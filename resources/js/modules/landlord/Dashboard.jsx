@@ -3,6 +3,7 @@ import api from '../../services/api';
 import TenantList from './tenants/TenantList';
 import TenantForm from './tenants/TenantForm';
 import Navbar from '../../components/Navbar';
+import DataTable from '@/components/DataTable';
 import Staff from './staff/StaffList';
 import Plans from './billing/Plans';
 import RolePermissions from './staff/RolePermissions';
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 import DatabaseModal from './modals/DatabaseModal';
 import MigrationModal from './modals/MigrationModal';
 import DomainModal from './modals/DomainModal';
+import { Box, Typography } from '@mui/material';
 
 export default function Dashboard({ user, setUser }) {
     const [tenants, setTenants] = useState([]);
@@ -314,13 +316,15 @@ export default function Dashboard({ user, setUser }) {
                             />
                         )}
                         {view === 'impersonate' && (
-                            <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                     <div>
-                                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#0f172a' }}>Impersonate Tenant</h3>
-                                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                                            Impersonate Tenant
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
                                             Select a tenant to impersonate. You will be redirected to their domain.
-                                        </p>
+                                        </Typography>
                                     </div>
                                     <button
                                         onClick={() => { setView('tenants'); fetchTenants(); }}
@@ -337,79 +341,43 @@ export default function Dashboard({ user, setUser }) {
                                     >
                                         Back to Tenants
                                     </button>
-                                </div>
-
-                                {loading ? (
-                                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Loading tenants...</div>
-                                ) : tenants.length === 0 ? (
-                                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No tenants found.</div>
-                                ) : (
-                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                        <thead>
-                                            <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
-                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Tenant ID</th>
-                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Name</th>
-                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Domain</th>
-                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
-                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {tenants.map((tenant, index) => (
-                                                <tr
-                                                    key={tenant.id}
-                                                    style={{
-                                                        borderBottom: '1px solid #e2e8f0',
-                                                        background: index % 2 === 0 ? '#fff' : '#f8fafc',
-                                                    }}
-                                                >
-                                                    <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '13px' }}>{tenant.id}</td>
-                                                    <td style={{ padding: '12px', fontWeight: 500 }}>{tenant.name}</td>
-                                                    <td style={{ padding: '12px' }}>
-                                                        <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontSize: '13px' }}>
-                                                            {tenant.domain}
-                                                        </code>
-                                                    </td>
-                                                    <td style={{ padding: '12px' }}>
-                                                        <span style={{
-                                                            display: 'inline-block',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: 600,
-                                                            background: tenant.status === 'Active' ? '#dcfce7' : '#fee2e2',
-                                                            color: tenant.status === 'Active' ? '#166534' : '#991b1b',
-                                                        }}>
-                                                            {tenant.status}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
-                                                        {tenant.status === 'Active' ? (
-                                                            <button
-                                                                onClick={() => handleImpersonateTenant(tenant)}
-                                                                style={{
-                                                                    padding: '6px 16px',
-                                                                    background: '#7c3aed',
-                                                                    color: 'white',
-                                                                    border: 'none',
-                                                                    borderRadius: '4px',
-                                                                    cursor: 'pointer',
-                                                                    fontSize: '12px',
-                                                                    fontWeight: 600,
-                                                                }}
-                                                            >
-                                                                Impersonate
-                                                            </button>
-                                                        ) : (
-                                                            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Suspended</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
+                                </Box>
+                                <DataTable
+                                    columns={[
+                                        { accessorKey: 'id', header: 'ID' },
+                                        { accessorKey: 'name', header: 'Name' },
+                                        {
+                                            accessorKey: 'domain',
+                                            header: 'Domain',
+                                            Cell: ({ cell }) => (
+                                                <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontSize: '13px', fontFamily: 'monospace' }}>
+                                                    {cell.getValue()}
+                                                </code>
+                                            ),
+                                        },
+                                        {
+                                            accessorKey: 'status',
+                                            header: 'Status',
+                                            Cell: ({ cell }) => (
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '4px',
+                                                    fontSize: '12px',
+                                                    fontWeight: 600,
+                                                    background: cell.getValue() === 'Active' ? '#dcfce7' : '#fee2e2',
+                                                    color: cell.getValue() === 'Active' ? '#166534' : '#991b1b',
+                                                }}>
+                                                    {cell.getValue()}
+                                                </span>
+                                            ),
+                                        },
+                                    ]}
+                                    data={tenants.filter((t) => t.status === 'Active')}
+                                    onImpersonate={handleImpersonateTenant}
+                                    emptyMessage="No active tenants to impersonate."
+                                />
+                            </>
                         )}
                     </div>
 

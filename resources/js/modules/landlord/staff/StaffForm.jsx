@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
+import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput } from '@/components/FormElements';
+import { toast } from 'sonner';
 
 export default function StaffForm({ staff = null, onSubmit, onCancel }) {
     const [formData, setFormData] = useState({
@@ -25,14 +27,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                 email: staff.email,
                 password: '',
                 password_confirmation: '',
-                roles: (staff.roles || []).map(role => {
-                    if (typeof role === 'object') return role.id;
-                    return role;
-                }),
-                direct_permissions: (staff.direct_permissions || []).map(perm => {
-                    if (typeof perm === 'object') return perm.id;
-                    return perm;
-                }),
+                roles: (staff.roles || []).map((role) => (typeof role === 'object' ? role.id : role)),
+                direct_permissions: (staff.direct_permissions || []).map((perm) => (typeof perm === 'object' ? perm.id : perm)),
                 is_active: staff.is_active,
             });
         } else {
@@ -74,12 +70,12 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
+        setFormData((prev) => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value,
         }));
         if (errors[name]) {
-            setErrors(prev => {
+            setErrors((prev) => {
                 const newErrors = { ...prev };
                 delete newErrors[name];
                 return newErrors;
@@ -88,21 +84,19 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
     };
 
     const handleRoleChange = (roleId) => {
-        setFormData(prev => {
-            const roles = prev.roles.includes(roleId)
-                ? prev.roles.filter(id => id !== roleId)
-                : [...prev.roles, roleId];
-            return { ...prev, roles };
-        });
+        setFormData((prev) => ({
+            ...prev,
+            roles: prev.roles.includes(roleId) ? prev.roles.filter((id) => id !== roleId) : [...prev.roles, roleId],
+        }));
     };
 
     const handlePermissionChange = (permissionId) => {
-        setFormData(prev => {
-            const direct_permissions = prev.direct_permissions.includes(permissionId)
-                ? prev.direct_permissions.filter(id => id !== permissionId)
-                : [...prev.direct_permissions, permissionId];
-            return { ...prev, direct_permissions };
-        });
+        setFormData((prev) => ({
+            ...prev,
+            direct_permissions: prev.direct_permissions.includes(permissionId)
+                ? prev.direct_permissions.filter((id) => id !== permissionId)
+                : [...prev.direct_permissions, permissionId],
+        }));
     };
 
     const handleSubmit = async (e) => {
@@ -134,22 +128,13 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
     };
 
     return (
-        <div style={{
-            background: '#f8f9fa',
-            padding: '30px',
-            borderRadius: '8px',
-            maxWidth: '600px',
-            margin: '0 auto',
-        }}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px' }}>
-                {staff ? 'Edit Staff Member' : 'Create New Staff Member'}
-            </h3>
-
+        <FormCard
+            title={staff ? 'Edit Staff Member' : 'Create Staff Member'}
+            subtitle={staff ? 'Update staff member details and permissions' : 'Add a new administrator to the platform'}
+            onClose={onCancel}
+        >
             <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                        Full Name *
-                    </label>
+                <FormInput label="Full Name" required error={errors?.name?.[0]}>
                     <input
                         type="text"
                         name="name"
@@ -157,26 +142,10 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                         onChange={handleChange}
                         placeholder="John Doe"
                         required
-                        style={{
-                            width: '100%',
-                            padding: '10px',
-                            border: `2px solid ${errors.name ? '#e74c3c' : '#dee2e6'}`,
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                        }}
                     />
-                    {errors.name && (
-                        <span style={{ color: '#e74c3c', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                            {errors.name[0]}
-                        </span>
-                    )}
-                </div>
+                </FormInput>
 
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                        Email *
-                    </label>
+                <FormInput label="Email" required error={errors?.email?.[0]}>
                     <input
                         type="email"
                         name="email"
@@ -184,26 +153,15 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                         onChange={handleChange}
                         placeholder="john@example.com"
                         required
-                        style={{
-                            width: '100%',
-                            padding: '10px',
-                            border: `2px solid ${errors.email ? '#e74c3c' : '#dee2e6'}`,
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                        }}
                     />
-                    {errors.email && (
-                        <span style={{ color: '#e74c3c', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                            {errors.email[0]}
-                        </span>
-                    )}
-                </div>
+                </FormInput>
 
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
-                        Password {!staff && '*'}
-                    </label>
+                <FormInput
+                    label="Password"
+                    required={!staff}
+                    hint={staff ? 'Leave empty to keep current password' : 'Min. 8 characters, mix of upper/lower, numbers, symbols'}
+                    error={errors?.password?.[0]}
+                >
                     <input
                         type="password"
                         name="password"
@@ -211,86 +169,36 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                         onChange={handleChange}
                         placeholder={staff ? 'Leave empty to keep current password' : 'Enter password'}
                         required={!staff}
-                        style={{
-                            width: '100%',
-                            padding: '10px',
-                            border: `2px solid ${errors.password ? '#e74c3c' : '#dee2e6'}`,
-                            borderRadius: '4px',
-                            fontSize: '14px',
-                            boxSizing: 'border-box',
-                        }}
                     />
-                    {errors.password && (
-                        <span style={{ color: '#e74c3c', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                            {errors.password[0]}
-                        </span>
-                    )}
-                    <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
-                        Password must be at least 8 characters, include uppercase, lowercase, numbers, and symbols.
-                    </small>
-                </div>
+                </FormInput>
 
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '14px' }}>
-                        Select Roles (multiple allowed)
-                    </label>
-                    {rolesLoading ? (
-                        <p style={{ color: '#666' }}>Loading roles...</p>
-                    ) : roles.length === 0 ? (
-                        <p style={{ color: '#999' }}>No roles available</p>
-                    ) : (
-                        <div style={{
-                            border: '1px solid #dee2e6',
-                            borderRadius: '4px',
-                            padding: '12px',
-                            background: '#fff',
-                            maxHeight: '200px',
-                            overflowY: 'auto',
-                        }}>
-                            {roles.map(role => (
-                                <div key={role.id} style={{ marginBottom: '10px', display: 'flex', alignItems: 'flex-start' }}>
-                                    <input
-                                        type="checkbox"
-                                        id={`role-${role.id}`}
-                                        checked={formData.roles.includes(role.id)}
-                                        onChange={() => handleRoleChange(role.id)}
-                                        style={{ marginRight: '10px', marginTop: '4px', cursor: 'pointer' }}
-                                    />
-                                    <label htmlFor={`role-${role.id}`} style={{ cursor: 'pointer', flex: 1 }}>
-                                        <strong style={{ display: 'block', marginBottom: '4px' }}>{role.name}</strong>
-                                        <small style={{ color: '#666', display: 'block' }}>
-                                            {role.description} ({role.permissions_count} permissions)
-                                        </small>
-                                    </label>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                    {errors.roles && (
-                        <span style={{ color: '#e74c3c', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                            {errors.roles[0]}
-                        </span>
-                    )}
-                </div>
+                <FormInput label="Roles">
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc', maxHeight: '200px', overflowY: 'auto' }}>
+                        {rolesLoading ? (
+                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Loading roles...</p>
+                        ) : roles.length === 0 ? (
+                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>No roles available</p>
+                        ) : (
+                            roles.map((role) => (
+                                <CheckboxInput
+                                    key={role.id}
+                                    label={`${role.name} — ${role.description || 'No description'}`}
+                                    checked={formData.roles.includes(role.id)}
+                                    onChange={() => handleRoleChange(role.id)}
+                                />
+                            ))
+                        )}
+                    </div>
+                </FormInput>
 
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '14px' }}>
-                        Direct Permissions (Optional)
-                    </label>
-                    {permissionsLoading ? (
-                        <p style={{ color: '#666' }}>Loading permissions...</p>
-                    ) : permissions.length === 0 ? (
-                        <p style={{ color: '#999' }}>No permissions available</p>
-                    ) : (
-                        <div style={{
-                            border: '1px solid #dee2e6',
-                            borderRadius: '4px',
-                            padding: '12px',
-                            background: '#fff',
-                            maxHeight: '300px',
-                            overflowY: 'auto',
-                        }}>
-                            {Object.entries(
+                <FormInput label="Direct Permissions" hint="Additional permissions beyond selected roles">
+                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc', maxHeight: '300px', overflowY: 'auto' }}>
+                        {permissionsLoading ? (
+                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Loading permissions...</p>
+                        ) : permissions.length === 0 ? (
+                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>No permissions available</p>
+                        ) : (
+                            Object.entries(
                                 permissions.reduce((groups, perm) => {
                                     const module = perm.module || 'General';
                                     if (!groups[module]) groups[module] = [];
@@ -298,106 +206,41 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                                     return groups;
                                 }, {})
                             ).map(([module, modulePerms]) => (
-                                <div key={module} style={{ marginBottom: '15px' }}>
-                                    <h5 style={{
-                                        margin: '0 0 8px 0',
-                                        fontSize: '14px',
-                                        fontWeight: '600',
-                                        color: '#495057',
-                                        borderBottom: '1px solid #e9ecef',
-                                        paddingBottom: '4px'
-                                    }}>
+                                <div key={module} style={{ marginBottom: '12px' }}>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>
                                         {module}
-                                    </h5>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-                                        {modulePerms.map(permission => (
-                                            <label key={permission.id} style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                cursor: 'pointer',
-                                                fontSize: '13px',
-                                                padding: '4px 0'
-                                            }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.direct_permissions.includes(permission.id)}
-                                                    onChange={() => handlePermissionChange(permission.id)}
-                                                    style={{ marginRight: '8px', cursor: 'pointer' }}
-                                                />
-                                                <span style={{ flex: 1 }}>
-                                                    <strong>{permission.name}</strong>
-                                                    {permission.description && permission.description !== permission.name && (
-                                                        <small style={{ display: 'block', color: '#666', marginTop: '2px' }}>
-                                                            {permission.description}
-                                                        </small>
-                                                    )}
-                                                </span>
-                                            </label>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px' }}>
+                                        {modulePerms.map((permission) => (
+                                            <CheckboxInput
+                                                key={permission.id}
+                                                label={permission.name}
+                                                checked={formData.direct_permissions.includes(permission.id)}
+                                                onChange={() => handlePermissionChange(permission.id)}
+                                            />
                                         ))}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                    <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
-                        Direct permissions are additional permissions beyond those granted by the selected roles.
-                    </small>
+                            ))
+                        )}
+                    </div>
+                </FormInput>
+
+                <div style={{ marginBottom: '16px' }}>
+                    <CheckboxInput
+                        label="Active"
+                        checked={formData.is_active}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.target.checked }))}
+                    />
                 </div>
 
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                        <input
-                            type="checkbox"
-                            name="is_active"
-                            checked={formData.is_active}
-                            onChange={handleChange}
-                            style={{ marginRight: '10px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '14px' }}>Active</span>
-                    </label>
-                </div>
-
-                <div style={{
-                    display: 'flex',
-                    gap: '10px',
-                    justifyContent: 'flex-end',
-                    paddingTop: '20px',
-                    borderTop: '1px solid #dee2e6',
-                }}>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        style={{
-                            padding: '10px 20px',
-                            background: '#6c757d',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                        }}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        style={{
-                            padding: '10px 20px',
-                            background: loading ? '#ccc' : '#27ae60',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                        }}
-                    >
-                        {loading ? 'Saving...' : (staff ? 'Update' : 'Create')}
-                    </button>
-                </div>
+                <FormActions>
+                    <ButtonSecondary onClick={onCancel}>Cancel</ButtonSecondary>
+                    <ButtonPrimary type="submit" disabled={loading}>
+                        {loading ? 'Saving...' : staff ? 'Update' : 'Create'}
+                    </ButtonPrimary>
+                </FormActions>
             </form>
-        </div>
+        </FormCard>
     );
 }

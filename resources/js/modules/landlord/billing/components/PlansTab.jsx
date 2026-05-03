@@ -10,83 +10,105 @@ import {
     TableHead,
     TableRow,
     Paper,
-    IconButton,
+    Chip,
 } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import { toast } from 'sonner';
 import api from '../../../../services/api';
+import DataTable from '@/components/DataTable';
 import PlanModal from './PlanModal';
 
 export default function PlansTab({ plans, fetchPlans, setError }) {
     const [planModalOpen, setPlanModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
 
-    const handleEditPlan = (plan) => {
-        setEditingPlan(plan);
+    const handleEditPlan = (row) => {
+        setEditingPlan(row);
         setPlanModalOpen(true);
     };
 
-    const handleDeletePlan = async (id) => {
-        if (confirm('Are you sure you want to delete this plan?')) {
-            try {
-                await api.delete(`/admin/api/plans/${id}`);
-                fetchPlans();
-                toast.success('Plan deleted successfully');
-            } catch (err) {
-                const message = 'Failed to delete plan';
-                toast.error(message);
-                setError(message);
-            }
+    const handleDeletePlan = async (row) => {
+        if (!confirm('Are you sure you want to delete this plan?')) return;
+        try {
+            await api.delete(`/admin/api/plans/${row.id}`);
+            fetchPlans();
+            toast.success('Plan deleted successfully');
+        } catch (err) {
+            const message = 'Failed to delete plan';
+            toast.error(message);
+            setError(message);
         }
     };
 
+    const columns = [
+        { accessorKey: 'name', header: 'Name' },
+        {
+            accessorKey: 'price',
+            header: 'Price',
+            Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>
+                    ${Number(cell.getValue()).toFixed(2)}
+                </Typography>
+            ),
+        },
+        {
+            accessorKey: 'max_users',
+            header: 'Max Users',
+            Cell: ({ cell }) => (
+                <Chip
+                    label={cell.getValue() ? `${cell.getValue()} users` : 'Unlimited'}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontWeight: 500, fontSize: 12 }}
+                />
+            ),
+        },
+        {
+            accessorKey: 'features',
+            header: 'Features',
+            Cell: ({ cell }) => {
+                const features = cell.getValue();
+                if (!features) return <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>None</Typography>;
+                const list = Array.isArray(features) ? features : [];
+                return (
+                    <Typography variant="body2" sx={{ fontSize: 13, maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {list.join(', ')}
+                    </Typography>
+                );
+            },
+        },
+    ];
+
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6">Manage Subscription Plans</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                    Subscription Plans
+                </Typography>
                 <Button
                     variant="contained"
-                    startIcon={<AddIcon />}
+                    size="small"
                     onClick={() => {
                         setEditingPlan(null);
                         setPlanModalOpen(true);
+                    }}
+                    sx={{
+                        bgcolor: '#22c55e',
+                        '&:hover': { bgcolor: '#16a34a' },
+                        fontWeight: 600,
+                        fontSize: '13px',
                     }}
                 >
                     Add Plan
                 </Button>
             </Box>
 
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Price</TableCell>
-                            <TableCell>Features</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {plans.map((plan) => (
-                            <TableRow key={plan.id}>
-                                <TableCell>{plan.name}</TableCell>
-                                <TableCell>${plan.price}</TableCell>
-                                <TableCell>{Array.isArray(plan.features) ? plan.features.join(', ') : plan.features}</TableCell>
-                                <TableCell>
-                                    <IconButton onClick={() => handleEditPlan(plan)}>
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => handleDeletePlan(plan.id)}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <DataTable
+                columns={columns}
+                data={plans}
+                onEdit={handleEditPlan}
+                onDelete={handleDeletePlan}
+                emptyMessage="No plans configured yet."
+            />
 
             <PlanModal
                 open={planModalOpen}

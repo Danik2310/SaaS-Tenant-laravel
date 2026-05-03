@@ -16,6 +16,9 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+    TablePagination,
+    useMediaQuery,
+    useTheme,
 } from '@mui/material';
 import {
     People as PeopleIcon,
@@ -35,21 +38,18 @@ import {
     PieChart,
     Pie,
     Cell,
-    BarChart,
-    Bar,
-    Legend,
 } from 'recharts';
 
-const COLORS = ['#4CAF50', '#f44336'];
+const COLORS = ['#22c55e', '#ef4444'];
 
 const StatCard = ({ title, value, icon, color, subtitle }) => (
-    <Card sx={{ height: '100%', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-        <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ bgcolor: color, width: 48, height: 48 }}>
+    <Card sx={{ height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 3 }}>
+            <Avatar sx={{ bgcolor: `${color}15`, color, width: 48, height: 48 }}>
                 {icon}
             </Avatar>
             <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a202c' }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
                     {value}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -66,11 +66,16 @@ const StatCard = ({ title, value, icon, color, subtitle }) => (
 );
 
 export default function DashboardOverview() {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isTablet = useMediaQuery(theme.breakpoints.down('md'));
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
     const [recentTenants, setRecentTenants] = useState([]);
     const [tenantsByMonth, setTenantsByMonth] = useState([]);
     const [statusDistribution, setStatusDistribution] = useState([]);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage] = useState(5);
 
     useEffect(() => {
         fetchStats();
@@ -94,18 +99,19 @@ export default function DashboardOverview() {
         return (
             <Box>
                 <Grid container spacing={3} sx={{ mb: 4 }}>
-                    {[1, 2, 3, 4].map((i) => (
-                        <Grid item xs={12} sm={6} md={4} key={i}>
-                            <Skeleton variant="rounded" height={100} />
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <Grid item xs={12} sm={6} md={4} lg={2.4} key={i}>
+                            <Skeleton variant="rounded" height={96} />
                         </Grid>
                     ))}
                 </Grid>
                 <Grid container spacing={3}>
-                    {[1, 2, 3].map((i) => (
-                        <Grid item xs={12} lg={4} key={i}>
-                            <Skeleton variant="rounded" height={300} />
-                        </Grid>
-                    ))}
+                    <Grid item xs={12} lg={8}>
+                        <Skeleton variant="rounded" height={320} />
+                    </Grid>
+                    <Grid item xs={12} lg={4}>
+                        <Skeleton variant="rounded" height={320} />
+                    </Grid>
                 </Grid>
             </Box>
         );
@@ -124,81 +130,104 @@ export default function DashboardOverview() {
         };
     });
 
+    const chartHeight = isMobile ? 220 : isTablet ? 260 : 300;
+    const pieRadius = isMobile ? 60 : 80;
+
+    const paginatedTenants = recentTenants.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
     return (
         <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#1a202c', mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a', mb: 3 }}>
                 Dashboard Overview
             </Typography>
 
-            {/* Stats Cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={6} md={2.4} md={2.4}>
+            <Grid container spacing={2} sx={{ mb: 4 }}>
+                <Grid item xs={6} sm={6} md={4} lg={2.4}>
                     <StatCard
                         title="Total Tenants"
                         value={stats?.total_tenants ?? 0}
                         icon={<PeopleIcon />}
-                        color="#3f51b5"
+                        color="#3b82f6"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
+                <Grid item xs={6} sm={6} md={4} lg={2.4}>
                     <StatCard
                         title="Active Tenants"
                         value={stats?.active_tenants ?? 0}
                         icon={<CheckCircleIcon />}
-                        color="#4CAF50"
+                        color="#22c55e"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
+                <Grid item xs={6} sm={6} md={4} lg={2.4}>
                     <StatCard
                         title="Suspended"
                         value={stats?.suspended_tenants ?? 0}
                         icon={<BlockIcon />}
-                        color="#f44336"
+                        color="#ef4444"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
+                <Grid item xs={6} sm={6} md={4} lg={2.4}>
                     <StatCard
-                        title="Staff Members"
+                        title="Staff"
                         value={stats?.total_staff ?? 0}
                         icon={<GroupIcon />}
-                        color="#ff9800"
+                        color="#f59e0b"
                         subtitle={`${stats?.active_staff ?? 0} active`}
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={2.4}>
+                <Grid item xs={12} sm={6} md={4} lg={2.4}>
                     <StatCard
-                        title="Active Plans"
+                        title="Plans"
                         value={stats?.total_plans ?? 0}
                         icon={<AssignmentIcon />}
-                        color="#9c27b0"
+                        color="#8b5cf6"
                     />
                 </Grid>
             </Grid>
 
-            {/* Charts Row */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
                 <Grid item xs={12} lg={8}>
-                    <Paper sx={{ p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1a202c' }}>
+                    <Paper sx={{ p: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#0f172a' }}>
                             Tenant Growth
                         </Typography>
                         {tenantsByMonth.length === 0 ? (
-                            <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
-                                No data yet
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: chartHeight }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    No data yet
+                                </Typography>
+                            </Box>
                         ) : (
-                            <ResponsiveContainer width="100%" height={280}>
-                                <AreaChart data={formattedMonthlyData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                                    <Tooltip />
+                            <ResponsiveContainer width="100%" height={chartHeight}>
+                                <AreaChart data={formattedMonthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorTenants" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                    <Tooltip
+                                        contentStyle={{
+                                            backgroundColor: '#fff',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                                            fontSize: '13px',
+                                        }}
+                                    />
                                     <Area
                                         type="monotone"
                                         dataKey="Tenants"
-                                        stroke="#3f51b5"
-                                        fill="#3f51b5"
-                                        fillOpacity={0.15}
+                                        stroke="#3b82f6"
+                                        strokeWidth={2}
+                                        fill="url(#colorTenants)"
                                     />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -206,24 +235,26 @@ export default function DashboardOverview() {
                     </Paper>
                 </Grid>
                 <Grid item xs={12} lg={4}>
-                    <Paper sx={{ p: 3, boxShadow: '0 2px 8px rgba(0,0,0,0.08)', height: '100%' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: '#1a202c' }}>
+                    <Paper sx={{ p: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', height: '100%' }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#0f172a' }}>
                             Tenant Status
                         </Typography>
                         {statusDistribution.every((s) => s.value === 0) ? (
-                            <Typography variant="body2" color="text.secondary" sx={{ py: 6, textAlign: 'center' }}>
-                                No data yet
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: chartHeight }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    No data yet
+                                </Typography>
+                            </Box>
                         ) : (
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <ResponsiveContainer width="100%" height={220}>
+                                <ResponsiveContainer width="100%" height={chartHeight * 0.7}>
                                     <PieChart>
                                         <Pie
                                             data={statusDistribution}
                                             cx="50%"
                                             cy="50%"
-                                            innerRadius={50}
-                                            outerRadius={80}
+                                            innerRadius={pieRadius * 0.65}
+                                            outerRadius={pieRadius}
                                             paddingAngle={4}
                                             dataKey="value"
                                             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
@@ -235,39 +266,48 @@ export default function DashboardOverview() {
                                         <Tooltip />
                                     </PieChart>
                                 </ResponsiveContainer>
+                                <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
+                                    {statusDistribution.map((item, index) => (
+                                        <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: COLORS[index] }} />
+                                            <Typography variant="caption" color="text.secondary">
+                                                {item.name} ({item.value})
+                                            </Typography>
+                                        </Box>
+                                    ))}
+                                </Box>
                             </Box>
                         )}
                     </Paper>
                 </Grid>
             </Grid>
 
-            {/* Recent Tenants Table */}
-            <Paper sx={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+            <Paper sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                 <Box sx={{ p: 3, pb: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: '#1a202c' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
                         Recent Tenants
                     </Typography>
                 </Box>
                 <TableContainer>
-                    <Table>
+                    <Table size="small">
                         <TableHead>
-                            <TableRow>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Domain</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Created</TableCell>
+                            <TableRow sx={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Name</TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Domain</TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Status</TableCell>
+                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Created</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {recentTenants.length === 0 ? (
+                            {paginatedTenants.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
                                         No tenants yet
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                recentTenants.map((tenant) => (
-                                    <TableRow key={tenant.domain}>
+                                paginatedTenants.map((tenant) => (
+                                    <TableRow key={tenant.domain} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
                                         <TableCell sx={{ fontWeight: 600 }}>{tenant.name}</TableCell>
                                         <TableCell>
                                             <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13 }}>
@@ -279,8 +319,8 @@ export default function DashboardOverview() {
                                                 label={tenant.status}
                                                 size="small"
                                                 sx={{
-                                                    bgcolor: tenant.status === 'Active' ? '#e8f5e9' : '#ffebee',
-                                                    color: tenant.status === 'Active' ? '#2e7d32' : '#c62828',
+                                                    bgcolor: tenant.status === 'Active' ? '#dcfce7' : '#fee2e2',
+                                                    color: tenant.status === 'Active' ? '#166534' : '#991b1b',
                                                     fontWeight: 600,
                                                 }}
                                             />
@@ -294,6 +334,15 @@ export default function DashboardOverview() {
                         </TableBody>
                     </Table>
                 </TableContainer>
+                <TablePagination
+                    component="div"
+                    count={recentTenants.length}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    rowsPerPageOptions={[5]}
+                    sx={{ borderTop: '1px solid #f1f5f9' }}
+                />
             </Paper>
         </Box>
     );

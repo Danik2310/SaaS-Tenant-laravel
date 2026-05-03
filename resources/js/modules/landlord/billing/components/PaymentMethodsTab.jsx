@@ -23,9 +23,9 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
 import { toast } from 'sonner';
 import api from '../../../../services/api';
+import DataTable from '@/components/DataTable';
 import PaymentMethodModal from './PaymentMethodModal';
 
 export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods, setError }) {
@@ -36,35 +36,31 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
     const [deleting, setDeleting] = useState(false);
     const [toggling, setToggling] = useState(null);
 
-    const handleEditPayment = async (method) => {
+    const handleEditPayment = async (row) => {
         try {
-            const response = await api.get(`/admin/api/payment-methods/${method.id}`);
+            const response = await api.get(`/admin/api/payment-methods/${row.id}`);
             setEditingPayment(response.data.method);
             setPaymentModalOpen(true);
         } catch (error) {
-            console.error('Error fetching payment method details:', error);
-            const message = 'Failed to load payment method details for editing';
-            toast.error(message);
-            setError(message);
+            toast.error('Failed to load payment method details');
+            setError('Failed to load payment method details');
         }
     };
 
-    const handleDeletePayment = (method) => {
-        setDeletingPayment(method);
+    const handleDeletePayment = (row) => {
+        setDeletingPayment(row);
         setDeleteDialogOpen(true);
     };
 
-    const handleToggleActive = async (methodId) => {
-        setToggling(methodId);
+    const handleToggleActive = async (row) => {
+        setToggling(row.id);
         try {
-            await api.patch(`/admin/api/payment-methods/${methodId}/toggle-active`);
+            await api.patch(`/admin/api/payment-methods/${row.id}/toggle-active`);
             fetchPaymentMethods();
             toast.success('Payment method status updated');
         } catch (error) {
-            console.error('Error toggling payment method status:', error);
-            const message = 'Failed to update payment method status';
-            toast.error(message);
-            setError(message);
+            toast.error('Failed to update payment method status');
+            setError('Failed to update payment method status');
         } finally {
             setToggling(null);
         }
@@ -79,101 +75,106 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
             fetchPaymentMethods();
             toast.success('Payment method deleted successfully');
             setError(null);
-            setDeleteDialogOpen(false);
-            setDeletingPayment(null);
         } catch (err) {
             const errorMessage = err.response?.data?.message || err.response?.data?.error || 'Failed to delete payment method';
             toast.error(errorMessage);
             setError(errorMessage);
         } finally {
             setDeleting(false);
+            setDeleteDialogOpen(false);
+            setDeletingPayment(null);
         }
     };
 
-    const cancelDelete = () => {
-        setDeleteDialogOpen(false);
-        setDeletingPayment(null);
-    };
+    const columns = [
+        { accessorKey: 'name', header: 'Name' },
+        { accessorKey: 'provider', header: 'Provider' },
+        {
+            accessorKey: 'mode',
+            header: 'Mode',
+            Cell: ({ cell }) => (
+                <Chip
+                    label={cell.getValue()}
+                    size="small"
+                    color={cell.getValue() === 'live' ? 'success' : 'warning'}
+                    sx={{ fontWeight: 600, fontSize: 12 }}
+                />
+            ),
+        },
+        {
+            accessorKey: 'active',
+            header: 'Status',
+            Cell: ({ cell, row }) => (
+                <FormControlLabel
+                    control={
+                        <Switch
+                            checked={cell.getValue()}
+                            onChange={() => handleToggleActive(row.original)}
+                            disabled={toggling === row.original.id}
+                            size="small"
+                            sx={{
+                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                    color: '#22c55e',
+                                    '&:hover': { bgcolor: '#22c55e1a' },
+                                },
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                    bgcolor: '#22c55e',
+                                },
+                            }}
+                        />
+                    }
+                    label={cell.getValue() ? 'Active' : 'Inactive'}
+                    slotProps={{ typography: { fontSize: 13 } }}
+                />
+            ),
+        },
+    ];
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6">Configure Payment Gateways</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                    Payment Gateways
+                </Typography>
                 <Button
                     variant="contained"
-                    startIcon={<AddIcon />}
+                    size="small"
                     onClick={() => {
                         setEditingPayment(null);
                         setPaymentModalOpen(true);
+                    }}
+                    sx={{
+                        bgcolor: '#22c55e',
+                        '&:hover': { bgcolor: '#16a34a' },
+                        fontWeight: 600,
+                        fontSize: '13px',
                     }}
                 >
                     Add Method
                 </Button>
             </Box>
 
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Provider</TableCell>
-                            <TableCell>Mode</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {paymentMethods.map((method) => (
-                            <TableRow key={method.id}>
-                                <TableCell>{method.name}</TableCell>
-                                <TableCell>{method.provider}</TableCell>
-                                <TableCell>
-                                    <Chip label={method.mode} color={method.mode === 'live' ? 'success' : 'warning'} />
-                                </TableCell>
-                                <TableCell>
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                checked={method.active}
-                                                onChange={() => handleToggleActive(method.id)}
-                                                disabled={toggling === method.id}
-                                                color="primary"
-                                            />
-                                        }
-                                        label={method.active ? 'Active' : 'Inactive'}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <IconButton onClick={() => handleEditPayment(method)}>
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => handleDeletePayment(method)}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <DataTable
+                columns={columns}
+                data={paymentMethods}
+                onEdit={handleEditPayment}
+                onDelete={handleDeletePayment}
+                emptyMessage="No payment methods configured yet."
+            />
 
             <Dialog
                 open={deleteDialogOpen}
-                onClose={cancelDelete}
-                aria-labelledby="delete-dialog-title"
-                aria-describedby="delete-dialog-description"
+                onClose={() => { setDeleteDialogOpen(false); setDeletingPayment(null); }}
             >
-                <DialogTitle id="delete-dialog-title">
-                    Delete Payment Method
-                </DialogTitle>
+                <DialogTitle>Delete Payment Method</DialogTitle>
                 <DialogContent>
-                    <DialogContentText id="delete-dialog-description">
+                    <DialogContentText>
                         Are you sure you want to delete the payment method "{deletingPayment?.name}"?
                         This action cannot be undone and may affect existing subscriptions.
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={cancelDelete} disabled={deleting}>
+                    <Button onClick={() => { setDeleteDialogOpen(false); setDeletingPayment(null); }} disabled={deleting}>
                         Cancel
                     </Button>
                     <Button
