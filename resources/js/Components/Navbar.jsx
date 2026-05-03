@@ -11,6 +11,7 @@ export default function Navbar({ user, view, setView }) {
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <button onClick={() => setView('tenants')} style={navButtonStyle(view === 'tenants')}>Tenant Management</button>
                 <button onClick={() => setView('staff')} style={navButtonStyle(view === 'staff')}>Staff Management</button>
+                <button onClick={() => setView('roles')} style={navButtonStyle(view === 'roles')}>Roles & Permissions</button>
                 <button onClick={() => setView('plans')} style={navButtonStyle(view === 'plans')}>Infrastructure and Global Configuration</button>
                 <button onClick={() => setView('impersonate')} style={navButtonStyle(view === 'impersonate')}>God Mode (Impersonation)</button>
             </nav>

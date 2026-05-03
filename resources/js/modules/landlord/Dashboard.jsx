@@ -6,6 +6,7 @@ import Navbar from '../../components/Navbar';
 import Modal from '../../components/Modal';
 import Staff from './staff/StaffList';
 import Plans from './billing/Plans';
+import RolePermissions from './staff/RolePermissions';
 import BlockIcon from '@mui/icons-material/Block';
 import LanguageIcon from '@mui/icons-material/Language';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -253,6 +254,7 @@ export default function Dashboard({ user, setUser }) {
                         <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>
                             {view === 'tenants' && 'Manage Tenants'}
                             {view === 'staff' && 'Staff Management'}
+                            {view === 'roles' && 'Roles & Permissions'}
                             {view === 'plans' && 'Plans & Settings'}
                             {view === 'impersonate' && 'Impersonation (God Mode)'}
                         </h2>
@@ -372,12 +374,105 @@ export default function Dashboard({ user, setUser }) {
                     {/* Forms and List */}
                     {view === 'staff' ? (
                         <Staff />
+                    ) : view === 'roles' ? (
+                        <RolePermissions />
                     ) : view === 'plans' ? (
                         <Plans />
                     ) : view === 'impersonate' ? (
                         <div style={{ background: 'white', padding: '30px', borderRadius: '8px' }}>
-                            <h3>Impersonation</h3>
-                            <p>Select a tenant and click "Impersonate" to jump to their domain.</p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>God Mode — Impersonate Tenant</h3>
+                                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
+                                        Select a tenant to impersonate. You will be redirected to their domain.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => { setView('tenants'); fetchTenants(); }}
+                                    style={{
+                                        padding: '8px 16px',
+                                        background: '#6c757d',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '5px',
+                                        cursor: 'pointer',
+                                        fontSize: '13px',
+                                    }}
+                                >
+                                    Back to Tenants
+                                </button>
+                            </div>
+
+                            {loading ? (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading tenants...</div>
+                            ) : tenants.length === 0 ? (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>No tenants found.</div>
+                            ) : (
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead>
+                                        <tr style={{ borderBottom: '2px solid #dee2e6', background: '#f8f9fa' }}>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Tenant ID</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Name</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Domain</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Status</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {tenants.map((tenant, index) => (
+                                            <tr
+                                                key={tenant.id}
+                                                style={{
+                                                    borderBottom: '1px solid #dee2e6',
+                                                    background: index % 2 === 0 ? '#fff' : '#f9f9f9',
+                                                }}
+                                            >
+                                                <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '13px' }}>{tenant.id}</td>
+                                                <td style={{ padding: '12px' }}>{tenant.name}</td>
+                                                <td style={{ padding: '12px' }}>
+                                                    <code style={{ background: '#f0f0f0', padding: '2px 6px', borderRadius: '3px', fontSize: '13px' }}>
+                                                        {tenant.domain}
+                                                    </code>
+                                                </td>
+                                                <td style={{ padding: '12px' }}>
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
+                                                        background: tenant.status === 'Active' ? '#e8f5e9' : '#ffebee',
+                                                        color: tenant.status === 'Active' ? '#2e7d32' : '#c62828',
+                                                    }}>
+                                                        {tenant.status}
+                                                    </span>
+                                                </td>
+                                                <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                                    {tenant.status === 'Active' ? (
+                                                        <button
+                                                            onClick={() => handleImpersonateTenant(tenant)}
+                                                            style={{
+                                                                padding: '6px 16px',
+                                                                background: '#667eea',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                cursor: 'pointer',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                            }}
+                                                        >
+                                                            Impersonate
+                                                        </button>
+                                                    ) : (
+                                                        <span style={{ fontSize: '12px', color: '#999' }}>Suspended — cannot impersonate</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     ) : (editingTenant || showForm) ? (
                         <TenantForm

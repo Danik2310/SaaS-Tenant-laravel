@@ -79,6 +79,27 @@ class AdminDashboardController extends Controller
         $tenant->database()->makeCredentials();
         $tenant->save();
 
+        // Run migrations automatically
+        $migrationResult = $tenant->run(function () {
+            $exit = \Artisan::call('migrate', ['--force' => true]);
+            return [
+                'output' => \Artisan::output(),
+                'exit' => $exit,
+            ];
+        });
+
+        // Seed basic roles and permissions for tenant
+        try {
+            $tenant->run(function () {
+                \Artisan::call('db:seed', [
+                    '--class' => \Database\Seeders\TenantRolePermissionSeeder::class,
+                    '--force' => true,
+                ]);
+            });
+        } catch (\Exception $e) {
+            \Log::warning('Failed to seed tenant: ' . $e->getMessage(), ['tenant_id' => $tenant->id]);
+        }
+
         return response()->json([
             'message' => 'Tenant created successfully',
             'tenant' => [
@@ -87,6 +108,7 @@ class AdminDashboardController extends Controller
                 'email' => $validated['email'],
                 'domain' => $validated['domain'],
                 'status' => 'Active',
+                'migrated' => $migrationResult['exit'] === 0,
             ],
         ], 201);
     }

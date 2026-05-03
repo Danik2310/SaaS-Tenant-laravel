@@ -290,6 +290,32 @@ class StaffController extends Controller
     }
 
     /**
+     * Obtener todos los permisos disponibles.
+     */
+    public function getPermissions()
+    {
+        try {
+            $permissions = Permission::where('guard_name', 'admin')
+                ->active()
+                ->orderBy('module')
+                ->get()
+                ->map(fn($perm) => [
+                    'id' => $perm->id,
+                    'name' => $perm->name,
+                    'description' => $perm->description,
+                    'module' => $perm->module ?? 'General',
+                ]);
+
+            return response()->json([
+                'permissions' => $permissions,
+                'total' => $permissions->count(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch permissions: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
      * Asignar roles a un usuario.
      */
     public function assignRoles(Request $request, $id)
