@@ -59,6 +59,14 @@ class RolePermissionSeeder extends Seeder
                     'is_active' => true
                 ]
             );
+            Permission::updateOrCreate(
+                ['name' => 'manage payment methods', 'guard_name' => $guard],
+                [
+                    'description' => 'Permite gestionar métodos de pago y configuraciones de facturación',
+                    'module' => 'billing',
+                    'is_active' => true
+                ]
+            );
 
             // Create roles for this guard
             $superAdmin = Role::updateOrCreate(
@@ -81,6 +89,7 @@ class RolePermissionSeeder extends Seeder
                 'manage tenants',
                 'manage staff',
                 'manage plans',
+                'manage payment methods',
                 'impersonate tenants',
                 'manage profile'
             ]);

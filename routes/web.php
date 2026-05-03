@@ -56,6 +56,11 @@ Route::post('/admin/login', [AdminAuthController::class, 'login']);
 Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->middleware('auth:admin')->name('admin.logout');
 Route::get('/admin/user', [AdminAuthController::class, 'user']);
 
+// Unauthorized page (accessible to authenticated admin users)
+Route::middleware(['auth:admin'])->get('/admin/unauthorized', function () {
+    return Inertia::render('Unauthorized');
+})->name('admin.unauthorized');
+
 // Protected admin routes
 Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
@@ -109,8 +114,8 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::delete('/api/plans/{id}', [PlanController::class, 'destroy']);
     });
 
-    // Payment methods management - requires 'manage plans' permission
-    Route::middleware(['permission:manage plans'])->group(function () {
+    // Payment methods management - requires 'manage payment methods' permission
+    Route::middleware(['permission:manage payment methods'])->group(function () {
         Route::get('/api/payment-methods', [PaymentMethodController::class, 'index']);
         Route::post('/api/payment-methods', [PaymentMethodController::class, 'store']);
         Route::get('/api/payment-methods/{id}', [PaymentMethodController::class, 'show']);
