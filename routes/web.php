@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PlanController;
+use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -84,6 +85,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::middleware(['permission:manage staff'])->group(function () {
         // Specific routes must come BEFORE parameterized routes
         Route::get('/api/staff/get-roles', [StaffController::class, 'getRoles']);
+        Route::get('/api/staff/get-permissions', [StaffController::class, 'getPermissions']);
         
         // Parameterized and other routes
         Route::get('/api/staff', [StaffController::class, 'index']);
@@ -106,8 +108,8 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::delete('/api/plans/{id}', [PlanController::class, 'destroy']);
     });
 
-    // Payment methods management - requires 'manage plans' permission (assuming same permission)
-    Route::middleware([])->group(function () {
+    // Payment methods management - requires 'manage plans' permission
+    Route::middleware(['permission:manage plans'])->group(function () {
         Route::get('/api/payment-methods', [PaymentMethodController::class, 'index']);
         Route::post('/api/payment-methods', [PaymentMethodController::class, 'store']);
         Route::get('/api/payment-methods/{id}', [PaymentMethodController::class, 'show']);
@@ -116,16 +118,24 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::delete('/api/payment-methods/{id}', [PaymentMethodController::class, 'destroy']);
     });
 
-    // Temporary route for testing without middleware
-    Route::patch('/api/test-toggle/{id}', [PaymentMethodController::class, 'toggleActive']);
-    // Temporary route for testing without any middleware
-    Route::patch('/api/test-toggle-noauth/{id}', [PaymentMethodController::class, 'toggleActive'])->withoutMiddleware(['auth:admin', 'permission:manage plans', 'payment.rate.limit']);
-    // Simple test route
-    Route::get('/api/test-simple', function() { return response()->json(['test' => 'ok']); })->withoutMiddleware(['auth:admin', 'permission:manage plans', 'payment.rate.limit']);
-
     // Impersonation (God Mode) - requires 'impersonate tenants' permission
     Route::middleware(['permission:impersonate tenants'])->group(function () {
         Route::post('/api/impersonate', [AdminDashboardController::class, 'impersonateTenant']);
         Route::post('/api/impersonate/stop', [AdminDashboardController::class, 'stopImpersonation']);
+    });
+
+    // Role & Permission management - requires 'manage staff' permission
+    Route::middleware(['permission:manage staff'])->group(function () {
+        // Roles
+        Route::get('/api/roles', [RolePermissionController::class, 'indexRoles']);
+        Route::post('/api/roles', [RolePermissionController::class, 'storeRole']);
+        Route::put('/api/roles/{id}', [RolePermissionController::class, 'updateRole']);
+        Route::delete('/api/roles/{id}', [RolePermissionController::class, 'destroyRole']);
+
+        // Permissions
+        Route::get('/api/permissions', [RolePermissionController::class, 'indexPermissions']);
+        Route::post('/api/permissions', [RolePermissionController::class, 'storePermission']);
+        Route::put('/api/permissions/{id}', [RolePermissionController::class, 'updatePermission']);
+        Route::delete('/api/permissions/{id}', [RolePermissionController::class, 'destroyPermission']);
     });
 });

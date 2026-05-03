@@ -15,8 +15,7 @@ class IsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Only authenticated users (AdminUser) can access admin routes
-        if (!auth()->check()) {
+        if (!auth('admin')->check()) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
