@@ -3,10 +3,63 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tenant;
+use App\Models\AdminUser;
+use App\Models\Plan;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
 {
+    /**
+     * Get dashboard statistics for overview charts
+     */
+    public function dashboardStats()
+    {
+        $tenants = Tenant::with('domains')->get();
+        $totalTenants = $tenants->count();
+        $activeTenants = $tenants->where('status', 'Active')->count();
+        $suspendedTenants = $tenants->where('status', 'Suspended')->count();
+
+        $staffCount = AdminUser::count();
+        $activeStaff = AdminUser::where('is_active', true)->count();
+
+        $plans = Plan::all();
+        $plansCount = $plans->count();
+
+        $recentTenants = $tenants->sortByDesc('created_at')->take(7)->map(function ($tenant) {
+            return [
+                'name' => $tenant->name,
+                'domain' => $tenant->domains->first()?->domain ?? 'N/A',
+                'status' => $tenant->status,
+                'created_at' => $tenant->created_at->format('Y-m-d'),
+            ];
+        })->values()->toArray();
+
+        $tenantsByMonth = $tenants->groupBy(function ($tenant) {
+            return $tenant->created_at->format('Y-m');
+        })->map(function ($group, $key) {
+            return ['month' => $key, 'count' => $group->count()];
+        })->sortBy('month')->values()->toArray();
+
+        $statusDistribution = [
+            ['name' => 'Active', 'value' => $activeTenants],
+            ['name' => 'Suspended', 'value' => $suspendedTenants],
+        ];
+
+        return response()->json([
+            'stats' => [
+                'total_tenants' => $totalTenants,
+                'active_tenants' => $activeTenants,
+                'suspended_tenants' => $suspendedTenants,
+                'total_staff' => $staffCount,
+                'active_staff' => $activeStaff,
+                'total_plans' => $plansCount,
+            ],
+            'recent_tenants' => $recentTenants,
+            'tenants_by_month' => $tenantsByMonth,
+            'status_distribution' => $statusDistribution,
+        ]);
+    }
+
     /**
      * Show the admin dashboard
      */

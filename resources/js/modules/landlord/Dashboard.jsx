@@ -3,32 +3,15 @@ import api from '../../services/api';
 import TenantList from './tenants/TenantList';
 import TenantForm from './tenants/TenantForm';
 import Navbar from '../../components/Navbar';
-import Modal from '../../components/Modal';
 import Staff from './staff/StaffList';
 import Plans from './billing/Plans';
 import RolePermissions from './staff/RolePermissions';
+import DashboardOverview from './DashboardOverview';
 import BlockIcon from '@mui/icons-material/Block';
 import LanguageIcon from '@mui/icons-material/Language';
 import StorageIcon from '@mui/icons-material/Storage';
 import SyncIcon from '@mui/icons-material/Sync';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    IconButton,
-    Avatar,
-    Chip,
-    Button,
-    Typography,
-    Box,
-    Grid,
-    Link
-} from '@mui/material';
 import { toast } from 'sonner';
-import CloseIcon from '@mui/icons-material/Close';
-import PersonIcon from '@mui/icons-material/Person';
-import LaunchIcon from '@mui/icons-material/Launch';
 import DatabaseModal from './modals/DatabaseModal';
 import MigrationModal from './modals/MigrationModal';
 import DomainModal from './modals/DomainModal';
@@ -38,16 +21,8 @@ export default function Dashboard({ user, setUser }) {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingTenant, setEditingTenant] = useState(null);
-    const [view, setView] = useState('tenants');
+    const [view, setView] = useState('overview');
     const [error, setError] = useState(null);
-
-    // UI states for extra actions
-    const [dbModalOpen, setDbModalOpen] = useState(false);
-    const [dbInfo, setDbInfo] = useState(null);
-    const [migrationModalOpen, setMigrationModalOpen] = useState(false);
-    const [migrationOutput, setMigrationOutput] = useState('');
-    const [domainModalOpen, setDomainModalOpen] = useState(false);
-    const [domainInfo, setDomainInfo] = useState(null);
 
     const [activeModal, setActiveModal] = useState(null);
 
@@ -188,369 +163,275 @@ export default function Dashboard({ user, setUser }) {
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f5f5f5', fontFamily: 'sans-serif', display: 'flex' }}>
+        <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex' }}>
             <Navbar user={user} view={view} setView={setView} />
             <div style={{ flex: 1 }}>
-                {/* Header */}
                 <header
                     style={{
-                        background: '#2c3e50',
-                        color: 'white',
-                        padding: '20px 30px',
+                        background: '#ffffff',
+                        padding: '16px 32px',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
+                        borderBottom: '1px solid #e2e8f0',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                     }}
                 >
                     <div>
-                        <h1 style={{ margin: 0, fontSize: '24px' }}>SaaS Admin Dashboard</h1>
-                        <p style={{ margin: '5px 0 0 0', fontSize: '14px', opacity: 0.9 }}>
-                            Welcome, {user?.name}
+                        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
+                            {view === 'overview' && 'Dashboard Overview'}
+                            {view === 'tenants' && 'Tenant Management'}
+                            {view === 'staff' && 'Staff Management'}
+                            {view === 'roles' && 'Roles & Permissions'}
+                            {view === 'plans' && 'Infrastructure & Plans'}
+                            {view === 'impersonate' && 'God Mode'}
+                        </h1>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                            {user?.name}
                         </p>
                     </div>
+                    {view === 'tenants' && !showForm && !editingTenant && (
+                        <button
+                            onClick={() => setShowForm(true)}
+                            style={{
+                                padding: '8px 20px',
+                                background: '#2563eb',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                            }}
+                        >
+                            + New Tenant
+                        </button>
+                    )}
+                    {(showForm || editingTenant) && (
+                        <button
+                            onClick={() => { setEditingTenant(null); setShowForm(false); }}
+                            style={{
+                                padding: '8px 20px',
+                                background: '#f1f5f9',
+                                color: '#334155',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: 600,
+                            }}
+                        >
+                            Cancel
+                        </button>
+                    )}
                     <button
                         onClick={handleLogout}
                         style={{
-                            padding: '10px 20px',
-                            background: '#e74c3c',
+                            padding: '8px 20px',
+                            background: '#ef4444',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '5px',
+                            borderRadius: '6px',
                             cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '600',
+                            fontSize: '13px',
+                            fontWeight: 600,
                         }}
                     >
                         Logout
                     </button>
                 </header>
 
-                {/* Main Content */}
-                <main style={{ padding: '30px' }}>
-                    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                    {error && (
-                        <div
-                            style={{
-                                background: '#fee',
-                                color: '#c33',
-                                padding: '15px 20px',
-                                borderRadius: '5px',
-                                marginBottom: '20px',
-                            }}
-                        >
-                            {error}
-                        </div>
-                    )}
+                <main style={{ padding: '24px 32px' }}>
+                    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+                        {error && (
+                            <div
+                                style={{
+                                    background: '#fef2f2',
+                                    color: '#dc2626',
+                                    padding: '12px 16px',
+                                    borderRadius: '6px',
+                                    marginBottom: '20px',
+                                    border: '1px solid #fecaca',
+                                }}
+                            >
+                                {error}
+                            </div>
+                        )}
 
-                    {/* Controls */}
-                    <div
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            marginBottom: '30px',
-                        }}
-                    >
-                        <h2 style={{ margin: 0, fontSize: '20px', color: '#333' }}>
-                            {view === 'tenants' && 'Manage Tenants'}
-                            {view === 'staff' && 'Staff Management'}
-                            {view === 'roles' && 'Roles & Permissions'}
-                            {view === 'plans' && 'Plans & Settings'}
-                            {view === 'impersonate' && 'Impersonation (God Mode)'}
-                        </h2>
-                        {view === 'tenants' && (
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <button
-                                    onClick={() => setShowForm(!showForm)}
-                                    style={{
-                                        padding: '12px 25px',
-                                        background: '#27ae60',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '5px',
-                                        cursor: 'pointer',
-                                        fontSize: '14px',
-                                        fontWeight: '600',
-                                    }}
-                                >
-                                    {showForm ? 'Cancel' : '+ New Tenant'}
-                                </button>
+                        {view === 'overview' && <DashboardOverview />}
+                        {view === 'staff' && <Staff />}
+                        {view === 'roles' && <RolePermissions />}
+                        {view === 'plans' && <Plans />}
+                        {view === 'tenants' && (showForm || editingTenant) && (
+                            <TenantForm
+                                tenant={editingTenant}
+                                onSubmit={editingTenant ? handleUpdateTenant : handleCreateTenant}
+                                onCancel={() => {
+                                    setEditingTenant(null);
+                                    setShowForm(false);
+                                }}
+                            />
+                        )}
+                        {view === 'tenants' && !showForm && !editingTenant && (
+                            <TenantList
+                                tenants={tenants}
+                                onDelete={handleDeleteTenant}
+                                onEdit={handleEditTenant}
+                                onImpersonate={handleImpersonateTenant}
+                                onRowSave={async (original, values) => {
+                                    try {
+                                        await api.put(`/admin/api/tenants/${original.id}`, values);
+                                        fetchTenants();
+                                    } catch (err) {
+                                        setError(err.response?.data?.message || 'Failed to update tenant');
+                                    }
+                                }}
+                                rowMenuActions={(tenant) => [
+                                    {
+                                        label: tenant.status === 'Active' ? 'Suspend' : 'Activate',
+                                        icon: <BlockIcon fontSize="small" />,
+                                        onClick: handleToggleActive,
+                                    },
+                                    {
+                                        label: 'View Domains',
+                                        icon: <LanguageIcon fontSize="small" />,
+                                        onClick: () => openModal('domain', tenant),
+                                    },
+                                    {
+                                        label: 'DB Info',
+                                        icon: <StorageIcon fontSize="small" />,
+                                        onClick: () => openModal('database', tenant),
+                                    },
+                                    {
+                                        label: 'Run Migrations',
+                                        icon: <SyncIcon fontSize="small" />,
+                                        onClick: () => openModal('migration', tenant),
+                                    },
+                                ]}
+                            />
+                        )}
+                        {view === 'impersonate' && (
+                            <div style={{ background: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                    <div>
+                                        <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#0f172a' }}>Impersonate Tenant</h3>
+                                        <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
+                                            Select a tenant to impersonate. You will be redirected to their domain.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => { setView('tenants'); fetchTenants(); }}
+                                        style={{
+                                            padding: '8px 16px',
+                                            background: '#f1f5f9',
+                                            color: '#334155',
+                                            border: '1px solid #e2e8f0',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        Back to Tenants
+                                    </button>
+                                </div>
+
+                                {loading ? (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>Loading tenants...</div>
+                                ) : tenants.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>No tenants found.</div>
+                                ) : (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '2px solid #e2e8f0', background: '#f8fafc' }}>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Tenant ID</th>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Name</th>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Domain</th>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Status</th>
+                                                <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {tenants.map((tenant, index) => (
+                                                <tr
+                                                    key={tenant.id}
+                                                    style={{
+                                                        borderBottom: '1px solid #e2e8f0',
+                                                        background: index % 2 === 0 ? '#fff' : '#f8fafc',
+                                                    }}
+                                                >
+                                                    <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '13px' }}>{tenant.id}</td>
+                                                    <td style={{ padding: '12px', fontWeight: 500 }}>{tenant.name}</td>
+                                                    <td style={{ padding: '12px' }}>
+                                                        <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontSize: '13px' }}>
+                                                            {tenant.domain}
+                                                        </code>
+                                                    </td>
+                                                    <td style={{ padding: '12px' }}>
+                                                        <span style={{
+                                                            display: 'inline-block',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: 600,
+                                                            background: tenant.status === 'Active' ? '#dcfce7' : '#fee2e2',
+                                                            color: tenant.status === 'Active' ? '#166534' : '#991b1b',
+                                                        }}>
+                                                            {tenant.status}
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
+                                                        {tenant.status === 'Active' ? (
+                                                            <button
+                                                                onClick={() => handleImpersonateTenant(tenant)}
+                                                                style={{
+                                                                    padding: '6px 16px',
+                                                                    background: '#7c3aed',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '4px',
+                                                                    cursor: 'pointer',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: 600,
+                                                                }}
+                                                            >
+                                                                Impersonate
+                                                            </button>
+                                                        ) : (
+                                                            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Suspended</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
                         )}
                     </div>
 
-                    {/* Tenant Management Tools */}
-                    {view === 'tenants' && !showForm && !editingTenant && (
-                        <div style={{
-                            background: 'white',
-                            padding: '20px',
-                            borderRadius: '8px',
-                            marginBottom: '20px',
-                            border: '1px solid #e1e1e1'
-                        }}>
-                            <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#333' }}>
-                                🛠️ Tenant Management Tools
-                            </h3>
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                                gap: '15px'
-                            }}>
-                                <div style={{
-                                    padding: '15px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '6px',
-                                    textAlign: 'center',
-                                    background: '#f9f9f9'
-                                }}>
-                                    <BlockIcon style={{ fontSize: '24px', color: '#e74c3c', marginBottom: '8px' }} />
-                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
-                                        Suspend/Activate
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                                        Toggle tenant active status (dynamic label)
-                                    </div>
-                                </div>
-                                <div style={{
-                                    padding: '15px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '6px',
-                                    textAlign: 'center',
-                                    background: '#f9f9f9'
-                                }}>
-                                    <LanguageIcon style={{ fontSize: '24px', color: '#3498db', marginBottom: '8px' }} />
-                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
-                                        Domain Management
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                                        View and manage domains
-                                    </div>
-                                </div>
-                                <div style={{
-                                    padding: '15px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '6px',
-                                    textAlign: 'center',
-                                    background: '#f9f9f9'
-                                }}>
-                                    <StorageIcon style={{ fontSize: '24px', color: '#27ae60', marginBottom: '8px' }} />
-                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
-                                        Database Info
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                                        View database credentials
-                                    </div>
-                                </div>
-                                <div style={{
-                                    padding: '15px',
-                                    border: '1px solid #ddd',
-                                    borderRadius: '6px',
-                                    textAlign: 'center',
-                                    background: '#f9f9f9'
-                                }}>
-                                    <SyncIcon style={{ fontSize: '24px', color: '#f39c12', marginBottom: '8px' }} />
-                                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#333' }}>
-                                        Run Migrations
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                                        Execute database migrations
-                                    </div>
-                                </div>
-                            </div>
-                            <div style={{
-                                marginTop: '15px',
-                                padding: '10px',
-                                background: '#fff3cd',
-                                border: '1px solid #ffeaa7',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                color: '#856404'
-                            }}>
-                                💡 <strong>Tip:</strong> Use the menu button (⋮) in each tenant row to access these management tools.
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Forms and List */}
-                    {view === 'staff' ? (
-                        <Staff />
-                    ) : view === 'roles' ? (
-                        <RolePermissions />
-                    ) : view === 'plans' ? (
-                        <Plans />
-                    ) : view === 'impersonate' ? (
-                        <div style={{ background: 'white', padding: '30px', borderRadius: '8px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>God Mode — Impersonate Tenant</h3>
-                                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666' }}>
-                                        Select a tenant to impersonate. You will be redirected to their domain.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => { setView('tenants'); fetchTenants(); }}
-                                    style={{
-                                        padding: '8px 16px',
-                                        background: '#6c757d',
-                                        color: 'white',
-                                        border: 'none',
-                                        borderRadius: '5px',
-                                        cursor: 'pointer',
-                                        fontSize: '13px',
-                                    }}
-                                >
-                                    Back to Tenants
-                                </button>
-                            </div>
-
-                            {loading ? (
-                                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>Loading tenants...</div>
-                            ) : tenants.length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>No tenants found.</div>
-                            ) : (
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '2px solid #dee2e6', background: '#f8f9fa' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Tenant ID</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Name</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Domain</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Status</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontWeight: '600' }}>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {tenants.map((tenant, index) => (
-                                            <tr
-                                                key={tenant.id}
-                                                style={{
-                                                    borderBottom: '1px solid #dee2e6',
-                                                    background: index % 2 === 0 ? '#fff' : '#f9f9f9',
-                                                }}
-                                            >
-                                                <td style={{ padding: '12px', fontFamily: 'monospace', fontSize: '13px' }}>{tenant.id}</td>
-                                                <td style={{ padding: '12px' }}>{tenant.name}</td>
-                                                <td style={{ padding: '12px' }}>
-                                                    <code style={{ background: '#f0f0f0', padding: '2px 6px', borderRadius: '3px', fontSize: '13px' }}>
-                                                        {tenant.domain}
-                                                    </code>
-                                                </td>
-                                                <td style={{ padding: '12px' }}>
-                                                    <span style={{
-                                                        display: 'inline-block',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: '600',
-                                                        background: tenant.status === 'Active' ? '#e8f5e9' : '#ffebee',
-                                                        color: tenant.status === 'Active' ? '#2e7d32' : '#c62828',
-                                                    }}>
-                                                        {tenant.status}
-                                                    </span>
-                                                </td>
-                                                <td style={{ padding: '12px', whiteSpace: 'nowrap' }}>
-                                                    {tenant.status === 'Active' ? (
-                                                        <button
-                                                            onClick={() => handleImpersonateTenant(tenant)}
-                                                            style={{
-                                                                padding: '6px 16px',
-                                                                background: '#667eea',
-                                                                color: 'white',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                cursor: 'pointer',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600',
-                                                            }}
-                                                        >
-                                                            Impersonate
-                                                        </button>
-                                                    ) : (
-                                                        <span style={{ fontSize: '12px', color: '#999' }}>Suspended — cannot impersonate</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-                    ) : (editingTenant || showForm) ? (
-                        <TenantForm
-                            tenant={editingTenant}
-                            onSubmit={editingTenant ? handleUpdateTenant : handleCreateTenant}
-                            onCancel={() => {
-                                setEditingTenant(null);
-                                setShowForm(false);
-                            }}
+                    <DatabaseModal
+                        tenant={activeModal?.type === 'database' ? activeModal.tenant : null}
+                        onClose={() => setActiveModal(null)}
                         />
-                    ) : (
-                        <>
-                            {loading ? (
-                                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-                                    Loading tenants...
-                                </div>
-                            ) : (
-                                <TenantList
-                                    tenants={tenants}
-                                    onDelete={handleDeleteTenant}
-                                    onEdit={handleEditTenant}
-                                    onImpersonate={handleImpersonateTenant}
-                                    onRowSave={async (original, values) => {
-                                        try {
-                                            await api.put(`/admin/api/tenants/${original.id}`, values);
-                                            fetchTenants();
-                                        } catch (err) {
-                                            setError(err.response?.data?.message || 'Failed to update tenant');
-                                        }
-                                    }}
-                                    rowMenuActions={(tenant) => [
-                                        {
-                                            label: tenant.status === 'Active' ? 'Suspend' : 'Activate',
-                                            icon: <BlockIcon fontSize="small" />,
-                                            onClick: handleToggleActive,
-                                        },
-                                        {
-                                            label: 'View Domains',
-                                            icon: <LanguageIcon fontSize="small" />,
-                                            onClick: () => openModal('domain', tenant),
-                                        },
-                                        {
-                                            label: 'DB Info',
-                                            icon: <StorageIcon fontSize="small" />,
-                                            onClick: () => openModal('database', tenant),
-                                        },
-                                        {
-                                            label: 'Run Migrations',
-                                            icon: <SyncIcon fontSize="small" />,
-                                            onClick: () => openModal('migration', tenant),
-                                        },
-                                        ]}
-                                />
-                            )}
-                        </>
-                    )}
-                </div>
-
-                {/* Extra modals */}
-                <DatabaseModal
-                    tenant={activeModal?.type === 'database' ? activeModal.tenant : null}
-                    onClose={() => setActiveModal(null)}
-                    />
 
                     <MigrationModal
-                    tenant={activeModal?.type === 'migration' ? activeModal.tenant : null}
-                    onClose={() => setActiveModal(null)}
-                    />
+                        tenant={activeModal?.type === 'migration' ? activeModal.tenant : null}
+                        onClose={() => setActiveModal(null)}
+                        />
 
                     <DomainModal
-                    tenant={activeModal?.type === 'domain' ? activeModal.tenant : null}
-                    onClose={() => setActiveModal(null)}
-                    onImpersonate={handleImpersonateTenant}
-                    onViewDatabase={(tenant) => openModal('database', tenant)}
-                    onRunMigrations={(tenant) => openModal('migration', tenant)}
-                    />
-            </main>
+                        tenant={activeModal?.type === 'domain' ? activeModal.tenant : null}
+                        onClose={() => setActiveModal(null)}
+                        onImpersonate={handleImpersonateTenant}
+                        onViewDatabase={(tenant) => openModal('database', tenant)}
+                        onRunMigrations={(tenant) => openModal('migration', tenant)}
+                        />
+                </main>
+            </div>
         </div>
-    </div>
     );
 }

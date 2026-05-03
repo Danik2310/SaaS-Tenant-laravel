@@ -59,6 +59,7 @@ Route::get('/admin/user', [AdminAuthController::class, 'user']);
 // Protected admin routes
 Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/api/dashboard-stats', [AdminDashboardController::class, 'dashboardStats']);
     
     // Admin profile endpoints (everyone authenticated should be able to manage own profile)
     Route::middleware(['permission:manage profile'])->group(function () {
