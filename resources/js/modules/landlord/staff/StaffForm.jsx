@@ -8,15 +8,15 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
         password: '',
         password_confirmation: '',
         roles: [],
-        direct_permissions: [], // Add direct permissions
+        direct_permissions: [],
         is_active: true,
     });
     const [errors, setErrors] = useState({});
     const [roles, setRoles] = useState([]);
-    const [permissions, setPermissions] = useState([]); // Add permissions state
+    const [permissions, setPermissions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [rolesLoading, setRolesLoading] = useState(true);
-    const [permissionsLoading, setPermissionsLoading] = useState(true); // Add permissions loading
+    const [permissionsLoading, setPermissionsLoading] = useState(true);
 
     useEffect(() => {
         if (staff) {
@@ -25,23 +25,29 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                 email: staff.email,
                 password: '',
                 password_confirmation: '',
-                roles: (staff.roles || []).length > 0
-                    ? [(staff.roles || []).map(role => {
-                        // Extract ID if role is an object, otherwise use the value as-is
-                        if (typeof role === 'object') return role.id;
-                        return role;
-                    })[0]] // Take first role for single selection
-                    : [],
+                roles: (staff.roles || []).map(role => {
+                    if (typeof role === 'object') return role.id;
+                    return role;
+                }),
                 direct_permissions: (staff.direct_permissions || []).map(perm => {
-                    // Extract ID if permission is an object, otherwise use the value as-is
                     if (typeof perm === 'object') return perm.id;
                     return perm;
                 }),
                 is_active: staff.is_active,
             });
+        } else {
+            setFormData({
+                name: '',
+                email: '',
+                password: '',
+                password_confirmation: '',
+                roles: [],
+                direct_permissions: [],
+                is_active: true,
+            });
         }
         fetchRoles();
-        fetchPermissions(); // Add permissions fetch
+        fetchPermissions();
     }, [staff]);
 
     const fetchRoles = async () => {
@@ -57,25 +63,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
 
     const fetchPermissions = async () => {
         try {
-            // Get all permissions from the API
-            const response = await api.get('/admin/api/staff/get-roles');
-            // Extract permissions from roles or get them separately if needed
-            const allPermissions = [];
-            response.data.roles.forEach(role => {
-                if (role.permissions) {
-                    role.permissions.forEach(perm => {
-                        if (!allPermissions.find(p => p.id === perm.id)) {
-                            allPermissions.push({
-                                id: perm.id,
-                                name: perm.name,
-                                description: perm.description || perm.name,
-                                module: perm.module || 'General'
-                            });
-                        }
-                    });
-                }
-            });
-            setPermissions(allPermissions);
+            const response = await api.get('/admin/api/staff/get-permissions');
+            setPermissions(response.data.permissions);
         } catch (err) {
             console.error('Failed to fetch permissions:', err);
         } finally {
@@ -99,10 +88,12 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
     };
 
     const handleRoleChange = (roleId) => {
-        setFormData(prev => ({
-            ...prev,
-            roles: [roleId], // Single selection - replace array with single role ID
-        }));
+        setFormData(prev => {
+            const roles = prev.roles.includes(roleId)
+                ? prev.roles.filter(id => id !== roleId)
+                : [...prev.roles, roleId];
+            return { ...prev, roles };
+        });
     };
 
     const handlePermissionChange = (permissionId) => {
@@ -119,22 +110,14 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
         setLoading(true);
         setErrors({});
 
-        // Validate that a role is selected
-        if (formData.roles.length === 0) {
-            setErrors({ roles: ['Please select a role'] });
-            setLoading(false);
-            return;
-        }
-
         const submitData = {
             name: formData.name,
             email: formData.email,
-            roles: formData.roles, // Always array of role IDs (single item now)
-            direct_permissions: formData.direct_permissions, // Add direct permissions
+            roles: formData.roles,
+            direct_permissions: formData.direct_permissions,
             is_active: formData.is_active,
         };
 
-        // Solo incluir contraseña si es creación o si se proporciona
         if (!staff || formData.password) {
             submitData.password = formData.password;
         }
@@ -163,14 +146,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
             </h3>
 
             <form onSubmit={handleSubmit}>
-                {/* Name */}
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{
-                        display: 'block',
-                        marginBottom: '8px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                    }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
                         Full Name *
                     </label>
                     <input
@@ -196,14 +173,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                     )}
                 </div>
 
-                {/* Email */}
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{
-                        display: 'block',
-                        marginBottom: '8px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                    }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
                         Email *
                     </label>
                     <input
@@ -229,14 +200,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                     )}
                 </div>
 
-                {/* Password */}
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{
-                        display: 'block',
-                        marginBottom: '8px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                    }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', fontSize: '14px' }}>
                         Password {!staff && '*'}
                     </label>
                     <input
@@ -265,15 +230,9 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                     </small>
                 </div>
 
-                {/* Roles */}
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{
-                        display: 'block',
-                        marginBottom: '12px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                    }}>
-                        Select Role *
+                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '14px' }}>
+                        Select Roles (multiple allowed)
                     </label>
                     {rolesLoading ? (
                         <p style={{ color: '#666' }}>Loading roles...</p>
@@ -291,9 +250,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                             {roles.map(role => (
                                 <div key={role.id} style={{ marginBottom: '10px', display: 'flex', alignItems: 'flex-start' }}>
                                     <input
-                                        type="radio"
+                                        type="checkbox"
                                         id={`role-${role.id}`}
-                                        name="selectedRole"
                                         checked={formData.roles.includes(role.id)}
                                         onChange={() => handleRoleChange(role.id)}
                                         style={{ marginRight: '10px', marginTop: '4px', cursor: 'pointer' }}
@@ -301,7 +259,7 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                                     <label htmlFor={`role-${role.id}`} style={{ cursor: 'pointer', flex: 1 }}>
                                         <strong style={{ display: 'block', marginBottom: '4px' }}>{role.name}</strong>
                                         <small style={{ color: '#666', display: 'block' }}>
-                                            {role.description}
+                                            {role.description} ({role.permissions_count} permissions)
                                         </small>
                                     </label>
                                 </div>
@@ -315,14 +273,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                     )}
                 </div>
 
-                {/* Direct Permissions */}
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={{
-                        display: 'block',
-                        marginBottom: '12px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                    }}>
+                    <label style={{ display: 'block', marginBottom: '12px', fontWeight: '600', fontSize: '14px' }}>
                         Direct Permissions (Optional)
                     </label>
                     {permissionsLoading ? (
@@ -338,7 +290,6 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                             maxHeight: '300px',
                             overflowY: 'auto',
                         }}>
-                            {/* Group permissions by module */}
                             {Object.entries(
                                 permissions.reduce((groups, perm) => {
                                     const module = perm.module || 'General';
@@ -389,11 +340,10 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                         </div>
                     )}
                     <small style={{ display: 'block', marginTop: '8px', color: '#666' }}>
-                        Direct permissions are additional permissions beyond those granted by the selected role.
+                        Direct permissions are additional permissions beyond those granted by the selected roles.
                     </small>
                 </div>
 
-                {/* Active Status */}
                 <div style={{ marginBottom: '20px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                         <input
@@ -407,7 +357,6 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                     </label>
                 </div>
 
-                {/* Buttons */}
                 <div style={{
                     display: 'flex',
                     gap: '10px',
