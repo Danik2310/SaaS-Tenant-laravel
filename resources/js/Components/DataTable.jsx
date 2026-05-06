@@ -67,7 +67,7 @@ export default function DataTable({
 
     const renderCell = (row, column) => {
         if (column.Cell) {
-            return <column.Cell cell={{ getValue: () => row[column.accessorKey], row }} />;
+            return <column.Cell cell={{ getValue: () => row[column.accessorKey], row: row }} />;
         }
         return row[column.accessorKey];
     };

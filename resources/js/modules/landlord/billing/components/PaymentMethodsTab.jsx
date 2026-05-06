@@ -104,7 +104,9 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
         {
             accessorKey: 'active',
             header: 'Status',
-            Cell: ({ cell, row }) => (
+            Cell: ({ cell }) => {
+                const row = cell.row || {};
+                return (
                 <FormControlLabel
                     control={
                         <Switch
@@ -126,7 +128,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                     label={cell.getValue() ? 'Active' : 'Inactive'}
                     slotProps={{ typography: { fontSize: 13 } }}
                 />
-            ),
+            )},
         },
     ];
 

@@ -2,7 +2,7 @@ import React from 'react';
 import DataTable from '@/components/DataTable';
 import { Chip, Tooltip, Typography } from '@mui/material';
 
-export default function TenantList({ tenants, onDelete, onEdit, onImpersonate, onRowSave, rowMenuActions }) {
+export default function TenantList({ tenants, onDelete, onEdit, onImpersonate, onRowSave, rowMenuActions = [] }) {
     const columns = React.useMemo(
         () => [
             { accessorKey: 'id', header: 'ID' },
@@ -44,7 +44,7 @@ export default function TenantList({ tenants, onDelete, onEdit, onImpersonate, o
             columns={columns}
             data={tenants}
             onEdit={onEdit}
-            onDelete={(row) => onDelete(row.id)}
+            onDelete={onDelete}
             onImpersonate={onImpersonate}
             onRowSave={onRowSave}
             rowMenuActions={rowMenuActions}
@@ -52,9 +52,3 @@ export default function TenantList({ tenants, onDelete, onEdit, onImpersonate, o
         />
     );
 }
-
-TenantList.defaultProps = {
-    onEdit: () => {},
-    onImpersonate: () => {},
-    rowMenuActions: [],
-};
