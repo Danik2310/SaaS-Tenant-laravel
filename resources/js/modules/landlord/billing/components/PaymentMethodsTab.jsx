@@ -109,8 +109,8 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                     control={
                         <Switch
                             checked={cell.getValue()}
-                            onChange={() => handleToggleActive(row.original)}
-                            disabled={toggling === row.original.id}
+                            onChange={() => handleToggleActive(row)}
+                            disabled={toggling === row.id}
                             size="small"
                             sx={{
                                 '& .MuiSwitch-switchBase.Mui-checked': {
