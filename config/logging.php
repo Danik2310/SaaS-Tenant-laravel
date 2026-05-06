@@ -128,10 +128,15 @@ return [
         ],
 
         'payment_methods' => [
-            'driver' => 'daily',
-            'path' => storage_path('logs/payment_methods.log'),
+            'driver' => 'monolog',
             'level' => env('PAYMENT_METHODS_LOG_LEVEL', 'info'),
-            'days' => 30, // Keep logs for 30 days for audit purposes
+            'handler' => Monolog\Handler\StreamHandler::class,
+            'formatter' => Monolog\Formatter\LineFormatter::class,
+            'with' => [
+                'stream' => storage_path('logs/payment_methods.log'),
+                'level' => \Monolog\Level::Info,
+                'bubble' => false, // Don't bubble to other handlers (like stderr)
+            ],
             'replace_placeholders' => true,
         ],
     ],

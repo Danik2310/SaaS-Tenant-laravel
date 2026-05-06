@@ -27,7 +27,9 @@ class PaymentMethodController extends Controller
     public function index()
     {
         // Discard any stray output (e.g., from log handlers writing to stderr)
-        if (ob_get_level()) ob_end_clean();
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
 
         $methods = PaymentMethod::all();
 
@@ -35,7 +37,7 @@ class PaymentMethodController extends Controller
         try {
             $this->logPaymentMethodAccessed(null, 'list');
         } catch (\Exception $e) {
-            Log::error('Failed to log payment method access: ' . $e->getMessage());
+            \Log::error('Failed to log payment method access: ' . $e->getMessage());
         }
 
         return response()->json(['methods' => $methods]);

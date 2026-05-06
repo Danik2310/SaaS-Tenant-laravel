@@ -116,6 +116,7 @@ trait AuditablePaymentMethods
             $logData['user_agent'] = request()->userAgent();
         }
 
+        // Use a dedicated channel that writes only to file, never to stderr
         Log::channel('payment_methods')->info('Payment method accessed', $logData);
     }
 
