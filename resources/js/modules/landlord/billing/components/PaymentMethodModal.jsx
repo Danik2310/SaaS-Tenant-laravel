@@ -1,26 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    TextField,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
-    FormControlLabel,
-    Switch,
-    CircularProgress,
-    Typography,
-    InputAdornment,
-    IconButton,
-} from '@mui/material';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import { toast } from 'sonner';
 import api from '../../../../services/api';
+import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, SelectInput, CheckboxInput } from '@/components/FormElements';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 export default function PaymentMethodModal({ open, onClose, editingPayment, fetchPaymentMethods, setError }) {
     const [form, setForm] = useState({ name: '', provider: '', api_key: '', secret_key: '', mode: 'test', active: true });
@@ -47,69 +30,37 @@ export default function PaymentMethodModal({ open, onClose, editingPayment, fetc
         }
     }, [editingPayment, open]);
 
-    const handleToggleApiKeyVisibility = () => {
-        setShowApiKey((prev) => !prev);
-    };
-
-    const handleToggleSecretKeyVisibility = () => {
-        setShowSecretKey((prev) => !prev);
-    };
-
     const handleSave = async () => {
-        // Reset field errors
         setFieldErrors({});
 
-        // Validación básica
         const errors = {};
 
-        // Name validation
         if (!form.name || form.name.trim().length === 0) {
             errors.name = 'Name is required';
         } else if (form.name.trim().length < 3) {
             errors.name = 'Name must be at least 3 characters';
-        } else if (form.name.length > 255) {
-            errors.name = 'Name must be less than 255 characters';
         }
 
-        // Provider validation
         if (!form.provider) {
             errors.provider = 'Provider is required';
-        } else if (!['stripe', 'paypal', 'other'].includes(form.provider)) {
-            errors.provider = 'Invalid provider selected';
         }
 
-        // API Key validation
         if (!form.api_key || form.api_key.trim().length === 0) {
             errors.api_key = 'API Key is required';
         } else if (form.api_key.length < 10) {
             errors.api_key = 'API Key must be at least 10 characters';
-        } else {
-            // Provider-specific validation
-            if (form.provider === 'stripe' && !form.api_key.startsWith('pk_')) {
-                errors.api_key = 'Stripe API keys should start with "pk_"';
-            } else if (form.provider === 'paypal' && !form.api_key.startsWith('A')) {
-                errors.api_key = 'PayPal API keys typically start with "A"';
-            }
         }
 
-        // Secret Key validation
         if (!form.secret_key || form.secret_key.trim().length === 0) {
             errors.secret_key = 'Secret Key is required';
         } else if (form.secret_key.length < 10) {
             errors.secret_key = 'Secret Key must be at least 10 characters';
-        } else {
-            // Provider-specific validation
-            if (form.provider === 'stripe' && !form.secret_key.startsWith('sk_')) {
-                errors.secret_key = 'Stripe secret keys should start with "sk_"';
-            }
         }
 
-        // Mode validation
         if (!form.mode || !['test', 'live'].includes(form.mode)) {
             errors.mode = 'Invalid mode selected';
         }
 
-        // Check if there are any errors
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors);
             setError('Please fix the validation errors below');
@@ -127,15 +78,14 @@ export default function PaymentMethodModal({ open, onClose, editingPayment, fetc
             }
             onClose();
             fetchPaymentMethods();
-            setError(null); // Clear any previous errors
+            setError(null);
         } catch (err) {
             const errorResponse = err.response?.data;
             if (errorResponse?.errors) {
-                // Handle validation errors from backend
                 setFieldErrors(errorResponse.errors);
                 setError('Please fix the validation errors below');
             } else {
-                const errorMessage = errorResponse?.message || errorResponse?.error || 'Failed to save payment method. Please check your permissions.';
+                const errorMessage = errorResponse?.message || errorResponse?.error || 'Failed to save payment method.';
                 toast.error(errorMessage);
                 setError(errorMessage);
             }
@@ -144,116 +94,119 @@ export default function PaymentMethodModal({ open, onClose, editingPayment, fetc
         }
     };
 
+    if (!open) return null;
+
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle>{editingPayment ? 'Edit Payment Method' : 'Add Payment Method'}</DialogTitle>
-            <DialogContent>
-                <TextField
-                    fullWidth
-                    label="Name"
+        <FormCard
+            title={editingPayment ? 'Edit Payment Method' : 'Add Payment Method'}
+            subtitle="Configure payment gateway credentials and settings"
+            onClose={onClose}
+        >
+            <FormInput label="Name" required error={fieldErrors.name}>
+                <input
+                    type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    sx={{ mb: 2 }}
-                    error={!!fieldErrors.name}
-                    helperText={fieldErrors.name}
-                    required
+                    placeholder="e.g., Stripe Production"
                 />
-                <FormControl fullWidth sx={{ mb: 2 }} error={!!fieldErrors.provider}>
-                    <InputLabel>Provider</InputLabel>
-                    <Select
-                        value={form.provider}
-                        onChange={(e) => setForm({ ...form, provider: e.target.value })}
+            </FormInput>
+
+            <FormInput label="Provider" required error={fieldErrors.provider}>
+                <SelectInput
+                    value={form.provider}
+                    onChange={(e) => setForm({ ...form, provider: e.target.value })}
+                >
+                    <option value="">Select a provider...</option>
+                    <option value="stripe">Stripe</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="other">Other</option>
+                </SelectInput>
+            </FormInput>
+
+            <FormInput label="API Key" required error={fieldErrors.api_key} hint="Public key (starts with pk_ for Stripe)">
+                <div style={{ position: 'relative' }}>
+                    <input
+                        type={showApiKey ? 'text' : 'password'}
+                        value={form.api_key}
+                        onChange={(e) => setForm({ ...form, api_key: e.target.value })}
+                        placeholder="pk_test_..."
+                        style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                            padding: '4px',
+                        }}
                     >
-                        <MenuItem value="stripe">Stripe</MenuItem>
-                        <MenuItem value="paypal">PayPal</MenuItem>
-                        <MenuItem value="other">Other</MenuItem>
-                    </Select>
-                    {fieldErrors.provider && (
-                        <Typography variant="caption" color="error" sx={{ mt: 1, ml: 2 }}>
-                            {fieldErrors.provider}
-                        </Typography>
-                    )}
-                </FormControl>
-                <TextField
-                    fullWidth
-                    label="API Key"
-                    value={form.api_key}
-                    onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-                    sx={{ mb: 2 }}
-                    error={!!fieldErrors.api_key}
-                    helperText={fieldErrors.api_key}
-                    required
-                    type={showApiKey ? 'text' : 'password'}
-                    InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
-                                    onClick={handleToggleApiKeyVisibility}
-                                    edge="end"
-                                >
-                                    {showApiKey ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                            </InputAdornment>
-                        ),
-                    }}
-                />
-                <TextField
-                    fullWidth
-                    label="Secret Key"
-                    value={form.secret_key}
-                    onChange={(e) => setForm({ ...form, secret_key: e.target.value })}
-                    sx={{ mb: 2 }}
-                    error={!!fieldErrors.secret_key}
-                    helperText={fieldErrors.secret_key}
-                    required
-                    type={showSecretKey ? 'text' : 'password'}
-                    InputProps={{
-                        endAdornment: (
-                            <InputAdornment position="end">
-                                <IconButton
-                                    aria-label={showSecretKey ? 'Hide secret key' : 'Show secret key'}
-                                    onClick={handleToggleSecretKeyVisibility}
-                                    edge="end"
-                                >
-                                    {showSecretKey ? <VisibilityOff /> : <Visibility />}
-                                </IconButton>
-                            </InputAdornment>
-                        ),
-                    }}
-                />
-                <FormControl fullWidth error={!!fieldErrors.mode}>
-                    <InputLabel>Mode</InputLabel>
-                    <Select
-                        value={form.mode}
-                        onChange={(e) => setForm({ ...form, mode: e.target.value })}
+                        {showApiKey ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                    </button>
+                </div>
+            </FormInput>
+
+            <FormInput label="Secret Key" required error={fieldErrors.secret_key} hint="Private key (starts with sk_ for Stripe)">
+                <div style={{ position: 'relative' }}>
+                    <input
+                        type={showSecretKey ? 'text' : 'password'}
+                        value={form.secret_key}
+                        onChange={(e) => setForm({ ...form, secret_key: e.target.value })}
+                        placeholder="sk_test_..."
+                        style={{ paddingRight: '40px' }}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowSecretKey(!showSecretKey)}
+                        style={{
+                            position: 'absolute',
+                            right: '8px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                            padding: '4px',
+                        }}
                     >
-                        <MenuItem value="test">Test</MenuItem>
-                        <MenuItem value="live">Live</MenuItem>
-                    </Select>
-                    {fieldErrors.mode && (
-                        <Typography variant="caption" color="error" sx={{ mt: 1, ml: 2 }}>
-                            {fieldErrors.mode}
-                        </Typography>
-                    )}
-                </FormControl>
-                <FormControlLabel
-                    control={
-                        <Switch
-                            checked={form.active}
-                            onChange={(e) => setForm({ ...form, active: e.target.checked })}
-                        />
-                    }
-                    label="Active"
-                    sx={{ mt: 2 }}
+                        {showSecretKey ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                    </button>
+                </div>
+            </FormInput>
+
+            <FormInput label="Mode" required error={fieldErrors.mode}>
+                <SelectInput
+                    value={form.mode}
+                    onChange={(e) => setForm({ ...form, mode: e.target.value })}
+                >
+                    <option value="test">Test (Sandbox)</option>
+                    <option value="live">Live (Production)</option>
+                </SelectInput>
+            </FormInput>
+
+            <FormInput label="Status">
+                <CheckboxInput
+                    label="Active - Enable this payment method for tenants"
+                    checked={form.active}
+                    onChange={(e) => setForm({ ...form, active: e.target.checked })}
                 />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={onClose} disabled={loading}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained" disabled={loading}>
-                    {loading ? <CircularProgress size={20} /> : 'Save'}
-                </Button>
-            </DialogActions>
-        </Dialog>
+            </FormInput>
+
+            <FormActions>
+                <ButtonSecondary onClick={onClose} disabled={loading}>
+                    Cancel
+                </ButtonSecondary>
+                <ButtonPrimary onClick={handleSave} disabled={loading}>
+                    {loading ? 'Saving...' : (editingPayment ? 'Update' : 'Create')}
+                </ButtonPrimary>
+            </FormActions>
+        </FormCard>
     );
 }
