@@ -11,15 +11,32 @@ use Illuminate\Support\Facades\Log;
 class PaymentMethodController extends Controller
 {
     use AuditablePaymentMethods;
+
+    protected $fillable = [
+        'name',
+        'provider',
+        'api_key',
+        'secret_key',
+        'mode',
+        'active',
+    ];
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
+        // Discard any stray output (e.g., from log handlers writing to stderr)
+        if (ob_get_level()) ob_end_clean();
+
         $methods = PaymentMethod::all();
 
         // Log access to payment methods list
-        $this->logPaymentMethodAccessed(null, 'list');
+        try {
+            $this->logPaymentMethodAccessed(null, 'list');
+        } catch (\Exception $e) {
+            Log::error('Failed to log payment method access: ' . $e->getMessage());
+        }
 
         return response()->json(['methods' => $methods]);
     }
@@ -64,7 +81,8 @@ class PaymentMethodController extends Controller
         // Log access to specific payment method
         $this->logPaymentMethodAccessed($method, 'view');
 
-        return response()->json(['method' => $method->makeVisible(['api_key', 'secret_key'])]);
+        // Return method without exposing api_key and secret_key
+        return response()->json(['method' => $method]);
     }
 
     /**
@@ -126,5 +144,20 @@ class PaymentMethodController extends Controller
         $this->logPaymentMethodToggled($method, $oldActive);
 
         return response()->json(['method' => $method]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        $method = PaymentMethod::findOrFail($id);
+
+        // Log the deletion before deleting
+        $this->logPaymentMethodDeleted($method);
+
+        $method->delete();
+
+        return response()->json(['message' => 'Payment method deleted successfully']);
     }
 }
