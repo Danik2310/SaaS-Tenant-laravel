@@ -29,7 +29,7 @@ class Handler extends ExceptionHandler
             //
         });
 
-        $this->render(function (AuthorizationException $e, $request) {
+        $this->renderable(function (AuthorizationException $e, $request) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => $e->getMessage() ?: 'This action is unauthorized.',
