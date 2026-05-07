@@ -12,6 +12,48 @@ import { FormInput, ButtonPrimary, ButtonSecondary, FormActions, SelectInput, Ch
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
+function ToggleInputWithButton({ type, value, onChange, placeholder, show, onToggle, ariaLabel, style, onFocus, onBlur }) {
+    return (
+        <div style={{ position: 'relative' }}>
+            <input
+                type={type}
+                value={value}
+                onChange={onChange}
+                placeholder={placeholder}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                style={{
+                    width: '100%',
+                    paddingRight: '40px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    outline: 'none',
+                    font: 'inherit',
+                    ...style,
+                }}
+            />
+            <button
+                type="button"
+                onClick={onToggle}
+                aria-label={ariaLabel}
+                style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    padding: '4px',
+                }}
+            >
+                {show ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+            </button>
+        </div>
+    );
+}
+
 export default function PaymentMethodModal({ open, onClose, editingPayment, fetchPaymentMethods, setError }) {
     const [form, setForm] = useState({ name: '', provider: '', api_key: '', secret_key: '', mode: 'test', active: true });
     const [loading, setLoading] = useState(false);
@@ -129,61 +171,27 @@ export default function PaymentMethodModal({ open, onClose, editingPayment, fetc
                 </FormInput>
 
                 <FormInput label="API Key" required error={fieldErrors.api_key} hint="Public key (starts with pk_ for Stripe)">
-                    <div style={{ position: 'relative' }}>
-                        <input
-                            type={showApiKey ? 'text' : 'password'}
-                            value={form.api_key}
-                            onChange={(e) => setForm({ ...form, api_key: e.target.value })}
-                            placeholder="pk_test_..."
-                            style={{ paddingRight: '40px' }}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowApiKey(!showApiKey)}
-                            style={{
-                                position: 'absolute',
-                                right: '8px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#64748b',
-                                padding: '4px',
-                            }}
-                        >
-                            {showApiKey ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-                        </button>
-                    </div>
+                    <ToggleInputWithButton
+                        type={showApiKey ? 'text' : 'password'}
+                        value={form.api_key}
+                        onChange={(e) => setForm({ ...form, api_key: e.target.value })}
+                        placeholder="pk_test_..."
+                        show={showApiKey}
+                        onToggle={() => setShowApiKey(!showApiKey)}
+                        ariaLabel={showApiKey ? 'Ocultar clave API' : 'Mostrar clave API'}
+                    />
                 </FormInput>
 
                 <FormInput label="Secret Key" required error={fieldErrors.secret_key} hint="Private key (starts with sk_ for Stripe)">
-                    <div style={{ position: 'relative' }}>
-                        <input
-                            type={showSecretKey ? 'text' : 'password'}
-                            value={form.secret_key}
-                            onChange={(e) => setForm({ ...form, secret_key: e.target.value })}
-                            placeholder="sk_test_..."
-                            style={{ paddingRight: '40px' }}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowSecretKey(!showSecretKey)}
-                            style={{
-                                position: 'absolute',
-                                right: '8px',
-                                top: '50%',
-                                transform: 'translateY(-50%)',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#64748b',
-                                padding: '4px',
-                            }}
-                        >
-                            {showSecretKey ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-                        </button>
-                    </div>
+                    <ToggleInputWithButton
+                        type={showSecretKey ? 'text' : 'password'}
+                        value={form.secret_key}
+                        onChange={(e) => setForm({ ...form, secret_key: e.target.value })}
+                        placeholder="sk_test_..."
+                        show={showSecretKey}
+                        onToggle={() => setShowSecretKey(!showSecretKey)}
+                        ariaLabel={showSecretKey ? 'Ocultar clave secreta' : 'Mostrar clave secreta'}
+                    />
                 </FormInput>
 
                 <FormInput label="Mode" required error={fieldErrors.mode}>
