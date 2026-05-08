@@ -1,8 +1,8 @@
 import React from 'react';
 import DataTable from '@/components/DataTable';
-import { Chip, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Typography, Chip, Tooltip } from '@mui/material';
 
-export default function TenantList({ tenants, onDelete, onEdit, onImpersonate, onRowSave, rowMenuActions = [] }) {
+export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImpersonate, onRowSave, rowMenuActions = [] }) {
     const columns = React.useMemo(
         () => [
             { accessorKey: 'id', header: 'ID' },
@@ -40,15 +40,36 @@ export default function TenantList({ tenants, onDelete, onEdit, onImpersonate, o
     );
 
     return (
-        <DataTable
-            columns={columns}
-            data={tenants}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onImpersonate={onImpersonate}
-            onRowSave={onRowSave}
-            rowMenuActions={rowMenuActions}
-            emptyMessage="No tenants found. Create one to get started."
-        />
+        <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                    Tenant Management
+                </Typography>
+                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={onAdd}
+                    sx={{
+                        bgcolor: '#22c55e',
+                        '&:hover': { bgcolor: '#16a34a' },
+                        fontWeight: 600,
+                        fontSize: '13px',
+                    }}
+                >
+                    + New Tenant
+                </Button>
+            </Box>
+
+            <DataTable
+                columns={columns}
+                data={tenants}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onImpersonate={onImpersonate}
+                onRowSave={onRowSave}
+                rowMenuActions={rowMenuActions}
+                emptyMessage="No tenants found. Create one to get started."
+            />
+        </Box>
     );
 }

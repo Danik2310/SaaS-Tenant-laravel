@@ -43,7 +43,17 @@ import {
 const COLORS = ['#22c55e', '#ef4444'];
 
 const StatCard = ({ title, value, icon, color, subtitle }) => (
-    <Card sx={{ height: '100%', boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)' }}>
+    <Card sx={{
+        height: '100%',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        borderLeft: `4px solid ${color}`,
+        borderRadius: '8px',
+        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+        '&:hover': {
+            boxShadow: `0 8px 25px -5px ${color}33, 0 4px 10px -4px ${color}22`,
+            transform: 'translateY(-2px)',
+        },
+    }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 3 }}>
             <Avatar sx={{ bgcolor: `${color}15`, color, width: 48, height: 48 }}>
                 {icon}
@@ -191,8 +201,14 @@ export default function DashboardOverview() {
 
             <Grid container spacing={3} sx={{ mb: 4 }}>
                 <Grid item xs={12} lg={8}>
-                    <Paper sx={{ p: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: '#0f172a' }}>
+                    <Paper sx={{
+                        p: 3,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                        borderTop: '3px solid #3b82f6',
+                        borderRadius: '8px',
+                    }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#3b82f6' }} />
                             Tenant Growth
                         </Typography>
                         {tenantsByMonth.length === 0 ? (
@@ -235,8 +251,15 @@ export default function DashboardOverview() {
                     </Paper>
                 </Grid>
                 <Grid item xs={12} lg={4}>
-                    <Paper sx={{ p: 3, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', height: '100%' }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: '#0f172a' }}>
+                    <Paper sx={{
+                        p: 3,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                        borderTop: '3px solid #22c55e',
+                        borderRadius: '8px',
+                        height: '100%',
+                    }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#22c55e' }} />
                             Tenant Status
                         </Typography>
                         {statusDistribution.every((s) => s.value === 0) ? (
@@ -282,20 +305,26 @@ export default function DashboardOverview() {
                 </Grid>
             </Grid>
 
-            <Paper sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <Paper sx={{
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                borderTop: '3px solid #8b5cf6',
+                borderRadius: '8px',
+                overflow: 'hidden',
+            }}>
                 <Box sx={{ p: 3, pb: 1 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#8b5cf6' }} />
                         Recent Tenants
                     </Typography>
                 </Box>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
-                            <TableRow sx={{ borderBottom: '1px solid #f1f5f9' }}>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Name</TableCell>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Domain</TableCell>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Status</TableCell>
-                                <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>Created</TableCell>
+                            <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Name</TableCell>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Domain</TableCell>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</TableCell>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Created</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -307,10 +336,17 @@ export default function DashboardOverview() {
                                 </TableRow>
                             ) : (
                                 paginatedTenants.map((tenant) => (
-                                    <TableRow key={tenant.domain} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                        <TableCell sx={{ fontWeight: 600 }}>{tenant.name}</TableCell>
+                                    <TableRow
+                                        key={tenant.domain}
+                                        sx={{
+                                            '&:last-child td, &:last-child th': { border: 0 },
+                                            transition: 'background-color 0.15s ease',
+                                            '&:hover': { bgcolor: '#f8fafc' },
+                                        }}
+                                    >
+                                        <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{tenant.name}</TableCell>
                                         <TableCell>
-                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13 }}>
+                                            <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 12, color: '#475569' }}>
                                                 {tenant.domain}
                                             </Typography>
                                         </TableCell>
@@ -322,10 +358,12 @@ export default function DashboardOverview() {
                                                     bgcolor: tenant.status === 'Active' ? '#dcfce7' : '#fee2e2',
                                                     color: tenant.status === 'Active' ? '#166534' : '#991b1b',
                                                     fontWeight: 600,
+                                                    height: 24,
+                                                    fontSize: 12,
                                                 }}
                                             />
                                         </TableCell>
-                                        <TableCell sx={{ color: 'text.secondary', fontSize: 13 }}>
+                                        <TableCell sx={{ color: '#64748b', fontSize: 13 }}>
                                             {tenant.created_at}
                                         </TableCell>
                                     </TableRow>
@@ -341,7 +379,7 @@ export default function DashboardOverview() {
                     onPageChange={handleChangePage}
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5]}
-                    sx={{ borderTop: '1px solid #f1f5f9' }}
+                    sx={{ borderTop: '1px solid #f1f5f9', bgcolor: '#fafafa' }}
                 />
             </Paper>
         </Box>

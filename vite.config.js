@@ -8,9 +8,7 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
-                // main Inertia React entry (no app.js anymore, we use app.jsx)
                 'resources/js/app.jsx',
-                // include the admin bundle so it is built and watched
                 'resources/js/landlord/app.jsx',
             ],
             refresh: true,
@@ -18,7 +16,18 @@ export default defineConfig({
     ],
     server: {
         port: 5174,
-        strictPort: true, // fail if the port is already taken so we notice conflicts
+        strictPort: true,
+    },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react':  ['react', 'react-dom', '@inertiajs/react'],
+                    'vendor-mui':    ['@mui/material', '@mui/icons-material'],
+                    'vendor-utils':  ['axios'],
+                },
+            },
+        },
     },
     test: {
         globals: true,

@@ -192,26 +192,6 @@ export default function Dashboard({ user, setUser }) {
                             {user?.name}
                         </p>
                     </div>
-                    {view === 'tenants' && !showForm && !editingTenant && (
-                        <button
-                            onClick={() => setShowForm(true)}
-                            style={{
-                                padding: '8px 20px',
-                                background: '#2563eb',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                            }}
-                        >
-                            + New Tenant
-                        </button>
-                    )}
                     {(showForm || editingTenant) && (
                         <button
                             onClick={() => { setEditingTenant(null); setShowForm(false); }}
@@ -280,6 +260,7 @@ export default function Dashboard({ user, setUser }) {
                         {view === 'tenants' && !showForm && !editingTenant && (
                             <TenantList
                                 tenants={tenants}
+                                onAdd={() => setShowForm(true)}
                                 onDelete={handleDeleteTenant}
                                 onEdit={handleEditTenant}
                                 onImpersonate={handleImpersonateTenant}
