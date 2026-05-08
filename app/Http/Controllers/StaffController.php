@@ -2,78 +2,41 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Admin\AssignPermissionsRequest;
+use App\Http\Requests\Admin\AssignRolesRequest;
+use App\Http\Requests\Admin\StoreStaffRequest;
+use App\Http\Requests\Admin\UpdateStaffRequest;
+use App\Http\Resources\StaffResource;
 use App\Models\AdminUser;
 use App\Models\Role;
 use App\Models\Permission;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
 
 class StaffController extends Controller
 {
-    /**
-     * Obtener lista de todos los staff.
-     */
     public function index()
     {
-        try {
-            // eager load direct permissions and role permissions to prevent duplicate queries
-            $staff = AdminUser::with(['roles.permissions', 'permissions'])
-                ->get()
-                ->map(function ($admin) {
-                    $roleNames = $admin->roles->pluck('name')->toArray();
+        $staff = AdminUser::with(['roles.permissions', 'permissions'])->paginate(25);
 
-                    $directPerms = $admin->permissions;
-                    $rolePerms = $admin->roles
-                        ->flatMap(fn($role) => $role->permissions);
-
-                    $allPerms = $directPerms->merge($rolePerms)->unique('id');
-
-                    return [
-                        'id' => $admin->id,
-                        'name' => $admin->name,
-                        'email' => $admin->email,
-                        'is_active' => $admin->is_active,
-                        'roles' => $roleNames,
-                        'permissions_count' => $allPerms->count(),
-                        'permissions' => $allPerms->pluck('name')->toArray(),
-                        'created_at' => $admin->created_at,
-                        'updated_at' => $admin->updated_at,
-                    ];
-                });
-
-            return response()->json([
-                'staff' => $staff,
-                'total' => $staff->count(),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch staff: ' . $e->getMessage()], 500);
-        }
+        return response()->json([
+            'staff' => StaffResource::collection($staff->items()),
+            'total' => $staff->total(),
+            'meta' => [
+                'current_page' => $staff->currentPage(),
+                'last_page' => $staff->lastPage(),
+                'per_page' => $staff->perPage(),
+                'total' => $staff->total(),
+            ],
+        ]);
     }
 
-    /**
-     * Obtener detalles de un usuario staff específico.
-     */
-    public function show($id)
+    public function show(string $id)
     {
         try {
             $admin = AdminUser::with('roles.permissions')->findOrFail($id);
 
             return response()->json([
-                'staff' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'email' => $admin->email,
-                    'is_active' => $admin->is_active,
-                    'roles' => $admin->roles->map(fn($role) => [
-                        'id' => $role->id,
-                        'name' => $role->name,
-                        'permissions' => $role->permissions->pluck('id')->toArray(),
-                    ])->toArray(),
-                    'direct_permissions' => $admin->permissions->pluck('id')->toArray(),
-                    'created_at' => $admin->created_at,
-                    'updated_at' => $admin->updated_at,
-                ],
+                'staff' => new StaffResource($admin),
                 'available_roles' => Role::with('permissions')
                     ->where('guard_name', 'admin')
                     ->get()
@@ -94,310 +57,171 @@ class StaffController extends Controller
         }
     }
 
-    /**
-     * Crear nuevo usuario staff.
-     */
-    public function store(Request $request)
+    public function store(StoreStaffRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:admin_users,email',
-            'password' => ['required', Password::min(8)->mixedCase()->numbers()->symbols()],
-            'roles' => 'sometimes|array',
-            'roles.*' => 'exists:roles,id',
-            'direct_permissions' => 'sometimes|array',
-            'direct_permissions.*' => 'exists:permissions,id',
-            'is_active' => 'sometimes|boolean',
+        $admin = AdminUser::create([
+            'name' => $request->validated('name'),
+            'email' => $request->validated('email'),
+            'password' => Hash::make($request->validated('password')),
+            'is_active' => $request->validated('is_active', true),
         ]);
 
-        try {
-            $admin = AdminUser::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'password' => Hash::make($validated['password']),
-                'is_active' => $validated['is_active'] ?? true,
-            ]);
-
-            // Asignar roles
-            if (!empty($validated['roles'])) {
-                $roleIds = $validated['roles'];
-                $roles = Role::whereIn('id', $roleIds)->get();
-                $admin->syncRoles($roles);
-            }
-
-            // Asignar permisos directos
-            if (!empty($validated['direct_permissions'])) {
-                $permissionIds = $validated['direct_permissions'];
-                $permissions = Permission::whereIn('id', $permissionIds)->get();
-                $admin->syncPermissions($permissions);
-            }
-
-            return response()->json([
-                'message' => 'Staff member created successfully',
-                'staff' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'email' => $admin->email,
-                    'is_active' => $admin->is_active,
-                    'roles' => $admin->roles->pluck('name')->toArray(),
-                ]
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to create staff: ' . $e->getMessage()], 500);
+        if (!empty($request->validated('roles'))) {
+            $roles = Role::whereIn('id', $request->validated('roles'))->get();
+            $admin->syncRoles($roles);
         }
+
+        if (!empty($request->validated('direct_permissions'))) {
+            $permissions = Permission::whereIn('id', $request->validated('direct_permissions'))->get();
+            $admin->syncPermissions($permissions);
+        }
+
+        return response()->json([
+            'message' => 'Staff member created successfully',
+            'staff' => new StaffResource($admin),
+        ], 201);
     }
 
-    /**
-     * Actualizar usuario staff.
-     */
-    public function update(Request $request, $id)
+    public function update(UpdateStaffRequest $request, string $id)
     {
         $admin = AdminUser::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:admin_users,email,' . $id,
-            'password' => ['sometimes', Password::min(8)->mixedCase()->numbers()->symbols()],
-            'roles' => 'sometimes|array',
-            'roles.*' => 'exists:roles,id',
-            'direct_permissions' => 'sometimes|array',
-            'direct_permissions.*' => 'exists:permissions,id',
-            'is_active' => 'sometimes|boolean',
+        if ($name = $request->validated('name')) {
+            $admin->name = $name;
+        }
+        if ($email = $request->validated('email')) {
+            $admin->email = $email;
+        }
+        if ($password = $request->validated('password')) {
+            $admin->password = Hash::make($password);
+        }
+        if (isset($request->validated()['is_active'])) {
+            $admin->is_active = $request->validated('is_active');
+        }
+
+        $admin->save();
+
+        if (isset($request->validated()['roles'])) {
+            $roles = Role::whereIn('id', $request->validated('roles'))->get();
+            $admin->syncRoles($roles);
+        }
+
+        if (isset($request->validated()['direct_permissions'])) {
+            $permissions = Permission::whereIn('id', $request->validated('direct_permissions'))->get();
+            $admin->syncPermissions($permissions);
+        }
+
+        return response()->json([
+            'message' => 'Staff member updated successfully',
+            'staff' => new StaffResource($admin),
         ]);
-
-        try {
-            // Actualizar datos básicos
-            if (isset($validated['name'])) {
-                $admin->name = $validated['name'];
-            }
-            if (isset($validated['email'])) {
-                $admin->email = $validated['email'];
-            }
-            if (isset($validated['password'])) {
-                $admin->password = Hash::make($validated['password']);
-            }
-            if (isset($validated['is_active'])) {
-                $admin->is_active = $validated['is_active'];
-            }
-
-            $admin->save();
-
-            // Actualizar roles
-            if (isset($validated['roles'])) {
-                $roleIds = $validated['roles'];
-                $roles = Role::whereIn('id', $roleIds)->get();
-                $admin->syncRoles($roles);
-            }
-
-            // Actualizar permisos directos
-            if (isset($validated['direct_permissions'])) {
-                $permissionIds = $validated['direct_permissions'];
-                $permissions = Permission::whereIn('id', $permissionIds)->get();
-                $admin->syncPermissions($permissions);
-            }
-
-            return response()->json([
-                'message' => 'Staff member updated successfully',
-                'staff' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'email' => $admin->email,
-                    'is_active' => $admin->is_active,
-                    'roles' => $admin->roles->pluck('name')->toArray(),
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to update staff: ' . $e->getMessage()], 500);
-        }
     }
 
-    /**
-     * Eliminar (soft delete) usuario staff.
-     */
-    public function destroy($id)
+    public function destroy(string $id)
     {
-        try {
-            $admin = AdminUser::findOrFail($id);
+        $admin = AdminUser::findOrFail($id);
 
-            // Prevenir que se eliminen a sí mismos
-            if (auth('admin')->id() === (int)$id) {
-                return response()->json(['error' => 'Cannot delete your own account'], 422);
-            }
-
-            $admin->delete();
-
-            return response()->json([
-                'message' => 'Staff member deleted successfully'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to delete staff: ' . $e->getMessage()], 500);
+        if (auth('admin')->id() === (int)$id) {
+            return response()->json(['error' => 'Cannot delete your own account'], 422);
         }
+
+        $admin->delete();
+
+        return response()->json(['message' => 'Staff member deleted successfully']);
     }
 
-    /**
-     * Restaurar usuario staff eliminado.
-     */
-    public function restore($id)
+    public function restore(string $id)
     {
-        try {
-            $admin = AdminUser::withTrashed()->findOrFail($id);
-            $admin->restore();
+        $admin = AdminUser::withTrashed()->findOrFail($id);
+        $admin->restore();
 
-            return response()->json([
-                'message' => 'Staff member restored successfully',
-                'staff' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'email' => $admin->email,
-                    'is_active' => $admin->is_active,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to restore staff: ' . $e->getMessage()], 500);
-        }
+        return response()->json([
+            'message' => 'Staff member restored successfully',
+            'staff' => new StaffResource($admin),
+        ]);
     }
 
-    /**
-     * Obtener todos los roles disponibles.
-     */
     public function getRoles()
     {
-        try {
-            $roles = Role::with('permissions')
-                ->where('guard_name', 'admin')
-                ->active()
-                ->get()
-                ->map(fn($role) => [
-                    'id' => $role->id,
-                    'name' => $role->name,
-                    'description' => $role->description,
-                    'permissions_count' => $role->permissions->count(),
-                    'permissions' => $role->permissions->map(fn($perm) => [
-                        'id' => $perm->id,
-                        'name' => $perm->name,
-                        'description' => $perm->description,
-                        'module' => $perm->module,
-                    ])->toArray(),
-                ]);
-
-            return response()->json([
-                'roles' => $roles,
-                'total' => $roles->count(),
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch roles: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Obtener todos los permisos disponibles.
-     */
-    public function getPermissions()
-    {
-        try {
-            $permissions = Permission::where('guard_name', 'admin')
-                ->active()
-                ->orderBy('module')
-                ->get()
-                ->map(fn($perm) => [
+        $roles = Role::with('permissions')
+            ->where('guard_name', 'admin')
+            ->active()
+            ->get()
+            ->map(fn($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'description' => $role->description,
+                'permissions_count' => $role->permissions->count(),
+                'permissions' => $role->permissions->map(fn($perm) => [
                     'id' => $perm->id,
                     'name' => $perm->name,
                     'description' => $perm->description,
-                    'module' => $perm->module ?? 'General',
-                ]);
-
-            return response()->json([
-                'permissions' => $permissions,
-                'total' => $permissions->count(),
+                    'module' => $perm->module,
+                ])->toArray(),
             ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch permissions: ' . $e->getMessage()], 500);
-        }
+
+        return response()->json([
+            'roles' => $roles,
+            'total' => $roles->count(),
+        ]);
     }
 
-    /**
-     * Asignar roles a un usuario.
-     */
-    public function assignRoles(Request $request, $id)
+    public function getPermissions()
+    {
+        $permissions = Permission::where('guard_name', 'admin')
+            ->active()
+            ->orderBy('module')
+            ->get()
+            ->map(fn($perm) => [
+                'id' => $perm->id,
+                'name' => $perm->name,
+                'description' => $perm->description,
+                'module' => $perm->module ?? 'General',
+            ]);
+
+        return response()->json([
+            'permissions' => $permissions,
+            'total' => $permissions->count(),
+        ]);
+    }
+
+    public function assignRoles(AssignRolesRequest $request, string $id)
+    {
+        $admin = AdminUser::findOrFail($id);
+        $roles = Role::whereIn('id', $request->validated('role_ids'))->get();
+        $admin->syncRoles($roles);
+
+        return response()->json([
+            'message' => 'Roles assigned successfully',
+            'staff' => new StaffResource($admin),
+        ]);
+    }
+
+    public function assignPermissions(AssignPermissionsRequest $request, string $id)
+    {
+        $admin = AdminUser::findOrFail($id);
+        $admin->syncPermissions($request->validated('permission_ids'));
+
+        return response()->json([
+            'message' => 'Permissions assigned successfully',
+            'staff' => new StaffResource($admin),
+        ]);
+    }
+
+    public function toggleStatus(string $id)
     {
         $admin = AdminUser::findOrFail($id);
 
-        $validated = $request->validate([
-            'role_ids' => 'required|array',
-            'role_ids.*' => 'exists:roles,id',
+        if (auth('admin')->id() === (int)$id) {
+            return response()->json(['error' => 'Cannot deactivate your own account'], 422);
+        }
+
+        $admin->is_active = !$admin->is_active;
+        $admin->save();
+
+        return response()->json([
+            'message' => 'Staff status updated successfully',
+            'staff' => new StaffResource($admin),
         ]);
-
-        try {
-            $roles = Role::whereIn('id', $validated['role_ids'])->get();
-            $admin->syncRoles($roles);
-
-            return response()->json([
-                'message' => 'Roles assigned successfully',
-                'staff' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'roles' => $admin->roles->pluck('name')->toArray(),
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to assign roles: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Asignar permisos directos a un usuario.
-     */
-    public function assignPermissions(Request $request, $id)
-    {
-        $admin = AdminUser::findOrFail($id);
-
-        $validated = $request->validate([
-            'permission_ids' => 'required|array',
-            'permission_ids.*' => 'exists:permissions,id',
-        ]);
-
-        try {
-            $admin->syncPermissions($validated['permission_ids']);
-
-            return response()->json([
-                'message' => 'Permissions assigned successfully',
-                'staff' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'permissions' => $admin->permissions->pluck('name')->toArray(),
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to assign permissions: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Cambiar estado activo/inactivo.
-     */
-    public function toggleStatus($id)
-    {
-        try {
-            $admin = AdminUser::findOrFail($id);
-
-            // Prevenir que se desactiven a sí mismos
-            if (auth('admin')->id() === (int)$id) {
-                return response()->json(['error' => 'Cannot deactivate your own account'], 422);
-            }
-
-            $admin->is_active = !$admin->is_active;
-            $admin->save();
-
-            return response()->json([
-                'message' => 'Staff status updated successfully',
-                'staff' => [
-                    'id' => $admin->id,
-                    'name' => $admin->name,
-                    'is_active' => $admin->is_active,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to update status: ' . $e->getMessage()], 500);
-        }
     }
 }

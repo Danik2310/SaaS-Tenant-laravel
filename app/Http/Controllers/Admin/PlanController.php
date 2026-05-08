@@ -3,83 +3,68 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StorePlanRequest;
+use App\Http\Requests\Admin\UpdatePlanRequest;
+use App\Http\Resources\PlanResource;
 use App\Models\Plan;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class PlanController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $plans = Plan::all();
-        return response()->json(['plans' => $plans]);
+        $plans = Plan::paginate(25);
+
+        return response()->json([
+            'plans' => PlanResource::collection($plans->items()),
+            'total' => $plans->total(),
+            'meta' => [
+                'current_page' => $plans->currentPage(),
+                'last_page' => $plans->lastPage(),
+                'per_page' => $plans->perPage(),
+                'total' => $plans->total(),
+            ],
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
+    public function store(StorePlanRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:plans,slug',
-            'price' => 'required|numeric|min:0',
-            'max_users' => 'nullable|integer|min:1',
-            'features' => 'nullable|string', // Frontend sends comma-separated
-        ]);
+        $data = $request->validated();
 
-        // Convert features to array if provided
-        if ($validated['features']) {
-            $validated['features'] = array_map('trim', explode(',', $validated['features']));
+        if ($data['features'] ?? null) {
+            $data['features'] = array_map('trim', explode(',', $data['features']));
         }
 
-        $plan = Plan::create($validated);
+        $plan = Plan::create($data);
 
         Log::info("Plan created by user: " . auth('admin')->id());
 
-        return response()->json(['plan' => $plan], 201);
+        return response()->json(['plan' => new PlanResource($plan)], 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         $plan = Plan::findOrFail($id);
-        return response()->json(['plan' => $plan]);
+
+        return response()->json(['plan' => new PlanResource($plan)]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function update(UpdatePlanRequest $request, string $id)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:plans,slug,' . $id,
-            'price' => 'required|numeric|min:0',
-            'max_users' => 'nullable|integer|min:1',
-            'features' => 'nullable|string',
-        ]);
+        $data = $request->validated();
 
-        if ($validated['features']) {
-            $validated['features'] = array_map('trim', explode(',', $validated['features']));
+        if ($data['features'] ?? null) {
+            $data['features'] = array_map('trim', explode(',', $data['features']));
         }
 
         $plan = Plan::findOrFail($id);
-        $plan->update($validated);
+        $plan->update($data);
 
         Log::info("Plan updated by user: " . auth('admin')->id());
 
-        return response()->json(['plan' => $plan]);
+        return response()->json(['plan' => new PlanResource($plan)]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(string $id)
     {
         $plan = Plan::findOrFail($id);

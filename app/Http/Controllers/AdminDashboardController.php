@@ -2,6 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Contracts\TenantManagerInterface;
+use App\Http\Requests\Admin\ImpersonateTenantRequest;
+use App\Http\Requests\Admin\StoreTenantRequest;
+use App\Http\Requests\Admin\UpdateTenantRequest;
+use App\Http\Resources\PlanResource;
+use App\Http\Resources\TenantResource;
 use App\Models\Tenant;
 use App\Models\AdminUser;
 use App\Models\Plan;
@@ -9,36 +15,39 @@ use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
 {
-    /**
-     * Get dashboard statistics for overview charts
-     */
+    public function __construct(
+        private TenantManagerInterface $tenantManager,
+    ) {}
+
     public function dashboardStats()
     {
-        $tenants = Tenant::with('domains')->get();
-        $totalTenants = $tenants->count();
-        $activeTenants = $tenants->where('status', 'Active')->count();
-        $suspendedTenants = $tenants->where('status', 'Suspended')->count();
+        $totalTenants = Tenant::count();
+        $activeTenants = Tenant::where('status', 'Active')->count();
+        $suspendedTenants = Tenant::where('status', 'Suspended')->count();
 
         $staffCount = AdminUser::count();
         $activeStaff = AdminUser::where('is_active', true)->count();
 
-        $plans = Plan::all();
-        $plansCount = $plans->count();
+        $plansCount = Plan::count();
 
-        $recentTenants = $tenants->sortByDesc('created_at')->take(7)->map(function ($tenant) {
-            return [
-                'name' => $tenant->name,
-                'domain' => $tenant->domains->first()?->domain ?? 'N/A',
-                'status' => $tenant->status,
-                'created_at' => $tenant->created_at->format('Y-m-d'),
-            ];
-        })->values()->toArray();
+        $recentTenants = Tenant::with('domains')
+            ->latest()
+            ->take(7)
+            ->get()
+            ->map(function ($tenant) {
+                return [
+                    'name' => $tenant->name,
+                    'domain' => $tenant->domains->first()?->domain ?? 'N/A',
+                    'status' => $tenant->status,
+                    'created_at' => $tenant->created_at->format('Y-m-d'),
+                ];
+            })->values()->toArray();
 
-        $tenantsByMonth = $tenants->groupBy(function ($tenant) {
-            return $tenant->created_at->format('Y-m');
-        })->map(function ($group, $key) {
-            return ['month' => $key, 'count' => $group->count()];
-        })->sortBy('month')->values()->toArray();
+        $tenantsByMonth = Tenant::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get()
+            ->toArray();
 
         $statusDistribution = [
             ['name' => 'Active', 'value' => $activeTenants],
@@ -60,163 +69,75 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-    /**
-     * Show the admin dashboard
-     */
     public function index()
     {
         return view('admin.dashboard');
     }
 
-    /**
-     * Get all tenants as JSON (for React)
-     */
     public function tenants()
     {
-        $tenants = Tenant::with('domains')->get()->map(function ($tenant) {
-            return [
-                'id' => $tenant->id,
-                'name' => $tenant->name ?? 'N/A',
-                'email' => $tenant->email ?? 'N/A',
-                'domain' => $tenant->domains->first()?->domain ?? 'N/A',
-                'status' => $tenant->status,
-                'created_at' => $tenant->created_at,
-                'updated_at' => $tenant->updated_at,
-            ];
-        });
-
-        return response()->json(['tenants' => $tenants]);
-    }
-
-    /**
-     * Get a single tenant details
-     */
-    public function showTenant($id)
-    {
-        $tenant = Tenant::with('domains')->findOrFail($id);
+        $tenants = Tenant::with(['domains', 'plan'])->paginate(25);
 
         return response()->json([
-            'tenant' => [
-                'id' => $tenant->id,
-                'name' => $tenant->name ?? 'N/A',
-                'email' => $tenant->email ?? 'N/A',
-                'domain' => $tenant->domains->first()?->domain ?? 'N/A',
-                'status' => $tenant->status,
-                'created_at' => $tenant->created_at,
-                'updated_at' => $tenant->updated_at,
+            'tenants' => TenantResource::collection($tenants->items()),
+            'total' => $tenants->total(),
+            'meta' => [
+                'current_page' => $tenants->currentPage(),
+                'last_page' => $tenants->lastPage(),
+                'per_page' => $tenants->perPage(),
+                'total' => $tenants->total(),
             ],
         ]);
     }
 
-    /**
-     * Create a new tenant
-     */
-    public function createTenant(Request $request)
+    public function showTenant(string $id)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:tenants,email',
-            'domain' => 'required|string|unique:domains,domain',
+        $tenant = Tenant::with(['domains', 'plan'])->findOrFail($id);
+
+        return response()->json([
+            'tenant' => new TenantResource($tenant),
         ]);
+    }
 
-        $tenant = Tenant::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'status' => 'Active',
-        ]);
-
-        $tenant->domains()->create([
-            'domain' => $validated['domain'],
-        ]);
-
-        $tenant->database()->makeCredentials();
-        $tenant->save();
-
-        // Run migrations automatically
-        $migrationResult = $tenant->run(function () {
-            $exit = \Artisan::call('migrate', ['--force' => true]);
-            return [
-                'output' => \Artisan::output(),
-                'exit' => $exit,
-            ];
-        });
-
-        // Seed basic roles and permissions for tenant
-        try {
-            $tenant->run(function () {
-                \Artisan::call('db:seed', [
-                    '--class' => \Database\Seeders\TenantRolePermissionSeeder::class,
-                    '--force' => true,
-                ]);
-            });
-        } catch (\Exception $e) {
-            \Log::warning('Failed to seed tenant: ' . $e->getMessage(), ['tenant_id' => $tenant->id]);
-        }
+    public function createTenant(StoreTenantRequest $request)
+    {
+        $tenant = $this->tenantManager->provision($request->validated());
 
         return response()->json([
             'message' => 'Tenant created successfully',
-            'tenant' => [
-                'id' => $tenant->id,
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'domain' => $validated['domain'],
-                'status' => 'Active',
-                'migrated' => $migrationResult['exit'] === 0,
-            ],
+            'tenant' => new TenantResource($tenant),
         ], 201);
     }
 
-    /**
-     * Update tenant info
-     */
-    public function updateTenant($id, Request $request)
+    public function updateTenant(string $id, UpdateTenantRequest $request)
     {
         $tenant = Tenant::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:tenants,email,' . $id,
-            'status' => 'nullable|in:Active,Suspended',
-        ]);
-
-        // Actualizar campos usando el modelo (ahora corregido para guardar en columnas)
-        if (isset($validated['name'])) {
-            $tenant->name = $validated['name'];
-        }
-        if (isset($validated['email'])) {
-            $tenant->email = $validated['email'];
-        }
-        if (isset($validated['status'])) {
-            $tenant->status = $validated['status'];
+        foreach ($request->validated() as $key => $value) {
+            if ($value !== null) {
+                $tenant->$key = $value;
+            }
         }
 
         $tenant->save();
-
-        // Recargar para asegurar que lee desde las columnas correctas
         $tenant->refresh();
 
         return response()->json([
             'message' => 'Tenant updated successfully',
-            'tenant' => $tenant,
+            'tenant' => new TenantResource($tenant),
         ]);
     }
 
-    /**
-     * Delete a tenant
-     */
-    public function deleteTenant($id)
+    public function deleteTenant(string $id)
     {
         $tenant = Tenant::findOrFail($id);
 
-        $tenant->delete();
+        $this->tenantManager->delete($tenant);
 
         return response()->json(['message' => 'Tenant deleted successfully']);
     }
 
-    /**
-     * Return database credentials/config for a tenant
-     */
-    public function tenantDatabase($id)
+    public function tenantDatabase(string $id)
     {
         $tenant = Tenant::findOrFail($id);
         $db = $tenant->database();
@@ -224,7 +145,6 @@ class AdminDashboardController extends Controller
         return response()->json([
             'database' => [
                 'name' => $db->getName(),
-                // REMOVED: username, password - SECURITY RISK
                 'connection' => $db->connection(),
                 'host' => config('database.connections.tenant.host'),
                 'port' => config('database.connections.tenant.port'),
@@ -232,15 +152,11 @@ class AdminDashboardController extends Controller
         ]);
     }
 
-    /**
-     * Run migrations for a specific tenant
-     */
-    public function migrateTenant($id)
+    public function migrateTenant(string $id)
     {
         try {
             $tenant = Tenant::findOrFail($id);
 
-            // Switch to the tenant context and run migrations
             $result = $tenant->run(function () {
                 $exit = \Artisan::call('migrate', [
                     '--force' => true,
@@ -260,50 +176,33 @@ class AdminDashboardController extends Controller
             return response()->json([
                 'message' => 'Migration failed',
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
             ], 500);
         }
     }
 
-    /**
-     * Staff management placeholder
-     */
     public function staff()
     {
-        // Placeholder: return empty staff list for now
         return response()->json(['staff' => []]);
     }
 
-    /**
-     * Plans / settings placeholder
-     */
     public function plans()
     {
-        // Placeholder: return basic plans data
-        return response()->json(['plans' => [
-            ['id' => 'free', 'name' => 'Free', 'price' => 0],
-            ['id' => 'pro', 'name' => 'Pro', 'price' => 2999],
-        ]]);
+        $plans = Plan::all();
+
+        return response()->json([
+            'plans' => PlanResource::collection($plans),
+        ]);
     }
 
-    /**
-     * Impersonate a tenant (God Mode) - store tenant id in session and return domain
-     */
-    public function impersonateTenant(Request $request)
+    public function impersonateTenant(ImpersonateTenantRequest $request)
     {
-        $validated = $request->validate([
-            'tenant_id' => 'required|string|exists:tenants,id',
-        ]);
-
-        $tenant = Tenant::with('domains')->find($validated['tenant_id']);
+        $tenant = Tenant::with('domains')->find($request->validated('tenant_id'));
         $domain = $tenant->domains->first()?->domain ?? null;
 
         if (!$domain) {
             return response()->json(['message' => 'Tenant has no domain configured'], 422);
         }
 
-        // Mark impersonation in session
         session(['impersonate_tenant' => $tenant->id]);
 
         return response()->json(['message' => 'Impersonation started', 'domain' => $domain]);
@@ -313,5 +212,22 @@ class AdminDashboardController extends Controller
     {
         session()->forget('impersonate_tenant');
         return response()->json(['message' => 'Impersonation stopped']);
+    }
+
+    public function changeTenantPlan(Request $request, string $id)
+    {
+        $request->validate(['plan_id' => 'required|integer|exists:plans,id']);
+
+        $tenant = Tenant::with('plan')->findOrFail($id);
+        $newPlan = Plan::findOrFail($request->input('plan_id'));
+
+        $this->tenantManager->changePlan($tenant, $newPlan);
+
+        $tenant->refresh();
+
+        return response()->json([
+            'message' => 'Tenant plan changed successfully',
+            'tenant' => new TenantResource($tenant),
+        ]);
     }
 }

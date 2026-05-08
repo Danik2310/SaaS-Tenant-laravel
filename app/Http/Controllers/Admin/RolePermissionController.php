@@ -3,120 +3,73 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StorePermissionRequest;
+use App\Http\Requests\Admin\StoreRoleRequest;
+use App\Http\Requests\Admin\UpdatePermissionRequest;
+use App\Http\Requests\Admin\UpdateRoleRequest;
+use App\Http\Resources\PermissionResource;
+use App\Http\Resources\RoleResource;
 use App\Models\Role;
 use App\Models\Permission;
-use Illuminate\Http\Request;
 
 class RolePermissionController extends Controller
 {
-    /**
-     * List all roles with their permissions.
-     */
     public function indexRoles()
     {
-        $roles = Role::with('permissions')
-            ->where('guard_name', 'admin')
-            ->orderBy('name')
-            ->get()
-            ->map(fn($role) => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'description' => $role->description,
-                'is_active' => $role->is_active,
-                'permissions_count' => $role->permissions->count(),
-                'permissions' => $role->permissions->map(fn($perm) => [
-                    'id' => $perm->id,
-                    'name' => $perm->name,
-                    'module' => $perm->module,
-                ])->toArray(),
-                'created_at' => $role->created_at,
-            ]);
+        $roles = RoleResource::collection(
+            Role::with('permissions')
+                ->where('guard_name', 'admin')
+                ->orderBy('name')
+                ->get()
+        );
 
         return response()->json(['roles' => $roles]);
     }
 
-    /**
-     * Create a new role.
-     */
-    public function storeRole(Request $request)
+    public function storeRole(StoreRoleRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name',
-            'description' => 'nullable|string|max:500',
-            'permissions' => 'sometimes|array',
-            'permissions.*' => 'exists:permissions,id',
-            'is_active' => 'sometimes|boolean',
-        ]);
-
         $role = Role::create([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? '',
+            'name' => $request->validated('name'),
+            'description' => $request->validated('description', ''),
             'guard_name' => 'admin',
-            'is_active' => $validated['is_active'] ?? true,
+            'is_active' => $request->validated('is_active', true),
         ]);
 
-        if (!empty($validated['permissions'])) {
-            $role->syncPermissions($validated['permissions']);
+        if (!empty($request->validated('permissions'))) {
+            $role->syncPermissions($request->validated('permissions'));
         }
 
         return response()->json([
             'message' => 'Role created successfully',
-            'role' => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'description' => $role->description,
-                'is_active' => $role->is_active,
-                'permissions_count' => $role->permissions->count(),
-            ],
+            'role' => new RoleResource($role->load('permissions')),
         ], 201);
     }
 
-    /**
-     * Update a role.
-     */
-    public function updateRole(Request $request, $id)
+    public function updateRole(UpdateRoleRequest $request, string $id)
     {
         $role = Role::where('guard_name', 'admin')->findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $id,
-            'description' => 'nullable|string|max:500',
-            'permissions' => 'sometimes|array',
-            'permissions.*' => 'exists:permissions,id',
-            'is_active' => 'sometimes|boolean',
-        ]);
-
         $role->update([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? '',
-            'is_active' => $validated['is_active'] ?? $role->is_active,
+            'name' => $request->validated('name'),
+            'description' => $request->validated('description', ''),
+            'is_active' => $request->validated('is_active', $role->is_active),
         ]);
 
-        if (isset($validated['permissions'])) {
-            $role->syncPermissions($validated['permissions']);
+        if (isset($request->validated()['permissions'])) {
+            $role->syncPermissions($request->validated('permissions'));
         }
 
         return response()->json([
             'message' => 'Role updated successfully',
-            'role' => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'description' => $role->description,
-                'is_active' => $role->is_active,
-                'permissions_count' => $role->permissions->count(),
-            ],
+            'role' => new RoleResource($role->load('permissions')),
         ]);
     }
 
-    /**
-     * Delete a role.
-     */
-    public function destroyRole($id)
+    public function destroyRole(string $id)
     {
         $role = Role::where('guard_name', 'admin')->findOrFail($id);
 
-        $hasUsers = $role->users()->exists();
-        if ($hasUsers) {
+        if ($role->users()->exists()) {
             return response()->json(['message' => 'Cannot delete role with assigned users'], 422);
         }
 
@@ -125,9 +78,6 @@ class RolePermissionController extends Controller
         return response()->json(['message' => 'Role deleted successfully']);
     }
 
-    /**
-     * List all available permissions grouped by module.
-     */
     public function indexPermissions()
     {
         $permissions = Permission::where('guard_name', 'admin')
@@ -135,71 +85,43 @@ class RolePermissionController extends Controller
             ->orderBy('name')
             ->get()
             ->groupBy('module')
-            ->map(fn($perms) => $perms->map(fn($perm) => [
-                'id' => $perm->id,
-                'name' => $perm->name,
-                'description' => $perm->description,
-                'is_active' => $perm->is_active,
-            ]));
+            ->map(fn($perms) => PermissionResource::collection($perms));
 
         return response()->json(['permissions' => $permissions]);
     }
 
-    /**
-     * Create a new permission.
-     */
-    public function storePermission(Request $request)
+    public function storePermission(StorePermissionRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:permissions,name',
-            'description' => 'nullable|string|max:500',
-            'module' => 'required|string|max:100',
-        ]);
-
         $permission = Permission::create([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? '',
-            'module' => $validated['module'],
+            'name' => $request->validated('name'),
+            'description' => $request->validated('description', ''),
+            'module' => $request->validated('module'),
             'guard_name' => 'admin',
             'is_active' => true,
         ]);
 
         return response()->json([
             'message' => 'Permission created successfully',
-            'permission' => $permission,
+            'permission' => new PermissionResource($permission),
         ], 201);
     }
 
-    /**
-     * Update a permission.
-     */
-    public function updatePermission(Request $request, $id)
+    public function updatePermission(UpdatePermissionRequest $request, string $id)
     {
         $permission = Permission::where('guard_name', 'admin')->findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:permissions,name,' . $id,
-            'description' => 'nullable|string|max:500',
-            'module' => 'required|string|max:100',
-        ]);
-
-        $permission->update($validated);
+        $permission->update($request->validated());
 
         return response()->json([
             'message' => 'Permission updated successfully',
-            'permission' => $permission,
+            'permission' => new PermissionResource($permission),
         ]);
     }
 
-    /**
-     * Delete a permission.
-     */
-    public function destroyPermission($id)
+    public function destroyPermission(string $id)
     {
         $permission = Permission::where('guard_name', 'admin')->findOrFail($id);
 
-        $hasRoles = $permission->roles()->exists();
-        if ($hasRoles) {
+        if ($permission->roles()->exists()) {
             return response()->json(['message' => 'Cannot delete permission assigned to roles'], 422);
         }
 

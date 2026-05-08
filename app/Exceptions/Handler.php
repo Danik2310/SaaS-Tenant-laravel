@@ -2,35 +2,39 @@
 
 namespace App\Exceptions;
 
-use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use App\Exceptions\PlanLimitExceededException;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
-    /**
-     * The list of the inputs that are never flashed to the session on validation exceptions.
-     *
-     * @var array<int, string>
-     */
     protected $dontFlash = [
         'current_password',
         'password',
         'password_confirmation',
     ];
 
-    /**
-     * Register the exception handling callbacks for the application.
-     */
     public function register(): void
     {
         $this->reportable(function (Throwable $e) {
             //
         });
 
+        $this->renderable(function (PlanLimitExceededException $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                return response()->json(['message' => $e->getMessage()], 403);
+            }
+
+            return back()->with('error', $e->getMessage());
+        });
+
         $this->renderable(function (AuthorizationException $e, $request) {
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
                 return response()->json([
                     'message' => $e->getMessage() ?: 'This action is unauthorized.',
                 ], 403);
@@ -39,6 +43,49 @@ class Handler extends ExceptionHandler
             return Inertia::render('Unauthorized', [
                 'message' => $e->getMessage() ?: 'You do not have permission to access this resource.',
             ])->toResponse($request)->setStatusCode(403);
+        });
+
+        $this->renderable(function (NotFoundHttpException $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => 'Resource not found.',
+                ], 404);
+            }
+        });
+
+        $this->renderable(function (ModelNotFoundException $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => 'Resource not found.',
+                ], 404);
+            }
+        });
+
+        $this->renderable(function (ValidationException $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => 'Validation failed.',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+        });
+
+        $this->renderable(function (Throwable $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                $response = [
+                    'message' => 'An error occurred.',
+                ];
+
+                if (config('app.debug')) {
+                    $response['error'] = $e->getMessage();
+                    $response['file'] = $e->getFile();
+                    $response['line'] = $e->getLine();
+                }
+
+                $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
+
+                return response()->json($response, $status);
+            }
         });
     }
 }
