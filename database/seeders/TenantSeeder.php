@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Plan;
 use App\Models\Tenant;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -32,12 +33,15 @@ class TenantSeeder extends Seeder
             ],
         ];
 
+        $defaultPlan = Plan::where('slug', 'free')->first();
+
         foreach ($tenants as $tenantData) {
             $tenant = Tenant::updateOrCreate(
                 ['email' => $tenantData['email']],
                 [
                     'name' => $tenantData['name'],
                     'status' => 'Active',
+                    'plan_id' => $defaultPlan?->id,
                 ]
             );
 
