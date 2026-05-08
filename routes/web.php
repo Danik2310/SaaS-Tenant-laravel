@@ -85,6 +85,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         // additional endpoints for tenants
         Route::get('/api/tenants/{id}/database', [AdminDashboardController::class, 'tenantDatabase']);
         Route::post('/api/tenants/{id}/migrate', [AdminDashboardController::class, 'migrateTenant']);
+        Route::put('/api/tenants/{id}/plan', [AdminDashboardController::class, 'changeTenantPlan']);
     });
 
     // Staff management - requires 'manage staff' permission

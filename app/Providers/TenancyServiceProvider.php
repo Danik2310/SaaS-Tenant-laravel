@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Events\PlanChanged;
+use App\Events\TenantReactivated;
+use App\Events\TenantSuspended;
+use App\Listeners\HandlePlanChange;
+use App\Listeners\HandleTenantReactivation;
+use App\Listeners\HandleTenantSuspension;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
@@ -21,21 +27,10 @@ class TenancyServiceProvider extends ServiceProvider
     public function events()
     {
         return [
-            // Tenant events
+            // Tenant events — provisioning is handled by TenantBuilder synchronously
             Events\CreatingTenant::class => [],
-            Events\TenantCreated::class => [
-                JobPipeline::make([
-                    Jobs\CreateDatabase::class,
-                    Jobs\MigrateDatabase::class,
-                    // Jobs\SeedDatabase::class,
+            Events\TenantCreated::class => [],
 
-                    // Your own jobs to prepare the tenant.
-                    // Provision API keys, create S3 buckets, anything you want!
-
-                ])->send(function (Events\TenantCreated $event) {
-                    return $event->tenant;
-                })->shouldBeQueued(false), // `false` by default, but you probably want to make this `true` for production.
-            ],
             Events\SavingTenant::class => [],
             Events\TenantSaved::class => [],
             Events\UpdatingTenant::class => [],
@@ -46,7 +41,18 @@ class TenancyServiceProvider extends ServiceProvider
                     Jobs\DeleteDatabase::class,
                 ])->send(function (Events\TenantDeleted $event) {
                     return $event->tenant;
-                })->shouldBeQueued(false), // `false` by default, but you probably want to make this `true` for production.
+                })->shouldBeQueued(false),
+            ],
+
+            // Custom domain events
+            TenantSuspended::class => [
+                HandleTenantSuspension::class,
+            ],
+            TenantReactivated::class => [
+                HandleTenantReactivation::class,
+            ],
+            PlanChanged::class => [
+                HandlePlanChange::class,
             ],
 
             // Domain events

@@ -19,21 +19,21 @@ class PlanSeeder extends Seeder
                 'slug' => 'free',
                 'price' => 0,
                 'max_users' => 2,
-                'features' => json_encode(['basic']),
+                'features' => ['basic'],
             ],
             [
                 'name' => 'Pro',
                 'slug' => 'pro',
                 'price' => 29,
                 'max_users' => 10,
-                'features' => json_encode(['advanced']),
+                'features' => ['advanced', 'api_access', 'custom_domain'],
             ],
             [
                 'name' => 'Enterprise',
                 'slug' => 'enterprise',
                 'price' => 99,
                 'max_users' => null,
-                'features' => json_encode(['all']),
+                'features' => ['all', 'api_access', 'custom_domain', 'white_label'],
             ],
         ];
 

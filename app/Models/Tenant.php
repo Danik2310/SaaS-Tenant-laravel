@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Plan;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Models\Domain;
@@ -25,7 +26,13 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'email',
         'domain',
         'status',
+        'plan_id',
+        'trial_ends_at',
         'tenancy_db_name',
+    ];
+
+    protected $casts = [
+        'trial_ends_at' => 'datetime',
     ];
 
     // Campos que deben guardarse en columnas específicas, no en data
@@ -102,6 +109,31 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     public function database(): DatabaseConfig
     {
         return new DatabaseConfig($this);
+    }
+
+    public function plan(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
+    }
+
+    public function hasFeature(string $feature): bool
+    {
+        return $this->plan?->hasFeature($feature) ?? false;
+    }
+
+    public function getLimit(string $limit): int
+    {
+        return $this->plan?->getLimit($limit) ?? 0;
+    }
+
+    public function isOnTrial(): bool
+    {
+        return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
+    }
+
+    public function trialHasExpired(): bool
+    {
+        return $this->trial_ends_at !== null && $this->trial_ends_at->isPast();
     }
 
     /**

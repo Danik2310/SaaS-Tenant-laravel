@@ -67,5 +67,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'payment.rate.limit' => \App\Http\Middleware\PaymentMethodRateLimit::class,
+        'feature' => \App\Http\Middleware\RequiresPlanFeature::class,
+        'tenant.state' => \App\Http\Middleware\CheckTenantState::class,
     ];
 }
