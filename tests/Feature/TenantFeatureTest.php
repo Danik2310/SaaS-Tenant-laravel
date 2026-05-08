@@ -249,7 +249,7 @@ class TenantFeatureTest extends TestCase
 
         $response = $this->withoutMiddleware()->get("/admin/api/tenants/{$tenant->id}/database");
         $response->assertStatus(200)
-                 ->assertJsonStructure(['database' => ['name', 'username', 'connection']]);
+                 ->assertJsonStructure(['database' => ['name', 'connection', 'host', 'port']]);
     }
 
     /**

@@ -5,43 +5,17 @@ namespace Tests\Feature;
 use App\Models\AdminUser;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class SecurityTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AdminAuthSetup;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        // Create the super-admin role if it doesn't exist
-        $role = \Spatie\Permission\Models\Role::firstOrCreate([
-            'name' => 'super-admin',
-            'guard_name' => 'admin'
-        ]);
-
-        // Create permissions if they don't exist
-        $permissions = [
-            'manage tenants',
-            'manage staff',
-            'manage plans',
-            'impersonate tenants',
-            'manage profile'
-        ];
-
-        foreach ($permissions as $permissionName) {
-            $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
-                'name' => $permissionName,
-                'guard_name' => 'admin'
-            ]);
-            $role->givePermissionTo($permission);
-        }
-
-        // Create admin user with permissions
-        $admin = AdminUser::factory()->create();
-        $admin->assignRole('super-admin');
-        $this->actingAs($admin, 'admin');
+        $this->setUpAdminAuth();
     }
 
     /**

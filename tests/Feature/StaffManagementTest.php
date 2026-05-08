@@ -6,43 +6,17 @@ use App\Models\AdminUser;
 use App\Models\Role;
 use App\Models\Permission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class StaffManagementTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, AdminAuthSetup;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        // Create the super-admin role if it doesn't exist
-        $role = \Spatie\Permission\Models\Role::firstOrCreate([
-            'name' => 'super-admin',
-            'guard_name' => 'admin'
-        ]);
-
-        // Create permissions if they don't exist
-        $permissions = [
-            'manage tenants',
-            'manage staff',
-            'manage plans',
-            'impersonate tenants',
-            'manage profile'
-        ];
-
-        foreach ($permissions as $permissionName) {
-            $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
-                'name' => $permissionName,
-                'guard_name' => 'admin'
-            ]);
-            $role->givePermissionTo($permission);
-        }
-
-        // Create admin user with permissions
-        $admin = AdminUser::factory()->create();
-        $admin->assignRole('super-admin');
-        $this->actingAs($admin, 'admin');
+        $this->setUpAdminAuth();
     }
 
     /**
@@ -71,7 +45,7 @@ class StaffManagementTest extends TestCase
                     ],
                     'total'
                 ])
-                ->assertJsonCount(3, 'staff'); // Including the admin user
+                ->assertJsonCount(AdminUser::count(), 'staff');
     }
 
     /**

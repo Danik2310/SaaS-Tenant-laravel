@@ -2,36 +2,19 @@
 
 namespace Tests\Feature;
 
-use App\Models\AdminUser;
 use App\Models\PaymentMethod;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Permission;
+use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class PaymentMethodFrontendTest extends TestCase
 {
-    use RefreshDatabase;
-
-    protected $admin;
+    use RefreshDatabase, AdminAuthSetup;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        // Create the manage plans permission for admin guard
-        Permission::firstOrCreate(
-            ['name' => 'manage plans', 'guard_name' => 'admin'],
-            [
-                'description' => 'Permite gestionar planes de suscripción y precios',
-                'module' => 'plans',
-                'is_active' => true
-            ]
-        );
-
-        // Create admin user with manage plans permission and authenticate
-        $this->admin = AdminUser::factory()->create();
-        $this->admin->givePermissionTo('manage plans');
-        $this->actingAs($this->admin, 'admin');
+        $this->setUpAdminAuth();
     }
 
     /** @test */
