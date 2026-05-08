@@ -2,23 +2,20 @@
 
 namespace App\Providers;
 
+use App\Contracts\TenantManagerInterface;
+use App\Services\TenantManager;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        //
+        $this->app->singleton(TenantManagerInterface::class, TenantManager::class);
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        //
+        Model::preventLazyLoading(!$this->app->isProduction());
     }
 }
