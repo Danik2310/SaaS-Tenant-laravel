@@ -23,16 +23,51 @@ Route::middleware([
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
 ])->group(function () {
-    // public-facing home for tenant
-    Route::get('/', function () {
-        return 'This is your multi-tenant application. The id of the current tenant is ' . tenant('id');
-    });
-
-    // admin login/logout for this tenant
+    // Public routes (no auth required)
     Route::get('/admin/login', [\App\Http\Controllers\Admin\AuthController::class, 'showLogin'])
         ->name('admin.login');
     Route::post('/admin/login', [\App\Http\Controllers\Admin\AuthController::class, 'login']);
-    Route::post('/admin/logout', [\App\Http\Controllers\Admin\AuthController::class, 'logout'])
-        ->middleware('auth')
-        ->name('admin.logout');
+
+    // Authenticated tenant routes
+    Route::middleware(['auth', 'tenant.state'])->group(function () {
+        Route::post('/admin/logout', [\App\Http\Controllers\Admin\AuthController::class, 'logout'])
+            ->name('admin.logout');
+
+        // Dashboard
+        Route::get('/', [\App\Http\Controllers\Tenant\DashboardController::class, 'index'])
+            ->name('tenant.dashboard');
+
+        // Products
+        Route::prefix('products')->name('tenant.products.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Tenant\ProductController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Tenant\ProductController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Tenant\ProductController::class, 'store'])->name('store');
+            Route::get('/{product}/edit', [\App\Http\Controllers\Tenant\ProductController::class, 'edit'])->name('edit');
+            Route::put('/{product}', [\App\Http\Controllers\Tenant\ProductController::class, 'update'])->name('update');
+            Route::delete('/{product}', [\App\Http\Controllers\Tenant\ProductController::class, 'destroy'])->name('destroy');
+        });
+
+        // Categories
+        Route::prefix('categories')->name('tenant.categories.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Tenant\CategoryController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Tenant\CategoryController::class, 'store'])->name('store');
+            Route::put('/{category}', [\App\Http\Controllers\Tenant\CategoryController::class, 'update'])->name('update');
+            Route::delete('/{category}', [\App\Http\Controllers\Tenant\CategoryController::class, 'destroy'])->name('destroy');
+        });
+
+        // Warehouses
+        Route::prefix('warehouses')->name('tenant.warehouses.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Tenant\WarehouseController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Tenant\WarehouseController::class, 'store'])->name('store');
+            Route::put('/{warehouse}', [\App\Http\Controllers\Tenant\WarehouseController::class, 'update'])->name('update');
+            Route::delete('/{warehouse}', [\App\Http\Controllers\Tenant\WarehouseController::class, 'destroy'])->name('destroy');
+        });
+
+        // Inventory Movements
+        Route::prefix('inventory')->name('tenant.inventory.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Tenant\InventoryMovementController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Tenant\InventoryMovementController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Tenant\InventoryMovementController::class, 'store'])->name('store');
+        });
+    });
 });
