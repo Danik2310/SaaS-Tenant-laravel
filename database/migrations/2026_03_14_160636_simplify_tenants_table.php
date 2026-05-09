@@ -30,6 +30,13 @@ return new class extends Migration
                 ->update(['domain' => $domain->domain]);
         }
 
+        // Backfill existing data into data_placeholder before dropping
+        DB::table('tenants')->whereNotNull('data')->orderBy('id')->each(function ($tenant) {
+            DB::table('tenants')
+                ->where('id', $tenant->id)
+                ->update(['data_placeholder' => $tenant->data]);
+        });
+
         // Remove the data column
         Schema::table('tenants', function (Blueprint $table) {
             $table->dropColumn('data');
