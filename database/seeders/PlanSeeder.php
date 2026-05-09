@@ -19,6 +19,7 @@ class PlanSeeder extends Seeder
                 'slug' => 'free',
                 'price' => 0,
                 'max_users' => 2,
+                'max_storage' => 100,
                 'features' => ['basic'],
             ],
             [
@@ -26,6 +27,7 @@ class PlanSeeder extends Seeder
                 'slug' => 'pro',
                 'price' => 29,
                 'max_users' => 10,
+                'max_storage' => 1024,
                 'features' => ['advanced', 'api_access', 'custom_domain'],
             ],
             [
@@ -33,6 +35,7 @@ class PlanSeeder extends Seeder
                 'slug' => 'enterprise',
                 'price' => 99,
                 'max_users' => null,
+                'max_storage' => null,
                 'features' => ['all', 'api_access', 'custom_domain', 'white_label'],
             ],
         ];

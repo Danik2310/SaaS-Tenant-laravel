@@ -67,6 +67,30 @@ class RolePermissionSeeder extends Seeder
                     'is_active' => true
                 ]
             );
+            Permission::updateOrCreate(
+                ['name' => 'manage subscriptions', 'guard_name' => $guard],
+                [
+                    'description' => 'Permite gestionar suscripciones de tenants',
+                    'module' => 'billing',
+                    'is_active' => true
+                ]
+            );
+            Permission::updateOrCreate(
+                ['name' => 'view activity logs', 'guard_name' => $guard],
+                [
+                    'description' => 'Permite ver registros de actividad del sistema',
+                    'module' => 'system',
+                    'is_active' => true
+                ]
+            );
+            Permission::updateOrCreate(
+                ['name' => 'manage settings', 'guard_name' => $guard],
+                [
+                    'description' => 'Permite gestionar configuraciones globales del sistema',
+                    'module' => 'system',
+                    'is_active' => true
+                ]
+            );
 
             // Create roles for this guard
             $superAdmin = Role::updateOrCreate(
@@ -90,6 +114,9 @@ class RolePermissionSeeder extends Seeder
                 'manage staff',
                 'manage plans',
                 'manage payment methods',
+                'manage subscriptions',
+                'view activity logs',
+                'manage settings',
                 'impersonate tenants',
                 'manage profile'
             ]);
