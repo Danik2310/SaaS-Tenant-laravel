@@ -14,6 +14,7 @@ class Plan extends Model
         'slug',
         'price',
         'max_users',
+        'max_storage',
         'features',
     ];
 
@@ -35,8 +36,8 @@ class Plan extends Model
     public function getLimit(string $limit): int
     {
         return match ($limit) {
-            'users' => (int) ($this->max_users ?? 0),
-            'storage' => (int) ($this->max_storage ?? 0),
+            'users' => $this->max_users !== null ? (int) $this->max_users : PHP_INT_MAX,
+            'storage' => $this->max_storage !== null ? (int) $this->max_storage : PHP_INT_MAX,
             default => (int) (is_array($this->features) && isset($this->features[$limit]) ? $this->features[$limit] : 0),
         };
     }
