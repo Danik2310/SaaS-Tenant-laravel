@@ -8,6 +8,10 @@ import Staff from './staff/StaffList';
 import Plans from './billing/Plans';
 import RolePermissions from './staff/RolePermissions';
 import DashboardOverview from './DashboardOverview';
+import Profile from './profile/Profile';
+import Subscriptions from './subscriptions/Subscriptions';
+import ActivityLog from './activity/ActivityLog';
+import Settings from './settings/Settings';
 import BlockIcon from '@mui/icons-material/Block';
 import LanguageIcon from '@mui/icons-material/Language';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -185,7 +189,11 @@ export default function Dashboard({ user, setUser }) {
                             {view === 'tenants' && 'Tenant Management'}
                             {view === 'staff' && 'Staff Management'}
                             {view === 'roles' && 'Roles & Permissions'}
+                            {view === 'subscriptions' && 'Subscriptions'}
                             {view === 'plans' && 'Infrastructure & Plans'}
+                            {view === 'activity' && 'Activity Logs'}
+                            {view === 'settings' && 'System Settings'}
+                            {view === 'profile' && 'My Profile'}
                             {view === 'impersonate' && 'God Mode'}
                         </h1>
                         <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
@@ -296,6 +304,10 @@ export default function Dashboard({ user, setUser }) {
                                 ]}
                             />
                         )}
+                        {view === 'subscriptions' && <Subscriptions />}
+                        {view === 'activity' && <ActivityLog />}
+                        {view === 'settings' && <Settings />}
+                        {view === 'profile' && <Profile user={user} />}
                         {view === 'impersonate' && (
                             <>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

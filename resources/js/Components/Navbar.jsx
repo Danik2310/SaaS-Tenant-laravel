@@ -5,14 +5,22 @@ import GroupIcon from '@mui/icons-material/Group';
 import SecurityIcon from '@mui/icons-material/Security';
 import StorageIcon from '@mui/icons-material/Storage';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import PersonIcon from '@mui/icons-material/Person';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
+import HistoryIcon from '@mui/icons-material/History';
+import SettingsIcon from '@mui/icons-material/Settings';
 
 const views = [
     { id: 'overview', label: 'Overview', icon: <DashboardIcon />, section: 'Main' },
     { id: 'tenants', label: 'Tenant Management', icon: <PeopleIcon />, section: 'Main' },
     { id: 'staff', label: 'Staff Management', icon: <GroupIcon />, section: 'Administration' },
     { id: 'roles', label: 'Roles & Permissions', icon: <SecurityIcon />, section: 'Administration' },
+    { id: 'subscriptions', label: 'Subscriptions', icon: <CreditCardIcon />, section: 'Billing' },
     { id: 'plans', label: 'Infrastructure & Plans', icon: <StorageIcon />, section: 'Configuration' },
+    { id: 'settings', label: 'System Settings', icon: <SettingsIcon />, section: 'Configuration' },
+    { id: 'activity', label: 'Activity Logs', icon: <HistoryIcon />, section: 'Tools' },
     { id: 'impersonate', label: 'God Mode', icon: <VisibilityIcon />, section: 'Tools' },
+    { id: 'profile', label: 'My Profile', icon: <PersonIcon />, section: 'Account' },
 ];
 
 export default function Navbar({ user, view, setView }) {
