@@ -7,6 +7,9 @@ use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\RolePermissionController;
+use App\Http\Controllers\Admin\SubscriptionController;
+use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -144,5 +147,28 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::post('/api/permissions', [RolePermissionController::class, 'storePermission']);
         Route::put('/api/permissions/{id}', [RolePermissionController::class, 'updatePermission']);
         Route::delete('/api/permissions/{id}', [RolePermissionController::class, 'destroyPermission']);
+    });
+
+    // Subscription management - requires 'manage subscriptions' permission
+    Route::middleware(['permission:manage subscriptions'])->group(function () {
+        Route::get('/api/subscriptions', [SubscriptionController::class, 'index']);
+        Route::get('/api/subscriptions/{id}', [SubscriptionController::class, 'show']);
+        Route::post('/api/subscriptions', [SubscriptionController::class, 'store']);
+        Route::put('/api/subscriptions/{id}', [SubscriptionController::class, 'update']);
+        Route::delete('/api/subscriptions/{id}', [SubscriptionController::class, 'destroy']);
+    });
+
+    // Activity Logs - requires 'view activity logs' permission
+    Route::middleware(['permission:view activity logs'])->group(function () {
+        Route::get('/api/activity-logs', [ActivityLogController::class, 'index']);
+        Route::get('/api/activity-logs/log-names', [ActivityLogController::class, 'logNames']);
+        Route::get('/api/activity-logs/{id}', [ActivityLogController::class, 'show']);
+    });
+
+    // Global settings - requires 'manage settings' permission
+    Route::middleware(['permission:manage settings'])->group(function () {
+        Route::get('/api/settings', [SettingController::class, 'index']);
+        Route::put('/api/settings', [SettingController::class, 'update']);
+        Route::get('/api/settings/{key}', [SettingController::class, 'get']);
     });
 });
