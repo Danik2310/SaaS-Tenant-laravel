@@ -48,13 +48,13 @@ class PlanGatingTest extends TestCase
         $this->assertEquals(10, $plan->getLimit('users'));
     }
 
-    public function test_plan_get_limit_returns_zero_when_not_set()
+    public function test_plan_get_limit_returns_max_int_when_not_set_unlimited()
     {
         $plan = Plan::factory()->create([
             'max_users' => null,
         ]);
 
-        $this->assertEquals(0, $plan->getLimit('users'));
+        $this->assertEquals(PHP_INT_MAX, $plan->getLimit('users'));
     }
 
     public function test_tenant_has_feature_delegates_to_plan()
