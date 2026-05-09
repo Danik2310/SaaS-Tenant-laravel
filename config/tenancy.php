@@ -39,7 +39,7 @@ return [
      * Database tenancy config. Used by DatabaseTenancyBootstrapper.
      */
     'database' => [
-        'central_connection' => env('DB_CONNECTION', 'central'),
+        'central_connection' => env('DB_CONNECTION', 'mysql'),
 
         /**
          * Connection used as a "template" for the dynamically created tenant database connection.
@@ -193,7 +193,7 @@ return [
      * Parameters used by the tenants:seed command.
      */
     'seeder_parameters' => [
-        '--class' => 'DatabaseSeeder', // root seeder class
-        // '--force' => true, // This needs to be true to seed tenant databases in production
+        '--class' => 'Database\\Seeders\\TenantRolePermissionSeeder',
+        '--force' => true,
     ],
 ];
