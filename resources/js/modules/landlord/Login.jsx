@@ -14,7 +14,7 @@ export default function Login({ setUser }) {
         setError(null);
 
         try {
-            const response = await api.post('/admin/login', {
+            const response = await api.post('/central/login', {
                 email,
                 password,
             });

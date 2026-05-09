@@ -34,7 +34,7 @@ Route::middleware([
             ->name('admin.logout');
 
         // Dashboard
-        Route::get('/', [\App\Http\Controllers\Tenant\DashboardController::class, 'index'])
+        Route::get('/dashboard', [\App\Http\Controllers\Tenant\DashboardController::class, 'index'])
             ->name('tenant.dashboard');
 
         // Products

@@ -53,10 +53,10 @@ require __DIR__.'/auth.php';
 |--------------------------------------------------------------------------
 */
 
-// Admin login/logout (public)
-Route::get('/admin/login', [AdminAuthController::class, 'showLogin'])->name('admin.login');
-Route::post('/admin/login', [AdminAuthController::class, 'login']);
-Route::post('/admin/logout', [AdminAuthController::class, 'logout'])->middleware('auth:admin')->name('admin.logout');
+// Central admin login/logout (public)
+Route::get('/central/login', [AdminAuthController::class, 'showLogin'])->name('central.login');
+Route::post('/central/login', [AdminAuthController::class, 'login']);
+Route::post('/central/logout', [AdminAuthController::class, 'logout'])->middleware('auth:admin')->name('central.logout');
 Route::get('/admin/user', [AdminAuthController::class, 'user']);
 
 // Unauthorized page (accessible to authenticated admin users)

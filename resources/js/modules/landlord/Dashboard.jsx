@@ -53,8 +53,8 @@ export default function Dashboard({ user, setUser }) {
 
     const handleLogout = async () => {
         try {
-            await api.post('/admin/logout');
-            window.location.href = '/admin/login';
+            await api.post('/central/logout');
+            window.location.href = '/central/login';
         } catch (err) {
             console.error('Logout error:', err);
         }
