@@ -38,7 +38,7 @@ Route::middleware([
             ->name('tenant.dashboard');
 
         // Products
-        Route::prefix('products')->name('tenant.products.')->group(function () {
+        Route::prefix('products')->name('tenant.products.')->middleware(['permission:manage products'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Tenant\ProductController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Tenant\ProductController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Tenant\ProductController::class, 'store'])->name('store');
@@ -48,7 +48,7 @@ Route::middleware([
         });
 
         // Categories
-        Route::prefix('categories')->name('tenant.categories.')->group(function () {
+        Route::prefix('categories')->name('tenant.categories.')->middleware(['permission:manage categories'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Tenant\CategoryController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Tenant\CategoryController::class, 'store'])->name('store');
             Route::put('/{category}', [\App\Http\Controllers\Tenant\CategoryController::class, 'update'])->name('update');
@@ -56,7 +56,7 @@ Route::middleware([
         });
 
         // Warehouses
-        Route::prefix('warehouses')->name('tenant.warehouses.')->group(function () {
+        Route::prefix('warehouses')->name('tenant.warehouses.')->middleware(['permission:manage inventory'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Tenant\WarehouseController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Tenant\WarehouseController::class, 'store'])->name('store');
             Route::put('/{warehouse}', [\App\Http\Controllers\Tenant\WarehouseController::class, 'update'])->name('update');
@@ -64,7 +64,7 @@ Route::middleware([
         });
 
         // Inventory Movements
-        Route::prefix('inventory')->name('tenant.inventory.')->group(function () {
+        Route::prefix('inventory')->name('tenant.inventory.')->middleware(['permission:manage inventory'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Tenant\InventoryMovementController::class, 'index'])->name('index');
             Route::get('/create', [\App\Http\Controllers\Tenant\InventoryMovementController::class, 'create'])->name('create');
             Route::post('/', [\App\Http\Controllers\Tenant\InventoryMovementController::class, 'store'])->name('store');
