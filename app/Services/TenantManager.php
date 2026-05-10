@@ -29,19 +29,14 @@ class TenantManager implements TenantManagerInterface
         $tenant->status = 'Suspended';
         $tenant->save();
 
-        Cache::tags(['tenant_' . $tenant->id])->flush();
+        Cache::tags(['tenant_'.$tenant->id])->flush();
     }
 
     public function delete(Tenant $tenant): void
     {
         $tenant->status = 'Deleted';
-        $tenant->delete(); // soft delete via SoftDeletes trait
-
-        activity('tenant')
-            ->performedOn($tenant)
-            ->causedBy(auth('admin')->user())
-            ->withProperties(['tenant_name' => $tenant->name, 'tenant_id' => $tenant->id])
-            ->log("Deleted tenant: {$tenant->name}");
+        $tenant->save();
+        $tenant->delete();
     }
 
     public function restore(Tenant $tenant): void
@@ -49,12 +44,6 @@ class TenantManager implements TenantManagerInterface
         $tenant->status = 'Active';
         $tenant->deleted_at = null;
         $tenant->save();
-
-        activity('tenant')
-            ->performedOn($tenant)
-            ->causedBy(auth('admin')->user())
-            ->withProperties(['tenant_name' => $tenant->name, 'tenant_id' => $tenant->id])
-            ->log("Restored tenant: {$tenant->name}");
     }
 
     public function changePlan(Tenant $tenant, Plan $newPlan): void
@@ -64,7 +53,7 @@ class TenantManager implements TenantManagerInterface
         $tenant->plan_id = $newPlan->id;
         $tenant->save();
 
-        Cache::tags(['tenant_' . $tenant->id])->flush();
+        Cache::tags(['tenant_'.$tenant->id])->flush();
 
         event(new PlanChanged($tenant, $oldPlan, $newPlan));
     }
