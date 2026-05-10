@@ -24,6 +24,7 @@ class TenantBuilder
     public function withDomain(string $domain): static
     {
         $this->tenant->domains()->create(['domain' => $domain]);
+
         return $this;
     }
 
@@ -32,14 +33,14 @@ class TenantBuilder
         $this->tenant->database()->makeCredentials();
         $this->tenant->database()->manager()->createDatabase($this->tenant);
         $this->tenant->save();
+
         return $this;
     }
 
     public function withMigrations(): static
     {
-        tenancy()->initialize($this->tenant);
-        Artisan::call('migrate', ['--force' => true]);
-        tenancy()->end();
+        Artisan::call('tenants:migrate', ['--tenants' => [$this->tenant->id]]);
+
         return $this;
     }
 
@@ -65,9 +66,10 @@ class TenantBuilder
                 '--force' => true,
             ]);
         } catch (\Exception $e) {
-            \Log::warning('Failed to seed tenant: ' . $e->getMessage(), ['tenant_id' => $this->tenant->id]);
+            \Log::warning('Failed to seed tenant: '.$e->getMessage(), ['tenant_id' => $this->tenant->id]);
         }
         tenancy()->end();
+
         return $this;
     }
 
