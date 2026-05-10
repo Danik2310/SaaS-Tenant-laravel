@@ -6,10 +6,11 @@ import {
     Box, Chip, Typography, TextField, Select, MenuItem,
     FormControl, InputLabel, Button, Stack, Alert, Paper,
     Dialog, DialogTitle, DialogContent, DialogActions,
-    Table, TableBody, TableCell, TableRow,
+    Table, TableBody, TableCell, TableRow, Tooltip,
 } from '@mui/material';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import PersonIcon from '@mui/icons-material/Person';
 
 export default function ActivityLog() {
     const [activities, setActivities] = useState([]);
@@ -21,16 +22,24 @@ export default function ActivityLog() {
     const [logNameFilter, setLogNameFilter] = useState('');
     const [search, setSearch] = useState('');
     const [logNames, setLogNames] = useState([]);
-
-    useEffect(() => {
-        fetchLogNames();
-        fetchActivities();
-    }, []);
+    const [causerId, setCauserId] = useState('');
+    const [causers, setCausers] = useState([]);
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
     const fetchLogNames = async () => {
         try {
             const res = await api.get('/admin/api/activity-logs/log-names');
             setLogNames(res.data.log_names);
+        } catch (err) {
+            // silently fail
+        }
+    };
+
+    const fetchCausers = async () => {
+        try {
+            const res = await api.get('/admin/api/activity-logs/causers');
+            setCausers(res.data.causers);
         } catch (err) {
             // silently fail
         }
@@ -42,6 +51,9 @@ export default function ActivityLog() {
             const params = new URLSearchParams();
             if (logNameFilter) params.append('log_name', logNameFilter);
             if (search) params.append('search', search);
+            if (causerId) params.append('causer_id', causerId);
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
             const res = await api.get(`/admin/api/activity-logs?${params.toString()}`);
             setActivities(res.data.activities);
             setError(null);
@@ -64,18 +76,23 @@ export default function ActivityLog() {
         }
     };
 
-    const handleFilter = () => {
-        fetchActivities();
-    };
-
     const handleClear = () => {
         setLogNameFilter('');
         setSearch('');
+        setCauserId('');
+        setDateFrom('');
+        setDateTo('');
     };
 
     useEffect(() => {
+        fetchLogNames();
+        fetchCausers();
         fetchActivities();
-    }, [logNameFilter, search]);
+    }, []);
+
+    useEffect(() => {
+        fetchActivities();
+    }, [logNameFilter, search, causerId, dateFrom, dateTo]);
 
     const columns = [
         { accessorKey: 'id', header: 'ID' },
@@ -92,14 +109,27 @@ export default function ActivityLog() {
             ),
         },
         { accessorKey: 'subject_type', header: 'Subject' },
-        { accessorKey: 'causer_type', header: 'Causer' },
+        {
+            accessorKey: 'causer_type',
+            header: 'Causer',
+            Cell: ({ cell }) => (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <PersonIcon sx={{ fontSize: 14, color: '#94a3b8' }} />
+                    <Typography variant="body2" sx={{ fontSize: 13 }}>
+                        {cell.getValue() || 'System'}
+                    </Typography>
+                </Box>
+            ),
+        },
         {
             accessorKey: 'created_at_diff',
             header: 'Time',
             Cell: ({ cell }) => (
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
-                    {cell.getValue()}
-                </Typography>
+                <Tooltip title={cell.row.created_at}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: 12 }}>
+                        {cell.getValue()}
+                    </Typography>
+                </Tooltip>
             ),
         },
     ];
@@ -121,6 +151,37 @@ export default function ActivityLog() {
                             ))}
                         </Select>
                     </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 180 }}>
+                        <InputLabel>Admin User</InputLabel>
+                        <Select
+                            value={causerId}
+                            label="Admin User"
+                            onChange={(e) => setCauserId(e.target.value)}
+                        >
+                            <MenuItem value="">All</MenuItem>
+                            {causers.map((u) => (
+                                <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <TextField
+                        size="small"
+                        type="date"
+                        label="From"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ minWidth: 150 }}
+                    />
+                    <TextField
+                        size="small"
+                        type="date"
+                        label="To"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                        sx={{ minWidth: 150 }}
+                    />
                     <TextField
                         size="small"
                         label="Search"
