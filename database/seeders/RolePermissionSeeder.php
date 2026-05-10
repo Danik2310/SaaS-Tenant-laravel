@@ -91,6 +91,14 @@ class RolePermissionSeeder extends Seeder
                     'is_active' => true
                 ]
             );
+            Permission::updateOrCreate(
+                ['name' => 'restore tenants', 'guard_name' => $guard],
+                [
+                    'description' => 'Permite restaurar tenants eliminados',
+                    'module' => 'tenants',
+                    'is_active' => true
+                ]
+            );
 
             // Create roles for this guard
             $superAdmin = Role::updateOrCreate(
@@ -118,6 +126,7 @@ class RolePermissionSeeder extends Seeder
                 'view activity logs',
                 'manage settings',
                 'impersonate tenants',
+                'restore tenants',
                 'manage profile'
             ]);
 

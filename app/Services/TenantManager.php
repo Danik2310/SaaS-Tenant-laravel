@@ -34,7 +34,27 @@ class TenantManager implements TenantManagerInterface
 
     public function delete(Tenant $tenant): void
     {
-        $tenant->delete();
+        $tenant->status = 'Deleted';
+        $tenant->delete(); // soft delete via SoftDeletes trait
+
+        activity('tenant')
+            ->performedOn($tenant)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['tenant_name' => $tenant->name, 'tenant_id' => $tenant->id])
+            ->log("Deleted tenant: {$tenant->name}");
+    }
+
+    public function restore(Tenant $tenant): void
+    {
+        $tenant->status = 'Active';
+        $tenant->deleted_at = null;
+        $tenant->save();
+
+        activity('tenant')
+            ->performedOn($tenant)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['tenant_name' => $tenant->name, 'tenant_id' => $tenant->id])
+            ->log("Restored tenant: {$tenant->name}");
     }
 
     public function changePlan(Tenant $tenant, Plan $newPlan): void

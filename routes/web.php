@@ -84,6 +84,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::post('/api/tenants', [AdminDashboardController::class, 'createTenant']);
         Route::put('/api/tenants/{id}', [AdminDashboardController::class, 'updateTenant']);
         Route::delete('/api/tenants/{id}', [AdminDashboardController::class, 'deleteTenant']);
+        Route::patch('/api/tenants/{id}/restore', [AdminDashboardController::class, 'restoreTenant']);
 
         // additional endpoints for tenants
         Route::get('/api/tenants/{id}/database', [AdminDashboardController::class, 'tenantDatabase']);
@@ -162,6 +163,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::middleware(['permission:view activity logs'])->group(function () {
         Route::get('/api/activity-logs', [ActivityLogController::class, 'index']);
         Route::get('/api/activity-logs/log-names', [ActivityLogController::class, 'logNames']);
+        Route::get('/api/activity-logs/causers', [ActivityLogController::class, 'causers']);
         Route::get('/api/activity-logs/{id}', [ActivityLogController::class, 'show']);
     });
 

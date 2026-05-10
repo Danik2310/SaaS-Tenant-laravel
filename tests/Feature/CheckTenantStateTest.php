@@ -54,6 +54,28 @@ class CheckTenantStateTest extends TestCase
         tenancy()->end();
     }
 
+    public function test_deleted_tenant_returns_403_with_deleted_message()
+    {
+        $tenant = Tenant::create([
+            'id' => 'deleted-tenant-' . uniqid(),
+            'name' => 'Deleted Tenant',
+            'status' => 'Deleted',
+        ]);
+
+        tenancy()->initialize($tenant);
+
+        $middleware = new CheckTenantState();
+        $request = Request::create('/', 'GET', [], [], [], ['HTTP_Accept' => 'application/json']);
+        $response = $middleware->handle($request, fn ($req) => response('OK'));
+
+        $this->assertEquals(403, $response->getStatusCode());
+
+        $data = json_decode($response->getContent(), true);
+        $this->assertEquals('This account has been deleted. Please contact support.', $data['message']);
+
+        tenancy()->end();
+    }
+
     public function test_middleware_passes_when_no_tenant_context()
     {
         $middleware = new CheckTenantState();

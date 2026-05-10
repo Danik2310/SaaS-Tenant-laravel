@@ -21,9 +21,10 @@ class AdminDashboardController extends Controller
 
     public function dashboardStats()
     {
-        $totalTenants = Tenant::count();
+        $totalTenants = Tenant::withTrashed()->count();
         $activeTenants = Tenant::where('status', 'Active')->count();
         $suspendedTenants = Tenant::where('status', 'Suspended')->count();
+        $deletedTenants = Tenant::onlyTrashed()->count();
 
         $staffCount = AdminUser::count();
         $activeStaff = AdminUser::where('is_active', true)->count();
@@ -52,6 +53,7 @@ class AdminDashboardController extends Controller
         $statusDistribution = [
             ['name' => 'Active', 'value' => $activeTenants],
             ['name' => 'Suspended', 'value' => $suspendedTenants],
+            ['name' => 'Deleted', 'value' => $deletedTenants],
         ];
 
         return response()->json([
@@ -59,6 +61,7 @@ class AdminDashboardController extends Controller
                 'total_tenants' => $totalTenants,
                 'active_tenants' => $activeTenants,
                 'suspended_tenants' => $suspendedTenants,
+                'deleted_tenants' => $deletedTenants,
                 'total_staff' => $staffCount,
                 'active_staff' => $activeStaff,
                 'total_plans' => $plansCount,
@@ -76,7 +79,13 @@ class AdminDashboardController extends Controller
 
     public function tenants()
     {
-        $tenants = Tenant::with(['domains', 'plan'])->paginate(25);
+        $query = Tenant::with(['domains', 'plan']);
+
+        if (request()->boolean('trashed')) {
+            $query->withTrashed();
+        }
+
+        $tenants = $query->paginate(25);
 
         return response()->json([
             'tenants' => TenantResource::collection($tenants->items()),
@@ -134,7 +143,28 @@ class AdminDashboardController extends Controller
 
         $this->tenantManager->delete($tenant);
 
+        activity('tenant')
+            ->performedOn($tenant)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['tenant_name' => $tenant->name, 'status' => 'deleted'])
+            ->log("Deleted tenant {$tenant->name}");
+
         return response()->json(['message' => 'Tenant deleted successfully']);
+    }
+
+    public function restoreTenant(string $id)
+    {
+        $tenant = Tenant::withTrashed()->findOrFail($id);
+
+        $this->tenantManager->restore($tenant);
+
+        activity('tenant')
+            ->performedOn($tenant)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['tenant_name' => $tenant->name, 'status' => 'restored'])
+            ->log("Restored tenant {$tenant->name}");
+
+        return response()->json(['message' => 'Tenant restored successfully', 'tenant' => new TenantResource($tenant)]);
     }
 
     public function tenantDatabase(string $id)
@@ -145,7 +175,7 @@ class AdminDashboardController extends Controller
         return response()->json([
             'database' => [
                 'name' => $db->getName(),
-                'connection' => $db->connection(),
+                'connection' => $db->connection()['driver'] ?? 'mysql',
                 'host' => config('database.connections.tenant.host'),
                 'port' => config('database.connections.tenant.port'),
             ],
@@ -205,6 +235,12 @@ class AdminDashboardController extends Controller
 
         session(['impersonate_tenant' => $tenant->id]);
 
+        activity('impersonation')
+            ->performedOn($tenant)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['tenant_name' => $tenant->name, 'domain' => $domain])
+            ->log("Impersonated tenant {$tenant->name}");
+
         return response()->json(['message' => 'Impersonation started', 'domain' => $domain]);
     }
 
@@ -220,10 +256,21 @@ class AdminDashboardController extends Controller
 
         $tenant = Tenant::with('plan')->findOrFail($id);
         $newPlan = Plan::findOrFail($request->input('plan_id'));
+        $oldPlanName = $tenant->plan?->name ?? 'None';
 
         $this->tenantManager->changePlan($tenant, $newPlan);
 
         $tenant->refresh();
+
+        activity('tenant')
+            ->performedOn($tenant)
+            ->causedBy(auth('admin')->user())
+            ->withProperties([
+                'tenant_name' => $tenant->name,
+                'from_plan' => $oldPlanName,
+                'to_plan' => $newPlan->name,
+            ])
+            ->log("Changed plan for {$tenant->name}: {$oldPlanName} → {$newPlan->name}");
 
         return response()->json([
             'message' => 'Tenant plan changed successfully',

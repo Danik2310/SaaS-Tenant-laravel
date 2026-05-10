@@ -18,7 +18,7 @@ class UpdateTenantRequest extends FormRequest
         return [
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|email|unique:tenants,email,' . $tenantId,
-            'status' => 'nullable|in:Active,Suspended',
+            'status' => 'nullable|in:Active,Suspended,Deleted',
             'plan_id' => 'nullable|integer|exists:plans,id',
         ];
     }

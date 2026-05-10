@@ -15,13 +15,21 @@ class CheckTenantState
         $tenant = tenant();
 
         if ($tenant && $tenant instanceof \App\Models\Tenant && $tenant->status !== 'Active') {
+            $isDeleted = $tenant->status === 'Deleted';
+
             if ($request->expectsJson()) {
-                return response()->json([
-                    'message' => 'Your account has been suspended. Please contact support.',
-                ], 403);
+                $message = $isDeleted
+                    ? 'This account has been deleted. Please contact support.'
+                    : 'Your account has been suspended. Please contact support.';
+
+                return response()->json(['message' => $message], 403);
             }
 
-            return redirect()->route('tenant.suspended');
+            return response()->view('admin.tenant-state', [
+                'status' => $tenant->status,
+                'isDeleted' => $isDeleted,
+                'tenantName' => $tenant->name,
+            ]);
         }
 
         return $next($request);

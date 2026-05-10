@@ -22,6 +22,7 @@ Route::middleware([
     'web',
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
+    'tenant.state',
 ])->group(function () {
     // Public routes (no auth required)
     Route::get('/admin/login', [\App\Http\Controllers\Admin\AuthController::class, 'showLogin'])
@@ -29,7 +30,7 @@ Route::middleware([
     Route::post('/admin/login', [\App\Http\Controllers\Admin\AuthController::class, 'login']);
 
     // Authenticated tenant routes
-    Route::middleware(['auth', 'tenant.state'])->group(function () {
+    Route::middleware(['auth'])->group(function () {
         Route::post('/admin/logout', [\App\Http\Controllers\Admin\AuthController::class, 'logout'])
             ->name('admin.logout');
 

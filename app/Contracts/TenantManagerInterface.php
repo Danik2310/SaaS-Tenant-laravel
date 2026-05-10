@@ -15,5 +15,7 @@ interface TenantManagerInterface
 
     public function delete(Tenant $tenant): void;
 
+    public function restore(Tenant $tenant): void;
+
     public function changePlan(Tenant $tenant, Plan $newPlan): void;
 }

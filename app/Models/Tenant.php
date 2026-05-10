@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Plan;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Models\Domain;
@@ -19,7 +20,7 @@ trait NoDataColumn
 class Tenant extends BaseTenant implements TenantWithDatabase
 {
     // Reemplazar HasDataColumn con nuestro trait vacío
-    use NoDataColumn;
+    use NoDataColumn, SoftDeletes;
     protected $fillable = [
         'id',
         'name',
@@ -33,6 +34,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     protected $casts = [
         'trial_ends_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     // Campos que deben guardarse en columnas específicas, no en data

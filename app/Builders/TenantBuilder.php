@@ -30,6 +30,7 @@ class TenantBuilder
     public function withDatabase(): static
     {
         $this->tenant->database()->makeCredentials();
+        $this->tenant->database()->manager()->createDatabase($this->tenant);
         $this->tenant->save();
         return $this;
     }
