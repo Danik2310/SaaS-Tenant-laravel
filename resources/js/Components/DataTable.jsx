@@ -13,6 +13,7 @@ import {
     Tooltip,
     Chip,
     Typography,
+    Divider,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -131,18 +132,22 @@ export default function DataTable({
                                     <MoreVertIcon fontSize="small" />
                                 </IconButton>
                                 <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor) && menuRow?.id === row.id} onClose={handleMenuClose}>
-                                    {menuActions.map((action, aIdx) => (
-                                        <MenuItem
-                                            key={aIdx}
-                                            onClick={() => {
-                                                action.onClick(row);
-                                                handleMenuClose();
-                                            }}
-                                        >
-                                            {action.icon && <ListItemIcon>{action.icon}</ListItemIcon>}
-                                            <ListItemText primaryTypographyProps={{ fontSize: '13px' }}>{action.label}</ListItemText>
-                                        </MenuItem>
-                                    ))}
+                                    {menuActions.map((action, aIdx) =>
+                                        action.divider ? (
+                                            <Divider key={aIdx} sx={{ my: 0.5 }} />
+                                        ) : (
+                                            <MenuItem
+                                                key={aIdx}
+                                                onClick={() => {
+                                                    action.onClick(row);
+                                                    handleMenuClose();
+                                                }}
+                                            >
+                                                {action.icon && <ListItemIcon>{action.icon}</ListItemIcon>}
+                                                <ListItemText primaryTypographyProps={{ fontSize: '13px' }}>{action.label}</ListItemText>
+                                            </MenuItem>
+                                        )
+                                    )}
                                 </Menu>
                             </React.Fragment>
                         );

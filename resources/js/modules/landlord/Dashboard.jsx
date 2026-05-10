@@ -16,11 +16,31 @@ import BlockIcon from '@mui/icons-material/Block';
 import LanguageIcon from '@mui/icons-material/Language';
 import StorageIcon from '@mui/icons-material/Storage';
 import SyncIcon from '@mui/icons-material/Sync';
+import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import ReceiptIcon from '@mui/icons-material/Receipt';
+import RestoreIcon from '@mui/icons-material/Restore';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { toast } from 'sonner';
 import DatabaseModal from './modals/DatabaseModal';
 import MigrationModal from './modals/MigrationModal';
 import DomainModal from './modals/DomainModal';
-import { Box, Typography } from '@mui/material';
+import {
+    Box,
+    Typography,
+    Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    Radio,
+    RadioGroup,
+    FormControlLabel,
+    FormControl,
+    FormLabel,
+    CircularProgress,
+} from '@mui/material';
 
 export default function Dashboard({ user, setUser }) {
     const [tenants, setTenants] = useState([]);
@@ -31,15 +51,28 @@ export default function Dashboard({ user, setUser }) {
     const [error, setError] = useState(null);
 
     const [activeModal, setActiveModal] = useState(null);
+    const [planChangeTenant, setPlanChangeTenant] = useState(null);
+    const [plans, setPlans] = useState([]);
+    const [selectedPlanId, setSelectedPlanId] = useState(null);
+    const [changingPlan, setChangingPlan] = useState(false);
+    const [showDeleted, setShowDeleted] = useState(false);
 
     useEffect(() => {
         fetchTenants();
-    }, []);
+    }, [showDeleted]);
+
+    useEffect(() => {
+        if (planChangeTenant) {
+            fetchPlans();
+            setSelectedPlanId(planChangeTenant.plan?.id || '');
+        }
+    }, [planChangeTenant]);
 
     const fetchTenants = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/admin/api/tenants');
+            const params = showDeleted ? '?trashed=1' : '';
+            const response = await api.get(`/admin/api/tenants${params}`);
             setTenants(response.data.tenants);
         } catch (err) {
             const message = 'Failed to fetch tenants';
@@ -73,14 +106,28 @@ export default function Dashboard({ user, setUser }) {
         }
     };
 
-    const handleDeleteTenant = async (id) => {
-        if (window.confirm('Are you sure you want to delete this tenant?')) {
+    const handleDeleteTenant = async (tenant) => {
+        if (window.confirm('This will soft-delete the tenant. The data will be preserved and can be restored later. Continue?')) {
             try {
-                await api.delete(`/admin/api/tenants/${id}`);
-                toast.success('Tenant deleted successfully');
+                await api.delete(`/admin/api/tenants/${tenant.id}`);
+                toast.success('Tenant soft-deleted successfully');
                 fetchTenants();
             } catch (err) {
                 const message = 'Failed to delete tenant';
+                toast.error(message);
+                setError(message);
+            }
+        }
+    };
+
+    const handleRestoreTenant = async (id) => {
+        if (window.confirm('Restore this tenant? It will be reactivated.')) {
+            try {
+                await api.patch(`/admin/api/tenants/${id}/restore`);
+                toast.success('Tenant restored successfully');
+                fetchTenants();
+            } catch (err) {
+                const message = 'Failed to restore tenant';
                 toast.error(message);
                 setError(message);
             }
@@ -164,6 +211,34 @@ export default function Dashboard({ user, setUser }) {
             toast.error(message);
             setError(message);
         }
+    };
+
+    const fetchPlans = async () => {
+        try {
+            const res = await api.get('/admin/api/plans');
+            setPlans(res.data.plans || []);
+        } catch {
+            toast.error('Failed to load plans');
+        }
+    };
+
+    const handleChangePlan = async () => {
+        if (!planChangeTenant || !selectedPlanId) return;
+        setChangingPlan(true);
+        try {
+            await api.put(`/admin/api/tenants/${planChangeTenant.id}/plan`, { plan_id: selectedPlanId });
+            toast.success('Plan changed successfully');
+            setPlanChangeTenant(null);
+            fetchTenants();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to change plan');
+        } finally {
+            setChangingPlan(false);
+        }
+    };
+
+    const handleViewSubscriptions = (tenant) => {
+        setView('subscriptions');
     };
 
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
@@ -267,11 +342,14 @@ export default function Dashboard({ user, setUser }) {
                         )}
                         {view === 'tenants' && !showForm && !editingTenant && (
                             <TenantList
-                                tenants={tenants}
+                                tenants={tenants.filter(t => showDeleted ? true : !t.is_deleted)}
                                 onAdd={() => setShowForm(true)}
                                 onDelete={handleDeleteTenant}
                                 onEdit={handleEditTenant}
                                 onImpersonate={handleImpersonateTenant}
+                                onRestore={handleRestoreTenant}
+                                showDeleted={showDeleted}
+                                onToggleDeleted={() => setShowDeleted(s => !s)}
                                 onRowSave={async (original, values) => {
                                     try {
                                         await api.put(`/admin/api/tenants/${original.id}`, values);
@@ -280,28 +358,24 @@ export default function Dashboard({ user, setUser }) {
                                         setError(err.response?.data?.message || 'Failed to update tenant');
                                     }
                                 }}
-                                rowMenuActions={(tenant) => [
-                                    {
-                                        label: tenant.status === 'Active' ? 'Suspend' : 'Activate',
-                                        icon: <BlockIcon fontSize="small" />,
-                                        onClick: handleToggleActive,
-                                    },
-                                    {
-                                        label: 'View Domains',
-                                        icon: <LanguageIcon fontSize="small" />,
-                                        onClick: () => openModal('domain', tenant),
-                                    },
-                                    {
-                                        label: 'DB Info',
-                                        icon: <StorageIcon fontSize="small" />,
-                                        onClick: () => openModal('database', tenant),
-                                    },
-                                    {
-                                        label: 'Run Migrations',
-                                        icon: <SyncIcon fontSize="small" />,
-                                        onClick: () => openModal('migration', tenant),
-                                    },
-                                ]}
+                                rowMenuActions={(tenant) => {
+                                    if (tenant.is_deleted) {
+                                        return [
+                                            { label: 'Restore', icon: <RestoreIcon fontSize="small" />, onClick: () => handleRestoreTenant(tenant.id) },
+                                        ];
+                                    }
+                                    return [
+                                        { divider: true },
+                                        { label: tenant.status === 'Active' ? 'Suspend' : 'Activate', icon: <BlockIcon fontSize="small" />, onClick: handleToggleActive },
+                                        { label: 'Change Plan', icon: <ChangeCircleIcon fontSize="small" />, onClick: () => setPlanChangeTenant(tenant) },
+                                        { divider: true },
+                                        { label: 'View Details', icon: <VisibilityIcon fontSize="small" />, onClick: () => openModal('domain', tenant) },
+                                        { label: 'View Subscriptions', icon: <ReceiptIcon fontSize="small" />, onClick: () => handleViewSubscriptions(tenant) },
+                                        { divider: true },
+                                        { label: 'DB Info', icon: <StorageIcon fontSize="small" />, onClick: () => openModal('database', tenant) },
+                                        { label: 'Run Migrations', icon: <SyncIcon fontSize="small" />, onClick: () => openModal('migration', tenant) },
+                                    ];
+                                }}
                             />
                         )}
                         {view === 'subscriptions' && <Subscriptions />}
@@ -391,6 +465,49 @@ export default function Dashboard({ user, setUser }) {
                         onViewDatabase={(tenant) => openModal('database', tenant)}
                         onRunMigrations={(tenant) => openModal('migration', tenant)}
                         />
+
+                    <Dialog
+                        open={!!planChangeTenant}
+                        onClose={() => setPlanChangeTenant(null)}
+                        maxWidth="xs"
+                        fullWidth
+                    >
+                        <DialogTitle>Change Plan</DialogTitle>
+                        <DialogContent>
+                            <Typography variant="body2" sx={{ mb: 2, color: '#64748b' }}>
+                                Select a new plan for <strong>{planChangeTenant?.name}</strong>
+                            </Typography>
+                            {plans.length === 0 ? (
+                                <CircularProgress size={24} />
+                            ) : (
+                                <FormControl component="fieldset">
+                                    <RadioGroup value={selectedPlanId} onChange={(e) => setSelectedPlanId(Number(e.target.value))}>
+                                        {plans.map((p) => (
+                                            <FormControlLabel
+                                                key={p.id}
+                                                value={p.id}
+                                                control={<Radio />}
+                                                label={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{p.name}</Typography>
+                                                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                            {p.price > 0 ? `$${p.price}/mo` : 'Free'}
+                                                        </Typography>
+                                                    </Box>
+                                                }
+                                            />
+                                        ))}
+                                    </RadioGroup>
+                                </FormControl>
+                            )}
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setPlanChangeTenant(null)}>Cancel</Button>
+                            <Button onClick={handleChangePlan} variant="contained" disabled={changingPlan || !selectedPlanId}>
+                                {changingPlan ? 'Changing...' : 'Change Plan'}
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
                 </main>
             </div>
         </div>

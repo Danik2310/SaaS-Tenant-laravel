@@ -24,6 +24,7 @@ import {
     People as PeopleIcon,
     CheckCircle as CheckCircleIcon,
     Block as BlockIcon,
+    Delete as DeleteIcon,
     Group as GroupIcon,
     Assignment as AssignmentIcon,
 } from '@mui/icons-material';
@@ -40,7 +41,7 @@ import {
     Cell,
 } from 'recharts';
 
-const COLORS = ['#22c55e', '#ef4444'];
+const COLORS = ['#22c55e', '#ef4444', '#64748b'];
 
 const StatCard = ({ title, value, icon, color, subtitle }) => (
     <Card sx={{
@@ -178,6 +179,14 @@ export default function DashboardOverview() {
                         value={stats?.suspended_tenants ?? 0}
                         icon={<BlockIcon />}
                         color="#ef4444"
+                    />
+                </Grid>
+                <Grid item xs={6} sm={6} md={4} lg={2.4}>
+                    <StatCard
+                        title="Deleted"
+                        value={stats?.deleted_tenants ?? 0}
+                        icon={<DeleteIcon />}
+                        color="#64748b"
                     />
                 </Grid>
                 <Grid item xs={6} sm={6} md={4} lg={2.4}>

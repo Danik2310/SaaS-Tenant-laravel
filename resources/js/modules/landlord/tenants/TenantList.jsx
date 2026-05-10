@@ -1,8 +1,9 @@
 import React from 'react';
 import DataTable from '@/components/DataTable';
-import { Box, Button, Typography, Chip, Tooltip } from '@mui/material';
+import { Box, Button, Typography, Chip, Tooltip, Switch, FormControlLabel } from '@mui/material';
+import RestoreIcon from '@mui/icons-material/Restore';
 
-export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImpersonate, onRowSave, rowMenuActions = [] }) {
+export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImpersonate, onRowSave, onRestore, showDeleted, onToggleDeleted, rowMenuActions = [] }) {
     const columns = React.useMemo(
         () => [
             { accessorKey: 'id', header: 'ID' },
@@ -12,19 +13,28 @@ export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImperso
             {
                 accessorKey: 'status',
                 header: 'Status',
-                Cell: ({ cell }) => (
-                    <Tooltip title={cell.getValue() === 'Active' ? 'Tenant is active and operational' : 'Tenant is suspended and cannot access the system'}>
-                        <Chip
-                            label={cell.getValue()}
-                            size="small"
-                            sx={{
-                                bgcolor: cell.getValue() === 'Active' ? '#dcfce7' : '#fee2e2',
-                                color: cell.getValue() === 'Active' ? '#166534' : '#991b1b',
-                                fontWeight: 600,
-                            }}
-                        />
-                    </Tooltip>
-                ),
+                Cell: ({ cell }) => {
+                    const isDeleted = cell.row.is_deleted;
+                    if (isDeleted) {
+                        return (
+                            <Chip label="Deleted" size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontWeight: 600, fontStyle: 'italic' }} />
+                        );
+                    }
+                    const status = cell.getValue();
+                    return (
+                        <Tooltip title={status === 'Active' ? 'Tenant is active and operational' : 'Tenant is suspended and cannot access the system'}>
+                            <Chip
+                                label={status}
+                                size="small"
+                                sx={{
+                                    bgcolor: status === 'Active' ? '#dcfce7' : '#fee2e2',
+                                    color: status === 'Active' ? '#166534' : '#991b1b',
+                                    fontWeight: 600,
+                                }}
+                            />
+                        </Tooltip>
+                    );
+                },
             },
             {
                 accessorKey: 'created_at',
@@ -45,19 +55,26 @@ export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImperso
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
                     Tenant Management
                 </Typography>
-                <Button
-                    variant="contained"
-                    size="small"
-                    onClick={onAdd}
-                    sx={{
-                        bgcolor: '#22c55e',
-                        '&:hover': { bgcolor: '#16a34a' },
-                        fontWeight: 600,
-                        fontSize: '13px',
-                    }}
-                >
-                    + New Tenant
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <FormControlLabel
+                        control={<Switch size="small" checked={showDeleted} onChange={onToggleDeleted} />}
+                        label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
+                        sx={{ mr: 0 }}
+                    />
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={onAdd}
+                        sx={{
+                            bgcolor: '#22c55e',
+                            '&:hover': { bgcolor: '#16a34a' },
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
+                    >
+                        + New Tenant
+                    </Button>
+                </Box>
             </Box>
 
             <DataTable
@@ -68,7 +85,7 @@ export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImperso
                 onImpersonate={onImpersonate}
                 onRowSave={onRowSave}
                 rowMenuActions={rowMenuActions}
-                emptyMessage="No tenants found. Create one to get started."
+                emptyMessage={showDeleted ? 'No deleted tenants found.' : 'No tenants found. Create one to get started.'}
             />
         </Box>
     );
