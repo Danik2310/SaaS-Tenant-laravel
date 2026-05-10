@@ -101,7 +101,7 @@ class AdminDashboardController extends Controller
 
     public function showTenant(string $id)
     {
-        $tenant = Tenant::with(['domains', 'plan'])->findOrFail($id);
+        $tenant = Tenant::withTrashed()->with(['domains', 'plan'])->findOrFail($id);
 
         return response()->json([
             'tenant' => new TenantResource($tenant),
@@ -169,7 +169,7 @@ class AdminDashboardController extends Controller
 
     public function tenantDatabase(string $id)
     {
-        $tenant = Tenant::findOrFail($id);
+        $tenant = Tenant::withTrashed()->findOrFail($id);
         $db = $tenant->database();
 
         return response()->json([
