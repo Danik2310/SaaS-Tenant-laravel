@@ -17,6 +17,8 @@ import {
     TableHead,
     TableRow,
     TablePagination,
+    Switch,
+    FormControlLabel,
     useMediaQuery,
     useTheme,
 } from '@mui/material';
@@ -87,14 +89,16 @@ export default function DashboardOverview() {
     const [statusDistribution, setStatusDistribution] = useState([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage] = useState(5);
+    const [showDeleted, setShowDeleted] = useState(false);
 
     useEffect(() => {
         fetchStats();
-    }, []);
+    }, [showDeleted]);
 
     const fetchStats = async () => {
         try {
-            const res = await api.get('/admin/api/dashboard-stats');
+            const params = showDeleted ? '?trashed=1' : '';
+            const res = await api.get(`/admin/api/dashboard-stats${params}`);
             setStats(res.data.stats);
             setRecentTenants(res.data.recent_tenants);
             setTenantsByMonth(res.data.tenants_by_month);
@@ -320,11 +324,16 @@ export default function DashboardOverview() {
                 borderRadius: '8px',
                 overflow: 'hidden',
             }}>
-                <Box sx={{ p: 3, pb: 1 }}>
+                <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#8b5cf6' }} />
                         Recent Tenants
                     </Typography>
+                    <FormControlLabel
+                        control={<Switch size="small" checked={showDeleted} onChange={() => setShowDeleted(s => !s)} />}
+                        label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
+                        sx={{ mr: 0 }}
+                    />
                 </Box>
                 <TableContainer>
                     <Table size="small">
@@ -364,11 +373,12 @@ export default function DashboardOverview() {
                                                 label={tenant.status}
                                                 size="small"
                                                 sx={{
-                                                    bgcolor: tenant.status === 'Active' ? '#dcfce7' : '#fee2e2',
-                                                    color: tenant.status === 'Active' ? '#166534' : '#991b1b',
+                                                    bgcolor: tenant.status === 'Active' ? '#dcfce7' : tenant.status === 'Suspended' ? '#fee2e2' : '#f1f5f9',
+                                                    color: tenant.status === 'Active' ? '#166534' : tenant.status === 'Suspended' ? '#991b1b' : '#64748b',
                                                     fontWeight: 600,
                                                     height: 24,
                                                     fontSize: 12,
+                                                    fontStyle: tenant.status === 'Deleted' ? 'italic' : 'normal',
                                                 }}
                                             />
                                         </TableCell>

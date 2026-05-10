@@ -40,6 +40,7 @@ import {
     FormControl,
     FormLabel,
     CircularProgress,
+    Switch,
 } from '@mui/material';
 
 export default function Dashboard({ user, setUser }) {
@@ -393,21 +394,28 @@ export default function Dashboard({ user, setUser }) {
                                             Select a tenant to impersonate. You will be redirected to their domain.
                                         </Typography>
                                     </div>
-                                    <button
-                                        onClick={() => { setView('tenants'); fetchTenants(); }}
-                                        style={{
-                                            padding: '8px 16px',
-                                            background: '#f1f5f9',
-                                            color: '#334155',
-                                            border: '1px solid #e2e8f0',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            fontSize: '13px',
-                                            fontWeight: 600,
-                                        }}
-                                    >
-                                        Back to Tenants
-                                    </button>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                        <FormControlLabel
+                                            control={<Switch size="small" checked={showDeleted} onChange={() => setShowDeleted(s => !s)} />}
+                                            label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
+                                            sx={{ mr: 0 }}
+                                        />
+                                        <button
+                                            onClick={() => { setView('tenants'); fetchTenants(); }}
+                                            style={{
+                                                padding: '8px 16px',
+                                                background: '#f1f5f9',
+                                                color: '#334155',
+                                                border: '1px solid #e2e8f0',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                fontSize: '13px',
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            Back to Tenants
+                                        </button>
+                                    </Box>
                                 </Box>
                                 <DataTable
                                     columns={[
@@ -425,24 +433,31 @@ export default function Dashboard({ user, setUser }) {
                                         {
                                             accessorKey: 'status',
                                             header: 'Status',
-                                            Cell: ({ cell }) => (
-                                                <span style={{
-                                                    display: 'inline-block',
-                                                    padding: '4px 8px',
-                                                    borderRadius: '4px',
-                                                    fontSize: '12px',
-                                                    fontWeight: 600,
-                                                    background: cell.getValue() === 'Active' ? '#dcfce7' : '#fee2e2',
-                                                    color: cell.getValue() === 'Active' ? '#166534' : '#991b1b',
-                                                }}>
-                                                    {cell.getValue()}
-                                                </span>
-                                            ),
+                                            Cell: ({ cell }) => {
+                                                const status = cell.getValue();
+                                                const chipStyle = status === 'Active'
+                                                    ? { background: '#dcfce7', color: '#166534' }
+                                                    : status === 'Suspended'
+                                                        ? { background: '#fee2e2', color: '#991b1b' }
+                                                        : { background: '#f1f5f9', color: '#64748b', fontStyle: 'italic' };
+                                                return (
+                                                    <span style={{
+                                                        display: 'inline-block',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        fontWeight: 600,
+                                                        ...chipStyle,
+                                                    }}>
+                                                        {status}
+                                                    </span>
+                                                );
+                                            },
                                         },
                                     ]}
-                                    data={tenants.filter((t) => t.status === 'Active')}
+                                    data={tenants.filter(t => showDeleted ? true : t.status === 'Active')}
                                     onImpersonate={handleImpersonateTenant}
-                                    emptyMessage="No active tenants to impersonate."
+                                    emptyMessage={showDeleted ? 'No tenants found.' : 'No active tenants to impersonate.'}
                                 />
                             </>
                         )}
