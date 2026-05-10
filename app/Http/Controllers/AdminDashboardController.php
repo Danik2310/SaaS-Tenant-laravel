@@ -8,9 +8,9 @@ use App\Http\Requests\Admin\StoreTenantRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
 use App\Http\Resources\PlanResource;
 use App\Http\Resources\TenantResource;
-use App\Models\Tenant;
 use App\Models\AdminUser;
 use App\Models\Plan;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
@@ -31,7 +31,12 @@ class AdminDashboardController extends Controller
 
         $plansCount = Plan::count();
 
-        $recentTenants = Tenant::with('domains')
+        $tenantQuery = request()->boolean('trashed')
+            ? Tenant::withTrashed()
+            : Tenant::query();
+
+        $recentTenants = $tenantQuery->clone()
+            ->with('domains')
             ->latest()
             ->take(7)
             ->get()
@@ -44,7 +49,8 @@ class AdminDashboardController extends Controller
                 ];
             })->values()->toArray();
 
-        $tenantsByMonth = Tenant::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
+        $tenantsByMonth = $tenantQuery->clone()
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count")
             ->groupBy('month')
             ->orderBy('month')
             ->get()
@@ -143,12 +149,6 @@ class AdminDashboardController extends Controller
 
         $this->tenantManager->delete($tenant);
 
-        activity('tenant')
-            ->performedOn($tenant)
-            ->causedBy(auth('admin')->user())
-            ->withProperties(['tenant_name' => $tenant->name, 'status' => 'deleted'])
-            ->log("Deleted tenant {$tenant->name}");
-
         return response()->json(['message' => 'Tenant deleted successfully']);
     }
 
@@ -157,12 +157,6 @@ class AdminDashboardController extends Controller
         $tenant = Tenant::withTrashed()->findOrFail($id);
 
         $this->tenantManager->restore($tenant);
-
-        activity('tenant')
-            ->performedOn($tenant)
-            ->causedBy(auth('admin')->user())
-            ->withProperties(['tenant_name' => $tenant->name, 'status' => 'restored'])
-            ->log("Restored tenant {$tenant->name}");
 
         return response()->json(['message' => 'Tenant restored successfully', 'tenant' => new TenantResource($tenant)]);
     }
@@ -187,25 +181,28 @@ class AdminDashboardController extends Controller
         try {
             $tenant = Tenant::findOrFail($id);
 
-            $result = $tenant->run(function () {
-                $exit = \Artisan::call('migrate', [
-                    '--force' => true,
-                ]);
-                return [
-                    'output' => \Artisan::output(),
-                    'exit' => $exit,
-                ];
-            });
+            $exitCode = \Artisan::call('tenants:migrate', [
+                '--tenants' => [$tenant->id],
+            ]);
+
+            $output = \Artisan::output();
+
+            activity('tenant')
+                ->performedOn($tenant)
+                ->causedBy(auth('admin')->user())
+                ->withProperties(['tenant_name' => $tenant->name])
+                ->log("Ran migrations for tenant {$tenant->name}");
 
             return response()->json([
-                'message' => 'Migrations executed',
-                'output' => $result['output'],
-                'exit' => $result['exit'],
+                'message' => $exitCode === 0 ? 'Migrations executed successfully' : 'Migrations completed with warnings',
+                'output' => $output,
+                'exit' => $exitCode,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Migration failed',
                 'error' => $e->getMessage(),
+                'output' => isset($output) ? $output : '',
             ], 500);
         }
     }
@@ -229,7 +226,7 @@ class AdminDashboardController extends Controller
         $tenant = Tenant::with('domains')->find($request->validated('tenant_id'));
         $domain = $tenant->domains->first()?->domain ?? null;
 
-        if (!$domain) {
+        if (! $domain) {
             return response()->json(['message' => 'Tenant has no domain configured'], 422);
         }
 
@@ -247,6 +244,7 @@ class AdminDashboardController extends Controller
     public function stopImpersonation()
     {
         session()->forget('impersonate_tenant');
+
         return response()->json(['message' => 'Impersonation stopped']);
     }
 
