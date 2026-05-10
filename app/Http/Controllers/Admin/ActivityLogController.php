@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminUser;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 
@@ -14,6 +15,11 @@ class ActivityLogController extends Controller
 
         if ($logName = $request->query('log_name')) {
             $query->where('log_name', $logName);
+        }
+
+        if ($causerId = $request->query('causer_id')) {
+            $query->where('causer_id', $causerId)
+                  ->where('causer_type', AdminUser::class);
         }
 
         if ($search = $request->query('search')) {
@@ -90,5 +96,15 @@ class ActivityLogController extends Controller
             ->values();
 
         return response()->json(['log_names' => $names]);
+    }
+
+    public function causers()
+    {
+        $users = AdminUser::select('id', 'name', 'email')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email]);
+
+        return response()->json(['causers' => $users]);
     }
 }

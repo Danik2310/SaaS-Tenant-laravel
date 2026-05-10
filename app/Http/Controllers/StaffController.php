@@ -189,7 +189,14 @@ class StaffController extends Controller
     {
         $admin = AdminUser::findOrFail($id);
         $roles = Role::whereIn('id', $request->validated('role_ids'))->get();
+        $roleNames = $roles->pluck('name')->implode(', ');
         $admin->syncRoles($roles);
+
+        activity('staff')
+            ->performedOn($admin)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['staff_name' => $admin->name, 'roles' => $roleNames])
+            ->log("Assigned roles to {$admin->name}: {$roleNames}");
 
         return response()->json([
             'message' => 'Roles assigned successfully',
@@ -200,7 +207,14 @@ class StaffController extends Controller
     public function assignPermissions(AssignPermissionsRequest $request, string $id)
     {
         $admin = AdminUser::findOrFail($id);
+        $perms = Permission::whereIn('id', $request->validated('permission_ids'))->pluck('name')->implode(', ');
         $admin->syncPermissions($request->validated('permission_ids'));
+
+        activity('staff')
+            ->performedOn($admin)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['staff_name' => $admin->name, 'permissions' => $perms])
+            ->log("Assigned permissions to {$admin->name}: {$perms}");
 
         return response()->json([
             'message' => 'Permissions assigned successfully',
@@ -218,6 +232,14 @@ class StaffController extends Controller
 
         $admin->is_active = !$admin->is_active;
         $admin->save();
+
+        $statusLabel = $admin->is_active ? 'activated' : 'deactivated';
+
+        activity('staff')
+            ->performedOn($admin)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['staff_name' => $admin->name, 'is_active' => $admin->is_active])
+            ->log("{$statusLabel} staff member: {$admin->name}");
 
         return response()->json([
             'message' => 'Staff status updated successfully',
