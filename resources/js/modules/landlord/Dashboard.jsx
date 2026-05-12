@@ -44,7 +44,7 @@ import {
     Switch,
 } from '@mui/material';
 
-export default function Dashboard({ user, setUser }) {
+export default function Dashboard({ user, permissions = [], setUser }) {
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -285,7 +285,7 @@ export default function Dashboard({ user, setUser }) {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex' }}>
-            <Navbar user={user} view={view} setView={setView} />
+            <Navbar user={user} permissions={permissions} view={view} setView={setView} />
             <div style={{ flex: 1 }}>
                 <header
                     style={{

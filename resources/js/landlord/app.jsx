@@ -6,7 +6,7 @@ import Dashboard from '../modules/landlord/Dashboard';
 import useAuth from '../hooks/useAuth';
 
 export default function LandlordApp() {
-    const { user, loading, setUser } = useAuth();
+    const { user, permissions, loading, setUser } = useAuth();
 
     if (loading) {
         return (
@@ -18,7 +18,7 @@ export default function LandlordApp() {
 
     return user ? (
         <>
-            <Dashboard user={user} setUser={setUser} />
+            <Dashboard user={user} permissions={permissions} setUser={setUser} />
             <Toaster richColors position="top-right" />
         </>
     ) : (

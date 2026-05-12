@@ -11,6 +11,20 @@ import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
+const permissionMap = {
+    overview: null,
+    tenants: 'manage tenants',
+    'resource-usage': 'manage tenants',
+    staff: 'manage staff',
+    roles: 'manage staff',
+    subscriptions: 'manage subscriptions',
+    plans: 'manage plans',
+    settings: 'manage settings',
+    activity: 'view activity logs',
+    impersonate: 'impersonate tenants',
+    profile: 'manage profile',
+};
+
 const views = [
     { id: 'overview', label: 'Overview', icon: <DashboardIcon />, section: 'Main' },
     { id: 'tenants', label: 'Tenant Management', icon: <PeopleIcon />, section: 'Main' },
@@ -25,8 +39,9 @@ const views = [
     { id: 'profile', label: 'My Profile', icon: <PersonIcon />, section: 'Account' },
 ];
 
-export default function Navbar({ user, view, setView }) {
-    const grouped = views.reduce((acc, v) => {
+export default function Navbar({ user, permissions = [], view, setView }) {
+    const filtered = views.filter(v => !permissionMap[v.id] || permissions.includes(permissionMap[v.id]));
+    const grouped = filtered.reduce((acc, v) => {
         if (!acc[v.section]) acc[v.section] = [];
         acc[v.section].push(v);
         return acc;
