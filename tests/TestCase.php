@@ -12,35 +12,55 @@ abstract class TestCase extends BaseTestCase
     use CreatesApplication;
 
     /**
-     * Create a test tenant for testing.
+     * Create a test tenant for testing, with tenant migrations run.
+     *
+     * Uses Tenant::withoutEvents() to prevent ActivityLogObserver from firing
+     * (which would fail on string tenant IDs in integer subject_id columns).
+     * Configures the 'tenant' connection manually and purges it before
+     * running migrations to avoid connection caching issues.
      */
     protected function createTestTenant(): Tenant
     {
-        $tenant = Tenant::create([
-            'id' => 'test-' . uniqid(),
+        $tenant = Tenant::withoutEvents(function () {
+            $t = Tenant::create([
+                'id' => 'test-' . uniqid(),
+            ]);
+
+            $t->database()->makeCredentials();
+            $t->database()->manager()->createDatabase($t);
+            $t->save();
+
+            return $t;
+        });
+
+        $dbName = $tenant->database()->getName();
+
+        // Configure the tenant connection explicitly to avoid caching issues
+        // where tenancy()->initialize() caches a connection with the wrong DB name.
+        config([
+            'database.connections.tenant' => [
+                'driver' => env('DB_CONNECTION', 'mysql'),
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '3306'),
+                'database' => $dbName,
+                'username' => env('DB_USERNAME', 'root'),
+                'password' => env('DB_PASSWORD', ''),
+                'charset' => 'utf8mb4',
+                'collation' => 'utf8mb4_unicode_ci',
+                'prefix' => '',
+                'prefix_indexes' => true,
+                'strict' => true,
+                'engine' => null,
+            ],
         ]);
 
-        $tenant->database()->makeCredentials();
-        // Provision the database using the configured manager
-        $tenant->database()->manager()->createDatabase($tenant);
-        $tenant->save();
+        DB::purge('tenant');
 
-        // Initialize the tenant context so the `tenant` connection is configured
-        tenancy()->initialize($tenant);
-
-        // make sure the connection config actually has the database name
-        config(['database.connections.tenant.database' => $tenant->database()->getName()]);
-
-        // Run migrations using the standard migrator but target the tenant connection.
-        // Limiting the path prevents central scripts from re‑running.
         Artisan::call('migrate', [
             '--path' => 'database/migrations/tenant',
             '--database' => 'tenant',
             '--force' => true,
         ]);
-
-        // End the tenant context so subsequent operations use the central DB again.
-        tenancy()->end();
 
         return $tenant;
     }
