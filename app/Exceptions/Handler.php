@@ -2,7 +2,6 @@
 
 namespace App\Exceptions;
 
-use App\Exceptions\PlanLimitExceededException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
