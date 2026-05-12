@@ -1,9 +1,11 @@
 import React from 'react';
 import DataTable from '@/components/DataTable';
+import BulkActionToolbar from '@/components/BulkActionToolbar';
+import ExportButton from '@/components/ExportButton';
 import { Box, Button, Typography, Chip, Tooltip, Switch, FormControlLabel } from '@mui/material';
 import RestoreIcon from '@mui/icons-material/Restore';
 
-export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImpersonate, onRowSave, onRestore, showDeleted, onToggleDeleted, rowMenuActions = [] }) {
+export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImpersonate, onRowSave, onRestore, showDeleted, onToggleDeleted, rowMenuActions = [], loading, total, page, rowsPerPage, onPageChange, onRowsPerPageChange, selectedIds, onSelectionChange, onBulkAction }) {
     const columns = React.useMemo(
         () => [
             { accessorKey: 'id', header: 'ID' },
@@ -56,6 +58,7 @@ export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImperso
                     Tenant Management
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <ExportButton resource="tenants" filters={{ status: showDeleted ? undefined : 'Active' }} />
                     <FormControlLabel
                         control={<Switch size="small" checked={showDeleted} onChange={onToggleDeleted} />}
                         label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
@@ -77,6 +80,11 @@ export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImperso
                 </Box>
             </Box>
 
+            <BulkActionToolbar
+                selectedIds={selectedIds}
+                onClear={() => onSelectionChange(new Set())}
+                onAction={onBulkAction}
+            />
             <DataTable
                 columns={columns}
                 data={tenants}
@@ -86,6 +94,15 @@ export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImperso
                 onRowSave={onRowSave}
                 rowMenuActions={rowMenuActions}
                 emptyMessage={showDeleted ? 'No deleted tenants found.' : 'No tenants found. Create one to get started.'}
+                loading={loading}
+                total={total}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                onPageChange={onPageChange}
+                onRowsPerPageChange={onRowsPerPageChange}
+                enableSelection={true}
+                selectedIds={selectedIds}
+                onSelectionChange={onSelectionChange}
             />
         </Box>
     );

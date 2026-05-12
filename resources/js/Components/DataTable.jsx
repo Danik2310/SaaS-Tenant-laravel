@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     Box,
     Paper,
@@ -11,9 +11,10 @@ import {
     TablePagination,
     IconButton,
     Tooltip,
-    Chip,
     Typography,
     Divider,
+    Checkbox,
+    Skeleton,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -22,10 +23,30 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import InboxIcon from '@mui/icons-material/Inbox';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+
+function RowSkeleton({ columns }) {
+    return (
+        <TableRow>
+            {columns.map((col, i) => (
+                <TableCell key={i} sx={{ py: 1.5 }}>
+                    <Skeleton variant="text" width={col.accessorKey === 'id' ? 40 : col.accessorKey === 'status' ? 60 : 120} />
+                </TableCell>
+            ))}
+            <TableCell sx={{ py: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <Skeleton variant="circular" width={28} height={28} />
+                    <Skeleton variant="circular" width={28} height={28} />
+                </Box>
+            </TableCell>
+        </TableRow>
+    );
+}
 
 export default function DataTable({
     columns = [],
@@ -39,22 +60,55 @@ export default function DataTable({
     emptyMessage = 'No records found',
     rowsPerPageOptions = [5, 10, 25],
     defaultRowsPerPage = 10,
+
+    // Server-side pagination
+    total,
+    page,
+    rowsPerPage,
+    onPageChange,
+    onRowsPerPageChange,
+
+    // Selection
+    enableSelection = false,
+    onSelectionChange,
+    selectedIds = new Set(),
+
+    // Loading & state
+    loading = false,
+    lastUpdated,
+    onRefresh,
 }) {
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(defaultRowsPerPage);
+    const [internalPage, setInternalPage] = useState(0);
+    const [internalRowsPerPage, setInternalRowsPerPage] = useState(defaultRowsPerPage);
     const [menuAnchor, setMenuAnchor] = useState(null);
     const [menuRow, setMenuRow] = useState(null);
 
+    const isServerSide = total !== undefined;
+
+    const currentPage = isServerSide ? page : internalPage;
+    const currentRowsPerPage = isServerSide ? rowsPerPage : internalRowsPerPage;
+
     const handleChangePage = (event, newPage) => {
-        setPage(newPage);
+        if (isServerSide) {
+            onPageChange(newPage);
+        } else {
+            setInternalPage(newPage);
+        }
     };
 
     const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
+        const value = parseInt(event.target.value, 10);
+        if (isServerSide) {
+            onRowsPerPageChange(value);
+        } else {
+            setInternalRowsPerPage(value);
+            setInternalPage(0);
+        }
     };
 
-    const paginatedData = data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+    const displayData = isServerSide
+        ? data
+        : data.slice(currentPage * currentRowsPerPage, currentPage * currentRowsPerPage + currentRowsPerPage);
 
     const handleMenuOpen = (event, row) => {
         setMenuAnchor(event.currentTarget);
@@ -66,9 +120,31 @@ export default function DataTable({
         setMenuRow(null);
     };
 
+    const handleSelectAll = useCallback((checked) => {
+        if (checked) {
+            const allIds = new Set(displayData.map((r) => r.id));
+            onSelectionChange(allIds);
+        } else {
+            onSelectionChange(new Set());
+        }
+    }, [displayData, onSelectionChange]);
+
+    const handleSelectRow = useCallback((id, checked) => {
+        const next = new Set(selectedIds);
+        if (checked) {
+            next.add(id);
+        } else {
+            next.delete(id);
+        }
+        onSelectionChange(next);
+    }, [selectedIds, onSelectionChange]);
+
+    const allDisplayedSelected = displayData.length > 0 && displayData.every((r) => selectedIds.has(r.id));
+    const someDisplayedSelected = displayData.some((r) => selectedIds.has(r.id));
+
     const renderCell = (row, column) => {
         if (column.Cell) {
-            return <column.Cell cell={{ getValue: () => row[column.accessorKey], row: row }} />;
+            return <column.Cell cell={{ getValue: () => row[column.accessorKey], row }} />;
         }
         return row[column.accessorKey];
     };
@@ -167,12 +243,42 @@ export default function DataTable({
         );
     };
 
+    const colCount = columns.length + (enableSelection ? 1 : 0) + (
+        onEdit || onDelete || onImpersonate || onView || onToggleStatus || rowMenuActions.length > 0 ? 1 : 0
+    );
+
     return (
         <Paper sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            {(onRefresh || lastUpdated) && (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', px: 2, pt: 1, gap: 1 }}>
+                    {lastUpdated && (
+                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                            Data as of {lastUpdated}
+                        </Typography>
+                    )}
+                    {onRefresh && (
+                        <Tooltip title="Refresh">
+                            <IconButton size="small" sx={{ color: '#64748b' }} onClick={onRefresh}>
+                                <RefreshIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
+                </Box>
+            )}
             <TableContainer>
                 <Table size="small">
                     <TableHead>
                         <TableRow sx={{ borderBottom: '1px solid #f1f5f9', bgcolor: '#f8fafc' }}>
+                            {enableSelection && (
+                                <TableCell sx={{ width: 48, py: 1.5 }}>
+                                    <Checkbox
+                                        size="small"
+                                        checked={allDisplayedSelected}
+                                        indeterminate={someDisplayedSelected && !allDisplayedSelected}
+                                        onChange={(e) => handleSelectAll(e.target.checked)}
+                                    />
+                                </TableCell>
+                            )}
                             {columns.map((col) => (
                                 <TableCell
                                     key={col.accessorKey}
@@ -205,17 +311,21 @@ export default function DataTable({
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {paginatedData.length === 0 ? (
+                        {loading ? (
+                            Array.from({ length: 5 }).map((_, i) => (
+                                <RowSkeleton key={i} columns={columns} />
+                            ))
+                        ) : displayData.length === 0 ? (
                             <TableRow>
-                                <TableCell
-                                    colSpan={columns.length + 1}
-                                    sx={{ textAlign: 'center', py: 5, color: '#94a3b8' }}
-                                >
-                                    <Typography variant="body2">{emptyMessage}</Typography>
+                                <TableCell colSpan={colCount} sx={{ textAlign: 'center', py: 6 }}>
+                                    <InboxIcon sx={{ fontSize: 48, color: '#cbd5e1', mb: 1 }} />
+                                    <Typography variant="body1" sx={{ fontWeight: 600, color: '#64748b' }}>
+                                        {emptyMessage}
+                                    </Typography>
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            paginatedData.map((row, idx) => (
+                            displayData.map((row, idx) => (
                                 <TableRow
                                     key={row.id ?? idx}
                                     sx={{
@@ -224,6 +334,15 @@ export default function DataTable({
                                         '&:hover': { bgcolor: '#f8fafc' },
                                     }}
                                 >
+                                    {enableSelection && (
+                                        <TableCell sx={{ width: 48, py: 1.5 }}>
+                                            <Checkbox
+                                                size="small"
+                                                checked={selectedIds.has(row.id)}
+                                                onChange={(e) => handleSelectRow(row.id, e.target.checked)}
+                                            />
+                                        </TableCell>
+                                    )}
                                     {columns.map((col) => (
                                         <TableCell key={col.accessorKey} sx={{ py: 1.5, fontSize: '13px' }}>
                                             {renderCell(row, col)}
@@ -242,10 +361,10 @@ export default function DataTable({
             </TableContainer>
             <TablePagination
                 component="div"
-                count={data.length}
-                page={page}
+                count={isServerSide ? total : data.length}
+                page={isServerSide ? currentPage : currentPage}
                 onPageChange={handleChangePage}
-                rowsPerPage={rowsPerPage}
+                rowsPerPage={currentRowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 rowsPerPageOptions={rowsPerPageOptions}
                 sx={{ borderTop: '1px solid #f1f5f9' }}

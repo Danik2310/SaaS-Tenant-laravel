@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Contracts\TenantManagerInterface;
+use App\Http\Requests\Admin\BulkTenantOperationRequest;
 use App\Http\Requests\Admin\ImpersonateTenantRequest;
 use App\Http\Requests\Admin\StoreTenantRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
@@ -11,6 +12,7 @@ use App\Http\Resources\TenantResource;
 use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Tenant;
+use App\States\TenantStateManager;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
@@ -91,7 +93,8 @@ class AdminDashboardController extends Controller
             $query->withTrashed();
         }
 
-        $tenants = $query->paginate(25);
+        $perPage = min((int) request('per_page', 25), 100);
+        $tenants = $query->paginate($perPage);
 
         return response()->json([
             'tenants' => TenantResource::collection($tenants->items()),
@@ -205,6 +208,66 @@ class AdminDashboardController extends Controller
                 'output' => isset($output) ? $output : '',
             ], 500);
         }
+    }
+
+    public function bulkTenantOperation(BulkTenantOperationRequest $request)
+    {
+        $validated = $request->validated();
+        $action = $validated['action'];
+        $payload = $validated['payload'] ?? [];
+        $tenantIds = $validated['tenant_ids'];
+        $adminUser = auth('admin')->user();
+
+        $results = [];
+        $succeeded = 0;
+        $failed = 0;
+
+        foreach ($tenantIds as $id) {
+            try {
+                $tenant = Tenant::withTrashed()->findOrFail($id);
+
+                match ($action) {
+                    'suspend' => $this->tenantManager->suspend($tenant),
+                    'activate' => $tenant->trashed()
+                        ? $this->tenantManager->restore($tenant)
+                        : TenantStateManager::transitionTo($tenant, 'Active'),
+                    'delete' => $this->tenantManager->delete($tenant),
+                    'restore' => $this->tenantManager->restore($tenant),
+                    'change_plan' => $this->tenantManager->changePlan(
+                        $tenant,
+                        Plan::findOrFail($payload['plan_id'])
+                    ),
+                    'extend_trial' => $this->extendTenantTrial($tenant, $payload['days']),
+                };
+
+                activity($action === 'delete' ? 'tenant' : 'tenant')
+                    ->performedOn($tenant)
+                    ->causedBy($adminUser)
+                    ->withProperties(['tenant_name' => $tenant->name, 'action' => $action, 'payload' => $payload])
+                    ->log("Bulk {$action} for tenant {$tenant->name}");
+
+                $results[] = ['tenant_id' => $id, 'status' => 'success'];
+                $succeeded++;
+            } catch (\Exception $e) {
+                \Log::warning("Bulk operation failed for tenant {$id}: {$e->getMessage()}");
+                $results[] = ['tenant_id' => $id, 'status' => 'failed', 'error' => 'An error occurred while processing this tenant.'];
+                $failed++;
+            }
+        }
+
+        return response()->json([
+            'total' => count($tenantIds),
+            'succeeded' => $succeeded,
+            'failed' => $failed,
+            'results' => $results,
+        ]);
+    }
+
+    private function extendTenantTrial(Tenant $tenant, int $days): void
+    {
+        $currentEnd = $tenant->trial_ends_at ? $tenant->trial_ends_at->copy() : now();
+        $tenant->trial_ends_at = $currentEnd->addDays($days);
+        $tenant->save();
     }
 
     public function staff()

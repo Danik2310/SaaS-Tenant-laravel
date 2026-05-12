@@ -12,6 +12,7 @@ import Profile from './profile/Profile';
 import Subscriptions from './subscriptions/Subscriptions';
 import ActivityLog from './activity/ActivityLog';
 import Settings from './settings/Settings';
+import ResourceUsage from './resource-usage/ResourceUsage';
 import BlockIcon from '@mui/icons-material/Block';
 import LanguageIcon from '@mui/icons-material/Language';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -58,9 +59,15 @@ export default function Dashboard({ user, setUser }) {
     const [changingPlan, setChangingPlan] = useState(false);
     const [showDeleted, setShowDeleted] = useState(false);
 
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [total, setTotal] = useState(0);
+    const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
+    const [bulkLoading, setBulkLoading] = useState(false);
+
     useEffect(() => {
         fetchTenants();
-    }, [showDeleted]);
+    }, [showDeleted, page, rowsPerPage]);
 
     useEffect(() => {
         if (planChangeTenant) {
@@ -72,9 +79,13 @@ export default function Dashboard({ user, setUser }) {
     const fetchTenants = async () => {
         setLoading(true);
         try {
-            const params = showDeleted ? '?trashed=1' : '';
-            const response = await api.get(`/admin/api/tenants${params}`);
+            const params = new URLSearchParams();
+            if (showDeleted) params.set('trashed', '1');
+            params.set('page', page + 1);
+            params.set('per_page', rowsPerPage);
+            const response = await api.get(`/admin/api/tenants?${params}`);
             setTenants(response.data.tenants);
+            setTotal(response.data.total);
         } catch (err) {
             const message = 'Failed to fetch tenants';
             toast.error(message);
@@ -83,6 +94,15 @@ export default function Dashboard({ user, setUser }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePageChange = (newPage) => {
+        setPage(newPage);
+    };
+
+    const handleRowsPerPageChange = (newRowsPerPage) => {
+        setRowsPerPage(newRowsPerPage);
+        setPage(0);
     };
 
     const handleLogout = async () => {
@@ -242,6 +262,25 @@ export default function Dashboard({ user, setUser }) {
         setView('subscriptions');
     };
 
+    const handleBulkAction = async (action) => {
+        const ids = Array.from(selectedTenantIds);
+        if (ids.length === 0) return;
+        setBulkLoading(true);
+        try {
+            await api.post('/admin/api/tenants/bulk', {
+                tenant_ids: ids,
+                action,
+            });
+            toast.success(`Bulk ${action} completed for ${ids.length} tenant(s)`);
+            setSelectedTenantIds(new Set());
+            fetchTenants();
+        } catch (err) {
+            toast.error(err.response?.data?.message || `Bulk ${action} failed`);
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
 
     return (
@@ -262,6 +301,7 @@ export default function Dashboard({ user, setUser }) {
                     <div>
                         <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
                             {view === 'overview' && 'Dashboard Overview'}
+                            {view === 'resource-usage' && 'Resource Usage'}
                             {view === 'tenants' && 'Tenant Management'}
                             {view === 'staff' && 'Staff Management'}
                             {view === 'roles' && 'Roles & Permissions'}
@@ -331,6 +371,7 @@ export default function Dashboard({ user, setUser }) {
                         {view === 'staff' && <Staff />}
                         {view === 'roles' && <RolePermissions />}
                         {view === 'plans' && <Plans />}
+                        {view === 'resource-usage' && <ResourceUsage />}
                         {view === 'tenants' && (showForm || editingTenant) && (
                             <TenantForm
                                 tenant={editingTenant}
@@ -350,7 +391,7 @@ export default function Dashboard({ user, setUser }) {
                                 onImpersonate={handleImpersonateTenant}
                                 onRestore={handleRestoreTenant}
                                 showDeleted={showDeleted}
-                                onToggleDeleted={() => setShowDeleted(s => !s)}
+                                onToggleDeleted={() => { setShowDeleted(s => !s); setPage(0); }}
                                 onRowSave={async (original, values) => {
                                     try {
                                         await api.put(`/admin/api/tenants/${original.id}`, values);
@@ -377,6 +418,15 @@ export default function Dashboard({ user, setUser }) {
                                         { label: 'Run Migrations', icon: <SyncIcon fontSize="small" />, onClick: () => openModal('migration', tenant) },
                                     ];
                                 }}
+                                loading={loading}
+                                total={total}
+                                page={page}
+                                rowsPerPage={rowsPerPage}
+                                onPageChange={(newPage) => { setSelectedTenantIds(new Set()); handlePageChange(newPage); }}
+                                onRowsPerPageChange={(newRowsPerPage) => { setSelectedTenantIds(new Set()); handleRowsPerPageChange(newRowsPerPage); }}
+                                selectedIds={selectedTenantIds}
+                                onSelectionChange={setSelectedTenantIds}
+                                onBulkAction={handleBulkAction}
                             />
                         )}
                         {view === 'subscriptions' && <Subscriptions />}
@@ -458,6 +508,12 @@ export default function Dashboard({ user, setUser }) {
                                     data={tenants.filter(t => showDeleted ? true : t.status === 'Active')}
                                     onImpersonate={handleImpersonateTenant}
                                     emptyMessage={showDeleted ? 'No tenants found.' : 'No active tenants to impersonate.'}
+                                    loading={loading}
+                                    total={total}
+                                    page={page}
+                                    rowsPerPage={rowsPerPage}
+                                    onPageChange={handlePageChange}
+                                    onRowsPerPageChange={handleRowsPerPageChange}
                                 />
                             </>
                         )}
