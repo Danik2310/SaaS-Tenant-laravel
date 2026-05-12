@@ -22,6 +22,9 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Observers\ActivityLogObserver;
+use App\Observers\Tenant\OrderObserver;
+use App\Observers\Tenant\ProductObserver;
+use App\Observers\Tenant\UserObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
@@ -56,6 +59,11 @@ class EventServiceProvider extends ServiceProvider
         Payment::observe(ActivityLogObserver::class);
         Category::observe(ActivityLogObserver::class);
         Warehouse::observe(ActivityLogObserver::class);
+
+        // Tenant resource usage observers (event-driven incremental counting)
+        User::observe(UserObserver::class);
+        Product::observe(ProductObserver::class);
+        Order::observe(OrderObserver::class);
     }
 
     public function shouldDiscoverEvents(): bool

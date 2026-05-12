@@ -1,11 +1,13 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityLogController;
+use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\SubscriptionController;
+use App\Http\Controllers\Admin\TenantMetricsController;
 use App\Http\Controllers\AdminAuthController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminProfileController;
@@ -178,14 +180,14 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
 
     // Data export - requires 'manage tenants' permission (reuses existing permission)
     Route::middleware(['permission:manage tenants'])->group(function () {
-        Route::post('/api/export/{entity}', [\App\Http\Controllers\Admin\ExportController::class, 'export']);
-        Route::get('/api/export/download/{filename}', [\App\Http\Controllers\Admin\ExportController::class, 'download']);
-        Route::get('/api/export/status/{jobId}', [\App\Http\Controllers\Admin\ExportController::class, 'status']);
+        Route::post('/api/export/{entity}', [ExportController::class, 'export']);
+        Route::get('/api/export/download/{filename}', [ExportController::class, 'download']);
+        Route::get('/api/export/status/{jobId}', [ExportController::class, 'status']);
     });
 
     // Tenant resource usage metrics
     Route::middleware(['permission:manage tenants'])->group(function () {
-        Route::get('/api/resource-usage', [\App\Http\Controllers\Admin\TenantMetricsController::class, 'index']);
-        Route::get('/api/resource-usage/{tenantId}', [\App\Http\Controllers\Admin\TenantMetricsController::class, 'show']);
+        Route::get('/api/resource-usage', [TenantMetricsController::class, 'index']);
+        Route::get('/api/resource-usage/{tenantId}', [TenantMetricsController::class, 'show']);
     });
 });
