@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\PaymentMethod;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\PaymentMethod>
+ * @extends Factory<PaymentMethod>
  */
 class PaymentMethodFactory extends Factory
 {
@@ -17,7 +18,7 @@ class PaymentMethodFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->company . ' Payment',
+            'name' => $this->faker->company.' Payment',
             'provider' => $this->faker->randomElement(['stripe', 'paypal', 'other']),
             'api_key' => $this->faker->password(20, 20), // Long enough
             'secret_key' => $this->faker->password(20, 20),

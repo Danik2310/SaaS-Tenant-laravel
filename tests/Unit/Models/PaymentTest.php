@@ -7,7 +7,6 @@ use App\Models\Payment;
 
 class PaymentTest extends TenantTestCase
 {
-
     public function test_payment_has_required_fillable_attributes(): void
     {
         $payment = Payment::factory()->create();
@@ -101,7 +100,7 @@ class PaymentTest extends TenantTestCase
     public function test_multiple_payments_for_same_order(): void
     {
         $order = Order::factory()->create();
-        
+
         Payment::factory(3)->forOrder($order)->create();
 
         $payments = Payment::where('order_id', $order->id)->get();
@@ -111,7 +110,7 @@ class PaymentTest extends TenantTestCase
     public function test_payment_method_values(): void
     {
         $methods = ['cash', 'card', 'transfer', 'check'];
-        
+
         foreach ($methods as $method) {
             $payment = Payment::factory()->create(['method' => $method]);
             $this->assertEquals($method, $payment->method);

@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -55,7 +55,7 @@ return new class extends Migration
 
         // Remove the added columns (check if they exist first)
         Schema::table('tenants', function (Blueprint $table) {
-            $columns = \Illuminate\Support\Facades\Schema::getColumnListing('tenants');
+            $columns = Schema::getColumnListing('tenants');
             if (in_array('domain', $columns)) {
                 $table->dropColumn('domain');
             }

@@ -4,8 +4,11 @@ namespace Tests\Integration;
 
 use App\Models\AdminUser;
 use App\Models\PaymentMethod;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class PaymentMethodIntegrationTest extends TestCase
@@ -17,9 +20,9 @@ class PaymentMethodIntegrationTest extends TestCase
         parent::setUp();
 
         // Create the super-admin role if it doesn't exist
-        $role = \Spatie\Permission\Models\Role::firstOrCreate([
+        $role = Role::firstOrCreate([
             'name' => 'super-admin',
-            'guard_name' => 'admin'
+            'guard_name' => 'admin',
         ]);
 
         // Create permissions
@@ -28,13 +31,13 @@ class PaymentMethodIntegrationTest extends TestCase
             'manage staff',
             'manage plans',
             'impersonate tenants',
-            'manage profile'
+            'manage profile',
         ];
 
         foreach ($permissions as $permissionName) {
-            $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
+            $permission = Permission::firstOrCreate([
                 'name' => $permissionName,
-                'guard_name' => 'admin'
+                'guard_name' => 'admin',
             ]);
             $role->givePermissionTo($permission);
         }
@@ -320,7 +323,7 @@ class PaymentMethodIntegrationTest extends TestCase
     public function test_data_integrity_and_constraints()
     {
         // Test enum constraints at database level
-        $this->expectException(\Illuminate\Database\QueryException::class);
+        $this->expectException(QueryException::class);
 
         // Try to insert invalid provider directly (bypassing validation)
         \DB::table('payment_methods')->insert([
@@ -346,8 +349,8 @@ class PaymentMethodIntegrationTest extends TestCase
             $methodsData[] = [
                 'name' => "Load Test Method {$i}",
                 'provider' => $i % 2 === 0 ? 'stripe' : 'paypal',
-                'api_key' => "pk_test_load_{$i}_" . str_repeat('1234567890', 3),
-                'secret_key' => "sk_live_load_{$i}_" . str_repeat('1234567890', 3),
+                'api_key' => "pk_test_load_{$i}_".str_repeat('1234567890', 3),
+                'secret_key' => "sk_live_load_{$i}_".str_repeat('1234567890', 3),
                 'mode' => $i % 3 === 0 ? 'live' : 'test',
                 'active' => $i % 4 !== 0, // 75% active
             ];
@@ -395,8 +398,8 @@ class PaymentMethodIntegrationTest extends TestCase
             $updateData = [
                 'name' => "Updated Load Test Method {$createdIds[$i]}",
                 'provider' => 'stripe',
-                'api_key' => "pk_test_updated_{$i}_" . str_repeat('1234567890', 3),
-                'secret_key' => "sk_live_updated_{$i}_" . str_repeat('1234567890', 3),
+                'api_key' => "pk_test_updated_{$i}_".str_repeat('1234567890', 3),
+                'secret_key' => "sk_live_updated_{$i}_".str_repeat('1234567890', 3),
                 'mode' => 'live',
                 'active' => false,
             ];
@@ -410,8 +413,8 @@ class PaymentMethodIntegrationTest extends TestCase
 
         // Verify updates were applied
         $updatedCount = PaymentMethod::where('active', false)
-                                    ->where('name', 'like', 'Updated Load Test Method%')
-                                    ->count();
+            ->where('name', 'like', 'Updated Load Test Method%')
+            ->count();
         $this->assertEquals(10, $updatedCount);
 
         // Cleanup - delete all test methods
@@ -513,7 +516,7 @@ class PaymentMethodIntegrationTest extends TestCase
         // Make 11 create requests (exceeds the 10 per hour limit)
         for ($i = 1; $i <= 11; $i++) {
             $response = $this->postJson('/admin/api/payment-methods', array_merge($createData, [
-                'name' => "Rate Limit Test {$i}"
+                'name' => "Rate Limit Test {$i}",
             ]));
 
             if ($i <= 10) {
@@ -526,7 +529,7 @@ class PaymentMethodIntegrationTest extends TestCase
                     'message',
                     'retry_after',
                     'limit',
-                    'limit_type'
+                    'limit_type',
                 ]);
                 break; // Stop after confirming rate limiting works
             }
@@ -537,7 +540,7 @@ class PaymentMethodIntegrationTest extends TestCase
         $readRequests = 0;
         $rateLimited = false;
 
-        while ($readRequests < 50 && !$rateLimited) { // Reasonable number for testing
+        while ($readRequests < 50 && ! $rateLimited) { // Reasonable number for testing
             $response = $this->getJson('/admin/api/payment-methods');
             $readRequests++;
 
@@ -548,7 +551,7 @@ class PaymentMethodIntegrationTest extends TestCase
                     'message',
                     'retry_after',
                     'limit',
-                    'limit_type'
+                    'limit_type',
                 ]);
             } else {
                 $response->assertStatus(200);

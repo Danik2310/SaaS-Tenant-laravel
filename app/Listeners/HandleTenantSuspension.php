@@ -11,6 +11,6 @@ class HandleTenantSuspension
 {
     public function handle(TenantSuspended $event): void
     {
-        Cache::tags(['tenant_' . $event->tenant->id])->flush();
+        Cache::tags(['tenant_'.$event->tenant->id])->flush();
     }
 }

@@ -37,7 +37,7 @@ class PlanController extends Controller
 
         $plan = Plan::create($data);
 
-        Log::info("Plan created by user: " . auth('admin')->id());
+        Log::info('Plan created by user: '.auth('admin')->id());
 
         return response()->json(['plan' => new PlanResource($plan)], 201);
     }
@@ -60,7 +60,7 @@ class PlanController extends Controller
         $plan = Plan::findOrFail($id);
         $plan->update($data);
 
-        Log::info("Plan updated by user: " . auth('admin')->id());
+        Log::info('Plan updated by user: '.auth('admin')->id());
 
         return response()->json(['plan' => new PlanResource($plan)]);
     }
@@ -70,7 +70,7 @@ class PlanController extends Controller
         $plan = Plan::findOrFail($id);
         $plan->delete();
 
-        Log::info("Plan deleted by user: " . auth('admin')->id());
+        Log::info('Plan deleted by user: '.auth('admin')->id());
 
         return response()->json(['message' => 'Deleted successfully']);
     }

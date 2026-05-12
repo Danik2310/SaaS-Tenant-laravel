@@ -8,8 +8,8 @@ use App\Http\Requests\Admin\StoreStaffRequest;
 use App\Http\Requests\Admin\UpdateStaffRequest;
 use App\Http\Resources\StaffResource;
 use App\Models\AdminUser;
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
 class StaffController extends Controller
@@ -40,11 +40,11 @@ class StaffController extends Controller
                 'available_roles' => Role::with('permissions')
                     ->where('guard_name', 'admin')
                     ->get()
-                    ->map(fn($role) => [
+                    ->map(fn ($role) => [
                         'id' => $role->id,
                         'name' => $role->name,
                         'description' => $role->description,
-                        'permissions' => $role->permissions->map(fn($perm) => [
+                        'permissions' => $role->permissions->map(fn ($perm) => [
                             'id' => $perm->id,
                             'name' => $perm->name,
                             'description' => $perm->description,
@@ -66,12 +66,12 @@ class StaffController extends Controller
             'is_active' => $request->validated('is_active', true),
         ]);
 
-        if (!empty($request->validated('roles'))) {
+        if (! empty($request->validated('roles'))) {
             $roles = Role::whereIn('id', $request->validated('roles'))->get();
             $admin->syncRoles($roles);
         }
 
-        if (!empty($request->validated('direct_permissions'))) {
+        if (! empty($request->validated('direct_permissions'))) {
             $permissions = Permission::whereIn('id', $request->validated('direct_permissions'))->get();
             $admin->syncPermissions($permissions);
         }
@@ -121,7 +121,7 @@ class StaffController extends Controller
     {
         $admin = AdminUser::findOrFail($id);
 
-        if (auth('admin')->id() === (int)$id) {
+        if (auth('admin')->id() === (int) $id) {
             return response()->json(['error' => 'Cannot delete your own account'], 422);
         }
 
@@ -147,12 +147,12 @@ class StaffController extends Controller
             ->where('guard_name', 'admin')
             ->active()
             ->get()
-            ->map(fn($role) => [
+            ->map(fn ($role) => [
                 'id' => $role->id,
                 'name' => $role->name,
                 'description' => $role->description,
                 'permissions_count' => $role->permissions->count(),
-                'permissions' => $role->permissions->map(fn($perm) => [
+                'permissions' => $role->permissions->map(fn ($perm) => [
                     'id' => $perm->id,
                     'name' => $perm->name,
                     'description' => $perm->description,
@@ -172,7 +172,7 @@ class StaffController extends Controller
             ->active()
             ->orderBy('module')
             ->get()
-            ->map(fn($perm) => [
+            ->map(fn ($perm) => [
                 'id' => $perm->id,
                 'name' => $perm->name,
                 'description' => $perm->description,
@@ -226,11 +226,11 @@ class StaffController extends Controller
     {
         $admin = AdminUser::findOrFail($id);
 
-        if (auth('admin')->id() === (int)$id) {
+        if (auth('admin')->id() === (int) $id) {
             return response()->json(['error' => 'Cannot deactivate your own account'], 422);
         }
 
-        $admin->is_active = !$admin->is_active;
+        $admin->is_active = ! $admin->is_active;
         $admin->save();
 
         $statusLabel = $admin->is_active ? 'activated' : 'deactivated';

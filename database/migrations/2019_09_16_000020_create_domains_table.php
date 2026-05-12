@@ -10,8 +10,6 @@ class CreateDomainsTable extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
     public function up(): void
     {
@@ -21,9 +19,9 @@ class CreateDomainsTable extends Migration
             // tenants use string primary keys, so tenant_id must match
             $table->string('tenant_id');
             $table->foreign('tenant_id')
-                  ->references('id')
-                  ->on('tenants')
-                  ->cascadeOnDelete();
+                ->references('id')
+                ->on('tenants')
+                ->cascadeOnDelete();
 
             $table->string('domain')->unique();
             $table->boolean('is_primary')->default(true);
@@ -34,8 +32,6 @@ class CreateDomainsTable extends Migration
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
     public function down(): void
     {

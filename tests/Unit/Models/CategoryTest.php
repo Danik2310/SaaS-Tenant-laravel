@@ -7,7 +7,6 @@ use App\Models\Product;
 
 class CategoryTest extends TenantTestCase
 {
-
     public function test_category_has_required_fillable_attributes(): void
     {
         $category = Category::factory()->create();
@@ -97,7 +96,7 @@ class CategoryTest extends TenantTestCase
     public function test_category_restore_from_soft_delete(): void
     {
         $category = Category::factory()->create();
-        
+
         $category->delete();
 
         // Since soft delete is not implemented, we can't restore

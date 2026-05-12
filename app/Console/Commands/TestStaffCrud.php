@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\AdminUser;
 use App\Models\Role;
+use Illuminate\Console\Command;
 
 class TestStaffCrud extends Command
 {
@@ -33,7 +33,7 @@ class TestStaffCrud extends Command
         try {
             // 1. Create a new staff member
             $this->info('1. Creating a new staff member...');
-            $email = 'teststaff' . time() . '@example.com';
+            $email = 'teststaff'.time().'@example.com';
             $staffMember = AdminUser::create([
                 'name' => 'Test Staff Member',
                 'email' => $email,
@@ -50,7 +50,7 @@ class TestStaffCrud extends Command
                 $staffMember->assignRole($role);
                 $this->line("   ✓ Role '{$role->name}' assigned");
             } else {
-                $this->line("   ⚠ No admin roles found to assign");
+                $this->line('   ⚠ No admin roles found to assign');
             }
             $this->line('');
 
@@ -58,8 +58,8 @@ class TestStaffCrud extends Command
             $this->info('3. Retrieving staff member...');
             $retrieved = AdminUser::find($staffMember->id);
             $this->line("   ✓ Retrieved: {$retrieved->name} ({$retrieved->email})");
-            $this->line("   ✓ Is Active: " . ($retrieved->is_active ? 'Yes' : 'No'));
-            $this->line("   ✓ Roles: " . ($retrieved->roles->count() > 0 ? $retrieved->roles->pluck('name')->join(', ') : 'None'));
+            $this->line('   ✓ Is Active: '.($retrieved->is_active ? 'Yes' : 'No'));
+            $this->line('   ✓ Roles: '.($retrieved->roles->count() > 0 ? $retrieved->roles->pluck('name')->join(', ') : 'None'));
             $this->line('');
 
             // 4. Update the staff member
@@ -73,19 +73,19 @@ class TestStaffCrud extends Command
             // 5. Toggle status
             $this->info('5. Toggling active status...');
             $staffMember->update(['is_active' => false]);
-            $this->line("   ✓ Status changed to: " . ($staffMember->is_active ? 'Active' : 'Inactive'));
+            $this->line('   ✓ Status changed to: '.($staffMember->is_active ? 'Active' : 'Inactive'));
             $this->line('');
 
             // 6. Soft delete
             $this->info('6. Soft deleting staff member...');
             $staffMember->delete();
-            $this->line("   ✓ Staff member soft deleted");
+            $this->line('   ✓ Staff member soft deleted');
             $this->line('');
 
             // 7. Restore
             $this->info('7. Restoring staff member...');
             $staffMember->restore();
-            $this->line("   ✓ Staff member restored");
+            $this->line('   ✓ Staff member restored');
             $this->line('');
 
             // 8. List all staff
@@ -100,14 +100,14 @@ class TestStaffCrud extends Command
             // 9. Clean up
             $this->info('9. Cleaning up test data...');
             $staffMember->forceDelete();
-            $this->line("   ✓ Test staff member permanently deleted");
+            $this->line('   ✓ Test staff member permanently deleted');
             $this->line('');
 
             $this->info('=== All Tests Passed! ===');
 
         } catch (\Exception $e) {
-            $this->error('✗ Error: ' . $e->getMessage());
-            $this->line('Trace: ' . $e->getTraceAsString());
+            $this->error('✗ Error: '.$e->getMessage());
+            $this->line('Trace: '.$e->getTraceAsString());
         }
     }
 }

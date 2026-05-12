@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\DB;
+use App\Models\AdminUser;
 use App\Models\Tenant;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class TenantFeatureTest extends TestCase
@@ -45,7 +47,7 @@ class TenantFeatureTest extends TestCase
     {
         // Create a fresh tenant that hasn't had migrations run
         $tenant = Tenant::create([
-            'id' => 'test-migration-' . uniqid(),
+            'id' => 'test-migration-'.uniqid(),
         ]);
         $tenant->database()->makeCredentials();
         $tenant->database()->manager()->createDatabase($tenant);
@@ -75,11 +77,11 @@ class TenantFeatureTest extends TestCase
 
         // Toggle the status
         $response = $this->withoutMiddleware()->put("/admin/api/tenants/{$tenant->id}", [
-            'status' => $originalStatus === 'Active' ? 'Suspended' : 'Active'
+            'status' => $originalStatus === 'Active' ? 'Suspended' : 'Active',
         ]);
 
         $response->assertStatus(200)
-                 ->assertJson(['message' => 'Tenant updated successfully']);
+            ->assertJson(['message' => 'Tenant updated successfully']);
 
         // Verify the tenant was updated in database
         $tenant->refresh();
@@ -94,7 +96,7 @@ class TenantFeatureTest extends TestCase
     {
         // Crear tenant con status Active (estado inicial)
         $tenant = Tenant::create([
-            'id' => 'test-status-update-' . uniqid(),
+            'id' => 'test-status-update-'.uniqid(),
             'name' => 'Test Status Update Tenant',
             'email' => 'status@test.com',
             'status' => 'Active', // 👈 Estado inicial Active
@@ -107,12 +109,12 @@ class TenantFeatureTest extends TestCase
 
         // Hacer llamada API para suspender (cambiar a Suspended)
         $response = $this->withoutMiddleware()->put("/admin/api/tenants/{$tenant->id}", [
-            'status' => 'Suspended' // 👈 Intentamos cambiar a Suspended
+            'status' => 'Suspended', // 👈 Intentamos cambiar a Suspended
         ]);
 
         // Verificar respuesta exitosa
         $response->assertStatus(200)
-                 ->assertJson(['message' => 'Tenant updated successfully']);
+            ->assertJson(['message' => 'Tenant updated successfully']);
 
         // Consultar el tenant desde la base de datos nuevamente
         $tenant->refresh();
@@ -134,7 +136,7 @@ class TenantFeatureTest extends TestCase
     {
         // Crear tenant con status Suspended (estado inicial)
         $tenant = Tenant::create([
-            'id' => 'test-status-activate-' . uniqid(),
+            'id' => 'test-status-activate-'.uniqid(),
             'name' => 'Test Status Activate Tenant',
             'email' => 'activate@test.com',
             'status' => 'Suspended', // 👈 Estado inicial Suspended
@@ -147,12 +149,12 @@ class TenantFeatureTest extends TestCase
 
         // Hacer llamada API para activar (cambiar a Active)
         $response = $this->withoutMiddleware()->put("/admin/api/tenants/{$tenant->id}", [
-            'status' => 'Active' // 👈 Intentamos cambiar a Active
+            'status' => 'Active', // 👈 Intentamos cambiar a Active
         ]);
 
         // Verificar respuesta exitosa
         $response->assertStatus(200)
-                 ->assertJson(['message' => 'Tenant updated successfully']);
+            ->assertJson(['message' => 'Tenant updated successfully']);
 
         // Consultar el tenant desde la base de datos nuevamente
         $tenant->refresh();
@@ -173,7 +175,7 @@ class TenantFeatureTest extends TestCase
     public function test_tenant_status_update_fails_without_manage_tenants_permission()
     {
         // Crear un usuario sin permisos
-        $user = \App\Models\AdminUser::factory()->create();
+        $user = AdminUser::factory()->create();
         $this->actingAs($user, 'admin');
 
         // Crear tenant
@@ -182,7 +184,7 @@ class TenantFeatureTest extends TestCase
 
         // Intentar actualizar status SIN bypass de middleware
         $response = $this->put("/admin/api/tenants/{$tenant->id}", [
-            'status' => 'Suspended'
+            'status' => 'Suspended',
         ]);
 
         // Debería fallar con 403 Forbidden porque no tiene permisos
@@ -200,17 +202,17 @@ class TenantFeatureTest extends TestCase
     public function test_tenant_status_update_works_with_manage_tenants_permission()
     {
         // Crear el rol y permiso si no existen
-        $role = \Spatie\Permission\Models\Role::firstOrCreate(
+        $role = Role::firstOrCreate(
             ['name' => 'super-admin', 'guard_name' => 'admin'],
             ['description' => 'Administrador con acceso completo']
         );
-        $permission = \Spatie\Permission\Models\Permission::firstOrCreate(
+        $permission = Permission::firstOrCreate(
             ['name' => 'manage tenants', 'guard_name' => 'admin']
         );
         $role->givePermissionTo($permission);
 
         // Crear un usuario con el rol super-admin (que tiene permisos)
-        $user = \App\Models\AdminUser::factory()->create();
+        $user = AdminUser::factory()->create();
         $user->assignRole('super-admin');
         $this->actingAs($user, 'admin');
 
@@ -227,12 +229,12 @@ class TenantFeatureTest extends TestCase
 
         // Intentar actualizar status CON permisos
         $response = $this->put("/admin/api/tenants/{$tenant->id}", [
-            'status' => 'Suspended'
+            'status' => 'Suspended',
         ]);
 
         // Debería funcionar con 200 OK
         $response->assertStatus(200)
-                 ->assertJson(['message' => 'Tenant updated successfully']);
+            ->assertJson(['message' => 'Tenant updated successfully']);
 
         // Verificar que el status SÍ cambió en la base de datos
         $tenant->refresh();
@@ -249,7 +251,7 @@ class TenantFeatureTest extends TestCase
 
         $response = $this->withoutMiddleware()->get("/admin/api/tenants/{$tenant->id}/database");
         $response->assertStatus(200)
-                 ->assertJsonStructure(['database' => ['name', 'connection', 'host', 'port']]);
+            ->assertJsonStructure(['database' => ['name', 'connection', 'host', 'port']]);
     }
 
     /**

@@ -3,8 +3,8 @@
 namespace Tests\Support;
 
 use App\Models\AdminUser;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 trait AdminAuthSetup
 {

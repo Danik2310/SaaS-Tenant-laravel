@@ -12,22 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('plans', function (Blueprint $table) {
-        $table->id();
+            $table->id();
 
-        $table->string('name');
-        $table->string('slug')->unique();
+            $table->string('name');
+            $table->string('slug')->unique();
 
-        $table->decimal('price', 10, 2)->default(0);
+            $table->decimal('price', 10, 2)->default(0);
 
-        $table->integer('max_users')->nullable();
-        $table->integer('max_storage')->nullable();
-        $table->boolean('custom_domain')->default(false);
+            $table->integer('max_users')->nullable();
+            $table->integer('max_storage')->nullable();
+            $table->boolean('custom_domain')->default(false);
 
-        $table->json('features')->nullable();
+            $table->json('features')->nullable();
 
-        $table->timestamps();
-    });
-        }
+            $table->timestamps();
+        });
+    }
 
     /**
      * Reverse the migrations.

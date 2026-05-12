@@ -3,19 +3,20 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class OrderManagementTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpAdminAuth();
 
-        if (!\Illuminate\Support\Facades\Route::has('admin.api.orders.index')) {
+        if (! Route::has('admin.api.orders.index')) {
             $this->markTestSkipped('Order API routes are not yet implemented.');
         }
     }
@@ -32,21 +33,21 @@ class OrderManagementTest extends TestCase
         $response = $this->getJson('/admin/api/orders');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'orders' => [
-                        '*' => [
-                            'id',
-                            'order_number',
-                            'status',
-                            'total_amount',
-                            'customer',
-                            'items_count',
-                            'created_at'
-                        ]
+            ->assertJsonStructure([
+                'orders' => [
+                    '*' => [
+                        'id',
+                        'order_number',
+                        'status',
+                        'total_amount',
+                        'customer',
+                        'items_count',
+                        'created_at',
                     ],
-                    'total'
-                ])
-                ->assertJsonCount(2, 'orders');
+                ],
+                'total',
+            ])
+            ->assertJsonCount(2, 'orders');
     }
 
     /**
@@ -59,31 +60,31 @@ class OrderManagementTest extends TestCase
             'product_id' => Product::factory()->create()->id,
             'quantity' => 2,
             'unit_price' => 50.00,
-            'total_price' => 100.00
+            'total_price' => 100.00,
         ]);
 
         $response = $this->getJson("/admin/api/orders/{$order->id}");
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'order' => [
-                        'id',
-                        'order_number',
-                        'status',
-                        'total_amount',
-                        'customer',
-                        'items' => [
-                            '*' => [
-                                'id',
-                                'product',
-                                'quantity',
-                                'unit_price',
-                                'total_price'
-                            ]
+            ->assertJsonStructure([
+                'order' => [
+                    'id',
+                    'order_number',
+                    'status',
+                    'total_amount',
+                    'customer',
+                    'items' => [
+                        '*' => [
+                            'id',
+                            'product',
+                            'quantity',
+                            'unit_price',
+                            'total_price',
                         ],
-                        'payments'
-                    ]
-                ]);
+                    ],
+                    'payments',
+                ],
+            ]);
     }
 
     /**
@@ -94,11 +95,11 @@ class OrderManagementTest extends TestCase
         $order = Order::factory()->create(['status' => 'pending']);
 
         $response = $this->patchJson("/admin/api/orders/{$order->id}/status", [
-            'status' => 'processing'
+            'status' => 'processing',
         ]);
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Order status updated successfully']);
+            ->assertJson(['message' => 'Order status updated successfully']);
 
         $this->assertEquals('processing', $order->fresh()->status);
     }
@@ -116,36 +117,36 @@ class OrderManagementTest extends TestCase
             'items' => [
                 [
                     'product_id' => $product->id,
-                    'quantity' => 2
-                ]
+                    'quantity' => 2,
+                ],
             ],
-            'notes' => 'Test order'
+            'notes' => 'Test order',
         ];
 
         $response = $this->postJson('/admin/api/orders', $orderData);
 
         $response->assertStatus(201)
-                ->assertJsonStructure([
-                    'order' => [
-                        'id',
-                        'order_number',
-                        'total_amount',
-                        'status'
-                    ],
-                    'message'
-                ]);
+            ->assertJsonStructure([
+                'order' => [
+                    'id',
+                    'order_number',
+                    'total_amount',
+                    'status',
+                ],
+                'message',
+            ]);
 
         $this->assertDatabaseHas('orders', [
             'customer_id' => $customer->id,
             'total_amount' => 199.98, // 2 * 99.99
-            'status' => 'pending'
+            'status' => 'pending',
         ]);
 
         $this->assertDatabaseHas('order_items', [
             'product_id' => $product->id,
             'quantity' => 2,
             'unit_price' => 99.99,
-            'total_price' => 199.98
+            'total_price' => 199.98,
         ]);
     }
 
@@ -159,7 +160,7 @@ class OrderManagementTest extends TestCase
         $response = $this->patchJson("/admin/api/orders/{$order->id}/cancel");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Order cancelled successfully']);
+            ->assertJson(['message' => 'Order cancelled successfully']);
 
         $this->assertEquals('cancelled', $order->fresh()->status);
     }
@@ -171,16 +172,16 @@ class OrderManagementTest extends TestCase
     {
         $response = $this->postJson('/admin/api/orders', [
             'customer_id' => 999, // Non-existent customer
-            'items' => []
+            'items' => [],
         ]);
 
         $response->assertStatus(422)
-                ->assertJsonStructure([
-                    'message',
-                    'errors' => [
-                        'customer_id',
-                        'items'
-                    ]
-                ]);
+            ->assertJsonStructure([
+                'message',
+                'errors' => [
+                    'customer_id',
+                    'items',
+                ],
+            ]);
     }
 }

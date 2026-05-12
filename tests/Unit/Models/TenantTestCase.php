@@ -53,4 +53,3 @@ abstract class TenantTestCase extends TestCase
         parent::tearDown();
     }
 }
-

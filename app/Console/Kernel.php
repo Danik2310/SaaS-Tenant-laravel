@@ -2,6 +2,7 @@
 
 namespace App\Console;
 
+use App\Services\ExportService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -14,7 +15,7 @@ class Kernel extends ConsoleKernel
     {
         // Clean up expired export files every hour
         $schedule->call(function () {
-            app(\App\Services\ExportService::class)->cleanupExpired();
+            app(ExportService::class)->cleanupExpired();
         })->hourly();
 
         // Collect tenant resource usage metrics hourly

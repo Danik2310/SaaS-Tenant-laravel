@@ -51,7 +51,7 @@ class TenantSeeder extends Seeder
                 ['domain' => $tenantData['domain']]
             );
 
-            if (!$tenant->database()->manager()->databaseExists($tenant->database()->getName())) {
+            if (! $tenant->database()->manager()->databaseExists($tenant->database()->getName())) {
                 $tenant->database()->manager()->createDatabase($tenant);
             }
 
@@ -72,7 +72,7 @@ class TenantSeeder extends Seeder
                 User::updateOrCreate(
                     ['email' => $tenantData['email']],
                     [
-                        'name' => 'Admin ' . $tenantData['name'],
+                        'name' => 'Admin '.$tenantData['name'],
                         'password' => bcrypt('password'),
                         'email_verified_at' => now(),
                     ]

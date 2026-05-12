@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\Plan;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
+use Illuminate\Support\Facades\Schema;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Models\Domain;
+use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\DatabaseConfig;
 
 /**
@@ -21,6 +24,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 {
     // Reemplazar HasDataColumn con nuestro trait vacío
     use NoDataColumn, SoftDeletes;
+
     protected $fillable = [
         'id',
         'name',
@@ -55,7 +59,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         // Verificar si la columna data existe en la tabla
         try {
             $table = (new static)->getTable();
-            if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'data')) {
+            if (Schema::hasColumn($table, 'data')) {
                 return 'data';
             }
         } catch (\Exception $e) {
@@ -113,17 +117,17 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return new DatabaseConfig($this);
     }
 
-    public function plan(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
     }
 
-    public function subscriptions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
     }
 
-    public function activeSubscription(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function activeSubscription(): HasOne
     {
         return $this->hasOne(Subscription::class)->where('status', 'active');
     }
@@ -193,8 +197,9 @@ class Tenant extends BaseTenant implements TenantWithDatabase
     {
         static $columns = null;
         if ($columns === null) {
-            $columns = \Illuminate\Support\Facades\Schema::getColumnListing($this->getTable());
+            $columns = Schema::getColumnListing($this->getTable());
         }
+
         return in_array($column, $columns);
     }
 }

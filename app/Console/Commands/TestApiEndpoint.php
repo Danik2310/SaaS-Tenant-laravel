@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\AdminDashboardController;
+use App\Models\AdminUser;
 use Illuminate\Console\Command;
 
 class TestApiEndpoint extends Command
@@ -26,26 +28,27 @@ class TestApiEndpoint extends Command
     public function handle()
     {
         $this->info('Testing /admin/api/tenants endpoint...');
-        
+
         // Simulate authenticated request
-        $user = \App\Models\AdminUser::first();
-        
-        if (!$user) {
+        $user = AdminUser::first();
+
+        if (! $user) {
             $this->error('No admin user found');
+
             return;
         }
-        
+
         // Manually authenticate the user for this request
         \Auth::guard('admin')->login($user);
-        
+
         // Make request to the controller method
-        $controller = new \App\Http\Controllers\AdminDashboardController();
+        $controller = new AdminDashboardController;
         $response = $controller->tenants();
-        
-        $this->info('Response status: ' . $response->getStatusCode());
+
+        $this->info('Response status: '.$response->getStatusCode());
         $this->line('Response data:');
         $this->line(json_encode($response->getData(), JSON_PRETTY_PRINT));
-        
+
         \Auth::guard('admin')->logout();
     }
 }

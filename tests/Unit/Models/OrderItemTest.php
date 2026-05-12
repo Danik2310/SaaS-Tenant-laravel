@@ -8,11 +8,10 @@ use App\Models\Product;
 
 class OrderItemTest extends TenantTestCase
 {
-
     public function test_order_item_has_required_fillable_attributes(): void
     {
         $fillable = ['order_id', 'product_id', 'quantity', 'price', 'subtotal'];
-        $this->assertEquals($fillable, (new OrderItem())->getFillable());
+        $this->assertEquals($fillable, (new OrderItem)->getFillable());
     }
 
     public function test_order_item_can_be_created(): void

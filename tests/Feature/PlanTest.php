@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class PlanTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -33,7 +33,7 @@ class PlanTest extends TestCase
         $response = $this->postJson('/admin/api/plans', $data);
 
         $response->assertStatus(201)
-                 ->assertJsonStructure(['plan' => ['id', 'name', 'slug', 'price', 'features']]);
+            ->assertJsonStructure(['plan' => ['id', 'name', 'slug', 'price', 'features']]);
 
         $this->assertDatabaseHas('plans', [
             'name' => 'Basic Plan',
@@ -70,7 +70,7 @@ class PlanTest extends TestCase
         $response = $this->putJson("/admin/api/plans/{$plan->id}", $updateData);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['plan' => ['id', 'name', 'slug', 'price', 'features']]);
+            ->assertJsonStructure(['plan' => ['id', 'name', 'slug', 'price', 'features']]);
 
         $this->assertDatabaseHas('plans', [
             'name' => 'Updated Plan',
@@ -97,7 +97,7 @@ class PlanTest extends TestCase
         $response = $this->postJson('/admin/api/plans', $invalidData);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['name', 'slug', 'price']);
+            ->assertJsonValidationErrors(['name', 'slug', 'price']);
     }
 
     /**
@@ -110,9 +110,9 @@ class PlanTest extends TestCase
         $response = $this->getJson('/admin/api/plans');
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['plans' => [
-                     '*' => ['id', 'name', 'slug', 'price']
-                 ]]);
+            ->assertJsonStructure(['plans' => [
+                '*' => ['id', 'name', 'slug', 'price'],
+            ]]);
 
         $this->assertCount(3, $response->json('plans'));
     }

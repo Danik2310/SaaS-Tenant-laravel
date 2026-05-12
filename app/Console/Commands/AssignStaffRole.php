@@ -29,27 +29,30 @@ class AssignStaffRole extends Command
     {
         $email = $this->argument('email');
 
-        if (!$email) {
+        if (! $email) {
             $email = $this->ask('Enter the email of the admin user');
         }
 
         $user = AdminUser::where('email', $email)->first();
 
-        if (!$user) {
+        if (! $user) {
             $this->error("Admin user with email {$email} not found.");
+
             return 1;
         }
 
         $role = Role::where('name', 'staff')->where('guard_name', 'web')->first();
 
-        if (!$role) {
+        if (! $role) {
             $this->error('Staff role not found. Please run the RolePermissionSeeder first.');
+
             return 1;
         }
 
         $user->assignRole($role);
 
         $this->info("Staff role assigned to {$user->name} ({$user->email})");
+
         return 0;
     }
 }

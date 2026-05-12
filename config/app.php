@@ -1,7 +1,14 @@
 <?php
 
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+use App\Providers\EventServiceProvider;
+use App\Providers\RouteServiceProvider;
+use App\Providers\TenancyServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
+use Spatie\Permission\PermissionFacade;
+use Spatie\Permission\PermissionServiceProvider;
 
 return [
 
@@ -159,17 +166,17 @@ return [
         /*
          * Package Service Providers...
          */
-        Spatie\Permission\PermissionServiceProvider::class,
+        PermissionServiceProvider::class,
 
         /*
          * Application Service Providers...
          */
-        App\Providers\AppServiceProvider::class,
-        App\Providers\AuthServiceProvider::class,
+        AppServiceProvider::class,
+        AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\RouteServiceProvider::class,
-        App\Providers\TenancyServiceProvider::class,
+        EventServiceProvider::class,
+        RouteServiceProvider::class,
+        TenancyServiceProvider::class,
     ])->toArray(),
 
     /*
@@ -184,7 +191,7 @@ return [
     */
 
     'aliases' => Facade::defaultAliases()->merge([
-        'Permission' => Spatie\Permission\PermissionFacade::class,
+        'Permission' => PermissionFacade::class,
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
 

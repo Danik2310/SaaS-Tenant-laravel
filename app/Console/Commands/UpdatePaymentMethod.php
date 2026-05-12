@@ -28,24 +28,27 @@ class UpdatePaymentMethod extends Command
     {
         $id = $this->argument('id');
         $method = PaymentMethod::find($id);
-        if (!$method) {
+        if (! $method) {
             $this->error('Payment method not found');
+
             return Command::FAILURE;
         }
 
         // Validaciones
         $name = $this->option('name') ?: $method->name;
         $provider = $this->option('provider') ?: $method->provider;
-        if (!in_array($provider, ['stripe', 'paypal', 'other'])) {
+        if (! in_array($provider, ['stripe', 'paypal', 'other'])) {
             $this->error('Invalid provider. Must be stripe, paypal, or other');
+
             return Command::FAILURE;
         }
 
         $apiKey = $this->option('api_key');
         $secretKey = $this->option('secret_key');
         $mode = $this->option('mode') ?: $method->mode;
-        if (!in_array($mode, ['test', 'live'])) {
+        if (! in_array($mode, ['test', 'live'])) {
             $this->error('Invalid mode. Must be test or live');
+
             return Command::FAILURE;
         }
         $active = $this->option('active') !== null ? filter_var($this->option('active'), FILTER_VALIDATE_BOOLEAN) : $method->active;
@@ -60,6 +63,7 @@ class UpdatePaymentMethod extends Command
         ]);
 
         $this->info('Payment method updated successfully');
+
         return Command::SUCCESS;
     }
 }

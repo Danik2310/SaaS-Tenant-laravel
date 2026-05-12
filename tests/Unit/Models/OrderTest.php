@@ -9,17 +9,16 @@ use App\Models\Payment;
 
 class OrderTest extends TenantTestCase
 {
-
     public function test_order_has_required_fillable_attributes(): void
     {
         $fillable = ['customer_id', 'status', 'total'];
-        $this->assertEquals($fillable, (new Order())->getFillable());
+        $this->assertEquals($fillable, (new Order)->getFillable());
     }
 
     public function test_order_can_be_created(): void
     {
         $customer = Customer::factory()->create();
-        
+
         $order = Order::create([
             'customer_id' => $customer->id,
             'status' => 'pending',
@@ -154,7 +153,7 @@ class OrderTest extends TenantTestCase
     public function test_order_restore_from_soft_delete(): void
     {
         $order = Order::factory()->create();
-        
+
         $order->delete();
 
         // Since soft delete is not implemented, we can't restore

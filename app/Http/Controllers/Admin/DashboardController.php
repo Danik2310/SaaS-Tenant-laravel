@@ -8,6 +8,6 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        return "Admin dashboard placeholder";
+        return 'Admin dashboard placeholder';
     }
 }

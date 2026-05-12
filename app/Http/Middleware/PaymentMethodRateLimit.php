@@ -6,7 +6,6 @@ use Closure;
 use Illuminate\Cache\RateLimiter;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Illuminate\Support\Str;
 
 class PaymentMethodRateLimit
 {
@@ -23,7 +22,7 @@ class PaymentMethodRateLimit
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -33,18 +32,18 @@ class PaymentMethodRateLimit
         $limits = $this->getLimitsForMethod($request->method(), $request->route()?->getName());
 
         foreach ($limits as $limit) {
-            if ($this->limiter->tooManyAttempts($key . '_' . $limit['key'], $limit['max_attempts'])) {
+            if ($this->limiter->tooManyAttempts($key.'_'.$limit['key'], $limit['max_attempts'])) {
                 return $this->buildRateLimitResponse($request, $limit);
             }
 
-            $this->limiter->hit($key . '_' . $limit['key'], $limit['decay_seconds']);
+            $this->limiter->hit($key.'_'.$limit['key'], $limit['decay_seconds']);
         }
 
         $response = $next($request);
 
         // Add rate limit headers to response
         $response->headers->set('X-RateLimit-Limit', $limits[0]['max_attempts'] ?? 60);
-        $response->headers->set('X-RateLimit-Remaining', $this->limiter->remaining($key . '_' . $limits[0]['key'], $limits[0]['max_attempts']));
+        $response->headers->set('X-RateLimit-Remaining', $this->limiter->remaining($key.'_'.$limits[0]['key'], $limits[0]['max_attempts']));
 
         return $response;
     }
@@ -58,7 +57,7 @@ class PaymentMethodRateLimit
         $ip = $request->ip();
         $route = $request->route()?->getName() ?? $request->path();
 
-        return sha1($userId . '|' . $ip . '|' . $route);
+        return sha1($userId.'|'.$ip.'|'.$route);
     }
 
     /**
@@ -136,7 +135,7 @@ class PaymentMethodRateLimit
     protected function buildRateLimitResponse(Request $request, array $limit): Response
     {
         $retryAfter = $this->limiter->availableIn(
-            $this->resolveRequestSignature($request) . '_' . $limit['key']
+            $this->resolveRequestSignature($request).'_'.$limit['key']
         );
 
         return response()->json([

@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Models\AdminUser;
 use App\Models\PaymentMethod;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class PaymentMethodTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -34,7 +37,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $data);
 
         $response->assertStatus(201)
-                 ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
+            ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
 
         $this->assertDatabaseHas('payment_methods', [
             'name' => 'Stripe Test',
@@ -74,7 +77,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->putJson("/admin/api/payment-methods/{$method->id}", $updateData);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
+            ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
 
         $this->assertDatabaseHas('payment_methods', [
             'name' => 'PayPal Updated',
@@ -109,7 +112,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $invalidData);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['name', 'provider', 'api_key', 'secret_key', 'mode']);
+            ->assertJsonValidationErrors(['name', 'provider', 'api_key', 'secret_key', 'mode']);
     }
 
     /**
@@ -135,11 +138,11 @@ class PaymentMethodTest extends TestCase
         $response = $this->getJson('/admin/api/payment-methods');
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'methods' => [
-                         '*' => ['id', 'name', 'provider', 'mode', 'active', 'created_at', 'updated_at']
-                     ]
-                 ]);
+            ->assertJsonStructure([
+                'methods' => [
+                    '*' => ['id', 'name', 'provider', 'mode', 'active', 'created_at', 'updated_at'],
+                ],
+            ]);
 
         $data = $response->json();
         $this->assertCount(2, $data['methods']);
@@ -162,7 +165,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->getJson("/admin/api/payment-methods/{$method->id}");
 
         $response->assertStatus(200)
-                 ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
+            ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
 
         $data = $response->json();
         $this->assertEquals('Stripe Production', $data['method']['name']);
@@ -191,7 +194,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->deleteJson("/admin/api/payment-methods/{$method->id}");
 
         $response->assertStatus(200)
-                 ->assertJson(['message' => 'Deleted successfully']);
+            ->assertJson(['message' => 'Deleted successfully']);
 
         $this->assertDatabaseMissing('payment_methods', ['id' => $method->id]);
     }
@@ -202,18 +205,18 @@ class PaymentMethodTest extends TestCase
     public function test_cannot_create_payment_method_without_proper_permissions()
     {
         // Create admin user without 'manage plans' permission
-        $role = \Spatie\Permission\Models\Role::firstOrCreate([
+        $role = Role::firstOrCreate([
             'name' => 'limited-admin',
-            'guard_name' => 'admin'
+            'guard_name' => 'admin',
         ]);
 
         // Create permission but don't assign it
-        $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
+        $permission = Permission::firstOrCreate([
             'name' => 'manage plans',
-            'guard_name' => 'admin'
+            'guard_name' => 'admin',
         ]);
 
-        $limitedAdmin = \App\Models\AdminUser::factory()->create();
+        $limitedAdmin = AdminUser::factory()->create();
         $limitedAdmin->assignRole('limited-admin');
 
         // Authenticate as limited admin
@@ -251,7 +254,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $data);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['api_key']);
+            ->assertJsonValidationErrors(['api_key']);
     }
 
     /**
@@ -271,7 +274,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $data);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['secret_key']);
+            ->assertJsonValidationErrors(['secret_key']);
     }
 
     /**
@@ -291,7 +294,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $data);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['provider']);
+            ->assertJsonValidationErrors(['provider']);
     }
 
     /**
@@ -311,7 +314,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $data);
 
         $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['mode']);
+            ->assertJsonValidationErrors(['mode']);
     }
 
     /**
@@ -357,7 +360,7 @@ class PaymentMethodTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $data);
 
         $response->assertStatus(201)
-                 ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
+            ->assertJsonStructure(['method' => ['id', 'name', 'provider', 'mode', 'active']]);
 
         $this->assertDatabaseHas('payment_methods', [
             'name' => 'Test Method',
@@ -464,17 +467,17 @@ class PaymentMethodTest extends TestCase
         $response = $this->getJson("/admin/api/payment-methods/{$method->id}");
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'method' => [
-                         'id',
-                         'name',
-                         'provider',
-                         'mode',
-                         'active',
-                         'created_at',
-                         'updated_at'
-                     ]
-                 ]);
+            ->assertJsonStructure([
+                'method' => [
+                    'id',
+                    'name',
+                    'provider',
+                    'mode',
+                    'active',
+                    'created_at',
+                    'updated_at',
+                ],
+            ]);
     }
 
     /**

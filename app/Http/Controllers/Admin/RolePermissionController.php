@@ -9,8 +9,8 @@ use App\Http\Requests\Admin\UpdatePermissionRequest;
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Http\Resources\PermissionResource;
 use App\Http\Resources\RoleResource;
-use App\Models\Role;
 use App\Models\Permission;
+use App\Models\Role;
 
 class RolePermissionController extends Controller
 {
@@ -35,7 +35,7 @@ class RolePermissionController extends Controller
             'is_active' => $request->validated('is_active', true),
         ]);
 
-        if (!empty($request->validated('permissions'))) {
+        if (! empty($request->validated('permissions'))) {
             $role->syncPermissions($request->validated('permissions'));
         }
 
@@ -85,7 +85,7 @@ class RolePermissionController extends Controller
             ->orderBy('name')
             ->get()
             ->groupBy('module')
-            ->map(fn($perms) => PermissionResource::collection($perms));
+            ->map(fn ($perms) => PermissionResource::collection($perms));
 
         return response()->json(['permissions' => $permissions]);
     }

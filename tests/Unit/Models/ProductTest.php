@@ -3,23 +3,21 @@
 namespace Tests\Unit\Models;
 
 use App\Models\Category;
-use App\Models\InventoryMovement;
 use App\Models\OrderItem;
 use App\Models\Product;
 
 class ProductTest extends TenantTestCase
 {
-
     public function test_product_has_required_fillable_attributes(): void
     {
         $fillable = ['name', 'description', 'sku', 'category_id', 'price', 'cost', 'active'];
-        $this->assertEquals($fillable, (new Product())->getFillable());
+        $this->assertEquals($fillable, (new Product)->getFillable());
     }
 
     public function test_product_can_be_created(): void
     {
         $category = Category::factory()->create();
-        
+
         $product = Product::create([
             'name' => 'Test Product',
             'sku' => 'TEST-001',
@@ -134,7 +132,7 @@ class ProductTest extends TenantTestCase
     public function test_product_restore_from_soft_delete(): void
     {
         $product = Product::factory()->create();
-        
+
         $product->delete();
         $product->restore();
 
@@ -154,11 +152,11 @@ class ProductTest extends TenantTestCase
     {
         $category = Category::factory()->create();
         $sku = 'UNIQUE-SKU-001';
-        
+
         Product::factory()->create(['sku' => $sku, 'category_id' => $category->id]);
-        
+
         $duplicate = Product::factory()->make(['sku' => $sku, 'category_id' => $category->id]);
-        
+
         // This would fail at database level, testing model level validation would require separate validators
         $this->assertEquals($sku, $duplicate->sku);
     }

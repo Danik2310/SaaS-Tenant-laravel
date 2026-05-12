@@ -50,7 +50,7 @@ class TenantManager implements TenantManagerInterface
         $tenant->plan_id = $newPlan->id;
         $tenant->save();
 
-        Cache::tags(['tenant_' . $tenant->id])->flush();
+        Cache::tags(['tenant_'.$tenant->id])->flush();
 
         event(new PlanChanged($tenant, $oldPlan, $newPlan));
     }

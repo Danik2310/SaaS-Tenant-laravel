@@ -3,19 +3,20 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class CustomerManagementTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpAdminAuth();
 
-        if (!\Illuminate\Support\Facades\Route::has('admin.api.customers.index')) {
+        if (! Route::has('admin.api.customers.index')) {
             $this->markTestSkipped('Customer API routes are not yet implemented.');
         }
     }
@@ -32,22 +33,22 @@ class CustomerManagementTest extends TestCase
         $response = $this->getJson('/admin/api/customers');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'customers' => [
-                        '*' => [
-                            'id',
-                            'name',
-                            'email',
-                            'phone',
-                            'is_active',
-                            'orders_count',
-                            'total_spent',
-                            'last_order_date'
-                        ]
+            ->assertJsonStructure([
+                'customers' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'email',
+                        'phone',
+                        'is_active',
+                        'orders_count',
+                        'total_spent',
+                        'last_order_date',
                     ],
-                    'total'
-                ])
-                ->assertJsonCount(2, 'customers');
+                ],
+                'total',
+            ])
+            ->assertJsonCount(2, 'customers');
     }
 
     /**
@@ -59,33 +60,33 @@ class CustomerManagementTest extends TestCase
         $customer->orders()->create([
             'order_number' => 'ORD-001',
             'total_amount' => 199.99,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         $response = $this->getJson("/admin/api/customers/{$customer->id}");
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'customer' => [
-                        'id',
-                        'name',
-                        'email',
-                        'phone',
-                        'address',
-                        'is_active',
-                        'orders' => [
-                            '*' => [
-                                'id',
-                                'order_number',
-                                'total_amount',
-                                'status',
-                                'created_at'
-                            ]
+            ->assertJsonStructure([
+                'customer' => [
+                    'id',
+                    'name',
+                    'email',
+                    'phone',
+                    'address',
+                    'is_active',
+                    'orders' => [
+                        '*' => [
+                            'id',
+                            'order_number',
+                            'total_amount',
+                            'status',
+                            'created_at',
                         ],
-                        'total_spent',
-                        'orders_count'
-                    ]
-                ]);
+                    ],
+                    'total_spent',
+                    'orders_count',
+                ],
+            ]);
     }
 
     /**
@@ -98,27 +99,27 @@ class CustomerManagementTest extends TestCase
             'email' => 'newcustomer@example.com',
             'phone' => '+1234567890',
             'address' => '123 Main St, City, State 12345',
-            'is_active' => true
+            'is_active' => true,
         ];
 
         $response = $this->postJson('/admin/api/customers', $customerData);
 
         $response->assertStatus(201)
-                ->assertJsonStructure([
-                    'customer' => [
-                        'id',
-                        'name',
-                        'email',
-                        'phone',
-                        'is_active'
-                    ],
-                    'message'
-                ]);
+            ->assertJsonStructure([
+                'customer' => [
+                    'id',
+                    'name',
+                    'email',
+                    'phone',
+                    'is_active',
+                ],
+                'message',
+            ]);
 
         $this->assertDatabaseHas('customers', [
             'name' => 'New Customer',
             'email' => 'newcustomer@example.com',
-            'phone' => '+1234567890'
+            'phone' => '+1234567890',
         ]);
     }
 
@@ -129,25 +130,25 @@ class CustomerManagementTest extends TestCase
     {
         $customer = Customer::factory()->create([
             'name' => 'Old Name',
-            'email' => 'old@example.com'
+            'email' => 'old@example.com',
         ]);
 
         $updateData = [
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
-            'phone' => '+0987654321'
+            'phone' => '+0987654321',
         ];
 
         $response = $this->putJson("/admin/api/customers/{$customer->id}", $updateData);
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Customer updated successfully']);
+            ->assertJson(['message' => 'Customer updated successfully']);
 
         $this->assertDatabaseHas('customers', [
             'id' => $customer->id,
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
-            'phone' => '+0987654321'
+            'phone' => '+0987654321',
         ]);
     }
 
@@ -161,7 +162,7 @@ class CustomerManagementTest extends TestCase
         $response = $this->patchJson("/admin/api/customers/{$customer->id}/toggle-status");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Customer status updated successfully']);
+            ->assertJson(['message' => 'Customer status updated successfully']);
 
         $this->assertFalse($customer->fresh()->is_active);
     }
@@ -176,7 +177,7 @@ class CustomerManagementTest extends TestCase
         $response = $this->deleteJson("/admin/api/customers/{$customer->id}");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Customer deleted successfully']);
+            ->assertJson(['message' => 'Customer deleted successfully']);
 
         $this->assertSoftDeleted('customers', ['id' => $customer->id]);
     }
@@ -189,18 +190,18 @@ class CustomerManagementTest extends TestCase
         $response = $this->postJson('/admin/api/customers', [
             'name' => '',
             'email' => 'invalid-email',
-            'phone' => 'invalid-phone'
+            'phone' => 'invalid-phone',
         ]);
 
         $response->assertStatus(422)
-                ->assertJsonStructure([
-                    'message',
-                    'errors' => [
-                        'name',
-                        'email',
-                        'phone'
-                    ]
-                ]);
+            ->assertJsonStructure([
+                'message',
+                'errors' => [
+                    'name',
+                    'email',
+                    'phone',
+                ],
+            ]);
     }
 
     /**
@@ -212,15 +213,15 @@ class CustomerManagementTest extends TestCase
         $customer->orders()->create([
             'order_number' => 'ORD-001',
             'total_amount' => 99.99,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         $response = $this->deleteJson("/admin/api/customers/{$customer->id}");
 
         $response->assertStatus(422)
-                ->assertJson([
-                    'message' => 'Cannot delete customer with associated orders'
-                ]);
+            ->assertJson([
+                'message' => 'Cannot delete customer with associated orders',
+            ]);
 
         $this->assertDatabaseHas('customers', ['id' => $customer->id]);
     }
@@ -236,7 +237,7 @@ class CustomerManagementTest extends TestCase
         $response = $this->getJson('/admin/api/customers?search=john');
 
         $response->assertStatus(200)
-                ->assertJsonCount(1, 'customers')
-                ->assertJsonFragment(['name' => 'John Doe']);
+            ->assertJsonCount(1, 'customers')
+            ->assertJsonFragment(['name' => 'John Doe']);
     }
 }

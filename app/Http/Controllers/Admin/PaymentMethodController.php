@@ -24,7 +24,7 @@ class PaymentMethodController extends Controller
         try {
             $this->logPaymentMethodAccessed(null, 'list');
         } catch (\Exception $e) {
-            \Log::error('Failed to log payment method access: ' . $e->getMessage());
+            \Log::error('Failed to log payment method access: '.$e->getMessage());
         }
 
         return response()->json(['methods' => $methods]);
@@ -73,7 +73,7 @@ class PaymentMethodController extends Controller
         $method = PaymentMethod::findOrFail($id);
         $oldActive = $method->active;
 
-        $method->update(['active' => !$method->active]);
+        $method->update(['active' => ! $method->active]);
 
         $this->logPaymentMethodToggled($method, $oldActive);
 

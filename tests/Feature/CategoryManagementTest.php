@@ -3,19 +3,20 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class CategoryManagementTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpAdminAuth();
 
-        if (!\Illuminate\Support\Facades\Route::has('admin.api.categories.index')) {
+        if (! Route::has('admin.api.categories.index')) {
             $this->markTestSkipped('Category API routes are not yet implemented.');
         }
     }
@@ -32,19 +33,19 @@ class CategoryManagementTest extends TestCase
         $response = $this->getJson('/admin/api/categories');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'categories' => [
-                        '*' => [
-                            'id',
-                            'name',
-                            'description',
-                            'is_active',
-                            'products_count'
-                        ]
+            ->assertJsonStructure([
+                'categories' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'description',
+                        'is_active',
+                        'products_count',
                     ],
-                    'total'
-                ])
-                ->assertJsonCount(2, 'categories');
+                ],
+                'total',
+            ])
+            ->assertJsonCount(2, 'categories');
     }
 
     /**
@@ -55,26 +56,26 @@ class CategoryManagementTest extends TestCase
         $categoryData = [
             'name' => 'New Category',
             'description' => 'Category description',
-            'is_active' => true
+            'is_active' => true,
         ];
 
         $response = $this->postJson('/admin/api/categories', $categoryData);
 
         $response->assertStatus(201)
-                ->assertJsonStructure([
-                    'category' => [
-                        'id',
-                        'name',
-                        'description',
-                        'is_active'
-                    ],
-                    'message'
-                ]);
+            ->assertJsonStructure([
+                'category' => [
+                    'id',
+                    'name',
+                    'description',
+                    'is_active',
+                ],
+                'message',
+            ]);
 
         $this->assertDatabaseHas('categories', [
             'name' => 'New Category',
             'description' => 'Category description',
-            'is_active' => true
+            'is_active' => true,
         ]);
     }
 
@@ -85,25 +86,25 @@ class CategoryManagementTest extends TestCase
     {
         $category = Category::factory()->create([
             'name' => 'Old Category',
-            'description' => 'Old description'
+            'description' => 'Old description',
         ]);
 
         $updateData = [
             'name' => 'Updated Category',
             'description' => 'Updated description',
-            'is_active' => false
+            'is_active' => false,
         ];
 
         $response = $this->putJson("/admin/api/categories/{$category->id}", $updateData);
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Category updated successfully']);
+            ->assertJson(['message' => 'Category updated successfully']);
 
         $this->assertDatabaseHas('categories', [
             'id' => $category->id,
             'name' => 'Updated Category',
             'description' => 'Updated description',
-            'is_active' => false
+            'is_active' => false,
         ]);
     }
 
@@ -117,7 +118,7 @@ class CategoryManagementTest extends TestCase
         $response = $this->patchJson("/admin/api/categories/{$category->id}/toggle-status");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Category status updated successfully']);
+            ->assertJson(['message' => 'Category status updated successfully']);
 
         $this->assertFalse($category->fresh()->is_active);
     }
@@ -132,7 +133,7 @@ class CategoryManagementTest extends TestCase
         $response = $this->deleteJson("/admin/api/categories/{$category->id}");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Category deleted successfully']);
+            ->assertJson(['message' => 'Category deleted successfully']);
 
         $this->assertSoftDeleted('categories', ['id' => $category->id]);
     }
@@ -144,17 +145,17 @@ class CategoryManagementTest extends TestCase
     {
         $response = $this->postJson('/admin/api/categories', [
             'name' => '',
-            'description' => str_repeat('a', 1001) // Too long
+            'description' => str_repeat('a', 1001), // Too long
         ]);
 
         $response->assertStatus(422)
-                ->assertJsonStructure([
-                    'message',
-                    'errors' => [
-                        'name',
-                        'description'
-                    ]
-                ]);
+            ->assertJsonStructure([
+                'message',
+                'errors' => [
+                    'name',
+                    'description',
+                ],
+            ]);
     }
 
     /**
@@ -168,15 +169,15 @@ class CategoryManagementTest extends TestCase
             'description' => 'Test description',
             'price' => 99.99,
             'stock_quantity' => 10,
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         $response = $this->deleteJson("/admin/api/categories/{$category->id}");
 
         $response->assertStatus(422)
-                ->assertJson([
-                    'message' => 'Cannot delete category with associated products'
-                ]);
+            ->assertJson([
+                'message' => 'Cannot delete category with associated products',
+            ]);
 
         $this->assertDatabaseHas('categories', ['id' => $category->id]);
     }

@@ -159,7 +159,7 @@ trait AuditablePaymentMethods
             if (isset($oldData[$field]) && $oldData[$field] != $method->$field) {
                 $changes[$field] = [
                     'from' => $oldData[$field],
-                    'to' => $method->$field
+                    'to' => $method->$field,
                 ];
             }
         }
@@ -168,14 +168,14 @@ trait AuditablePaymentMethods
         if (isset($oldData['api_key']) && $oldData['api_key'] !== $method->getAttributes()['api_key']) {
             $changes['api_key'] = [
                 'from' => '[ENCRYPTED]',
-                'to' => '[ENCRYPTED]'
+                'to' => '[ENCRYPTED]',
             ];
         }
 
         if (isset($oldData['secret_key']) && $oldData['secret_key'] !== $method->getAttributes()['secret_key']) {
             $changes['secret_key'] = [
                 'from' => '[ENCRYPTED]',
-                'to' => '[ENCRYPTED]'
+                'to' => '[ENCRYPTED]',
             ];
         }
 

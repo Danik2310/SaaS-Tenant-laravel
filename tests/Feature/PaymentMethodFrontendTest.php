@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 class PaymentMethodFrontendTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -32,17 +32,17 @@ class PaymentMethodFrontendTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $data);
 
         $response->assertStatus(201)
-                ->assertJsonStructure([
-                    'method' => [
-                        'id',
-                        'name',
-                        'provider',
-                        'mode',
-                        'active',
-                        'created_at',
-                        'updated_at',
-                    ]
-                ]);
+            ->assertJsonStructure([
+                'method' => [
+                    'id',
+                    'name',
+                    'provider',
+                    'mode',
+                    'active',
+                    'created_at',
+                    'updated_at',
+                ],
+            ]);
 
         $this->assertDatabaseHas('payment_methods', [
             'name' => 'Frontend Test Payment',
@@ -72,16 +72,16 @@ class PaymentMethodFrontendTest extends TestCase
         $response = $this->putJson("/admin/api/payment-methods/{$paymentMethod->id}", $updateData);
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'method' => [
-                        'id',
-                        'name',
-                        'provider',
-                        'mode',
-                        'active',
-                        'updated_at',
-                    ]
-                ]);
+            ->assertJsonStructure([
+                'method' => [
+                    'id',
+                    'name',
+                    'provider',
+                    'mode',
+                    'active',
+                    'updated_at',
+                ],
+            ]);
 
         $this->assertDatabaseHas('payment_methods', [
             'id' => $paymentMethod->id,
@@ -100,9 +100,9 @@ class PaymentMethodFrontendTest extends TestCase
         $response = $this->deleteJson("/admin/api/payment-methods/{$paymentMethod->id}");
 
         $response->assertStatus(200)
-                ->assertJson([
-                    'message' => 'Deleted successfully'
-                ]);
+            ->assertJson([
+                'message' => 'Deleted successfully',
+            ]);
 
         $this->assertDatabaseMissing('payment_methods', [
             'id' => $paymentMethod->id,
@@ -123,12 +123,12 @@ class PaymentMethodFrontendTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $invalidData);
 
         $response->assertStatus(422)
-                ->assertJsonValidationErrors([
-                    'name',
-                    'provider',
-                    'api_key',
-                    'mode',
-                ]);
+            ->assertJsonValidationErrors([
+                'name',
+                'provider',
+                'api_key',
+                'mode',
+            ]);
     }
 
     /** @test */
@@ -149,7 +149,7 @@ class PaymentMethodFrontendTest extends TestCase
         $response = $this->postJson('/admin/api/payment-methods', $duplicateData);
 
         $response->assertStatus(422)
-                ->assertJsonValidationErrors(['name']);
+            ->assertJsonValidationErrors(['name']);
     }
 
     /** @test */
@@ -193,7 +193,7 @@ class PaymentMethodFrontendTest extends TestCase
         $response = $this->putJson("/admin/api/payment-methods/{$method2->id}", $updateData);
 
         $response->assertStatus(422)
-                ->assertJsonValidationErrors(['name']);
+            ->assertJsonValidationErrors(['name']);
     }
 
     /** @test */

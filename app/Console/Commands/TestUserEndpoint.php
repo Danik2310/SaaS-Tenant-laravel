@@ -2,6 +2,8 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\AdminAuthController;
+use App\Models\AdminUser;
 use Illuminate\Console\Command;
 
 class TestUserEndpoint extends Command
@@ -26,26 +28,27 @@ class TestUserEndpoint extends Command
     public function handle()
     {
         $this->info('Testing /admin/user endpoint...');
-        
+
         // Simulate authenticated request
-        $user = \App\Models\AdminUser::first();
-        
-        if (!$user) {
+        $user = AdminUser::first();
+
+        if (! $user) {
             $this->error('No admin user found');
+
             return;
         }
-        
+
         // Manually authenticate the user for this request
         \Auth::guard('admin')->login($user);
-        
+
         // Make request to the controller method
-        $controller = new \App\Http\Controllers\AdminAuthController();
+        $controller = new AdminAuthController;
         $response = $controller->user();
-        
-        $this->info('Response status: ' . $response->getStatusCode());
+
+        $this->info('Response status: '.$response->getStatusCode());
         $this->line('Response data:');
         $this->line(json_encode($response->getData(), JSON_PRETTY_PRINT));
-        
+
         \Auth::guard('admin')->logout();
     }
 }

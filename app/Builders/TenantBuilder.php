@@ -6,6 +6,7 @@ namespace App\Builders;
 
 use App\Models\Plan;
 use App\Models\Tenant;
+use Database\Seeders\TenantRolePermissionSeeder;
 use Illuminate\Support\Facades\Artisan;
 
 class TenantBuilder
@@ -62,7 +63,7 @@ class TenantBuilder
         tenancy()->initialize($this->tenant);
         try {
             Artisan::call('db:seed', [
-                '--class' => $seederClass ?? \Database\Seeders\TenantRolePermissionSeeder::class,
+                '--class' => $seederClass ?? TenantRolePermissionSeeder::class,
                 '--force' => true,
             ]);
         } catch (\Exception $e) {

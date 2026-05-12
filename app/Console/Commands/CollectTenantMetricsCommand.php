@@ -18,7 +18,7 @@ class CollectTenantMetricsCommand extends Command
     {
         $tenantIds = $this->option('tenant');
 
-        if (!empty($tenantIds)) {
+        if (! empty($tenantIds)) {
             $tenants = Tenant::whereIn('id', $tenantIds)->get();
         } else {
             $tenants = Tenant::where('status', 'Active')->get();

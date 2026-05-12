@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
 use App\Models\AdminUser;
 use App\Models\Role;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Hash;
 
 class TestStaffRolesFlow extends Command
@@ -35,7 +35,7 @@ class TestStaffRolesFlow extends Command
             // Step 1: Simulate fetching roles (like StaffForm does)
             $this->info('Step 1: Fetching available roles (simulating StaffForm.fetchRoles())');
             $roles = Role::where('guard_name', 'admin')->get();
-            $this->line("   ✓ Retrieved " . $roles->count() . " roles");
+            $this->line('   ✓ Retrieved '.$roles->count().' roles');
             foreach ($roles as $role) {
                 $this->line("     - {$role->name} ({$role->permissions->count()} permissions)");
             }
@@ -43,7 +43,7 @@ class TestStaffRolesFlow extends Command
 
             // Step 2: Create a new staff member
             $this->info('Step 2: Creating new staff member with roles');
-            $email = 'newstaff' . time() . '@example.com';
+            $email = 'newstaff'.time().'@example.com';
             $newStaff = AdminUser::create([
                 'name' => 'New Staff Member',
                 'email' => $email,
@@ -59,7 +59,7 @@ class TestStaffRolesFlow extends Command
             $roleIds = $roles->take(1)->pluck('id')->toArray();
             $selectedRoles = Role::whereIn('id', $roleIds)->get();
             $newStaff->syncRoles($selectedRoles);
-            $this->line("   ✓ Assigned " . count($selectedRoles) . " role(s)");
+            $this->line('   ✓ Assigned '.count($selectedRoles).' role(s)');
             foreach ($newStaff->roles as $role) {
                 $this->line("     - {$role->name}");
             }
@@ -67,7 +67,7 @@ class TestStaffRolesFlow extends Command
 
             // Step 4: Verify the staff member has permissions from roles
             $this->info('Step 4: Verifying staff has inherited permissions');
-            $this->line("   Staff permissions from roles:");
+            $this->line('   Staff permissions from roles:');
             foreach ($newStaff->roles as $role) {
                 foreach ($role->permissions as $perm) {
                     $this->line("     ✓ {$perm->name} (from role: {$role->name})");
@@ -81,7 +81,7 @@ class TestStaffRolesFlow extends Command
             foreach ($testPerms as $permName) {
                 $hasPermission = $newStaff->hasPermissionTo($permName);
                 $status = $hasPermission ? '✓' : '✗';
-                $this->line("   {$status} Can perform '{$permName}': " . ($hasPermission ? 'YES' : 'NO'));
+                $this->line("   {$status} Can perform '{$permName}': ".($hasPermission ? 'YES' : 'NO'));
             }
             $this->line('');
 
@@ -96,14 +96,14 @@ class TestStaffRolesFlow extends Command
                 'roles' => $newStaff->roles->pluck('name')->toArray(),
                 'permissions' => $directPerms,
             ];
-            $this->line("   ✓ Staff details retrieved successfully");
-            $this->line("   ✓ Roles: " . implode(', ', $staffData['roles']));
+            $this->line('   ✓ Staff details retrieved successfully');
+            $this->line('   ✓ Roles: '.implode(', ', $staffData['roles']));
             $this->line('');
 
             // Step 7: Clean up
             $this->info('Step 7: Cleaning up test data');
             $newStaff->forceDelete();
-            $this->line("   ✓ Test staff member deleted");
+            $this->line('   ✓ Test staff member deleted');
             $this->line('');
 
             $this->info('=== All Tests Passed! ===');
@@ -113,8 +113,8 @@ class TestStaffRolesFlow extends Command
             $this->line('✓ Staff data retrieval includes all role information');
 
         } catch (\Exception $e) {
-            $this->error('✗ Error: ' . $e->getMessage());
-            $this->line('Trace: ' . $e->getTraceAsString());
+            $this->error('✗ Error: '.$e->getMessage());
+            $this->line('Trace: '.$e->getTraceAsString());
         }
     }
 }

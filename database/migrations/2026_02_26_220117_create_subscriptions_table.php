@@ -17,9 +17,9 @@ return new class extends Migration
             // tenant uses string PK
             $table->string('tenant_id');
             $table->foreign('tenant_id')
-                  ->references('id')
-                  ->on('tenants')
-                  ->cascadeOnDelete();
+                ->references('id')
+                ->on('tenants')
+                ->cascadeOnDelete();
 
             $table->foreignId('plan_id')->constrained()->cascadeOnDelete();
 

@@ -26,7 +26,7 @@ class TenantStateManager
     {
         $allowed = self::allowedTransitions($tenant->status);
 
-        if (!in_array($targetStatus, $allowed, true)) {
+        if (! in_array($targetStatus, $allowed, true)) {
             throw new InvalidArgumentException(sprintf(
                 "Cannot transition tenant '%s' from '%s' to '%s'. Allowed transitions: %s",
                 $tenant->id,
@@ -49,6 +49,6 @@ class TenantStateManager
             event(new TenantReactivated($tenant));
         }
 
-        Cache::tags(['tenant_' . $tenant->id])->flush();
+        Cache::tags(['tenant_'.$tenant->id])->flush();
     }
 }

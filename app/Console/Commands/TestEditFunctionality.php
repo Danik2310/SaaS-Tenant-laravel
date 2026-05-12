@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\AdminUser;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
-use App\Models\AdminUser;
-use App\Models\Role;
 
 class TestEditFunctionality extends Command
 {
@@ -33,13 +32,14 @@ class TestEditFunctionality extends Command
 
         // 1. Obtener un staff existente
         $staff = AdminUser::with('roles')->first();
-        if (!$staff) {
+        if (! $staff) {
             $this->error('❌ No staff members found. Please create one first.');
+
             return 1;
         }
 
         $this->info("1. Found staff member: {$staff->name} (ID: {$staff->id})");
-        $this->info("   Current roles: " . implode(', ', $staff->roles->pluck('name')->toArray()));
+        $this->info('   Current roles: '.implode(', ', $staff->roles->pluck('name')->toArray()));
         $this->newLine();
 
         // 2. Simular la llamada al endpoint show() (como hace handleEditClick)
@@ -52,7 +52,7 @@ class TestEditFunctionality extends Command
                 'name' => $admin->name,
                 'email' => $admin->email,
                 'is_active' => $admin->is_active,
-                'roles' => $admin->roles->map(fn($role) => [
+                'roles' => $admin->roles->map(fn ($role) => [
                     'id' => $role->id,
                     'name' => $role->name,
                     'permissions' => $role->permissions->pluck('id')->toArray(),
@@ -60,7 +60,7 @@ class TestEditFunctionality extends Command
             ],
         ];
 
-        $this->info("   ✅ Show endpoint returns roles with IDs: " . implode(', ', array_column($showData['staff']['roles'], 'id')));
+        $this->info('   ✅ Show endpoint returns roles with IDs: '.implode(', ', array_column($showData['staff']['roles'], 'id')));
         $this->newLine();
 
         // 3. Simular cómo StaffForm procesa estos datos
@@ -70,16 +70,17 @@ class TestEditFunctionality extends Command
             'name' => $showData['staff']['name'],
             'email' => $showData['staff']['email'],
             'password' => '', // No cambiar password
-            'roles' => array_map(function($role) {
+            'roles' => array_map(function ($role) {
                 if (is_array($role) && isset($role['id'])) {
                     return $role['id'];
                 }
+
                 return $role;
             }, $showData['staff']['roles']),
             'is_active' => $showData['staff']['is_active'],
         ];
 
-        $this->info("   ✅ Form data roles (should be IDs): " . implode(', ', $formData['roles']));
+        $this->info('   ✅ Form data roles (should be IDs): '.implode(', ', $formData['roles']));
         $this->newLine();
 
         // 4. Simular validación de actualización
@@ -87,7 +88,7 @@ class TestEditFunctionality extends Command
 
         $validationRules = [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:admin_users,email,' . $staff->id,
+            'email' => 'required|email|unique:admin_users,email,'.$staff->id,
             'roles' => 'array',
             'roles.*' => 'exists:roles,id',
             'is_active' => 'boolean',
@@ -100,6 +101,7 @@ class TestEditFunctionality extends Command
             foreach ($validator->errors()->all() as $error) {
                 $this->error("      - $error");
             }
+
             return 1;
         } else {
             $this->info('   ✅ Validation passed! Form data is correct.');

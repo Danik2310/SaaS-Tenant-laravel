@@ -3,12 +3,13 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class OrderFlowIntegrationTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected array $createdTenantDbNames = [];
 
@@ -17,7 +18,7 @@ class OrderFlowIntegrationTest extends TestCase
         parent::setUp();
         $this->setUpAdminAuth();
 
-        if (!\Illuminate\Support\Facades\Route::has('admin.api.orders.index')) {
+        if (! Route::has('admin.api.orders.index')) {
             $this->markTestSkipped('Order/Payment API routes are not yet implemented.');
         }
     }
@@ -40,19 +41,19 @@ class OrderFlowIntegrationTest extends TestCase
             'name' => 'Laptop',
             'price' => 999.99,
             'active' => true,
-            'category_id' => $category->id
+            'category_id' => $category->id,
         ]);
         $product2 = Product::factory()->create([
             'name' => 'Mouse',
             'price' => 29.99,
             'active' => true,
-            'category_id' => $category->id
+            'category_id' => $category->id,
         ]);
 
         // 2. Create customer
         $customer = Customer::factory()->create([
             'name' => 'John Doe',
-            'email' => 'john@example.com'
+            'email' => 'john@example.com',
         ]);
 
         // 3. Create order
@@ -61,14 +62,14 @@ class OrderFlowIntegrationTest extends TestCase
             'items' => [
                 [
                     'product_id' => $product1->id,
-                    'quantity' => 1
+                    'quantity' => 1,
                 ],
                 [
                     'product_id' => $product2->id,
-                    'quantity' => 2
-                ]
+                    'quantity' => 2,
+                ],
             ],
-            'notes' => 'Integration test order'
+            'notes' => 'Integration test order',
         ];
 
         $response = $this->postJson('/admin/api/orders', $orderData);
@@ -81,7 +82,7 @@ class OrderFlowIntegrationTest extends TestCase
 
         // 4. Update order status to processing
         $response = $this->patchJson("/admin/api/orders/{$order->id}/status", [
-            'status' => 'processing'
+            'status' => 'processing',
         ]);
         $response->assertStatus(200);
         $this->assertEquals('processing', $order->fresh()->status);
@@ -91,7 +92,7 @@ class OrderFlowIntegrationTest extends TestCase
             'order_id' => $order->id,
             'amount' => 1059.97,
             'payment_method' => 'credit_card',
-            'transaction_id' => 'txn_integration_test_001'
+            'transaction_id' => 'txn_integration_test_001',
         ];
 
         $response = $this->postJson('/admin/api/payments', $paymentData);
@@ -103,7 +104,7 @@ class OrderFlowIntegrationTest extends TestCase
 
         // 6. Update order status to completed
         $response = $this->patchJson("/admin/api/orders/{$order->id}/status", [
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
         $response->assertStatus(200);
         $this->assertEquals('completed', $order->fresh()->status);
@@ -139,9 +140,9 @@ class OrderFlowIntegrationTest extends TestCase
             'items' => [
                 [
                     'product_id' => $product->id,
-                    'quantity' => 2
-                ]
-            ]
+                    'quantity' => 2,
+                ],
+            ],
         ];
 
         $response = $this->postJson('/admin/api/orders', $orderData);
@@ -176,13 +177,13 @@ class OrderFlowIntegrationTest extends TestCase
         $payment = Payment::factory()->create([
             'order_id' => $order->id,
             'amount' => 199.99,
-            'status' => 'completed'
+            'status' => 'completed',
         ]);
 
         // Process refund
         $refundData = [
             'refund_amount' => 50.00,
-            'reason' => 'Customer dissatisfaction'
+            'reason' => 'Customer dissatisfaction',
         ];
 
         $response = $this->patchJson("/admin/api/payments/{$payment->id}/refund", $refundData);
@@ -190,8 +191,8 @@ class OrderFlowIntegrationTest extends TestCase
 
         // Verify refund was created
         $refund = Payment::where('order_id', $order->id)
-                        ->where('amount', -50.00)
-                        ->first();
+            ->where('amount', -50.00)
+            ->first();
 
         $this->assertNotNull($refund);
         $this->assertEquals('refunded', $refund->status);
@@ -220,9 +221,9 @@ class OrderFlowIntegrationTest extends TestCase
             'items' => [
                 [
                     'product_id' => $product->id,
-                    'quantity' => 5 // Large quantity
-                ]
-            ]
+                    'quantity' => 5, // Large quantity
+                ],
+            ],
         ];
 
         $response = $this->postJson('/admin/api/orders', $orderData);

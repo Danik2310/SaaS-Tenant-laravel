@@ -48,7 +48,7 @@ class SettingController extends Controller
     {
         $setting = GlobalSetting::where('key', $key)->first();
 
-        if (!$setting) {
+        if (! $setting) {
             return response()->json(['message' => 'Setting not found'], 404);
         }
 

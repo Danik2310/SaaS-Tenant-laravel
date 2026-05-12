@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Spatie\Permission\Models\Role as SpatieRole;
 use Spatie\Permission\Contracts\Role as RoleContract;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 class Role extends SpatieRole implements RoleContract
 {

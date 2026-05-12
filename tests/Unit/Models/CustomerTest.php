@@ -10,7 +10,7 @@ class CustomerTest extends TenantTestCase
     public function test_customer_has_required_fillable_attributes(): void
     {
         $fillable = ['name', 'email', 'phone', 'document', 'notes', 'active'];
-        $this->assertEquals($fillable, (new Customer())->getFillable());
+        $this->assertEquals($fillable, (new Customer)->getFillable());
     }
 
     public function test_customer_can_be_created(): void
@@ -62,7 +62,7 @@ class CustomerTest extends TenantTestCase
     public function test_customer_total_spent_only_counts_paid_orders(): void
     {
         $customer = Customer::factory()->create();
-        
+
         $order1 = Order::factory()->forCustomer($customer)->paid()->state(['total' => 1000])->create();
         $order2 = Order::factory()->forCustomer($customer)->paid()->state(['total' => 2000])->create();
         Order::factory()->forCustomer($customer)->pending()->state(['total' => 500])->create();
@@ -87,7 +87,7 @@ class CustomerTest extends TenantTestCase
     public function test_customer_restore_from_soft_delete(): void
     {
         $customer = Customer::factory()->create();
-        
+
         $customer->delete();
         $customer->restore();
 

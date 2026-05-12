@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\AdminDashboardController;
 use Illuminate\Console\Command;
 
 class TestTenantsCommand extends Command
@@ -25,9 +26,9 @@ class TestTenantsCommand extends Command
      */
     public function handle()
     {
-        $controller = new \App\Http\Controllers\AdminDashboardController();
+        $controller = new AdminDashboardController;
         $response = $controller->tenants();
-        
+
         $this->info('Tenants data:');
         $this->line(json_encode($response->getData(), JSON_PRETTY_PRINT));
     }

@@ -10,7 +10,7 @@ class StaffResource extends JsonResource
     {
         $roleNames = $this->roles->pluck('name')->toArray();
         $directPerms = $this->permissions;
-        $rolePerms = $this->roles->flatMap(fn($role) => $role->permissions);
+        $rolePerms = $this->roles->flatMap(fn ($role) => $role->permissions);
         $allPerms = $directPerms->merge($rolePerms)->unique('id');
 
         return [

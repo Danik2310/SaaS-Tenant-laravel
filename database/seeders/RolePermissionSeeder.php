@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -24,7 +23,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite gestionar tenants: crear, editar, eliminar y ver información de tenants',
                     'module' => 'tenants',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -32,7 +31,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite gestionar el personal administrativo',
                     'module' => 'staff',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -40,7 +39,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite gestionar planes de suscripción y precios',
                     'module' => 'plans',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -48,7 +47,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite impersonar tenants para acceder a sus dominios',
                     'module' => 'tenants',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -56,7 +55,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite gestionar el perfil personal',
                     'module' => 'profile',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -64,7 +63,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite gestionar métodos de pago y configuraciones de facturación',
                     'module' => 'billing',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -72,7 +71,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite gestionar suscripciones de tenants',
                     'module' => 'billing',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -80,7 +79,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite ver registros de actividad del sistema',
                     'module' => 'system',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -88,7 +87,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite gestionar configuraciones globales del sistema',
                     'module' => 'system',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             Permission::updateOrCreate(
@@ -96,7 +95,7 @@ class RolePermissionSeeder extends Seeder
                 [
                     'description' => 'Permite restaurar tenants eliminados',
                     'module' => 'tenants',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
 
@@ -105,14 +104,14 @@ class RolePermissionSeeder extends Seeder
                 ['name' => 'super-admin', 'guard_name' => $guard],
                 [
                     'description' => 'Administrador con acceso completo a todas las funciones',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
             $staff = Role::updateOrCreate(
                 ['name' => 'staff', 'guard_name' => $guard],
                 [
                     'description' => 'Personal administrativo con permisos limitados',
-                    'is_active' => true
+                    'is_active' => true,
                 ]
             );
 
@@ -127,13 +126,13 @@ class RolePermissionSeeder extends Seeder
                 'manage settings',
                 'impersonate tenants',
                 'restore tenants',
-                'manage profile'
+                'manage profile',
             ]);
 
             $staff->givePermissionTo([
                 'manage tenants',
                 'manage plans',
-                'manage profile'
+                'manage profile',
             ]);
         }
     }

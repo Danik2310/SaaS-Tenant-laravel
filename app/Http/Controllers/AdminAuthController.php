@@ -24,6 +24,7 @@ class AdminAuthController extends Controller
             $request->filled('remember')
         )) {
             $request->session()->regenerate();
+
             return response()->json(['success' => true, 'message' => 'Logged in successfully']);
         }
 
@@ -41,7 +42,7 @@ class AdminAuthController extends Controller
 
     public function user()
     {
-        if (!Auth::guard('admin')->check()) {
+        if (! Auth::guard('admin')->check()) {
             return response()->json(['user' => null]);
         }
 

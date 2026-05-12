@@ -12,7 +12,7 @@ class HandlePlanChange
 {
     public function handle(PlanChanged $event): void
     {
-        Cache::tags(['tenant_' . $event->tenant->id])->flush();
+        Cache::tags(['tenant_'.$event->tenant->id])->flush();
 
         Log::info('Tenant plan changed', [
             'tenant_id' => $event->tenant->id,

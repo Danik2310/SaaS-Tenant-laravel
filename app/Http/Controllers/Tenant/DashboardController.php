@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
-use App\Models\Order;
 use App\Models\Customer;
 use App\Models\InventoryMovement;
-use Illuminate\Http\Request;
+use App\Models\Order;
+use App\Models\Product;
 use Inertia\Inertia;
 
 class DashboardController extends Controller

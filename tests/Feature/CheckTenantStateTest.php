@@ -15,14 +15,14 @@ class CheckTenantStateTest extends TestCase
     public function test_active_tenant_passes_middleware()
     {
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test Tenant',
             'status' => 'Active',
         ]);
 
         tenancy()->initialize($tenant);
 
-        $middleware = new CheckTenantState();
+        $middleware = new CheckTenantState;
         $request = Request::create('/');
         $response = $middleware->handle($request, fn ($req) => response('OK'));
 
@@ -35,14 +35,14 @@ class CheckTenantStateTest extends TestCase
     public function test_suspended_tenant_returns_403()
     {
         $tenant = Tenant::create([
-            'id' => 'suspended-tenant-' . uniqid(),
+            'id' => 'suspended-tenant-'.uniqid(),
             'name' => 'Suspended Tenant',
             'status' => 'Suspended',
         ]);
 
         tenancy()->initialize($tenant);
 
-        $middleware = new CheckTenantState();
+        $middleware = new CheckTenantState;
         $request = Request::create('/', 'GET', [], [], [], ['HTTP_Accept' => 'application/json']);
         $response = $middleware->handle($request, fn ($req) => response('OK'));
 
@@ -57,14 +57,14 @@ class CheckTenantStateTest extends TestCase
     public function test_deleted_tenant_returns_403_with_deleted_message()
     {
         $tenant = Tenant::create([
-            'id' => 'deleted-tenant-' . uniqid(),
+            'id' => 'deleted-tenant-'.uniqid(),
             'name' => 'Deleted Tenant',
             'status' => 'Deleted',
         ]);
 
         tenancy()->initialize($tenant);
 
-        $middleware = new CheckTenantState();
+        $middleware = new CheckTenantState;
         $request = Request::create('/', 'GET', [], [], [], ['HTTP_Accept' => 'application/json']);
         $response = $middleware->handle($request, fn ($req) => response('OK'));
 
@@ -78,7 +78,7 @@ class CheckTenantStateTest extends TestCase
 
     public function test_middleware_passes_when_no_tenant_context()
     {
-        $middleware = new CheckTenantState();
+        $middleware = new CheckTenantState;
         $request = Request::create('/');
         $response = $middleware->handle($request, fn ($req) => response('OK'));
 

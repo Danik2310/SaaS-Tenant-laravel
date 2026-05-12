@@ -3,19 +3,20 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class ProductManagementTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpAdminAuth();
 
-        if (!\Illuminate\Support\Facades\Route::has('admin.api.products.index')) {
+        if (! Route::has('admin.api.products.index')) {
             $this->markTestSkipped('Product API routes are not yet implemented.');
         }
     }
@@ -32,22 +33,22 @@ class ProductManagementTest extends TestCase
         $response = $this->getJson('/admin/api/products');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'products' => [
-                        '*' => [
-                            'id',
-                            'name',
-                            'description',
-                            'price',
-                            'stock_quantity',
-                            'is_active',
-                            'category',
-                            'images'
-                        ]
+            ->assertJsonStructure([
+                'products' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'description',
+                        'price',
+                        'stock_quantity',
+                        'is_active',
+                        'category',
+                        'images',
                     ],
-                    'total'
-                ])
-                ->assertJsonCount(2, 'products');
+                ],
+                'total',
+            ])
+            ->assertJsonCount(2, 'products');
     }
 
     /**
@@ -63,28 +64,28 @@ class ProductManagementTest extends TestCase
             'price' => 199.99,
             'stock_quantity' => 50,
             'category_id' => $category->id,
-            'is_active' => true
+            'is_active' => true,
         ];
 
         $response = $this->postJson('/admin/api/products', $productData);
 
         $response->assertStatus(201)
-                ->assertJsonStructure([
-                    'product' => [
-                        'id',
-                        'name',
-                        'description',
-                        'price',
-                        'stock_quantity',
-                        'is_active'
-                    ],
-                    'message'
-                ]);
+            ->assertJsonStructure([
+                'product' => [
+                    'id',
+                    'name',
+                    'description',
+                    'price',
+                    'stock_quantity',
+                    'is_active',
+                ],
+                'message',
+            ]);
 
         $this->assertDatabaseHas('products', [
             'name' => 'New Product',
             'price' => 199.99,
-            'stock_quantity' => 50
+            'stock_quantity' => 50,
         ]);
     }
 
@@ -95,25 +96,25 @@ class ProductManagementTest extends TestCase
     {
         $product = Product::factory()->create([
             'name' => 'Old Product',
-            'price' => 99.99
+            'price' => 99.99,
         ]);
 
         $updateData = [
             'name' => 'Updated Product',
             'price' => 149.99,
-            'stock_quantity' => 75
+            'stock_quantity' => 75,
         ];
 
         $response = $this->putJson("/admin/api/products/{$product->id}", $updateData);
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Product updated successfully']);
+            ->assertJson(['message' => 'Product updated successfully']);
 
         $this->assertDatabaseHas('products', [
             'id' => $product->id,
             'name' => 'Updated Product',
             'price' => 149.99,
-            'stock_quantity' => 75
+            'stock_quantity' => 75,
         ]);
     }
 
@@ -127,20 +128,20 @@ class ProductManagementTest extends TestCase
         $image = UploadedFile::fake()->image('product.jpg');
 
         $response = $this->postJson("/admin/api/products/{$product->id}/images", [
-            'images' => [$image]
+            'images' => [$image],
         ]);
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'images' => [
-                        '*' => [
-                            'id',
-                            'path',
-                            'url'
-                        ]
+            ->assertJsonStructure([
+                'images' => [
+                    '*' => [
+                        'id',
+                        'path',
+                        'url',
                     ],
-                    'message'
-                ]);
+                ],
+                'message',
+            ]);
     }
 
     /**
@@ -153,7 +154,7 @@ class ProductManagementTest extends TestCase
         $response = $this->patchJson("/admin/api/products/{$product->id}/toggle-status");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Product status updated successfully']);
+            ->assertJson(['message' => 'Product status updated successfully']);
 
         $this->assertFalse($product->fresh()->is_active);
     }
@@ -168,7 +169,7 @@ class ProductManagementTest extends TestCase
         $response = $this->deleteJson("/admin/api/products/{$product->id}");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Product deleted successfully']);
+            ->assertJson(['message' => 'Product deleted successfully']);
 
         $this->assertSoftDeleted('products', ['id' => $product->id]);
     }
@@ -181,17 +182,17 @@ class ProductManagementTest extends TestCase
         $response = $this->postJson('/admin/api/products', [
             'name' => '',
             'price' => -10,
-            'stock_quantity' => -5
+            'stock_quantity' => -5,
         ]);
 
         $response->assertStatus(422)
-                ->assertJsonStructure([
-                    'message',
-                    'errors' => [
-                        'name',
-                        'price',
-                        'stock_quantity'
-                    ]
-                ]);
+            ->assertJsonStructure([
+                'message',
+                'errors' => [
+                    'name',
+                    'price',
+                    'stock_quantity',
+                ],
+            ]);
     }
 }

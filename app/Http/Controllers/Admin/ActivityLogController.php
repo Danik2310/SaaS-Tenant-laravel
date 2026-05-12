@@ -19,14 +19,14 @@ class ActivityLogController extends Controller
 
         if ($causerId = $request->query('causer_id')) {
             $query->where('causer_id', $causerId)
-                  ->where('causer_type', AdminUser::class);
+                ->where('causer_type', AdminUser::class);
         }
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('subject_type', 'like', "%{$search}%")
-                  ->orWhere('causer_type', 'like', "%{$search}%");
+                    ->orWhere('subject_type', 'like', "%{$search}%")
+                    ->orWhere('causer_type', 'like', "%{$search}%");
             });
         }
 

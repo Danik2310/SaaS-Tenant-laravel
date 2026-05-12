@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('admin_users')) {
+        if (! Schema::hasTable('admin_users')) {
             Schema::create('admin_users', function (Blueprint $table) {
                 $table->id();
                 $table->string('name');
@@ -25,12 +25,12 @@ return new class extends Migration
             });
         } else {
             // Si la tabla ya existe, agregar columnas faltantes
-            if (!Schema::hasColumn('admin_users', 'is_active')) {
+            if (! Schema::hasColumn('admin_users', 'is_active')) {
                 Schema::table('admin_users', function (Blueprint $table) {
                     $table->boolean('is_active')->default(true)->after('password');
                 });
             }
-            if (!Schema::hasColumn('admin_users', 'deleted_at')) {
+            if (! Schema::hasColumn('admin_users', 'deleted_at')) {
                 Schema::table('admin_users', function (Blueprint $table) {
                     $table->softDeletes();
                 });

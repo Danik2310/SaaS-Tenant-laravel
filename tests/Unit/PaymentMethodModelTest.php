@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\PaymentMethod;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class PaymentMethodModelTest extends TestCase
     public function test_api_key_is_encrypted_when_set()
     {
         $plainApiKey = 'sk_test_123456789012345678901234567890';
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $method->api_key = $plainApiKey;
 
         // The stored value should be encrypted
@@ -29,7 +30,7 @@ class PaymentMethodModelTest extends TestCase
     public function test_api_key_is_decrypted_when_accessed()
     {
         $plainApiKey = 'sk_test_123456789012345678901234567890';
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $method->api_key = $plainApiKey;
 
         // Accessing the attribute should return the plain text
@@ -42,7 +43,7 @@ class PaymentMethodModelTest extends TestCase
     public function test_secret_key_is_encrypted_when_set()
     {
         $plainSecretKey = 'sk_live_123456789012345678901234567890';
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $method->secret_key = $plainSecretKey;
 
         // The stored value should be encrypted
@@ -55,7 +56,7 @@ class PaymentMethodModelTest extends TestCase
     public function test_secret_key_is_decrypted_when_accessed()
     {
         $plainSecretKey = 'sk_live_123456789012345678901234567890';
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $method->secret_key = $plainSecretKey;
 
         // Accessing the attribute should return the plain text
@@ -67,7 +68,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_fillable_attributes()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $expectedFillable = ['name', 'provider', 'api_key', 'secret_key', 'mode', 'active'];
 
         $this->assertEquals($expectedFillable, $method->getFillable());
@@ -78,7 +79,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_casts()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $casts = $method->getCasts();
 
         // Check specific casts we defined
@@ -92,7 +93,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_mass_assignment_protection()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
 
         // Test that guarded attributes are protected
         $method->fill([
@@ -115,7 +116,7 @@ class PaymentMethodModelTest extends TestCase
         $specialApiKey = 'sk_test_!@#$%^&*()_+{}|:<>?[]\;\'",./1234567890';
         $specialSecretKey = 'sk_live_特殊字符_ñáéíóú_1234567890';
 
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $method->api_key = $specialApiKey;
         $method->secret_key = $specialSecretKey;
 
@@ -133,7 +134,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_encryption_with_empty_strings()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $method->api_key = '';
         $method->secret_key = '';
 
@@ -151,7 +152,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_model_uses_has_factory_trait()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $traits = class_uses($method);
 
         $this->assertArrayHasKey('Illuminate\Database\Eloquent\Factories\HasFactory', $traits);
@@ -162,7 +163,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_model_has_correct_table_name()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $this->assertEquals('payment_methods', $method->getTable());
     }
 
@@ -171,7 +172,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_model_has_correct_primary_key()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $this->assertEquals('id', $method->getKeyName());
     }
 
@@ -180,7 +181,7 @@ class PaymentMethodModelTest extends TestCase
      */
     public function test_model_has_timestamps_enabled()
     {
-        $method = new PaymentMethod();
+        $method = new PaymentMethod;
         $this->assertTrue($method->usesTimestamps());
     }
 
@@ -267,7 +268,7 @@ class PaymentMethodModelTest extends TestCase
 
         $this->assertIsBool($retrievedMethod->active);
         $this->assertTrue($retrievedMethod->active);
-        $this->assertInstanceOf(\Carbon\Carbon::class, $retrievedMethod->created_at);
-        $this->assertInstanceOf(\Carbon\Carbon::class, $retrievedMethod->updated_at);
+        $this->assertInstanceOf(Carbon::class, $retrievedMethod->created_at);
+        $this->assertInstanceOf(Carbon::class, $retrievedMethod->updated_at);
     }
 }

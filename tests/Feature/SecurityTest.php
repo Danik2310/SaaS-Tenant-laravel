@@ -3,14 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\AdminUser;
-use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class SecurityTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -28,16 +27,16 @@ class SecurityTest extends TestCase
         $response = $this->getJson("/admin/api/tenants/{$tenant->id}/database");
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'database' => [
-                        'name',
-                        'connection',
-                        'host',
-                        'port'
-                    ]
-                ])
-                ->assertJsonMissing(['database.username'])
-                ->assertJsonMissing(['database.password']);
+            ->assertJsonStructure([
+                'database' => [
+                    'name',
+                    'connection',
+                    'host',
+                    'port',
+                ],
+            ])
+            ->assertJsonMissing(['database.username'])
+            ->assertJsonMissing(['database.password']);
     }
 
     /**
@@ -50,20 +49,20 @@ class SecurityTest extends TestCase
         $response = $this->getJson('/admin/api/staff');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'staff' => [
-                        '*' => [
-                            'id',
-                            'name',
-                            'email',
-                            'is_active',
-                            'roles',
-                            'permissions_count',
-                            'permissions'
-                        ]
-                    ]
-                ])
-                ->assertJsonMissing(['staff.*.password']);
+            ->assertJsonStructure([
+                'staff' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'email',
+                        'is_active',
+                        'roles',
+                        'permissions_count',
+                        'permissions',
+                    ],
+                ],
+            ])
+            ->assertJsonMissing(['staff.*.password']);
     }
 
     /**
@@ -76,21 +75,21 @@ class SecurityTest extends TestCase
         $response = $this->getJson('/admin/api/tenants');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'tenants' => [
-                        '*' => [
-                            'id',
-                            'name',
-                            'email',
-                            'domain',
-                            'status',
-                            'created_at',
-                            'updated_at'
-                        ]
-                    ]
-                ])
-                ->assertJsonMissing(['tenants.*.tenancy_db_name'])
-                ->assertJsonMissing(['tenants.*.data_placeholder']);
+            ->assertJsonStructure([
+                'tenants' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'email',
+                        'domain',
+                        'status',
+                        'created_at',
+                        'updated_at',
+                    ],
+                ],
+            ])
+            ->assertJsonMissing(['tenants.*.tenancy_db_name'])
+            ->assertJsonMissing(['tenants.*.data_placeholder']);
     }
 
     /**
@@ -99,7 +98,7 @@ class SecurityTest extends TestCase
     public function test_unauthorized_access_to_admin_routes_blocked()
     {
         // Create admin user without permissions
-        $admin = \App\Models\AdminUser::factory()->create();
+        $admin = AdminUser::factory()->create();
         $this->actingAs($admin, 'admin');
 
         // Should be blocked without 'manage tenants' permission

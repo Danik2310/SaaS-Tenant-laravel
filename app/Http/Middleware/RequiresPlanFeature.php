@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Tenant;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,7 +15,7 @@ class RequiresPlanFeature
     {
         $tenant = tenant();
 
-        if (!$tenant || !$tenant instanceof \App\Models\Tenant || !$tenant->hasFeature($feature)) {
+        if (! $tenant || ! $tenant instanceof Tenant || ! $tenant->hasFeature($feature)) {
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => "Your current plan does not include {$feature}.",

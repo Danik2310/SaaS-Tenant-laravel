@@ -16,7 +16,7 @@ class AdminProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -38,7 +38,7 @@ class AdminProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -74,7 +74,7 @@ class AdminProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -84,7 +84,7 @@ class AdminProfileController extends Controller
         ]);
 
         // Verify current password
-        if (!Hash::check($validated['current_password'], $user->password)) {
+        if (! Hash::check($validated['current_password'], $user->password)) {
             return response()->json(
                 ['message' => 'Current password is incorrect'],
                 422
@@ -108,7 +108,7 @@ class AdminProfileController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -117,7 +117,7 @@ class AdminProfileController extends Controller
         ]);
 
         // Verify password before deletion
-        if (!Hash::check($validated['password'], $user->password)) {
+        if (! Hash::check($validated['password'], $user->password)) {
             return response()->json(
                 ['message' => 'Password is incorrect'],
                 422

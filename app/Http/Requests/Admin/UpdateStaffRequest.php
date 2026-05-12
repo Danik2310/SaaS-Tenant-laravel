@@ -18,7 +18,7 @@ class UpdateStaffRequest extends FormRequest
 
         return [
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:admin_users,email,' . $staffId,
+            'email' => 'sometimes|email|unique:admin_users,email,'.$staffId,
             'password' => ['sometimes', Password::min(8)->mixedCase()->numbers()->symbols()],
             'roles' => 'sometimes|array',
             'roles.*' => 'exists:roles,id',

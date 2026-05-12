@@ -23,9 +23,9 @@ return new class extends Migration
         // Re-add FK with nullOnDelete
         Schema::table('subscriptions', function (Blueprint $table) {
             $table->foreign('plan_id')
-                  ->references('id')
-                  ->on('plans')
-                  ->nullOnDelete();
+                ->references('id')
+                ->on('plans')
+                ->nullOnDelete();
         });
     }
 
@@ -41,16 +41,16 @@ return new class extends Migration
 
         // Only revert to NOT NULL if no null values exist (safety check)
         $hasNulls = DB::table('subscriptions')->whereNull('plan_id')->exists();
-        if (!$hasNulls) {
+        if (! $hasNulls) {
             DB::statement('ALTER TABLE subscriptions MODIFY COLUMN plan_id BIGINT UNSIGNED NOT NULL');
         }
 
         // Re-add the original FK
         Schema::table('subscriptions', function (Blueprint $table) {
             $table->foreign('plan_id')
-                  ->references('id')
-                  ->on('plans')
-                  ->cascadeOnDelete();
+                ->references('id')
+                ->on('plans')
+                ->cascadeOnDelete();
         });
     }
 
@@ -65,7 +65,8 @@ return new class extends Migration
              WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = ?',
             [$database, $table, $indexName, 'FOREIGN KEY']
         );
-        return !empty($result);
+
+        return ! empty($result);
     }
 
     /**
@@ -73,6 +74,6 @@ return new class extends Migration
      */
     private function getForeignKeyName(string $table, string $column): string
     {
-        return $table . '_' . $column . '_foreign';
+        return $table.'_'.$column.'_foreign';
     }
 };

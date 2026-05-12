@@ -7,12 +7,13 @@ use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Role;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class PlanGatingTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -64,7 +65,7 @@ class PlanGatingTest extends TestCase
         ]);
 
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'email' => 'test@example.com',
             'status' => 'Active',
@@ -78,7 +79,7 @@ class PlanGatingTest extends TestCase
     public function test_tenant_has_feature_returns_false_without_plan()
     {
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'email' => 'test@example.com',
             'status' => 'Active',
@@ -94,7 +95,7 @@ class PlanGatingTest extends TestCase
         ]);
 
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'email' => 'test@example.com',
             'status' => 'Active',
@@ -107,7 +108,7 @@ class PlanGatingTest extends TestCase
     public function test_tenant_get_limit_returns_zero_without_plan()
     {
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'email' => 'test@example.com',
             'status' => 'Active',
@@ -119,7 +120,7 @@ class PlanGatingTest extends TestCase
     public function test_tenant_is_on_trial()
     {
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'trial_ends_at' => now()->addDays(7),
         ]);
@@ -131,7 +132,7 @@ class PlanGatingTest extends TestCase
     public function test_tenant_trial_has_expired()
     {
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'trial_ends_at' => now()->subDay(),
         ]);
@@ -161,7 +162,7 @@ class PlanGatingTest extends TestCase
         $plan2 = Plan::factory()->create(['slug' => 'pro', 'max_users' => 50]);
 
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'email' => 'test@example.com',
             'status' => 'Active',
@@ -183,14 +184,14 @@ class PlanGatingTest extends TestCase
     {
         $plan = Plan::factory()->create();
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'email' => 'test@example.com',
             'status' => 'Active',
         ]);
 
         $regularAdmin = AdminUser::factory()->create();
-        $regularRole = \Spatie\Permission\Models\Role::firstOrCreate([
+        $regularRole = Role::firstOrCreate([
             'name' => 'regular',
             'guard_name' => 'admin',
         ]);
@@ -211,7 +212,7 @@ class PlanGatingTest extends TestCase
         $response = $this->postJson('/admin/api/tenants', [
             'name' => 'Test Tenant',
             'email' => 'tenant@example.com',
-            'domain' => 'test-' . uniqid() . '.localhost',
+            'domain' => 'test-'.uniqid().'.localhost',
             'plan' => 'pro',
         ]);
 
@@ -228,7 +229,7 @@ class PlanGatingTest extends TestCase
         $response = $this->postJson('/admin/api/tenants', [
             'name' => 'Test Tenant',
             'email' => 'tenant@example.com',
-            'domain' => 'test-' . uniqid() . '.localhost',
+            'domain' => 'test-'.uniqid().'.localhost',
             'plan' => 'nonexistent-plan',
         ]);
 
@@ -240,7 +241,7 @@ class PlanGatingTest extends TestCase
     {
         $plan = Plan::factory()->create();
         $tenant = Tenant::create([
-            'id' => 'test-tenant-' . uniqid(),
+            'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
             'email' => 'test@example.com',
             'status' => 'Active',

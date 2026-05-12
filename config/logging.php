@@ -1,8 +1,10 @@
 <?php
 
+use Monolog\Formatter\LineFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
+use Monolog\Level;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 return [
@@ -130,11 +132,11 @@ return [
         'payment_methods' => [
             'driver' => 'monolog',
             'level' => env('PAYMENT_METHODS_LOG_LEVEL', 'info'),
-            'handler' => Monolog\Handler\StreamHandler::class,
-            'formatter' => Monolog\Formatter\LineFormatter::class,
+            'handler' => StreamHandler::class,
+            'formatter' => LineFormatter::class,
             'with' => [
                 'stream' => storage_path('logs/payment_methods.log'),
-                'level' => \Monolog\Level::Info,
+                'level' => Level::Info,
                 'bubble' => false, // Don't bubble to other handlers (like stderr)
             ],
             'replace_placeholders' => true,

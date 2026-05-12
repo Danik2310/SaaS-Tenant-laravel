@@ -4,14 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\AdminUser;
 use App\Models\Role;
-use App\Models\Permission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class StaffManagementTest extends TestCase
 {
-    use RefreshDatabase, AdminAuthSetup;
+    use AdminAuthSetup, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -31,21 +30,21 @@ class StaffManagementTest extends TestCase
         $response = $this->getJson('/admin/api/staff');
 
         $response->assertStatus(200)
-                ->assertJsonStructure([
-                    'staff' => [
-                        '*' => [
-                            'id',
-                            'name',
-                            'email',
-                            'is_active',
-                            'roles',
-                            'permissions_count',
-                            'permissions'
-                        ]
+            ->assertJsonStructure([
+                'staff' => [
+                    '*' => [
+                        'id',
+                        'name',
+                        'email',
+                        'is_active',
+                        'roles',
+                        'permissions_count',
+                        'permissions',
                     ],
-                    'total'
-                ])
-                ->assertJsonCount(AdminUser::count(), 'staff');
+                ],
+                'total',
+            ])
+            ->assertJsonCount(AdminUser::count(), 'staff');
     }
 
     /**
@@ -57,26 +56,26 @@ class StaffManagementTest extends TestCase
             'name' => 'New Staff',
             'email' => 'newstaff@example.com',
             'password' => 'Password123!',
-            'is_active' => true
+            'is_active' => true,
         ];
 
         $response = $this->postJson('/admin/api/staff', $staffData);
 
         $response->assertStatus(201)
-                ->assertJsonStructure([
-                    'staff' => [
-                        'id',
-                        'name',
-                        'email',
-                        'is_active'
-                    ],
-                    'message'
-                ]);
+            ->assertJsonStructure([
+                'staff' => [
+                    'id',
+                    'name',
+                    'email',
+                    'is_active',
+                ],
+                'message',
+            ]);
 
         $this->assertDatabaseHas('admin_users', [
             'name' => 'New Staff',
             'email' => 'newstaff@example.com',
-            'is_active' => true
+            'is_active' => true,
         ]);
     }
 
@@ -87,25 +86,25 @@ class StaffManagementTest extends TestCase
     {
         $staff = AdminUser::factory()->create([
             'name' => 'Old Name',
-            'email' => 'old@example.com'
+            'email' => 'old@example.com',
         ]);
 
         $updateData = [
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
-            'is_active' => false
+            'is_active' => false,
         ];
 
         $response = $this->putJson("/admin/api/staff/{$staff->id}", $updateData);
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Staff member updated successfully']);
+            ->assertJson(['message' => 'Staff member updated successfully']);
 
         $this->assertDatabaseHas('admin_users', [
             'id' => $staff->id,
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
-            'is_active' => false
+            'is_active' => false,
         ]);
     }
 
@@ -118,11 +117,11 @@ class StaffManagementTest extends TestCase
         $role = Role::create(['name' => 'test-role', 'guard_name' => 'admin']);
 
         $response = $this->postJson("/admin/api/staff/{$staff->id}/roles", [
-            'role_ids' => [$role->id]
+            'role_ids' => [$role->id],
         ]);
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Roles assigned successfully']);
+            ->assertJson(['message' => 'Roles assigned successfully']);
 
         $this->assertTrue($staff->fresh()->hasRole('test-role'));
     }
@@ -137,7 +136,7 @@ class StaffManagementTest extends TestCase
         $response = $this->patchJson("/admin/api/staff/{$staff->id}/toggle-status");
 
         $response->assertStatus(200)
-                ->assertJson(['message' => 'Staff status updated successfully']);
+            ->assertJson(['message' => 'Staff status updated successfully']);
 
         $this->assertFalse($staff->fresh()->is_active);
     }
@@ -170,17 +169,17 @@ class StaffManagementTest extends TestCase
         $response = $this->postJson('/admin/api/staff', [
             'name' => '',
             'email' => 'invalid-email',
-            'password' => '123'
+            'password' => '123',
         ]);
 
         $response->assertStatus(422)
-                ->assertJsonStructure([
-                    'message',
-                    'errors' => [
-                        'name',
-                        'email',
-                        'password'
-                    ]
-                ]);
+            ->assertJsonStructure([
+                'message',
+                'errors' => [
+                    'name',
+                    'email',
+                    'password',
+                ],
+            ]);
     }
 }
