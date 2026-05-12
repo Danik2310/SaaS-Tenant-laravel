@@ -1,15 +1,15 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\AdminAuthController;
-use App\Http\Controllers\AdminDashboardController;
-use App\Http\Controllers\AdminProfileController;
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\PaymentMethodController;
 use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\RolePermissionController;
-use App\Http\Controllers\Admin\SubscriptionController;
-use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\SubscriptionController;
+use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminProfileController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -67,8 +67,8 @@ Route::middleware(['auth:admin'])->get('/admin/unauthorized', function () {
 // Protected admin routes
 Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
-    Route::get('/api/dashboard-stats', [AdminDashboardController::class, 'dashboardStats']);
-    
+    Route::get('/api/dashboard-stats', [AdminDashboardController::class, 'dashboardStats'])->middleware('permission:manage tenants');
+
     // Admin profile endpoints (everyone authenticated should be able to manage own profile)
     Route::middleware(['permission:manage profile'])->group(function () {
         Route::get('/api/profile', [AdminProfileController::class, 'show']);
@@ -76,9 +76,11 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::put('/api/profile/password', [AdminProfileController::class, 'updatePassword']);
         Route::delete('/api/profile', [AdminProfileController::class, 'deleteAccount']);
     });
-    
+
     // Tenant management API endpoints - requires 'manage tenants' permission
     Route::middleware(['permission:manage tenants'])->group(function () {
+        // Specific routes must come BEFORE parameterized routes
+        Route::post('/api/tenants/bulk', [AdminDashboardController::class, 'bulkTenantOperation']);
         Route::get('/api/tenants', [AdminDashboardController::class, 'tenants']);
         Route::get('/api/tenants/{id}', [AdminDashboardController::class, 'showTenant']);
         Route::post('/api/tenants', [AdminDashboardController::class, 'createTenant']);
@@ -97,7 +99,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         // Specific routes must come BEFORE parameterized routes
         Route::get('/api/staff/get-roles', [StaffController::class, 'getRoles']);
         Route::get('/api/staff/get-permissions', [StaffController::class, 'getPermissions']);
-        
+
         // Parameterized and other routes
         Route::get('/api/staff', [StaffController::class, 'index']);
         Route::post('/api/staff', [StaffController::class, 'store']);
@@ -172,5 +174,18 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::get('/api/settings', [SettingController::class, 'index']);
         Route::put('/api/settings', [SettingController::class, 'update']);
         Route::get('/api/settings/{key}', [SettingController::class, 'get']);
+    });
+
+    // Data export - requires 'manage tenants' permission (reuses existing permission)
+    Route::middleware(['permission:manage tenants'])->group(function () {
+        Route::post('/api/export/{entity}', [\App\Http\Controllers\Admin\ExportController::class, 'export']);
+        Route::get('/api/export/download/{filename}', [\App\Http\Controllers\Admin\ExportController::class, 'download']);
+        Route::get('/api/export/status/{jobId}', [\App\Http\Controllers\Admin\ExportController::class, 'status']);
+    });
+
+    // Tenant resource usage metrics
+    Route::middleware(['permission:manage tenants'])->group(function () {
+        Route::get('/api/resource-usage', [\App\Http\Controllers\Admin\TenantMetricsController::class, 'index']);
+        Route::get('/api/resource-usage/{tenantId}', [\App\Http\Controllers\Admin\TenantMetricsController::class, 'show']);
     });
 });

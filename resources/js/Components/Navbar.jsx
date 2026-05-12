@@ -9,10 +9,12 @@ import PersonIcon from '@mui/icons-material/Person';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
+import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
 const views = [
     { id: 'overview', label: 'Overview', icon: <DashboardIcon />, section: 'Main' },
     { id: 'tenants', label: 'Tenant Management', icon: <PeopleIcon />, section: 'Main' },
+    { id: 'resource-usage', label: 'Resource Usage', icon: <MonitorHeartIcon />, section: 'Main' },
     { id: 'staff', label: 'Staff Management', icon: <GroupIcon />, section: 'Administration' },
     { id: 'roles', label: 'Roles & Permissions', icon: <SecurityIcon />, section: 'Administration' },
     { id: 'subscriptions', label: 'Subscriptions', icon: <CreditCardIcon />, section: 'Billing' },

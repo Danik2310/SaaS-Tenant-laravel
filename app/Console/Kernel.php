@@ -12,7 +12,13 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Clean up expired export files every hour
+        $schedule->call(function () {
+            app(\App\Services\ExportService::class)->cleanupExpired();
+        })->hourly();
+
+        // Collect tenant resource usage metrics hourly
+        $schedule->command('tenants:collect-metrics')->hourly();
     }
 
     /**
