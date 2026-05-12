@@ -9,6 +9,7 @@ use App\Contracts\TenantManagerInterface;
 use App\Events\PlanChanged;
 use App\Models\Plan;
 use App\Models\Tenant;
+use App\States\TenantStateManager;
 use Illuminate\Support\Facades\Cache;
 
 class TenantManager implements TenantManagerInterface
@@ -26,22 +27,18 @@ class TenantManager implements TenantManagerInterface
 
     public function suspend(Tenant $tenant): void
     {
-        $tenant->status = 'Suspended';
-        $tenant->save();
-
-        Cache::tags(['tenant_'.$tenant->id])->flush();
+        TenantStateManager::transitionTo($tenant, 'Suspended');
     }
 
     public function delete(Tenant $tenant): void
     {
-        $tenant->status = 'Deleted';
-        $tenant->save();
+        TenantStateManager::transitionTo($tenant, 'Deleted');
         $tenant->delete();
     }
 
     public function restore(Tenant $tenant): void
     {
-        $tenant->status = 'Active';
+        TenantStateManager::transitionTo($tenant, 'Active');
         $tenant->deleted_at = null;
         $tenant->save();
     }
@@ -53,7 +50,7 @@ class TenantManager implements TenantManagerInterface
         $tenant->plan_id = $newPlan->id;
         $tenant->save();
 
-        Cache::tags(['tenant_'.$tenant->id])->flush();
+        Cache::tags(['tenant_' . $tenant->id])->flush();
 
         event(new PlanChanged($tenant, $oldPlan, $newPlan));
     }
