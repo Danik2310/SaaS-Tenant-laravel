@@ -2,13 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Admin\AssignPermissionsRequest;
 use App\Http\Requests\Admin\AssignRolesRequest;
 use App\Http\Requests\Admin\StoreStaffRequest;
 use App\Http\Requests\Admin\UpdateStaffRequest;
 use App\Http\Resources\StaffResource;
 use App\Models\AdminUser;
-use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
@@ -71,11 +69,6 @@ class StaffController extends Controller
             $admin->syncRoles($roles);
         }
 
-        if (! empty($request->validated('direct_permissions'))) {
-            $permissions = Permission::whereIn('id', $request->validated('direct_permissions'))->get();
-            $admin->syncPermissions($permissions);
-        }
-
         return response()->json([
             'message' => 'Staff member created successfully',
             'staff' => new StaffResource($admin),
@@ -104,11 +97,6 @@ class StaffController extends Controller
         if (isset($request->validated()['roles'])) {
             $roles = Role::whereIn('id', $request->validated('roles'))->get();
             $admin->syncRoles($roles);
-        }
-
-        if (isset($request->validated()['direct_permissions'])) {
-            $permissions = Permission::whereIn('id', $request->validated('direct_permissions'))->get();
-            $admin->syncPermissions($permissions);
         }
 
         return response()->json([
@@ -200,24 +188,6 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Roles assigned successfully',
-            'staff' => new StaffResource($admin),
-        ]);
-    }
-
-    public function assignPermissions(AssignPermissionsRequest $request, string $id)
-    {
-        $admin = AdminUser::findOrFail($id);
-        $perms = Permission::whereIn('id', $request->validated('permission_ids'))->pluck('name')->implode(', ');
-        $admin->syncPermissions($request->validated('permission_ids'));
-
-        activity('staff')
-            ->performedOn($admin)
-            ->causedBy(auth('admin')->user())
-            ->withProperties(['staff_name' => $admin->name, 'permissions' => $perms])
-            ->log("Assigned permissions to {$admin->name}: {$perms}");
-
-        return response()->json([
-            'message' => 'Permissions assigned successfully',
             'staff' => new StaffResource($admin),
         ]);
     }

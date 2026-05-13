@@ -20,8 +20,6 @@ class StoreStaffRequest extends FormRequest
             'password' => ['required', Password::min(8)->mixedCase()->numbers()->symbols()],
             'roles' => 'sometimes|array',
             'roles.*' => 'exists:roles,id',
-            'direct_permissions' => 'sometimes|array',
-            'direct_permissions.*' => 'exists:permissions,id',
             'is_active' => 'sometimes|boolean',
         ];
     }

@@ -111,7 +111,6 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::patch('/api/staff/{id}/restore', [StaffController::class, 'restore']);
         Route::patch('/api/staff/{id}/toggle-status', [StaffController::class, 'toggleStatus']);
         Route::post('/api/staff/{id}/roles', [StaffController::class, 'assignRoles']);
-        Route::post('/api/staff/{id}/permissions', [StaffController::class, 'assignPermissions']);
     });
 
     // Plans management - requires 'manage plans' permission

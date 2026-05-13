@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Factories\PermissionPrerequisiteStrategyFactory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePermissionRequest;
 use App\Http\Requests\Admin\StoreRoleRequest;
@@ -11,13 +12,15 @@ use App\Http\Resources\PermissionResource;
 use App\Http\Resources\RoleResource;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Services\PermissionPrerequisiteValidator;
 
 class RolePermissionController extends Controller
 {
     public function indexRoles()
     {
         $roles = RoleResource::collection(
-            Role::with('permissions')
+            Role::select(['id', 'name', 'description', 'is_active'])
+                ->with('permissions')
                 ->where('guard_name', 'admin')
                 ->orderBy('name')
                 ->get()
@@ -36,7 +39,9 @@ class RolePermissionController extends Controller
         ]);
 
         if (! empty($request->validated('permissions'))) {
-            $role->syncPermissions($request->validated('permissions'));
+            $permissionIds = $request->validated('permissions');
+            $this->validatePermissionDependencies($permissionIds);
+            $role->syncPermissions($permissionIds);
         }
 
         return response()->json([
@@ -56,7 +61,9 @@ class RolePermissionController extends Controller
         ]);
 
         if (isset($request->validated()['permissions'])) {
-            $role->syncPermissions($request->validated('permissions'));
+            $permissionIds = $request->validated('permissions');
+            $this->validatePermissionDependencies($permissionIds);
+            $role->syncPermissions($permissionIds);
         }
 
         return response()->json([
@@ -80,7 +87,8 @@ class RolePermissionController extends Controller
 
     public function indexPermissions()
     {
-        $permissions = Permission::where('guard_name', 'admin')
+        $permissions = Permission::select(['id', 'name', 'description', 'module', 'is_active'])
+            ->where('guard_name', 'admin')
             ->orderBy('module')
             ->orderBy('name')
             ->get()
@@ -125,8 +133,41 @@ class RolePermissionController extends Controller
             return response()->json(['message' => 'Cannot delete permission assigned to roles'], 422);
         }
 
+        if ($permission->name === 'manage tenants') {
+            $dependentNames = PermissionPrerequisiteStrategyFactory::getManagedPermissions();
+            $rolesWithDependents = Role::whereHas('permissions', fn ($q) =>
+                $q->whereIn('name', $dependentNames)
+            )->where('guard_name', 'admin')->count();
+
+            if ($rolesWithDependents > 0) {
+                return response()->json([
+                    'message' => "Cannot delete 'manage tenants': {$rolesWithDependents} role(s) have dependent permissions assigned. Remove dependents first.",
+                ], 422);
+            }
+        }
+
         $permission->delete();
 
         return response()->json(['message' => 'Permission deleted successfully']);
+    }
+
+    private function validatePermissionDependencies(array $permissionIds): void
+    {
+        $permissionNames = Permission::whereIn('id', $permissionIds)
+            ->pluck('name')
+            ->all();
+
+        $validator = app(PermissionPrerequisiteValidator::class);
+        $errors = $validator->validateAll($permissionNames);
+
+        if (! empty($errors)) {
+            $messages = collect($errors)->map(
+                fn (array $error, string $perm) => "The permission '{$perm}' requires: "
+                    . implode(', ', $error['missing'])
+                    . '. ' . $error['explanation']
+            )->values()->all();
+
+            abort(422, implode(' ', $messages));
+        }
     }
 }

@@ -9,11 +9,13 @@ class SubscriptionResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $canManageTenants = auth('admin')->user()?->can('manage tenants') ?? false;
+
         return [
             'id' => $this->id,
             'tenant_id' => $this->tenant_id,
             'plan_id' => $this->plan_id,
-            'tenant_name' => $this->tenant?->name ?? 'Unknown',
+            'tenant_name' => $canManageTenants ? ($this->tenant?->name ?? 'Unknown') : 'Restricted',
             'plan_name' => $this->plan?->name ?? 'Unknown',
             'plan_slug' => $this->plan?->slug ?? '',
             'starts_at' => $this->starts_at?->format('Y-m-d'),

@@ -14,8 +14,7 @@ class RoleResource extends JsonResource
             'description' => $this->description,
             'is_active' => $this->is_active,
             'permissions_count' => $this->permissions->count(),
-            'permissions' => PermissionResource::collection($this->permissions),
-            'created_at' => $this->created_at,
+            'permission_ids' => $this->permissions->pluck('id'),
         ];
     }
 }

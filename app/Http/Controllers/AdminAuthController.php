@@ -46,8 +46,19 @@ class AdminAuthController extends Controller
             return response()->json(['user' => null]);
         }
 
-        $user = Auth::guard('admin')->user()->load('roles', 'permissions');
+        $user = Auth::guard('admin')->user()->load('roles.permissions', 'permissions');
 
-        return response()->json(['user' => $user]);
+        $allPermissions = $user->roles
+            ->flatMap(fn ($role) => $role->permissions)
+            ->merge($user->permissions)
+            ->unique('id')
+            ->pluck('name')
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'user' => $user,
+            'permissions' => $allPermissions,
+        ]);
     }
 }

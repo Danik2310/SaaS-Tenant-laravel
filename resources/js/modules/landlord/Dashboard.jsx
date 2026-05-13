@@ -66,8 +66,12 @@ export default function Dashboard({ user, permissions = [], setUser }) {
     const [bulkLoading, setBulkLoading] = useState(false);
 
     useEffect(() => {
-        fetchTenants();
-    }, [showDeleted, page, rowsPerPage]);
+        if (permissions.includes('manage tenants')) {
+            fetchTenants();
+        } else {
+            setLoading(false);
+        }
+    }, [showDeleted, page, rowsPerPage, permissions]);
 
     useEffect(() => {
         if (planChangeTenant) {
@@ -451,7 +455,7 @@ export default function Dashboard({ user, permissions = [], setUser }) {
                                             sx={{ mr: 0 }}
                                         />
                                         <button
-                                            onClick={() => { setView('tenants'); fetchTenants(); }}
+                                            onClick={() => { setView('tenants'); if (permissions.includes('manage tenants')) fetchTenants(); }}
                                             style={{
                                                 padding: '8px 16px',
                                                 background: '#f1f5f9',
@@ -467,54 +471,60 @@ export default function Dashboard({ user, permissions = [], setUser }) {
                                         </button>
                                     </Box>
                                 </Box>
-                                <DataTable
-                                    columns={[
-                                        { accessorKey: 'id', header: 'ID' },
-                                        { accessorKey: 'name', header: 'Name' },
-                                        {
-                                            accessorKey: 'domain',
-                                            header: 'Domain',
-                                            Cell: ({ cell }) => (
-                                                <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontSize: '13px', fontFamily: 'monospace' }}>
-                                                    {cell.getValue()}
-                                                </code>
-                                            ),
-                                        },
-                                        {
-                                            accessorKey: 'status',
-                                            header: 'Status',
-                                            Cell: ({ cell }) => {
-                                                const status = cell.getValue();
-                                                const chipStyle = status === 'Active'
-                                                    ? { background: '#dcfce7', color: '#166534' }
-                                                    : status === 'Suspended'
-                                                        ? { background: '#fee2e2', color: '#991b1b' }
-                                                        : { background: '#f1f5f9', color: '#64748b', fontStyle: 'italic' };
-                                                return (
-                                                    <span style={{
-                                                        display: 'inline-block',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: 600,
-                                                        ...chipStyle,
-                                                    }}>
-                                                        {status}
-                                                    </span>
-                                                );
+                                {permissions.includes('manage tenants') ? (
+                                    <DataTable
+                                        columns={[
+                                            { accessorKey: 'id', header: 'ID' },
+                                            { accessorKey: 'name', header: 'Name' },
+                                            {
+                                                accessorKey: 'domain',
+                                                header: 'Domain',
+                                                Cell: ({ cell }) => (
+                                                    <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontSize: '13px', fontFamily: 'monospace' }}>
+                                                        {cell.getValue()}
+                                                    </code>
+                                                ),
                                             },
-                                        },
-                                    ]}
-                                    data={tenants.filter(t => showDeleted ? true : t.status === 'Active')}
-                                    onImpersonate={handleImpersonateTenant}
-                                    emptyMessage={showDeleted ? 'No tenants found.' : 'No active tenants to impersonate.'}
-                                    loading={loading}
-                                    total={total}
-                                    page={page}
-                                    rowsPerPage={rowsPerPage}
-                                    onPageChange={handlePageChange}
-                                    onRowsPerPageChange={handleRowsPerPageChange}
-                                />
+                                            {
+                                                accessorKey: 'status',
+                                                header: 'Status',
+                                                Cell: ({ cell }) => {
+                                                    const status = cell.getValue();
+                                                    const chipStyle = status === 'Active'
+                                                        ? { background: '#dcfce7', color: '#166534' }
+                                                        : status === 'Suspended'
+                                                            ? { background: '#fee2e2', color: '#991b1b' }
+                                                            : { background: '#f1f5f9', color: '#64748b', fontStyle: 'italic' };
+                                                    return (
+                                                        <span style={{
+                                                            display: 'inline-block',
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: 600,
+                                                            ...chipStyle,
+                                                        }}>
+                                                            {status}
+                                                        </span>
+                                                    );
+                                                },
+                                            },
+                                        ]}
+                                        data={tenants.filter(t => showDeleted ? true : t.status === 'Active')}
+                                        onImpersonate={handleImpersonateTenant}
+                                        emptyMessage={showDeleted ? 'No tenants found.' : 'No active tenants to impersonate.'}
+                                        loading={loading}
+                                        total={total}
+                                        page={page}
+                                        rowsPerPage={rowsPerPage}
+                                        onPageChange={handlePageChange}
+                                        onRowsPerPageChange={handleRowsPerPageChange}
+                                    />
+                                ) : (
+                                    <Alert severity="info">
+                                        You need the <strong>manage tenants</strong> permission to list and impersonate tenants.
+                                    </Alert>
+                                )}
                             </>
                         )}
                     </div>

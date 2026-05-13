@@ -3,7 +3,14 @@ import { toast } from 'sonner';
 import api from '../../../services/api';
 import StaffForm from './StaffForm';
 import DataTable from '@/components/DataTable';
-import { Chip, Typography } from '@mui/material';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
 
 export default function StaffList() {
     const [staff, setStaff] = useState([]);
@@ -26,7 +33,6 @@ export default function StaffList() {
             const message = 'Failed to fetch staff';
             toast.error(message);
             setError(message);
-            console.error(err);
         } finally {
             setLoading(false);
         }
@@ -34,27 +40,23 @@ export default function StaffList() {
 
     const handleCreateStaff = async (data) => {
         try {
-            await api.post('/admin/api/staff', data);
+            const res = await api.post('/admin/api/staff', data);
             toast.success('Staff member created successfully');
             setShowForm(false);
-            fetchStaff();
+            setStaff(prev => [...prev, res.data.staff]);
         } catch (err) {
-            const message = err.response?.data?.message || 'Failed to create staff';
-            toast.error(message);
-            setError(message);
+            toast.error(err.response?.data?.message || 'Failed to create staff');
         }
     };
 
     const handleUpdateStaff = async (data) => {
         try {
-            await api.put(`/admin/api/staff/${editingStaff.id}`, data);
+            const res = await api.put(`/admin/api/staff/${editingStaff.id}`, data);
             toast.success('Staff member updated successfully');
             setEditingStaff(null);
-            fetchStaff();
+            setStaff(prev => prev.map(s => s.id === editingStaff.id ? res.data.staff : s));
         } catch (err) {
-            const message = err.response?.data?.message || 'Failed to update staff';
-            toast.error(message);
-            setError(message);
+            toast.error(err.response?.data?.message || 'Failed to update staff');
         }
     };
 
@@ -65,11 +67,9 @@ export default function StaffList() {
         try {
             await api.delete(`/admin/api/staff/${row.id}`);
             toast.success('Staff member deleted successfully');
-            fetchStaff();
+            setStaff(prev => prev.filter(s => s.id !== row.id));
         } catch (err) {
-            const message = 'Failed to delete staff';
-            toast.error(message);
-            setError(message);
+            toast.error('Failed to delete staff');
         }
     };
 
@@ -77,11 +77,9 @@ export default function StaffList() {
         try {
             await api.patch(`/admin/api/staff/${row.id}/toggle-status`);
             toast.success(`Staff member ${row.is_active ? 'deactivated' : 'activated'} successfully`);
-            fetchStaff();
+            setStaff(prev => prev.map(s => s.id === row.id ? { ...s, is_active: !s.is_active } : s));
         } catch (err) {
-            const message = err.response?.data?.message || 'Failed to toggle status';
-            toast.error(message);
-            setError(message);
+            toast.error(err.response?.data?.message || 'Failed to toggle status');
         }
     };
 
@@ -90,12 +88,11 @@ export default function StaffList() {
             const response = await api.get(`/admin/api/staff/${row.id}`);
             setEditingStaff(response.data.staff);
         } catch (err) {
-            const message = 'Failed to load staff details';
-            toast.error(message);
-            setError(message);
+            toast.error('Failed to load staff details');
         }
     };
 
+    // Show the form when creating or editing
     if (showForm || editingStaff) {
         return (
             <StaffForm
@@ -103,6 +100,18 @@ export default function StaffList() {
                 onSubmit={editingStaff ? handleUpdateStaff : handleCreateStaff}
                 onCancel={() => { setEditingStaff(null); setShowForm(false); }}
             />
+        );
+    }
+
+    // Loading state
+    if (loading) {
+        return (
+            <Box sx={{ textAlign: 'center', py: 5 }}>
+                <CircularProgress size={32} />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                    Loading staff members...
+                </Typography>
+            </Box>
         );
     }
 
@@ -115,7 +124,11 @@ export default function StaffList() {
             Cell: ({ cell }) => {
                 const roles = cell.getValue();
                 if (!roles || roles.length === 0) {
-                    return <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>No roles</Typography>;
+                    return (
+                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                            No roles
+                        </Typography>
+                    );
                 }
                 return (
                     <Typography variant="body2" sx={{ fontSize: 13 }}>
@@ -130,7 +143,11 @@ export default function StaffList() {
             Cell: ({ cell }) => {
                 const perms = cell.getValue();
                 if (!perms || perms.length === 0) {
-                    return <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>None</Typography>;
+                    return (
+                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                            None
+                        </Typography>
+                    );
                 }
                 return (
                     <Typography variant="body2" sx={{ fontSize: 13 }}>
@@ -146,11 +163,7 @@ export default function StaffList() {
                 <Chip
                     label={cell.getValue() ? 'Active' : 'Inactive'}
                     size="small"
-                    sx={{
-                        bgcolor: cell.getValue() ? '#dcfce7' : '#fee2e2',
-                        color: cell.getValue() ? '#166534' : '#991b1b',
-                        fontWeight: 600,
-                    }}
+                    color={cell.getValue() ? 'success' : 'error'}
                 />
             ),
         },
@@ -159,10 +172,28 @@ export default function StaffList() {
     return (
         <>
             {error && (
-                <div style={{ background: '#fef2f2', color: '#dc2626', padding: '12px 16px', borderRadius: '6px', marginBottom: '16px', border: '1px solid #fecaca' }}>
+                <Alert severity="error" sx={{ mb: 2 }}>
                     {error}
-                </div>
+                </Alert>
             )}
+
+            <Paper sx={{ p: 2, mb: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={1.5}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                        Staff Management
+                    </Typography>
+                    <Button
+                        variant="contained"
+                        color="success"
+                        size="small"
+                        onClick={() => setShowForm(true)}
+                        sx={{ textTransform: 'none', fontWeight: 600 }}
+                    >
+                        + Create
+                    </Button>
+                </Stack>
+            </Paper>
+
             <DataTable
                 columns={columns}
                 data={staff}

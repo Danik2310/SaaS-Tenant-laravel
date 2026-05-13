@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Rules\PermissionPrerequisitesRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreRoleRequest extends FormRequest
@@ -16,7 +17,7 @@ class StoreRoleRequest extends FormRequest
         return [
             'name' => 'required|string|max:255|unique:roles,name',
             'description' => 'nullable|string|max:500',
-            'permissions' => 'sometimes|array',
+            'permissions' => ['sometimes', 'array', new PermissionPrerequisitesRule],
             'permissions.*' => 'exists:permissions,id',
             'is_active' => 'sometimes|boolean',
         ];

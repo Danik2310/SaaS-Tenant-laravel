@@ -1,21 +1,19 @@
 import React, { useState, useCallback } from 'react';
-import {
-    Box,
-    Paper,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    TablePagination,
-    IconButton,
-    Tooltip,
-    Typography,
-    Divider,
-    Checkbox,
-    Skeleton,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import Divider from '@mui/material/Divider';
+import Checkbox from '@mui/material/Checkbox';
+import Skeleton from '@mui/material/Skeleton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LoginIcon from '@mui/icons-material/Login';
@@ -48,7 +46,7 @@ function RowSkeleton({ columns }) {
     );
 }
 
-export default function DataTable({
+const DataTable = React.memo(function DataTable({
     columns = [],
     data = [],
     onEdit,
@@ -88,15 +86,15 @@ export default function DataTable({
     const currentPage = isServerSide ? page : internalPage;
     const currentRowsPerPage = isServerSide ? rowsPerPage : internalRowsPerPage;
 
-    const handleChangePage = (event, newPage) => {
+    const handleChangePage = useCallback((event, newPage) => {
         if (isServerSide) {
             onPageChange(newPage);
         } else {
             setInternalPage(newPage);
         }
-    };
+    }, [isServerSide, onPageChange]);
 
-    const handleChangeRowsPerPage = (event) => {
+    const handleChangeRowsPerPage = useCallback((event) => {
         const value = parseInt(event.target.value, 10);
         if (isServerSide) {
             onRowsPerPageChange(value);
@@ -104,21 +102,21 @@ export default function DataTable({
             setInternalRowsPerPage(value);
             setInternalPage(0);
         }
-    };
+    }, [isServerSide, onRowsPerPageChange]);
 
     const displayData = isServerSide
         ? data
         : data.slice(currentPage * currentRowsPerPage, currentPage * currentRowsPerPage + currentRowsPerPage);
 
-    const handleMenuOpen = (event, row) => {
+    const handleMenuOpen = useCallback((event, row) => {
         setMenuAnchor(event.currentTarget);
         setMenuRow(row);
-    };
+    }, []);
 
-    const handleMenuClose = () => {
+    const handleMenuClose = useCallback(() => {
         setMenuAnchor(null);
         setMenuRow(null);
-    };
+    }, []);
 
     const handleSelectAll = useCallback((checked) => {
         if (checked) {
@@ -371,4 +369,6 @@ export default function DataTable({
             />
         </Paper>
     );
-}
+});
+
+export default DataTable;

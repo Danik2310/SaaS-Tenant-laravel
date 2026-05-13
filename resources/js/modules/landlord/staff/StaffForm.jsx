@@ -10,15 +10,12 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
         password: '',
         password_confirmation: '',
         roles: [],
-        direct_permissions: [],
         is_active: true,
     });
     const [errors, setErrors] = useState({});
     const [roles, setRoles] = useState([]);
-    const [permissions, setPermissions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [rolesLoading, setRolesLoading] = useState(true);
-    const [permissionsLoading, setPermissionsLoading] = useState(true);
 
     useEffect(() => {
         if (staff) {
@@ -28,7 +25,6 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                 password: '',
                 password_confirmation: '',
                 roles: (staff.roles || []).map((role) => (typeof role === 'object' ? role.id : role)),
-                direct_permissions: (staff.direct_permissions || []).map((perm) => (typeof perm === 'object' ? perm.id : perm)),
                 is_active: staff.is_active,
             });
         } else {
@@ -38,12 +34,10 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                 password: '',
                 password_confirmation: '',
                 roles: [],
-                direct_permissions: [],
                 is_active: true,
             });
         }
         fetchRoles();
-        fetchPermissions();
     }, [staff]);
 
     const fetchRoles = async () => {
@@ -54,17 +48,6 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
             console.error('Failed to fetch roles:', err);
         } finally {
             setRolesLoading(false);
-        }
-    };
-
-    const fetchPermissions = async () => {
-        try {
-            const response = await api.get('/admin/api/staff/get-permissions');
-            setPermissions(response.data.permissions);
-        } catch (err) {
-            console.error('Failed to fetch permissions:', err);
-        } finally {
-            setPermissionsLoading(false);
         }
     };
 
@@ -90,15 +73,6 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
         }));
     };
 
-    const handlePermissionChange = (permissionId) => {
-        setFormData((prev) => ({
-            ...prev,
-            direct_permissions: prev.direct_permissions.includes(permissionId)
-                ? prev.direct_permissions.filter((id) => id !== permissionId)
-                : [...prev.direct_permissions, permissionId],
-        }));
-    };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -108,7 +82,6 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
             name: formData.name,
             email: formData.email,
             roles: formData.roles,
-            direct_permissions: formData.direct_permissions,
             is_active: formData.is_active,
         };
 
@@ -186,41 +159,6 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
                                     checked={formData.roles.includes(role.id)}
                                     onChange={() => handleRoleChange(role.id)}
                                 />
-                            ))
-                        )}
-                    </div>
-                </FormInput>
-
-                <FormInput label="Direct Permissions" hint="Additional permissions beyond selected roles">
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc', maxHeight: '300px', overflowY: 'auto' }}>
-                        {permissionsLoading ? (
-                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Loading permissions...</p>
-                        ) : permissions.length === 0 ? (
-                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>No permissions available</p>
-                        ) : (
-                            Object.entries(
-                                permissions.reduce((groups, perm) => {
-                                    const module = perm.module || 'General';
-                                    if (!groups[module]) groups[module] = [];
-                                    groups[module].push(perm);
-                                    return groups;
-                                }, {})
-                            ).map(([module, modulePerms]) => (
-                                <div key={module} style={{ marginBottom: '12px' }}>
-                                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>
-                                        {module}
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '4px' }}>
-                                        {modulePerms.map((permission) => (
-                                            <CheckboxInput
-                                                key={permission.id}
-                                                label={permission.name}
-                                                checked={formData.direct_permissions.includes(permission.id)}
-                                                onChange={() => handlePermissionChange(permission.id)}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
                             ))
                         )}
                     </div>
