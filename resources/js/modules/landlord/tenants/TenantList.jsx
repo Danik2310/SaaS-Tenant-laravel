@@ -1,8 +1,14 @@
 import React from 'react';
-import DataTable from '@/components/DataTable';
-import BulkActionToolbar from '@/components/BulkActionToolbar';
-import ExportButton from '@/components/ExportButton';
-import { Box, Button, Typography, Chip, Tooltip, Switch, FormControlLabel } from '@mui/material';
+import DataTable from '@/Components/DataTable';
+import BulkActionToolbar from '@/Components/BulkActionToolbar';
+import ExportButton from '@/Components/ExportButton';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import RestoreIcon from '@mui/icons-material/Restore';
 
 export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImpersonate, onRowSave, onRestore, showDeleted, onToggleDeleted, rowMenuActions = [], loading, total, page, rowsPerPage, onPageChange, onRowsPerPageChange, selectedIds, onSelectionChange, onBulkAction }) {

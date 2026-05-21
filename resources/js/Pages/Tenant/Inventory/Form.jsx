@@ -1,7 +1,8 @@
 import TenantLayout from '@/Layouts/TenantLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, SelectInput } from '@/Components/FormElements';
-import { Box, Typography } from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 
 export default function InventoryForm({ movement, products, warehouses }) {
     const { data, setData, errors, post, processing } = useForm({

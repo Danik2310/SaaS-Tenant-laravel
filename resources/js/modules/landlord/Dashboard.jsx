@@ -3,7 +3,7 @@ import api from '../../services/api';
 import TenantList from './tenants/TenantList';
 import TenantForm from './tenants/TenantForm';
 import Navbar from '../../components/Navbar';
-import DataTable from '@/components/DataTable';
+import DataTable from '@/Components/DataTable';
 import Staff from './staff/StaffList';
 import Plans from './billing/Plans';
 import RolePermissions from './staff/RolePermissions';
@@ -26,23 +26,21 @@ import { toast } from 'sonner';
 import DatabaseModal from './modals/DatabaseModal';
 import MigrationModal from './modals/MigrationModal';
 import DomainModal from './modals/DomainModal';
-import {
-    Box,
-    Typography,
-    Divider,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    Radio,
-    RadioGroup,
-    FormControlLabel,
-    FormControl,
-    FormLabel,
-    CircularProgress,
-    Switch,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Divider from '@mui/material/Divider';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import Radio from '@mui/material/Radio';
+import RadioGroup from '@mui/material/RadioGroup';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormControl from '@mui/material/FormControl';
+import FormLabel from '@mui/material/FormLabel';
+import CircularProgress from '@mui/material/CircularProgress';
+import Switch from '@mui/material/Switch';
 
 export default function Dashboard({ user, permissions = [], setUser }) {
     const [tenants, setTenants] = useState([]);

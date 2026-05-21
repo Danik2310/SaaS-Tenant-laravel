@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput } from '@/components/FormElements';
+import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput } from '@/Components/FormElements';
 import { toast } from 'sonner';
 
 export default function StaffForm({ staff = null, onSubmit, onCancel }) {

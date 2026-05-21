@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
-import {
-    Box, Paper, Typography, TextField, Button, Divider,
-    Avatar, CircularProgress, Alert,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
+import Avatar from '@mui/material/Avatar';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
 import PersonIcon from '@mui/icons-material/Person';
 
 export default function Profile({ user }) {

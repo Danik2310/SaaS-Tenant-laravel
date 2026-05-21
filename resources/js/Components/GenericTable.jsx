@@ -1,6 +1,11 @@
 import React from 'react';
 import { MaterialReactTable } from 'material-react-table';
-import { Box, IconButton, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import Edit from '@mui/icons-material/Edit';
 import Delete from '@mui/icons-material/Delete';
 import LoginIcon from '@mui/icons-material/Login';

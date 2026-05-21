@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '@/services/api';
-import ExportButton from '@/components/ExportButton';
+import ExportButton from '@/Components/ExportButton';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';

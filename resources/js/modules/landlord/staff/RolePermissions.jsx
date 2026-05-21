@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
-import DataTable from '@/components/DataTable';
-import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/components/FormElements';
+import DataTable from '@/Components/DataTable';
+import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';

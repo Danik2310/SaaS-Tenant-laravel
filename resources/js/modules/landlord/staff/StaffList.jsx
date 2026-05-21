@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
 import StaffForm from './StaffForm';
-import DataTable from '@/components/DataTable';
+import DataTable from '@/Components/DataTable';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Box from '@mui/material/Box';

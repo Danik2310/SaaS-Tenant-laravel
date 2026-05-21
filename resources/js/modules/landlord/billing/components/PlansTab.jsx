@@ -1,20 +1,18 @@
 import React, { useState } from 'react';
-import {
-    Box,
-    Typography,
-    Button,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    Chip,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import Chip from '@mui/material/Chip';
 import { toast } from 'sonner';
 import api from '../../../../services/api';
-import DataTable from '@/components/DataTable';
+import DataTable from '@/Components/DataTable';
 import PlanModal from './PlanModal';
 
 export default function PlansTab({ plans, fetchPlans, setError }) {

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import {
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-} from '@mui/material';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
 import { toast } from 'sonner';
 import api from '../../../../services/api';
-import { FormInput, ButtonPrimary, ButtonSecondary, FormActions, SelectInput, CheckboxInput } from '@/components/FormElements';
+import { FormInput, ButtonPrimary, ButtonSecondary, FormActions, SelectInput, CheckboxInput } from '@/Components/FormElements';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 

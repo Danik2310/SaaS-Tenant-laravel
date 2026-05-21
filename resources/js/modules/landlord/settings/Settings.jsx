@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
-import {
-    Box, Paper, Typography, TextField, Button, Switch,
-    FormControlLabel, Select, MenuItem, FormControl, InputLabel,
-    CircularProgress, Alert, Grid, Divider,
-} from '@mui/material';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Grid from '@mui/material/Grid';
+import Divider from '@mui/material/Divider';
 import SaveIcon from '@mui/icons-material/Save';
 
 const settingFields = [

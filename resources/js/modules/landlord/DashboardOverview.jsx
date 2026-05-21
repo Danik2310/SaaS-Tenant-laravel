@@ -1,35 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
-import {
-    Box,
-    Paper,
-    Typography,
-    Grid,
-    Card,
-    CardContent,
-    Skeleton,
-    Avatar,
-    Chip,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    TablePagination,
-    Switch,
-    FormControlLabel,
-    useMediaQuery,
-    useTheme,
-} from '@mui/material';
-import {
-    People as PeopleIcon,
-    CheckCircle as CheckCircleIcon,
-    Block as BlockIcon,
-    Delete as DeleteIcon,
-    Group as GroupIcon,
-    Assignment as AssignmentIcon,
-} from '@mui/icons-material';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Skeleton from '@mui/material/Skeleton';
+import Avatar from '@mui/material/Avatar';
+import Chip from '@mui/material/Chip';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import TablePagination from '@mui/material/TablePagination';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import useTheme from '@mui/material/styles/useTheme';
+import PeopleIcon from '@mui/icons-material/People';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import BlockIcon from '@mui/icons-material/Block';
+import DeleteIcon from '@mui/icons-material/Delete';
+import GroupIcon from '@mui/icons-material/Group';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import {
     AreaChart,
     Area,
