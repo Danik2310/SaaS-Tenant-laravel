@@ -15,7 +15,7 @@ class ProductObserverTest extends TestCase
 {
     protected Tenant $tenant;
 
-    /** @var array<int, \App\Models\Tenant> */
+    /** @var array<int, Tenant> */
     protected array $createdTenants = [];
 
     protected function setUp(): void
@@ -184,7 +184,7 @@ class ProductObserverTest extends TestCase
 
         $product = Product::factory()->make(['id' => 999, 'category_id' => null]);
 
-        $observer = new ProductObserver();
+        $observer = new ProductObserver;
         $observer->created($product);
 
         $this->assertEquals(0, TenantResourceUsage::count());
@@ -197,7 +197,7 @@ class ProductObserverTest extends TestCase
 
         $product = Product::factory()->make(['id' => 999, 'category_id' => null]);
 
-        $observer = new ProductObserver();
+        $observer = new ProductObserver;
         $observer->deleted($product);
 
         $this->assertEquals(0, TenantResourceUsage::count());
@@ -210,7 +210,7 @@ class ProductObserverTest extends TestCase
 
         $product = Product::factory()->make(['id' => 999, 'category_id' => null]);
 
-        $observer = new ProductObserver();
+        $observer = new ProductObserver;
         $observer->restored($product);
 
         $this->assertEquals(0, TenantResourceUsage::count());

@@ -135,8 +135,7 @@ class RolePermissionController extends Controller
 
         if ($permission->name === 'manage tenants') {
             $dependentNames = PermissionPrerequisiteStrategyFactory::getManagedPermissions();
-            $rolesWithDependents = Role::whereHas('permissions', fn ($q) =>
-                $q->whereIn('name', $dependentNames)
+            $rolesWithDependents = Role::whereHas('permissions', fn ($q) => $q->whereIn('name', $dependentNames)
             )->where('guard_name', 'admin')->count();
 
             if ($rolesWithDependents > 0) {
@@ -163,8 +162,8 @@ class RolePermissionController extends Controller
         if (! empty($errors)) {
             $messages = collect($errors)->map(
                 fn (array $error, string $perm) => "The permission '{$perm}' requires: "
-                    . implode(', ', $error['missing'])
-                    . '. ' . $error['explanation']
+                    .implode(', ', $error['missing'])
+                    .'. '.$error['explanation']
             )->values()->all();
 
             abort(422, implode(' ', $messages));

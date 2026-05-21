@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ExportRequest;
 use App\Services\ExportService;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ExportController extends Controller
 {
@@ -14,30 +15,9 @@ class ExportController extends Controller
         private ExportService $exportService,
     ) {}
 
-    public function export(Request $request, string $entity)
+    public function export(ExportRequest $request, string $entity)
     {
-        $validEntities = ['tenants', 'subscriptions', 'staff', 'plans', 'activity-logs'];
-
-        if (! in_array($entity, $validEntities, true)) {
-            return response()->json([
-                'message' => 'Invalid entity. Supported: '.implode(', ', $validEntities),
-            ], 422);
-        }
-
-        $validated = $request->validate([
-            'format' => ['sometimes', 'string', 'in:csv,xlsx'],
-            'columns' => ['sometimes', 'array'],
-            'columns.*' => ['string'],
-            'filters' => ['sometimes', 'array'],
-            'filters.status' => ['sometimes', 'string'],
-            'filters.plan_id' => ['sometimes', 'integer'],
-            'filters.date_from' => ['sometimes', 'date'],
-            'filters.date_to' => ['sometimes', 'date'],
-            'filters.search' => ['sometimes', 'string'],
-            'filters.log_name' => ['sometimes', 'string'],
-            'filters.causer_id' => ['sometimes', 'integer'],
-            'filters.is_active' => ['sometimes', 'boolean'],
-        ]);
+        $validated = $request->validated();
 
         $format = $validated['format'] ?? 'csv';
         $columns = $validated['columns'] ?? [];
@@ -84,9 +64,9 @@ class ExportController extends Controller
         }
 
         $safeFilename = basename($filename);
-        $path = storage_path('app/exports/'.$safeFilename);
+        $path = 'exports/'.$safeFilename;
 
-        if (! file_exists($path)) {
+        if (! Storage::disk('local')->exists($path)) {
             return response()->json(['message' => 'Export file not found or expired.'], 404);
         }
 
@@ -97,7 +77,7 @@ class ExportController extends Controller
             ->withProperties(['filename' => $safeFilename])
             ->log("Downloaded export {$safeFilename}");
 
-        return response()->download($path, $safeFilename, [
+        return response()->download(Storage::disk('local')->path($path), $safeFilename, [
             'Content-Type' => $mime,
         ]);
     }

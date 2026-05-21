@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\AdminUser;
 use App\Models\Permission;
 use App\Models\Role;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -16,7 +17,7 @@ class RolePermissionTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+        $this->seed(RolePermissionSeeder::class);
     }
 
     // ──────────────────────────────────────────────
@@ -193,22 +194,22 @@ class RolePermissionTest extends TestCase
     public function test_guest_cannot_access_role_endpoints(): void
     {
         // All role/permission endpoints under /admin/api/* return a JSON error
-        // for unauthenticated requests (caught by exception handler's catch-all)
+        // for unauthenticated requests
         $this->get('/admin/api/roles')
-            ->assertStatus(500)
-            ->assertJson(['message' => 'An error occurred.']);
+            ->assertUnauthorized()
+            ->assertJson(['message' => 'Unauthenticated.']);
 
         $this->post('/admin/api/roles', ['name' => 'guest-role'])
-            ->assertStatus(500);
+            ->assertUnauthorized();
 
         $this->put('/admin/api/roles/1', ['name' => 'nothing'])
-            ->assertStatus(500);
+            ->assertUnauthorized();
 
         $this->delete('/admin/api/roles/1')
-            ->assertStatus(500);
+            ->assertUnauthorized();
 
         $this->get('/admin/api/permissions')
-            ->assertStatus(500);
+            ->assertUnauthorized();
     }
 
     // ──────────────────────────────────────────────

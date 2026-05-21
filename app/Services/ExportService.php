@@ -9,6 +9,8 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use OpenSpout\Common\Entity\Row;
 use OpenSpout\Writer\CSV\Writer as CsvWriter;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 use Spatie\Activitylog\Models\Activity;
@@ -17,8 +19,18 @@ class ExportService
 {
     private const EXPIRY_HOURS = 24;
 
+    private const MAX_RECORDS = [
+        'tenants' => 10000,
+        'subscriptions' => 25000,
+        'staff' => 5000,
+        'plans' => 1000,
+        'activity-logs' => 5000,
+    ];
+
     public function export(string $entity, string $format, array $columns, array $filters = []): array
     {
+        $this->ensureDirectoryExists();
+
         $data = match ($entity) {
             'tenants' => $this->getTenantsData($filters, $columns),
             'subscriptions' => $this->getSubscriptionsData($filters, $columns),
@@ -28,7 +40,7 @@ class ExportService
             default => throw new \InvalidArgumentException("Unknown entity: {$entity}"),
         };
 
-        $filename = sprintf('%s_%s.%s', $entity, now()->format('Ymd_His'), $format);
+        $filename = Str::uuid()->toString().'.'.$format;
         $path = 'exports/'.$filename;
 
         if ($format === 'csv') {
@@ -54,26 +66,37 @@ class ExportService
         return Storage::url($path);
     }
 
+    private function ensureDirectoryExists(): void
+    {
+        $dir = Storage::disk('local')->path('exports');
+
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+    }
+
     private function writeCsv(string $path, array $headers, array $rows): void
     {
+        $fullPath = Storage::disk('local')->path($path);
         $writer = new CsvWriter;
-        $writer->openToFile(storage_path('app/'.$path));
-        $writer->addRow($headers);
+        $writer->openToFile($fullPath);
+        $writer->addRow(Row::fromValues($headers));
         foreach ($rows as $row) {
-            $writer->addRow($row);
+            $writer->addRow(Row::fromValues($row));
         }
         $writer->close();
     }
 
     private function writeXlsx(string $path, array $headers, array $rows): void
     {
+        $fullPath = Storage::disk('local')->path($path);
         $writer = new XlsxWriter;
-        $writer->openToFile(storage_path('app/'.$path));
+        $writer->openToFile($fullPath);
         $sheet = $writer->getCurrentSheet();
         $sheet->setName('Export');
-        $writer->addRow($headers);
+        $writer->addRow(Row::fromValues($headers));
         foreach ($rows as $row) {
-            $writer->addRow($row);
+            $writer->addRow(Row::fromValues($row));
         }
         $writer->close();
     }
@@ -95,11 +118,18 @@ class ExportService
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
-        $tenants = $query->get();
         $headers = $this->resolveHeaders($columns, ['ID', 'Name', 'Email', 'Domain', 'Status', 'Plan', 'Created']);
         $allColumns = ['id', 'name', 'email', 'domain', 'status', 'plan_name', 'created_at'];
 
-        $rows = $tenants->map(function ($tenant) use ($columns, $allColumns) {
+        $rows = [];
+        $counter = 0;
+        $max = self::MAX_RECORDS['tenants'];
+
+        foreach ($query->lazy(500) as $tenant) {
+            if ($counter >= $max) {
+                break;
+            }
+
             $selected = $this->pickColumns($columns, $allColumns, [
                 'id' => $tenant->id,
                 'name' => $tenant->name,
@@ -110,8 +140,9 @@ class ExportService
                 'created_at' => $tenant->created_at->format('Y-m-d H:i:s'),
             ]);
 
-            return array_values($selected);
-        })->toArray();
+            $rows[] = array_values($selected);
+            $counter++;
+        }
 
         return ['headers' => $headers, 'rows' => $rows];
     }
@@ -131,14 +162,23 @@ class ExportService
                 ->orWhere('email', 'like', "%{$filters['search']}%"));
         }
 
-        $subscriptions = $query->get();
         $headers = $this->resolveHeaders($columns, ['ID', 'Tenant', 'Plan', 'Status', 'Start', 'End', 'Created']);
         $allColumns = ['id', 'tenant_name', 'plan_name', 'status', 'starts_at', 'ends_at', 'created_at'];
 
-        $rows = $subscriptions->map(function ($sub) use ($columns, $allColumns) {
+        $canViewTenantName = auth('admin')->user()?->can('manage tenants') ?? false;
+
+        $rows = [];
+        $counter = 0;
+        $max = self::MAX_RECORDS['subscriptions'];
+
+        foreach ($query->lazy(500) as $sub) {
+            if ($counter >= $max) {
+                break;
+            }
+
             $selected = $this->pickColumns($columns, $allColumns, [
                 'id' => $sub->id,
-                'tenant_name' => $sub->tenant?->name ?? '',
+                'tenant_name' => $canViewTenantName ? ($sub->tenant?->name ?? '') : 'Restricted',
                 'plan_name' => $sub->plan?->name ?? '',
                 'status' => $sub->status,
                 'starts_at' => $sub->starts_at?->format('Y-m-d') ?? '',
@@ -146,8 +186,9 @@ class ExportService
                 'created_at' => $sub->created_at->format('Y-m-d H:i:s'),
             ]);
 
-            return array_values($selected);
-        })->toArray();
+            $rows[] = array_values($selected);
+            $counter++;
+        }
 
         return ['headers' => $headers, 'rows' => $rows];
     }
@@ -160,11 +201,18 @@ class ExportService
             $query->where('is_active', filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN));
         }
 
-        $staff = $query->get();
         $headers = $this->resolveHeaders($columns, ['ID', 'Name', 'Email', 'Active', 'Created']);
         $allColumns = ['id', 'name', 'email', 'is_active', 'created_at'];
 
-        $rows = $staff->map(function ($user) use ($columns, $allColumns) {
+        $rows = [];
+        $counter = 0;
+        $max = self::MAX_RECORDS['staff'];
+
+        foreach ($query->lazy(500) as $user) {
+            if ($counter >= $max) {
+                break;
+            }
+
             $selected = $this->pickColumns($columns, $allColumns, [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -173,8 +221,9 @@ class ExportService
                 'created_at' => $user->created_at->format('Y-m-d H:i:s'),
             ]);
 
-            return array_values($selected);
-        })->toArray();
+            $rows[] = array_values($selected);
+            $counter++;
+        }
 
         return ['headers' => $headers, 'rows' => $rows];
     }
@@ -183,11 +232,18 @@ class ExportService
     {
         $query = Plan::query();
 
-        $plans = $query->get();
         $headers = $this->resolveHeaders($columns, ['ID', 'Name', 'Slug', 'Price', 'Max Users', 'Created']);
         $allColumns = ['id', 'name', 'slug', 'price', 'max_users', 'created_at'];
 
-        $rows = $plans->map(function ($plan) use ($columns, $allColumns) {
+        $rows = [];
+        $counter = 0;
+        $max = self::MAX_RECORDS['plans'];
+
+        foreach ($query->lazy(500) as $plan) {
+            if ($counter >= $max) {
+                break;
+            }
+
             $selected = $this->pickColumns($columns, $allColumns, [
                 'id' => $plan->id,
                 'name' => $plan->name,
@@ -197,15 +253,16 @@ class ExportService
                 'created_at' => $plan->created_at->format('Y-m-d H:i:s'),
             ]);
 
-            return array_values($selected);
-        })->toArray();
+            $rows[] = array_values($selected);
+            $counter++;
+        }
 
         return ['headers' => $headers, 'rows' => $rows];
     }
 
     private function getActivityLogsData(array $filters, array $columns): array
     {
-        $query = Activity::query();
+        $query = Activity::with('causer');
 
         if (! empty($filters['log_name'])) {
             $query->where('log_name', $filters['log_name']);
@@ -223,11 +280,20 @@ class ExportService
             $query->where('description', 'like', "%{$filters['search']}%");
         }
 
-        $activities = $query->latest()->limit(5000)->get();
+        $query->latest();
+
         $headers = $this->resolveHeaders($columns, ['ID', 'Description', 'Log', 'Causer', 'Created']);
         $allColumns = ['id', 'description', 'log_name', 'causer', 'created_at'];
 
-        $rows = $activities->map(function ($log) use ($columns, $allColumns) {
+        $rows = [];
+        $counter = 0;
+        $max = self::MAX_RECORDS['activity-logs'];
+
+        foreach ($query->lazy(500) as $log) {
+            if ($counter >= $max) {
+                break;
+            }
+
             $selected = $this->pickColumns($columns, $allColumns, [
                 'id' => $log->id,
                 'description' => $log->description,
@@ -236,8 +302,9 @@ class ExportService
                 'created_at' => $log->created_at->format('Y-m-d H:i:s'),
             ]);
 
-            return array_values($selected);
-        })->toArray();
+            $rows[] = array_values($selected);
+            $counter++;
+        }
 
         return ['headers' => $headers, 'rows' => $rows];
     }
@@ -256,6 +323,7 @@ class ExportService
         if (empty($requested)) {
             return $values;
         }
+
         $result = [];
         foreach ($requested as $col) {
             $index = array_search($col, $allColumns);

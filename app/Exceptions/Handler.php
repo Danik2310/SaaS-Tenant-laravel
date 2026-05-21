@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Validation\ValidationException;
@@ -30,6 +31,12 @@ class Handler extends ExceptionHandler
             }
 
             return back()->with('error', $e->getMessage());
+        });
+
+        $this->renderable(function (AuthenticationException $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
         });
 
         $this->renderable(function (AuthorizationException $e, $request) {

@@ -37,8 +37,8 @@ class PermissionPrerequisiteValidator
         if (! empty($errors)) {
             $messages = collect($errors)->map(
                 fn (array $error, string $perm) => "The permission '{$perm}' requires: "
-                    . implode(', ', $error['missing'])
-                    . '. ' . $error['explanation']
+                    .implode(', ', $error['missing'])
+                    .'. '.$error['explanation']
             )->values()->all();
 
             throw ValidationException::withMessages(['permissions' => $messages]);

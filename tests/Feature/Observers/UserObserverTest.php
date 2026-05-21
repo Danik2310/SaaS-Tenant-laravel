@@ -15,7 +15,7 @@ class UserObserverTest extends TestCase
 {
     protected Tenant $tenant;
 
-    /** @var array<int, \App\Models\Tenant> */
+    /** @var array<int, Tenant> */
     protected array $createdTenants = [];
 
     protected function setUp(): void
@@ -135,7 +135,7 @@ class UserObserverTest extends TestCase
 
         $user = User::factory()->make(['id' => 999]);
 
-        $observer = new UserObserver();
+        $observer = new UserObserver;
         $observer->created($user);
 
         $this->assertEquals(0, TenantResourceUsage::count());
@@ -148,7 +148,7 @@ class UserObserverTest extends TestCase
 
         $user = User::factory()->make(['id' => 999]);
 
-        $observer = new UserObserver();
+        $observer = new UserObserver;
         $observer->deleted($user);
 
         $this->assertEquals(0, TenantResourceUsage::count());

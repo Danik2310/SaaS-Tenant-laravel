@@ -23,7 +23,7 @@ abstract class TestCase extends BaseTestCase
     {
         $tenant = Tenant::withoutEvents(function () {
             $t = Tenant::create([
-                'id' => 'test-' . uniqid(),
+                'id' => 'test-'.uniqid(),
             ]);
 
             $t->database()->makeCredentials();

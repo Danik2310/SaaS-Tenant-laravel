@@ -16,7 +16,7 @@ class OrderObserverTest extends TestCase
 {
     protected Tenant $tenant;
 
-    /** @var array<int, \App\Models\Tenant> */
+    /** @var array<int, Tenant> */
     protected array $createdTenants = [];
 
     protected function setUp(): void
@@ -143,7 +143,7 @@ class OrderObserverTest extends TestCase
         $order = new Order(['id' => 999, 'customer_id' => 1, 'total' => 100]);
         $order->exists = true;
 
-        $observer = new OrderObserver();
+        $observer = new OrderObserver;
         $observer->created($order);
 
         $this->assertEquals(0, TenantResourceUsage::count());
@@ -159,7 +159,7 @@ class OrderObserverTest extends TestCase
         $order = new Order(['id' => 999, 'customer_id' => 1, 'total' => 100]);
         $order->exists = true;
 
-        $observer = new OrderObserver();
+        $observer = new OrderObserver;
         $observer->deleted($order);
 
         $this->assertEquals(0, TenantResourceUsage::count());

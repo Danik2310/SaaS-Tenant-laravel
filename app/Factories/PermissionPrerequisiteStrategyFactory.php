@@ -9,9 +9,9 @@ use App\Services\Permissions\Strategies\TenantModulePrerequisiteStrategy;
 class PermissionPrerequisiteStrategyFactory
 {
     private const STRATEGY_MAP = [
-        'impersonate tenants'  => TenantModulePrerequisiteStrategy::class,
+        'impersonate tenants' => TenantModulePrerequisiteStrategy::class,
         'manage subscriptions' => TenantModulePrerequisiteStrategy::class,
-        'restore tenants'      => TenantModulePrerequisiteStrategy::class,
+        'restore tenants' => TenantModulePrerequisiteStrategy::class,
     ];
 
     public static function make(string $permissionName): PermissionPrerequisiteStrategyInterface

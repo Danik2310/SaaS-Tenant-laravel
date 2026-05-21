@@ -15,7 +15,7 @@ class TenantResourceUsageTest extends TestCase
 
     protected Tenant $tenantB;
 
-    /** @var array<int, \App\Models\Tenant> */
+    /** @var array<int, Tenant> */
     protected array $createdTenants = [];
 
     protected function setUp(): void
@@ -194,7 +194,7 @@ class TenantResourceUsageTest extends TestCase
 
     public function test_tenant_resource_usage_uses_central_connection(): void
     {
-        $model = new TenantResourceUsage();
+        $model = new TenantResourceUsage;
 
         $this->assertEquals(
             'mysql',

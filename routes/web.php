@@ -177,9 +177,10 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
         Route::get('/api/settings/{key}', [SettingController::class, 'get']);
     });
 
-    // Data export - requires 'manage tenants' permission (reuses existing permission)
+    // Data export - POST uses ExportRequest for entity-level authorization
+    // Download and status require 'manage tenants' to access stored files
+    Route::post('/api/export/{entity}', [ExportController::class, 'export']);
     Route::middleware(['permission:manage tenants'])->group(function () {
-        Route::post('/api/export/{entity}', [ExportController::class, 'export']);
         Route::get('/api/export/download/{filename}', [ExportController::class, 'download']);
         Route::get('/api/export/status/{jobId}', [ExportController::class, 'status']);
     });

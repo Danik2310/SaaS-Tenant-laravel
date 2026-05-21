@@ -20,8 +20,8 @@ class PermissionPrerequisitesRule implements ValidationRule
 
         foreach ($errors as $perm => $error) {
             $fail("The permission '{$perm}' requires: "
-                . implode(', ', $error['missing'])
-                . '. ' . $error['explanation']);
+                .implode(', ', $error['missing'])
+                .'. '.$error['explanation']);
         }
     }
 }
