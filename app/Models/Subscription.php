@@ -40,7 +40,7 @@ class Subscription extends Model
 
     public function scopeExpired($query)
     {
-        return $query->where('status', 'active')->where('ends_at', '<', now());
+        return $query->where('ends_at', '<', now());
     }
 
     public function scopeCancelled($query)

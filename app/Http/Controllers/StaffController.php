@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreStaffRequest;
 use App\Http\Requests\Admin\UpdateStaffRequest;
 use App\Http\Resources\StaffResource;
 use App\Models\AdminUser;
+use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 

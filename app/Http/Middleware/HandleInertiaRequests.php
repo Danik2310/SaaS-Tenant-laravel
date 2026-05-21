@@ -19,6 +19,10 @@ class HandleInertiaRequests extends Middleware
     {
         $currentTenant = tenant();
 
+        if ($currentTenant && $currentTenant instanceof Tenant) {
+            $currentTenant->load('plan');
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
