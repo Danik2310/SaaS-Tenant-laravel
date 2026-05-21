@@ -30,6 +30,9 @@ abstract class TestCase extends BaseTestCase
             $t->database()->manager()->createDatabase($t);
             $t->save();
 
+            // Refresh from DB to pick up column defaults (e.g. status = 'Active')
+            $t->refresh();
+
             return $t;
         });
 
