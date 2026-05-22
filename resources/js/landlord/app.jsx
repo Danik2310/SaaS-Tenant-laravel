@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { ThemeProvider } from '@mui/material/styles';
 import { Toaster } from 'sonner';
+import theme from '../theme';
 import Login from '../modules/landlord/Login';
 import Dashboard from '../modules/landlord/Dashboard';
 import useAuth from '../hooks/useAuth';
@@ -16,16 +18,20 @@ export default function LandlordApp() {
         );
     }
 
-    return user ? (
-        <>
-            <Dashboard user={user} permissions={permissions} setUser={setUser} />
-            <Toaster richColors position="top-right" />
-        </>
-    ) : (
-        <>
-            <Login setUser={setUser} />
-            <Toaster richColors position="top-right" />
-        </>
+    return (
+        <ThemeProvider theme={theme}>
+            {user ? (
+                <>
+                    <Dashboard user={user} permissions={permissions} setUser={setUser} />
+                    <Toaster richColors position="top-right" />
+                </>
+            ) : (
+                <>
+                    <Login setUser={setUser} />
+                    <Toaster richColors position="top-right" />
+                </>
+            )}
+        </ThemeProvider>
     );
 }
 

@@ -1,5 +1,5 @@
 import TenantLayout from '@/Layouts/TenantLayout';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -7,6 +7,7 @@ import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Avatar from '@mui/material/Avatar';
+import Tooltip from '@mui/material/Tooltip';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -14,12 +15,36 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Chip from '@mui/material/Chip';
+import Skeleton from '@mui/material/Skeleton';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import PeopleIcon from '@mui/icons-material/People';
 import WarningIcon from '@mui/icons-material/Warning';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
-function StatCard({ title, value, icon, color }) {
+function TrendBadge({ value }) {
+    if (value === 0) return null;
+    const isUp = value > 0;
+    return (
+        <Tooltip title={`${isUp ? 'Up' : 'Down'} ${Math.abs(value)}% vs last month`}>
+            <Box component="span" sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.25,
+                fontSize: 11,
+                fontWeight: 600,
+                color: isUp ? '#16a34a' : '#dc2626',
+                ml: 1,
+            }}>
+                {isUp ? <TrendingUpIcon sx={{ fontSize: 14 }} /> : <TrendingDownIcon sx={{ fontSize: 14 }} />}
+                {Math.abs(value)}%
+            </Box>
+        </Tooltip>
+    );
+}
+
+function StatCard({ title, value, icon, color, trend }) {
     return (
         <Card sx={{
             height: '100%',
@@ -35,8 +60,9 @@ function StatCard({ title, value, icon, color }) {
                     <Typography variant="h4" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
                         {value}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
                         {title}
+                        {trend !== undefined && <TrendBadge value={trend} />}
                     </Typography>
                 </Box>
             </CardContent>
@@ -44,7 +70,35 @@ function StatCard({ title, value, icon, color }) {
     );
 }
 
-export default function Dashboard({ stats, recentOrders, recentMovements }) {
+function LazyTable({ data, loading, emptyMessage, columns, renderRow }) {
+    if (loading) {
+        return (
+            <Box sx={{ p: 3 }}>
+                {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} variant="text" sx={{ mb: 1, height: 32 }} />
+                ))}
+            </Box>
+        );
+    }
+
+    if (!data || data.length === 0) {
+        return (
+            <TableRow>
+                <TableCell colSpan={columns.length} sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
+                    {emptyMessage}
+                </TableCell>
+            </TableRow>
+        );
+    }
+
+    return data.map((row) => renderRow(row));
+}
+
+export default function Dashboard({ stats, trends, recentOrders, recentMovements }) {
+    const page = usePage();
+    const ordersLoading = page.props.recentOrders === undefined || typeof page.props.recentOrders === 'function';
+    const movementsLoading = page.props.recentMovements === undefined || typeof page.props.recentMovements === 'function';
+
     return (
         <TenantLayout>
             <Head title="Dashboard" />
@@ -55,13 +109,13 @@ export default function Dashboard({ stats, recentOrders, recentMovements }) {
 
             <Grid container spacing={2} sx={{ mb: 4 }}>
                 <Grid item xs={6} sm={6} md={3}>
-                    <StatCard title="Active Products" value={stats.active_products} icon={<InventoryIcon />} color="#3b82f6" />
+                    <StatCard title="Active Products" value={stats.active_products} icon={<InventoryIcon />} color="#3b82f6" trend={trends?.active_products} />
                 </Grid>
                 <Grid item xs={6} sm={6} md={3}>
-                    <StatCard title="Total Orders" value={stats.total_orders} icon={<ShoppingCartIcon />} color="#22c55e" />
+                    <StatCard title="Total Orders" value={stats.total_orders} icon={<ShoppingCartIcon />} color="#22c55e" trend={trends?.total_orders} />
                 </Grid>
                 <Grid item xs={6} sm={6} md={3}>
-                    <StatCard title="Customers" value={stats.total_customers} icon={<PeopleIcon />} color="#f59e0b" />
+                    <StatCard title="Customers" value={stats.total_customers} icon={<PeopleIcon />} color="#f59e0b" trend={trends?.total_customers} />
                 </Grid>
                 <Grid item xs={6} sm={6} md={3}>
                     <StatCard title="Low Stock Items" value={stats.low_stock_count} icon={<WarningIcon />} color="#ef4444" />
@@ -87,7 +141,17 @@ export default function Dashboard({ stats, recentOrders, recentMovements }) {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {recentOrders.length === 0 ? (
+                                    {ordersLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} sx={{ p: 0, border: 'none' }}>
+                                                <Box sx={{ p: 3 }}>
+                                                    {[1, 2, 3].map((i) => (
+                                                        <Skeleton key={i} variant="text" sx={{ mb: 1, height: 32 }} />
+                                                    ))}
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : recentOrders.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
                                                 No orders yet
@@ -132,7 +196,17 @@ export default function Dashboard({ stats, recentOrders, recentMovements }) {
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                    {recentMovements.length === 0 ? (
+                                    {movementsLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={4} sx={{ p: 0, border: 'none' }}>
+                                                <Box sx={{ p: 3 }}>
+                                                    {[1, 2, 3].map((i) => (
+                                                        <Skeleton key={i} variant="text" sx={{ mb: 1, height: 32 }} />
+                                                    ))}
+                                                </Box>
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : recentMovements.length === 0 ? (
                                         <TableRow>
                                             <TableCell colSpan={4} sx={{ textAlign: 'center', py: 4, color: 'text.secondary' }}>
                                                 No movements yet
