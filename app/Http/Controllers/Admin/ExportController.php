@@ -6,7 +6,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ExportRequest;
+use App\Jobs\RunExportJob;
 use App\Services\ExportService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class ExportController extends Controller
@@ -22,6 +24,32 @@ class ExportController extends Controller
         $format = $validated['format'] ?? 'csv';
         $columns = $validated['columns'] ?? [];
         $filters = $validated['filters'] ?? [];
+
+        $async = $validated['async'] ?? false;
+
+        if ($async) {
+            $job = new RunExportJob($entity, $format, $columns, $filters);
+            dispatch($job);
+
+            activity('export')
+                ->causedBy(auth('admin')->user())
+                ->withProperties([
+                    'entity' => $entity,
+                    'format' => $format,
+                    'job_id' => $job->getJobId(),
+                ])
+                ->log("Queued export of {$entity} as {$format}");
+
+            return response()->json([
+                'data' => [
+                    'job_id' => $job->getJobId(),
+                    'entity' => $entity,
+                    'format' => $format,
+                    'status' => 'queued',
+                ],
+                'message' => 'Export queued successfully. Check status endpoint for completion.',
+            ]);
+        }
 
         try {
             $result = $this->exportService->export($entity, $format, $columns, $filters);
@@ -84,11 +112,26 @@ class ExportController extends Controller
 
     public function status(string $jobId)
     {
-        return response()->json([
+        $status = Cache::get("export:{$jobId}:status", 'unknown');
+        $result = Cache::get("export:{$jobId}:result");
+        $error = Cache::get("export:{$jobId}:error");
+
+        $response = [
             'data' => [
                 'job_id' => $jobId,
-                'status' => 'completed',
+                'status' => $status,
             ],
-        ]);
+        ];
+
+        if ($result) {
+            $response['data']['filename'] = $result['filename'];
+            $response['data']['record_count'] = $result['record_count'];
+        }
+
+        if ($error) {
+            $response['data']['error'] = $error;
+        }
+
+        return response()->json($response);
     }
 }
