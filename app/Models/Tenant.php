@@ -144,12 +144,16 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     public function isOnTrial(): bool
     {
-        return $this->trial_ends_at !== null && $this->trial_ends_at->isFuture();
+        return $this->status === 'Trial'
+            && $this->trial_ends_at !== null
+            && $this->trial_ends_at->isFuture();
     }
 
     public function trialHasExpired(): bool
     {
-        return $this->trial_ends_at !== null && $this->trial_ends_at->isPast();
+        return $this->status === 'Trial'
+            && $this->trial_ends_at !== null
+            && $this->trial_ends_at->isPast();
     }
 
     /**

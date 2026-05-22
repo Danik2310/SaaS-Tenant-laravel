@@ -15,12 +15,19 @@ class Plan extends Model
         'price',
         'max_users',
         'max_storage',
+        'max_warehouses',
+        'max_categories',
+        'max_products',
         'features',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'max_users' => 'integer',
+        'max_storage' => 'integer',
+        'max_warehouses' => 'integer',
+        'max_categories' => 'integer',
+        'max_products' => 'integer',
         'features' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -38,7 +45,10 @@ class Plan extends Model
         return match ($limit) {
             'users' => $this->max_users !== null ? (int) $this->max_users : PHP_INT_MAX,
             'storage' => $this->max_storage !== null ? (int) $this->max_storage : PHP_INT_MAX,
-            default => (int) (is_array($this->features) && isset($this->features[$limit]) ? $this->features[$limit] : 0),
+            'warehouses' => $this->max_warehouses !== null ? (int) $this->max_warehouses : PHP_INT_MAX,
+            'categories' => $this->max_categories !== null ? (int) $this->max_categories : PHP_INT_MAX,
+            'products' => $this->max_products !== null ? (int) $this->max_products : PHP_INT_MAX,
+            default => PHP_INT_MAX,
         };
     }
 }

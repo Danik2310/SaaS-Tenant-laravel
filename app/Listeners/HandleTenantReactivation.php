@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Listeners;
 
 use App\Events\TenantReactivated;
+use Illuminate\Support\Facades\Cache;
 
 class HandleTenantReactivation
 {

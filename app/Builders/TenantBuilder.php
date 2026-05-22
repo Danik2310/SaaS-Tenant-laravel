@@ -15,10 +15,13 @@ class TenantBuilder
 
     public function __construct(array $data)
     {
+        $status = isset($data['trial_ends_at']) ? 'Trial' : 'Active';
+
         $this->tenant = Tenant::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'status' => 'Active',
+            'status' => $status,
+            'trial_ends_at' => $data['trial_ends_at'] ?? null,
         ]);
     }
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Listeners;
 
 use App\Events\PlanChanged;
+use App\Models\Plan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -14,10 +15,30 @@ class HandlePlanChange
     {
         Cache::tags(['tenant_'.$event->tenant->id])->flush();
 
+        $oldPrice = $event->oldPlan->price ?? 0;
+        $newPrice = $event->newPlan->price ?? 0;
+        $direction = $newPrice < $oldPrice ? 'downgrade' : ($newPrice > $oldPrice ? 'upgrade' : 'lateral');
+
+        $lostFeatures = $direction === 'downgrade'
+            ? array_diff($event->oldPlan->features ?? [], $event->newPlan->features ?? [])
+            : [];
+
         Log::info('Tenant plan changed', [
             'tenant_id' => $event->tenant->id,
             'old_plan' => $event->oldPlan->slug,
             'new_plan' => $event->newPlan->slug,
+            'direction' => $direction,
+            'lost_features' => $lostFeatures,
         ]);
+
+        if ($direction === 'downgrade' && !empty($lostFeatures)) {
+            Log::warning('Tenant lost features on downgrade', [
+                'tenant_id' => $event->tenant->id,
+                'tenant_name' => $event->tenant->name,
+                'lost_features' => $lostFeatures,
+                'old_plan' => $event->oldPlan->slug,
+                'new_plan' => $event->newPlan->slug,
+            ]);
+        }
     }
 }

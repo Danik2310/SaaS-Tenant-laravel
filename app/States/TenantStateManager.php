@@ -16,7 +16,9 @@ class TenantStateManager
     {
         return match ($fromStatus) {
             'Active' => ActiveState::allowedTransitions(),
+            'Trial' => TrialState::allowedTransitions(),
             'Suspended' => SuspendedState::allowedTransitions(),
+            'Cancelled' => CancelledState::allowedTransitions(),
             'Deleted' => DeletedState::allowedTransitions(),
             default => [],
         };

@@ -19,6 +19,9 @@ class PlanSeeder extends Seeder
                 'price' => 0,
                 'max_users' => 2,
                 'max_storage' => 100,
+                'max_warehouses' => 1,
+                'max_categories' => 5,
+                'max_products' => 25,
                 'features' => ['basic'],
             ],
             [
@@ -27,6 +30,9 @@ class PlanSeeder extends Seeder
                 'price' => 29,
                 'max_users' => 10,
                 'max_storage' => 1024,
+                'max_warehouses' => 10,
+                'max_categories' => 50,
+                'max_products' => 500,
                 'features' => ['advanced', 'api_access', 'custom_domain'],
             ],
             [
@@ -35,6 +41,9 @@ class PlanSeeder extends Seeder
                 'price' => 99,
                 'max_users' => null,
                 'max_storage' => null,
+                'max_warehouses' => null,
+                'max_categories' => null,
+                'max_products' => null,
                 'features' => ['all', 'api_access', 'custom_domain', 'white_label'],
             ],
         ];
