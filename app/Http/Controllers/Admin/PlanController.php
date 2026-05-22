@@ -72,6 +72,6 @@ class PlanController extends Controller
 
         Log::info('Plan deleted by user: '.auth('admin')->id());
 
-        return response()->json(['message' => 'Deleted successfully']);
+        return response()->noContent();
     }
 }

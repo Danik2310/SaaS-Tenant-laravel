@@ -116,7 +116,7 @@ class StaffController extends Controller
 
         $admin->delete();
 
-        return response()->json(['message' => 'Staff member deleted successfully']);
+        return response()->noContent();
     }
 
     public function restore(string $id)

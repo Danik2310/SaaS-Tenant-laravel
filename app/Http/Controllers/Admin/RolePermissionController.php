@@ -82,7 +82,7 @@ class RolePermissionController extends Controller
 
         $role->delete();
 
-        return response()->json(['message' => 'Role deleted successfully']);
+        return response()->noContent();
     }
 
     public function indexPermissions()
@@ -147,7 +147,7 @@ class RolePermissionController extends Controller
 
         $permission->delete();
 
-        return response()->json(['message' => 'Permission deleted successfully']);
+        return response()->noContent();
     }
 
     private function validatePermissionDependencies(array $permissionIds): void
