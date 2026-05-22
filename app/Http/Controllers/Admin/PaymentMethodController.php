@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePaymentMethodRequest;
+use App\Http\Requests\Admin\TogglePaymentMethodRequest;
 use App\Http\Requests\Admin\UpdatePaymentMethodRequest;
 use App\Http\Resources\PaymentMethodResource;
 use App\Models\PaymentMethod;
 use App\Traits\AuditablePaymentMethods;
+use Illuminate\Support\Facades\Cache;
 
 class PaymentMethodController extends Controller
 {
@@ -19,7 +21,9 @@ class PaymentMethodController extends Controller
             ob_end_clean();
         }
 
-        $methods = PaymentMethodResource::collection(PaymentMethod::all());
+        $methods = Cache::remember('payment_methods_all', 3600, fn () =>
+            PaymentMethodResource::collection(PaymentMethod::all())
+        );
 
         try {
             $this->logPaymentMethodAccessed(null, 'list');
@@ -34,6 +38,7 @@ class PaymentMethodController extends Controller
     {
         $method = PaymentMethod::create($request->validated());
 
+        Cache::forget('payment_methods_all');
         $this->logPaymentMethodCreated($method);
 
         return response()->json(['method' => new PaymentMethodResource($method)], 201);
@@ -63,18 +68,20 @@ class PaymentMethodController extends Controller
 
         $method->update($request->validated());
 
+        Cache::forget('payment_methods_all');
         $this->logPaymentMethodUpdated($method, $oldData);
 
         return response()->json(['method' => new PaymentMethodResource($method)]);
     }
 
-    public function toggleActive(string $id)
+    public function toggleActive(TogglePaymentMethodRequest $request, string $id)
     {
         $method = PaymentMethod::findOrFail($id);
         $oldActive = $method->active;
 
         $method->update(['active' => ! $method->active]);
 
+        Cache::forget('payment_methods_all');
         $this->logPaymentMethodToggled($method, $oldActive);
 
         return response()->json(['method' => new PaymentMethodResource($method)]);
@@ -84,9 +91,10 @@ class PaymentMethodController extends Controller
     {
         $method = PaymentMethod::findOrFail($id);
 
+        Cache::forget('payment_methods_all');
         $this->logPaymentMethodDeleted($method);
         $method->delete();
 
-        return response()->json(['message' => 'Deleted successfully']);
+        return response()->noContent();
     }
 }
