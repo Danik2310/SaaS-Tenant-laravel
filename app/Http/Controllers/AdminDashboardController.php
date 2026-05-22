@@ -14,6 +14,8 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\States\TenantStateManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use InvalidArgumentException;
 
 class AdminDashboardController extends Controller
 {
@@ -131,13 +133,26 @@ class AdminDashboardController extends Controller
     {
         $tenant = Tenant::findOrFail($id);
 
-        foreach ($request->validated() as $key => $value) {
+        $data = $request->validated();
+        $status = $data['status'] ?? null;
+        unset($data['status']);
+
+        foreach ($data as $key => $value) {
             if ($value !== null) {
                 $tenant->$key = $value;
             }
         }
 
-        $tenant->save();
+        if ($status !== null) {
+            try {
+                TenantStateManager::transitionTo($tenant, $status);
+            } catch (InvalidArgumentException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+        } else {
+            $tenant->save();
+        }
+
         $tenant->refresh();
 
         return response()->json([
@@ -152,7 +167,7 @@ class AdminDashboardController extends Controller
 
         $this->tenantManager->delete($tenant);
 
-        return response()->json(['message' => 'Tenant deleted successfully']);
+        return response()->noContent();
     }
 
     public function restoreTenant(string $id)
@@ -173,8 +188,6 @@ class AdminDashboardController extends Controller
             'database' => [
                 'name' => $db->getName(),
                 'connection' => $db->connection()['driver'] ?? 'mysql',
-                'host' => config('database.connections.tenant.host'),
-                'port' => config('database.connections.tenant.port'),
             ],
         ]);
     }
@@ -218,13 +231,23 @@ class AdminDashboardController extends Controller
         $tenantIds = $validated['tenant_ids'];
         $adminUser = auth('admin')->user();
 
+        $tenants = Tenant::withTrashed()->whereIn('id', $tenantIds)->get()->keyBy('id');
+
+        if ($action === 'change_plan') {
+            $newPlan = Plan::findOrFail($payload['plan_id']);
+        }
+
         $results = [];
         $succeeded = 0;
         $failed = 0;
 
         foreach ($tenantIds as $id) {
             try {
-                $tenant = Tenant::withTrashed()->findOrFail($id);
+                $tenant = $tenants->get($id);
+
+                if (! $tenant) {
+                    throw new \RuntimeException("Tenant not found");
+                }
 
                 match ($action) {
                     'suspend' => $this->tenantManager->suspend($tenant),
@@ -233,10 +256,7 @@ class AdminDashboardController extends Controller
                         : TenantStateManager::transitionTo($tenant, 'Active'),
                     'delete' => $this->tenantManager->delete($tenant),
                     'restore' => $this->tenantManager->restore($tenant),
-                    'change_plan' => $this->tenantManager->changePlan(
-                        $tenant,
-                        Plan::findOrFail($payload['plan_id'])
-                    ),
+                    'change_plan' => $this->tenantManager->changePlan($tenant, $newPlan),
                     'extend_trial' => $this->extendTenantTrial($tenant, $payload['days']),
                 };
 
@@ -277,7 +297,7 @@ class AdminDashboardController extends Controller
 
     public function plans()
     {
-        $plans = Plan::all();
+        $plans = Cache::remember('admin_plans_list', 3600, fn () => Plan::all());
 
         return response()->json([
             'plans' => PlanResource::collection($plans),

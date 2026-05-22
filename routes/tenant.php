@@ -38,7 +38,7 @@ $tenancyMiddleware = app()->environment('testing')
     ? []
     : [InitializeTenancyByDomain::class, PreventAccessFromCentralDomains::class];
 
-Route::middleware(array_merge(['web', 'tenant.state'], $tenancyMiddleware))->group(function () {
+Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->group(function () {
     // Public routes (no auth required)
 
     // Tenant user auth (end-user of the tenant)
@@ -72,7 +72,7 @@ Route::middleware(array_merge(['web', 'tenant.state'], $tenancyMiddleware))->gro
     Route::post('/admin/login', [AuthController::class, 'login']);
 
     // Authenticated tenant routes
-    Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth', 'throttle:60,1'])->group(function () {
         // Tenant user auth (authenticated)
         Route::get('verify-email', EmailVerificationPromptController::class)
             ->name('verification.notice');
@@ -134,8 +134,8 @@ Route::middleware(array_merge(['web', 'tenant.state'], $tenancyMiddleware))->gro
             Route::delete('/{warehouse}', [WarehouseController::class, 'destroy'])->name('destroy');
         });
 
-        // Inventory Movements
-        Route::prefix('inventory')->name('tenant.inventory.')->middleware(['permission:manage inventory'])->group(function () {
+        // Inventory Movements — premium feature (not available on free plan)
+        Route::prefix('inventory')->name('tenant.inventory.')->middleware(['permission:manage inventory', 'feature:advanced'])->group(function () {
             Route::get('/', [InventoryMovementController::class, 'index'])->name('index');
             Route::get('/create', [InventoryMovementController::class, 'create'])->name('create');
             Route::post('/', [InventoryMovementController::class, 'store'])->name('store');

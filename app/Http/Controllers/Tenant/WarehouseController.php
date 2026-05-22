@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\StoreWarehouseRequest;
+use App\Http\Requests\Tenant\UpdateWarehouseRequest;
 use App\Models\Warehouse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class WarehouseController extends Controller
@@ -18,27 +19,17 @@ class WarehouseController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreWarehouseRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'location' => 'nullable|string|max:255',
-        ]);
-
-        Warehouse::create($validated);
+        Warehouse::create($request->validated());
 
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse created successfully.');
     }
 
-    public function update(Request $request, Warehouse $warehouse)
+    public function update(UpdateWarehouseRequest $request, Warehouse $warehouse)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'location' => 'nullable|string|max:255',
-        ]);
-
-        $warehouse->update($validated);
+        $warehouse->update($request->validated());
 
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse updated successfully.');

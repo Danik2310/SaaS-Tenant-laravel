@@ -79,6 +79,6 @@ class SubscriptionController extends Controller
         $subscription = Subscription::findOrFail($id);
         $subscription->delete();
 
-        return response()->json(['message' => 'Subscription deleted successfully']);
+        return response()->noContent();
     }
 }

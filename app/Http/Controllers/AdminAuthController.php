@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Admin\AdminLoginRequest;
+use App\Http\Resources\AdminUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -57,7 +58,7 @@ class AdminAuthController extends Controller
             ->toArray();
 
         return response()->json([
-            'user' => $user,
+            'user' => new AdminUserResource($user),
             'permissions' => $allPermissions,
         ]);
     }

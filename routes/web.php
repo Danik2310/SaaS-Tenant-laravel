@@ -40,7 +40,11 @@ Route::get('/', function () {
 Route::get('/central/login', [AdminAuthController::class, 'showLogin'])->name('central.login');
 Route::post('/central/login', [AdminAuthController::class, 'login']);
 Route::post('/central/logout', [AdminAuthController::class, 'logout'])->middleware('auth:admin')->name('central.logout');
-Route::get('/admin/user', [AdminAuthController::class, 'user']);
+
+// Protected admin routes
+Route::middleware(['auth:admin'])->group(function () {
+    Route::get('/admin/user', [AdminAuthController::class, 'user']);
+});
 
 // Unauthorized page (accessible to authenticated admin users)
 Route::middleware(['auth:admin'])->get('/admin/unauthorized', function () {
@@ -48,7 +52,7 @@ Route::middleware(['auth:admin'])->get('/admin/unauthorized', function () {
 })->name('admin.unauthorized');
 
 // Protected admin routes
-Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
+Route::middleware(['auth:admin', 'throttle:100,1'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/api/dashboard-stats', [AdminDashboardController::class, 'dashboardStats'])->middleware('permission:manage tenants');
 
@@ -104,7 +108,7 @@ Route::middleware(['auth:admin'])->prefix('admin')->group(function () {
     });
 
     // Payment methods management - requires 'manage payment methods' permission
-    Route::middleware(['permission:manage payment methods'])->group(function () {
+    Route::middleware(['permission:manage payment methods', 'payment.rate.limit'])->group(function () {
         Route::get('/api/payment-methods', [PaymentMethodController::class, 'index']);
         Route::post('/api/payment-methods', [PaymentMethodController::class, 'store']);
         Route::get('/api/payment-methods/{id}', [PaymentMethodController::class, 'show']);

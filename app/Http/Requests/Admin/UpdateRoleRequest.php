@@ -9,7 +9,7 @@ class UpdateRoleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return auth('admin')->check();
     }
 
     public function rules(): array

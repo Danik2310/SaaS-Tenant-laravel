@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\StoreInventoryMovementRequest;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Warehouse;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class InventoryMovementController extends Controller
@@ -34,17 +34,9 @@ class InventoryMovementController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreInventoryMovementRequest $request)
     {
-        $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'warehouse_id' => 'required|exists:warehouses,id',
-            'type' => 'required|in:in,out,adjustment',
-            'quantity' => 'required|integer|min:1',
-            'reason' => 'nullable|string|max:500',
-        ]);
-
-        InventoryMovement::create($validated);
+        InventoryMovement::create($request->validated());
 
         return redirect()->route('tenant.inventory.index')
             ->with('success', 'Inventory movement recorded successfully.');

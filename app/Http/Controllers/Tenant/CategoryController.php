@@ -3,8 +3,9 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\StoreCategoryRequest;
+use App\Http\Requests\Tenant\UpdateCategoryRequest;
 use App\Models\Category;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -22,13 +23,9 @@ class CategoryController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id',
-        ]);
-
+        $validated = $request->validated();
         $validated['slug'] = Str::slug($validated['name']);
 
         Category::create($validated);
@@ -37,14 +34,9 @@ class CategoryController extends Controller
             ->with('success', 'Category created successfully.');
     }
 
-    public function update(Request $request, Category $category)
+    public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id',
-        ]);
-
-        $category->update($validated);
+        $category->update($request->validated());
 
         return redirect()->route('tenant.categories.index')
             ->with('success', 'Category updated successfully.');
