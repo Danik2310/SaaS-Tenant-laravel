@@ -100,7 +100,7 @@ class PaymentMethodIntegrationTest extends TestCase
 
         // 5. DELETE
         $deleteResponse = $this->deleteJson("/admin/api/payment-methods/{$methodId}");
-        $deleteResponse->assertStatus(200);
+        $deleteResponse->assertStatus(204);
 
         // Verify deletion
         $this->assertDatabaseMissing('payment_methods', ['id' => $methodId]);
@@ -604,7 +604,7 @@ class PaymentMethodIntegrationTest extends TestCase
 
         // Delete the payment method
         $deleteResponse = $this->deleteJson("/admin/api/payment-methods/{$methodId}");
-        $deleteResponse->assertStatus(200);
+        $deleteResponse->assertStatus(204);
 
         // Check if log file exists and contains entries
         $logPattern = storage_path('logs/payment_methods-*.log');

@@ -159,10 +159,7 @@ class RolePermissionTest extends TestCase
 
         $response = $this->deleteJson("/admin/api/roles/{$role->id}");
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'message' => 'Role deleted successfully',
-            ]);
+        $response->assertStatus(204);
 
         $this->assertDatabaseMissing('roles', ['id' => $role->id]);
     }

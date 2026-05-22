@@ -31,10 +31,10 @@ class SecurityTest extends TestCase
                 'database' => [
                     'name',
                     'connection',
-                    'host',
-                    'port',
                 ],
             ])
+            ->assertJsonMissing(['database.host'])
+            ->assertJsonMissing(['database.port'])
             ->assertJsonMissing(['database.username'])
             ->assertJsonMissing(['database.password']);
     }

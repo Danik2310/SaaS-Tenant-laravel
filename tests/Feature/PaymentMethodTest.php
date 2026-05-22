@@ -193,8 +193,7 @@ class PaymentMethodTest extends TestCase
 
         $response = $this->deleteJson("/admin/api/payment-methods/{$method->id}");
 
-        $response->assertStatus(200)
-            ->assertJson(['message' => 'Deleted successfully']);
+        $response->assertStatus(204);
 
         $this->assertDatabaseMissing('payment_methods', ['id' => $method->id]);
     }

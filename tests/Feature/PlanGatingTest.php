@@ -122,6 +122,7 @@ class PlanGatingTest extends TestCase
         $tenant = Tenant::create([
             'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
+            'status' => 'Trial',
             'trial_ends_at' => now()->addDays(7),
         ]);
 
@@ -134,6 +135,7 @@ class PlanGatingTest extends TestCase
         $tenant = Tenant::create([
             'id' => 'test-tenant-'.uniqid(),
             'name' => 'Test',
+            'status' => 'Trial',
             'trial_ends_at' => now()->subDay(),
         ]);
 

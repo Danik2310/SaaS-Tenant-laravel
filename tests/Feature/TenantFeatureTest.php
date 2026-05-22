@@ -70,13 +70,20 @@ class TenantFeatureTest extends TestCase
      */
     public function test_tenant_toggle_active_status()
     {
+        $role = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'admin']);
+        $permission = Permission::firstOrCreate(['name' => 'manage tenants', 'guard_name' => 'admin']);
+        $role->givePermissionTo($permission);
+        $user = AdminUser::factory()->create();
+        $user->assignRole('super-admin');
+        $this->actingAs($user, 'admin');
+
         $tenant = $this->createTestTenant();
         $this->createdTenantDbNames[] = $tenant->database()->getName();
 
         $originalStatus = $tenant->status;
 
         // Toggle the status
-        $response = $this->withoutMiddleware()->put("/admin/api/tenants/{$tenant->id}", [
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
             'status' => $originalStatus === 'Active' ? 'Suspended' : 'Active',
         ]);
 
@@ -107,8 +114,15 @@ class TenantFeatureTest extends TestCase
         // Verificar estado inicial
         $this->assertEquals('Active', $tenant->status, 'El estado inicial debe ser Active');
 
+        $role = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'admin']);
+        $permission = Permission::firstOrCreate(['name' => 'manage tenants', 'guard_name' => 'admin']);
+        $role->givePermissionTo($permission);
+        $user = AdminUser::factory()->create();
+        $user->assignRole('super-admin');
+        $this->actingAs($user, 'admin');
+
         // Hacer llamada API para suspender (cambiar a Suspended)
-        $response = $this->withoutMiddleware()->put("/admin/api/tenants/{$tenant->id}", [
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
             'status' => 'Suspended', // 👈 Intentamos cambiar a Suspended
         ]);
 
@@ -147,8 +161,15 @@ class TenantFeatureTest extends TestCase
         // Verificar estado inicial
         $this->assertEquals('Suspended', $tenant->status, 'El estado inicial debe ser Suspended');
 
+        $role = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'admin']);
+        $permission = Permission::firstOrCreate(['name' => 'manage tenants', 'guard_name' => 'admin']);
+        $role->givePermissionTo($permission);
+        $user = AdminUser::factory()->create();
+        $user->assignRole('super-admin');
+        $this->actingAs($user, 'admin');
+
         // Hacer llamada API para activar (cambiar a Active)
-        $response = $this->withoutMiddleware()->put("/admin/api/tenants/{$tenant->id}", [
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
             'status' => 'Active', // 👈 Intentamos cambiar a Active
         ]);
 
@@ -251,7 +272,7 @@ class TenantFeatureTest extends TestCase
 
         $response = $this->withoutMiddleware()->get("/admin/api/tenants/{$tenant->id}/database");
         $response->assertStatus(200)
-            ->assertJsonStructure(['database' => ['name', 'connection', 'host', 'port']]);
+            ->assertJsonStructure(['database' => ['name', 'connection']]);
     }
 
     /**

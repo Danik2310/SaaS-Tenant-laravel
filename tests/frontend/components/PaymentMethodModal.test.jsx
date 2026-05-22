@@ -1,25 +1,23 @@
+import { vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import PaymentMethodModal from '../../../../resources/js/modules/landlord/billing/components/PaymentMethodModal';
+import * as api from '@/services/api';
+import PaymentMethodModal from '@/modules/landlord/billing/components/PaymentMethodModal';
 
-// Mock the API
-jest.mock('../../../../resources/js/services/api', () => ({
-    post: jest.fn(),
-    put: jest.fn(),
-}));
+vi.mock('@/services/api');
 
 describe('PaymentMethodModal', () => {
     const mockProps = {
         open: true,
-        onClose: jest.fn(),
+        onClose: vi.fn(),
         editingPayment: null,
-        fetchPaymentMethods: jest.fn(),
-        setError: jest.fn(),
+        fetchPaymentMethods: vi.fn(),
+        setError: vi.fn(),
     };
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     test('renders add payment method modal correctly', () => {
@@ -102,8 +100,7 @@ describe('PaymentMethodModal', () => {
     });
 
     test('successfully creates new payment method', async () => {
-        const mockApi = require('../../../../resources/js/services/api');
-        mockApi.post.mockResolvedValueOnce({});
+        api.post.mockResolvedValueOnce({});
 
         render(<PaymentMethodModal {...mockProps} />);
 
@@ -117,7 +114,7 @@ describe('PaymentMethodModal', () => {
         fireEvent.click(saveButton);
 
         await waitFor(() => {
-            expect(mockApi.post).toHaveBeenCalledWith('/admin/api/payment-methods', {
+            expect(api.post).toHaveBeenCalledWith('/admin/api/payment-methods', {
                 name: 'New Payment',
                 provider: 'stripe',
                 api_key: 'sk_test_long_enough_key',
@@ -131,8 +128,7 @@ describe('PaymentMethodModal', () => {
     });
 
     test('successfully updates existing payment method', async () => {
-        const mockApi = require('../../../../resources/js/services/api');
-        mockApi.put.mockResolvedValueOnce({});
+        api.put.mockResolvedValueOnce({});
 
         const editingProps = {
             ...mockProps,
@@ -157,7 +153,7 @@ describe('PaymentMethodModal', () => {
         fireEvent.click(saveButton);
 
         await waitFor(() => {
-            expect(mockApi.put).toHaveBeenCalledWith('/admin/api/payment-methods/1', {
+            expect(api.put).toHaveBeenCalledWith('/admin/api/payment-methods/1', {
                 name: 'Updated Name',
                 provider: 'stripe',
                 api_key: 'sk_test_old',
@@ -169,8 +165,7 @@ describe('PaymentMethodModal', () => {
     });
 
     test('handles API errors gracefully', async () => {
-        const mockApi = require('../../../../resources/js/services/api');
-        mockApi.post.mockRejectedValueOnce({
+        api.post.mockRejectedValueOnce({
             response: { data: { message: 'API Error' } }
         });
 

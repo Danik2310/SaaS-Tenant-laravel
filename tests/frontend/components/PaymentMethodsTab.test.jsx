@@ -1,26 +1,24 @@
+import { vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import PaymentMethodsTab from '../../../../resources/js/modules/landlord/billing/components/PaymentMethodsTab';
+import * as api from '@/services/api';
+import PaymentMethodsTab from '@/modules/landlord/billing/components/PaymentMethodsTab';
 
-// Mock the API
-jest.mock('../../../../resources/js/services/api', () => ({
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-}));
+vi.mock('@/services/api');
 
-// Mock Material-UI components that might cause issues
-jest.mock('@mui/material', () => ({
-    ...jest.requireActual('@mui/material'),
-    TableContainer: ({ children }) => <div data-testid="table-container">{children}</div>,
-    Table: ({ children }) => <table>{children}</table>,
-    TableHead: ({ children }) => <thead>{children}</thead>,
-    TableBody: ({ children }) => <tbody>{children}</tbody>,
-    TableRow: ({ children }) => <tr>{children}</tr>,
-    TableCell: ({ children }) => <td>{children}</td>,
-}));
+vi.mock('@mui/material', async (importOriginal) => {
+    const mod = await importOriginal();
+    return {
+        ...mod,
+        TableContainer: ({ children }) => <div data-testid="table-container">{children}</div>,
+        Table: ({ children }) => <table>{children}</table>,
+        TableHead: ({ children }) => <thead>{children}</thead>,
+        TableBody: ({ children }) => <tbody>{children}</tbody>,
+        TableRow: ({ children }) => <tr>{children}</tr>,
+        TableCell: ({ children }) => <td>{children}</td>,
+    };
+});
 
 const mockPaymentMethods = [
     {
@@ -41,13 +39,13 @@ const mockPaymentMethods = [
 
 const mockProps = {
     paymentMethods: mockPaymentMethods,
-    fetchPaymentMethods: jest.fn(),
-    setError: jest.fn(),
+    fetchPaymentMethods: vi.fn(),
+    setError: vi.fn(),
 };
 
 describe('PaymentMethodsTab', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     test('renders payment methods table correctly', () => {
@@ -94,8 +92,7 @@ describe('PaymentMethodsTab', () => {
     });
 
     test('calls fetchPaymentMethods after successful deletion', async () => {
-        const mockApi = require('../../../../resources/js/services/api');
-        mockApi.delete.mockResolvedValueOnce({});
+        api.delete.mockResolvedValueOnce({});
 
         render(<PaymentMethodsTab {...mockProps} />);
 
@@ -106,14 +103,13 @@ describe('PaymentMethodsTab', () => {
         fireEvent.click(confirmDeleteButton);
 
         await waitFor(() => {
-            expect(mockApi.delete).toHaveBeenCalledWith('/admin/api/payment-methods/1');
+            expect(api.delete).toHaveBeenCalledWith('/admin/api/payment-methods/1');
             expect(mockProps.fetchPaymentMethods).toHaveBeenCalled();
         });
     });
 
     test('shows error message when deletion fails', async () => {
-        const mockApi = require('../../../../resources/js/services/api');
-        mockApi.delete.mockRejectedValueOnce({
+        api.delete.mockRejectedValueOnce({
             response: { data: { message: 'Deletion failed' } }
         });
 

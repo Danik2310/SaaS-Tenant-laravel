@@ -245,11 +245,23 @@ class ExportControllerTest extends TestCase
     //  Status
     // ──────────────────────────────────────────────
 
-    public function test_status_returns_completed(): void
+    public function test_status_returns_unknown_for_non_existent_job(): void
     {
         $this->authenticateAsSuperAdmin();
 
         $this->getJson('/admin/api/export/status/abc-123')
+            ->assertOk()
+            ->assertJsonPath('data.status', 'unknown');
+    }
+
+    public function test_status_returns_completed_for_valid_job(): void
+    {
+        $this->authenticateAsSuperAdmin();
+
+        $jobId = (string) \Illuminate\Support\Str::uuid();
+        \Illuminate\Support\Facades\Cache::put("export:{$jobId}:status", 'completed', 60);
+
+        $this->getJson("/admin/api/export/status/{$jobId}")
             ->assertOk()
             ->assertJsonPath('data.status', 'completed');
     }

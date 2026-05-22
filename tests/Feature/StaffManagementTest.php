@@ -150,7 +150,7 @@ class StaffManagementTest extends TestCase
 
         // Soft delete
         $response = $this->deleteJson("/admin/api/staff/{$staff->id}");
-        $response->assertStatus(200);
+        $response->assertStatus(204);
 
         $this->assertSoftDeleted('admin_users', ['id' => $staff->id]);
 
