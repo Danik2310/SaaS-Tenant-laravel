@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Permissions\Strategies;
+namespace App\Services\Strategies;
 
 use App\Contracts\PermissionPrerequisiteStrategyInterface;
 

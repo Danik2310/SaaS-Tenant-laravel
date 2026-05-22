@@ -3,8 +3,8 @@
 namespace App\Factories;
 
 use App\Contracts\PermissionPrerequisiteStrategyInterface;
-use App\Services\Permissions\Strategies\NullPrerequisiteStrategy;
-use App\Services\Permissions\Strategies\TenantModulePrerequisiteStrategy;
+use App\Services\Strategies\NullPrerequisiteStrategy;
+use App\Services\Strategies\TenantModulePrerequisiteStrategy;
 
 class PermissionPrerequisiteStrategyFactory
 {
