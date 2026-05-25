@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
+import api from '../../../services/api';
 
 export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
     const [name, setName] = useState(tenant?.name || '');
     const [email, setEmail] = useState(tenant?.email || '');
     const [domain, setDomain] = useState(tenant?.domain || '');
+    const [planId, setPlanId] = useState(tenant?.plan?.id || '');
+    const [plans, setPlans] = useState([]);
+    const [plansLoading, setPlansLoading] = useState(false);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -13,8 +17,25 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
         setName(tenant?.name || '');
         setEmail(tenant?.email || '');
         setDomain(tenant?.domain || '');
+        setPlanId(tenant?.plan?.id || '');
         setError(null);
     }, [tenant]);
+
+    useEffect(() => {
+        fetchPlans();
+    }, []);
+
+    const fetchPlans = async () => {
+        setPlansLoading(true);
+        try {
+            const res = await api.get('/admin/api/plans-list');
+            setPlans(res.data.plans || []);
+        } catch {
+            toast.error('Failed to load plans');
+        } finally {
+            setPlansLoading(false);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -25,8 +46,17 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
             const payload = { name, email };
             if (tenant) {
                 payload.id = tenant.id;
+                if (planId) {
+                    payload.plan_id = Number(planId);
+                }
             } else {
                 payload.domain = domain;
+                if (planId) {
+                    const selectedPlan = plans.find(p => p.id === Number(planId));
+                    if (selectedPlan) {
+                        payload.plan = selectedPlan.slug;
+                    }
+                }
             }
             await onSubmit(payload);
             toast.success(tenant ? 'Tenant updated successfully' : 'Tenant created successfully');
@@ -34,6 +64,7 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                 setName('');
                 setEmail('');
                 setDomain('');
+                setPlanId('');
             }
         } catch (err) {
             const message = err.message || (tenant ? 'Failed to update tenant' : 'Failed to create tenant');
@@ -98,6 +129,39 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                         </p>
                     </div>
                 )}
+
+                <FormInput label="Plan" hint={tenant ? "Change the tenant's subscription plan" : "Assign a plan to this tenant (optional)"}>
+                    <select
+                        value={planId}
+                        onChange={(e) => setPlanId(e.target.value)}
+                        disabled={plansLoading}
+                        style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '6px',
+                            fontSize: '14px',
+                            color: '#0f172a',
+                            background: plansLoading ? '#f1f5f9' : '#ffffff',
+                            cursor: plansLoading ? 'not-allowed' : 'pointer',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                        }}
+                    >
+                        {plansLoading ? (
+                            <option value="">Loading plans...</option>
+                        ) : (
+                            <>
+                                <option value="">No Plan</option>
+                                {plans.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.name} {p.price > 0 ? `($${p.price}/mo)` : '(Free)'}
+                                    </option>
+                                ))}
+                            </>
+                        )}
+                    </select>
+                </FormInput>
 
                 <FormActions>
                     <ButtonSecondary onClick={onCancel}>Cancel</ButtonSecondary>

@@ -131,16 +131,25 @@ class AdminDashboardController extends Controller
 
     public function updateTenant(string $id, UpdateTenantRequest $request)
     {
-        $tenant = Tenant::findOrFail($id);
+        $tenant = Tenant::with(['plan'])->findOrFail($id);
 
         $data = $request->validated();
         $status = $data['status'] ?? null;
-        unset($data['status']);
+        $planId = $data['plan_id'] ?? null;
+        unset($data['status'], $data['plan_id']);
 
         foreach ($data as $key => $value) {
             if ($value !== null) {
                 $tenant->$key = $value;
             }
+        }
+
+        if ($planId !== null && $planId != $tenant->plan_id) {
+            $newPlan = Plan::findOrFail($planId);
+            $this->tenantManager->changePlan($tenant, $newPlan);
+            $needsSave = false;
+        } else {
+            $needsSave = true;
         }
 
         if ($status !== null) {
@@ -149,7 +158,7 @@ class AdminDashboardController extends Controller
             } catch (InvalidArgumentException $e) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
-        } else {
+        } elseif ($needsSave) {
             $tenant->save();
         }
 

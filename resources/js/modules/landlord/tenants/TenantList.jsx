@@ -10,11 +10,16 @@ import Tooltip from '@mui/material/Tooltip';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import RestoreIcon from '@mui/icons-material/Restore';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 
 export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImpersonate, onRowSave, onRestore, showDeleted, onToggleDeleted, rowMenuActions = [], loading, total, page, rowsPerPage, onPageChange, onRowsPerPageChange, selectedIds, onSelectionChange, onBulkAction }) {
     const columns = React.useMemo(
         () => [
-            { accessorKey: 'id', header: 'ID' },
+            { accessorKey: 'reference_id', header: 'ID', Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+                    {cell.getValue() || cell.row.id}
+                </Typography>
+            ) },
             { accessorKey: 'name', header: 'Name' },
             { accessorKey: 'email', header: 'Email' },
             { accessorKey: 'domain', header: 'Domain' },
@@ -41,6 +46,29 @@ export default function TenantList({ tenants, onAdd, onDelete, onEdit, onImperso
                                 }}
                             />
                         </Tooltip>
+                    );
+                },
+            },
+            {
+                accessorKey: 'plan_name',
+                header: 'Plan',
+                Cell: ({ cell }) => {
+                    const planName = cell.getValue();
+                    const isDeleted = cell.row.is_deleted;
+                    if (!planName || isDeleted) {
+                        return (
+                            <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                                {isDeleted ? '—' : 'No Plan'}
+                            </Typography>
+                        );
+                    }
+                    return (
+                        <Chip
+                            icon={<WorkspacePremiumIcon sx={{ fontSize: 14 }} />}
+                            label={planName}
+                            size="small"
+                            sx={{ bgcolor: '#f0f9ff', color: '#0369a1', fontWeight: 600, border: '1px solid #bae6fd' }}
+                        />
                     );
                 },
             },
