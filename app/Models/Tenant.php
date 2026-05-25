@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
 use Stancl\Tenancy\Database\Models\Domain;
@@ -34,12 +35,41 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'plan_id',
         'trial_ends_at',
         'tenancy_db_name',
+        'reference_id',
     ];
 
     protected $casts = [
         'trial_ends_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function (self $tenant) {
+            if (empty($tenant->reference_id)) {
+                $tenant->reference_id = self::generateReferenceId();
+            }
+        });
+    }
+
+    public static function generateReferenceId(): string
+    {
+        $date = now()->format('Ymd');
+        $lock = Cache::lock("ref_id_counter:{$date}", 10);
+
+        $lock->block(5);
+
+        try {
+            $counter = Cache::get("ref_id_counter:{$date}", 0) + 1;
+            Cache::put("ref_id_counter:{$date}", $counter, now()->addDays(2));
+
+            return 'TEN-'.$date.'-'.str_pad((string) $counter, 4, '0', STR_PAD_LEFT);
+        } finally {
+            $lock->release();
+        }
+    }
 
     // Campos que deben guardarse en columnas específicas, no en data
     public $realColumns = [

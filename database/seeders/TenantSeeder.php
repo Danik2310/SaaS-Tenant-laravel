@@ -46,6 +46,11 @@ class TenantSeeder extends Seeder
                 ]
             );
 
+            if (empty($tenant->reference_id)) {
+                $tenant->reference_id = Tenant::generateReferenceId();
+                $tenant->save();
+            }
+
             $tenant->domains()->updateOrCreate(
                 ['domain' => $tenantData['domain']],
                 ['domain' => $tenantData['domain']]

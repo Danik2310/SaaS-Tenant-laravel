@@ -12,6 +12,7 @@ class TenantResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'reference_id' => $this->reference_id,
             'name' => $this->name ?? 'N/A',
             'email' => $this->email ?? 'N/A',
             'domain' => $domains->first()?->domain ?? 'N/A',

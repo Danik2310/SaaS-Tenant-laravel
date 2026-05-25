@@ -13,6 +13,7 @@ class TenantFactory extends Factory
     {
         return [
             'id' => 'test-'.$this->faker->unique()->slug(2),
+            'reference_id' => 'TEN-'.now()->format('Ymd').'-'.$this->faker->unique()->numberBetween(1, 9999),
             'name' => $this->faker->company(),
             'email' => $this->faker->unique()->companyEmail(),
             'status' => 'Active',
