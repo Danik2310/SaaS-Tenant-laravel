@@ -322,7 +322,10 @@ class AdminDashboardController extends Controller
             return response()->json(['message' => 'Tenant has no domain configured'], 422);
         }
 
-        session(['impersonate_tenant' => $tenant->id]);
+        session([
+            'impersonate_tenant' => $tenant->id,
+            'impersonate_started_at' => now()->timestamp,
+        ]);
 
         activity('impersonation')
             ->performedOn($tenant)
@@ -335,7 +338,7 @@ class AdminDashboardController extends Controller
 
     public function stopImpersonation()
     {
-        session()->forget('impersonate_tenant');
+        session()->forget(['impersonate_tenant', 'impersonate_started_at']);
 
         return response()->json(['message' => 'Impersonation stopped']);
     }

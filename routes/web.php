@@ -119,7 +119,7 @@ Route::middleware(['auth:admin', 'throttle:100,1'])->prefix('admin')->group(func
     });
 
     // Impersonation (God Mode) - requires 'impersonate tenants' permission
-    Route::middleware(['permission:impersonate tenants'])->group(function () {
+    Route::middleware(['permission:impersonate tenants', 'impersonation.expiry'])->group(function () {
         Route::post('/api/impersonate', [AdminDashboardController::class, 'impersonateTenant']);
         Route::post('/api/impersonate/stop', [AdminDashboardController::class, 'stopImpersonation']);
     });

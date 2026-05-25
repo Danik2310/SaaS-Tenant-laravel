@@ -99,5 +99,6 @@ class Kernel extends HttpKernel
         'payment.rate.limit' => PaymentMethodRateLimit::class,
         'feature' => RequiresPlanFeature::class,
         'tenant.state' => CheckTenantState::class,
+        'impersonation.expiry' => CheckImpersonationExpiry::class,
     ];
 }
