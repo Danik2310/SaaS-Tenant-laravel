@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\AdminUser;
 use App\Models\Permission;
 use App\Models\Role;
-use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,7 +17,7 @@ class RolePermissionTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(RolePermissionSeeder::class);
+        $this->seed(CentralRolePermissionSeeder::class);
     }
 
     // ──────────────────────────────────────────────

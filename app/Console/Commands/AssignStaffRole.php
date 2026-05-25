@@ -44,7 +44,7 @@ class AssignStaffRole extends Command
         $role = Role::where('name', 'staff')->where('guard_name', 'web')->first();
 
         if (! $role) {
-            $this->error('Staff role not found. Please run the RolePermissionSeeder first.');
+            $this->error('Staff role not found. Please run php artisan db:seed --class=CentralRolePermissionSeeder first.');
 
             return 1;
         }

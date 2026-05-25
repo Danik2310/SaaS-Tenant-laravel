@@ -44,7 +44,7 @@ class AssignSuperAdminRole extends Command
         $role = Role::where('name', 'super-admin')->where('guard_name', 'web')->first();
 
         if (! $role) {
-            $this->error('Super-admin role not found. Please run the RolePermissionSeeder first.');
+            $this->error('Super-admin role not found. Please run php artisan db:seed --class=CentralRolePermissionSeeder first.');
 
             return 1;
         }

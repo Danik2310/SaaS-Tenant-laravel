@@ -70,7 +70,7 @@ class TenantSeeder extends Seeder
             // Seed inside tenant context for Spatie permissions + admin user
             $tenant->run(function () use ($tenantData) {
                 Artisan::call('db:seed', [
-                    '--class' => TenantRolePermissionSeeder::class,
+                    '--class' => TenantUserRolePermissionSeeder::class,
                     '--force' => true,
                 ]);
 

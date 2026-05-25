@@ -7,7 +7,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Services\ExportService;
-use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -22,7 +22,7 @@ class ExportServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->seed(RolePermissionSeeder::class);
+        $this->seed(CentralRolePermissionSeeder::class);
 
         $dir = Storage::disk('local')->path('exports');
         if (! is_dir($dir)) {

@@ -201,7 +201,7 @@ return [
      * Parameters used by the tenants:seed command.
      */
     'seeder_parameters' => [
-        '--class' => 'Database\\Seeders\\TenantRolePermissionSeeder',
+        '--class' => 'Database\\Seeders\\TenantUserRolePermissionSeeder',
         '--force' => true,
     ],
 ];

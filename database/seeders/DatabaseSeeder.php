@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -15,7 +16,7 @@ class DatabaseSeeder extends Seeder
         // Central seeders
         $this->call([
             // ensure permissions and roles exist before creating users
-            RolePermissionSeeder::class,
+            CentralRolePermissionSeeder::class,
             PlanSeeder::class,
             AdminUserSeeder::class,
             TenantSeeder::class,

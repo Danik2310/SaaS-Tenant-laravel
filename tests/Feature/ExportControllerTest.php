@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AdminUser;
 use App\Models\Permission;
-use Database\Seeders\RolePermissionSeeder;
+use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -16,7 +16,7 @@ class ExportControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(RolePermissionSeeder::class);
+        $this->seed(CentralRolePermissionSeeder::class);
 
         $dir = Storage::disk('local')->path('exports');
         if (! is_dir($dir)) {
