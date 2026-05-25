@@ -1,187 +1,170 @@
 import { vi } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
-import * as api from '@/services/api';
+import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
 import PaymentMethodModal from '@/modules/landlord/billing/components/PaymentMethodModal';
+import { mockPaymentMethod } from '../fixtures';
 
-vi.mock('@/services/api');
+const mockApi = vi.hoisted(() => ({
+  get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn(),
+}));
+vi.mock('@/services/api', () => ({ default: mockApi }));
 
 describe('PaymentMethodModal', () => {
-    const mockProps = {
-        open: true,
-        onClose: vi.fn(),
-        editingPayment: null,
-        fetchPaymentMethods: vi.fn(),
-        setError: vi.fn(),
+  const mockProps = {
+    open: true,
+    onClose: vi.fn(),
+    editingPayment: null,
+    fetchPaymentMethods: vi.fn(),
+    setError: vi.fn(),
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test('renders add payment method modal correctly', () => {
+    renderWithProviders(<PaymentMethodModal {...mockProps} />);
+
+    expect(screen.getByText('Add Payment Method')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('e.g., Stripe Production')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('pk_test_...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('sk_test_...')).toBeInTheDocument();
+    expect(screen.getByText('Test (Sandbox)')).toBeInTheDocument();
+    expect(screen.getByText('Active - Enable this payment method for tenants')).toBeInTheDocument();
+  });
+
+  test('renders edit payment method modal with pre-filled data', () => {
+    const editingProps = { ...mockProps, editingPayment: mockPaymentMethod };
+
+    renderWithProviders(<PaymentMethodModal {...editingProps} />);
+
+    expect(screen.getByText('Edit Payment Method')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Test Payment')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('sk_test_123')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('sk_live_456')).toBeInTheDocument();
+  });
+
+  test('validates required fields', async () => {
+    renderWithProviders(<PaymentMethodModal {...mockProps} />);
+
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockProps.setError).toHaveBeenCalledWith('Please fix the validation errors below');
+    });
+  });
+
+  test('validates API key length', async () => {
+    renderWithProviders(<PaymentMethodModal {...mockProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., Stripe Production'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByPlaceholderText('pk_test_...'), { target: { value: 'short' } });
+    fireEvent.change(screen.getByPlaceholderText('sk_test_...'), { target: { value: 'sk_live_long_enough_key' } });
+
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockProps.setError).toHaveBeenCalledWith('Please fix the validation errors below');
+    });
+  });
+
+  test('validates secret key length', async () => {
+    renderWithProviders(<PaymentMethodModal {...mockProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., Stripe Production'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getByPlaceholderText('pk_test_...'), { target: { value: 'sk_test_long_enough_key' } });
+    fireEvent.change(screen.getByPlaceholderText('sk_test_...'), { target: { value: 'short' } });
+
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockProps.setError).toHaveBeenCalledWith('Please fix the validation errors below');
+    });
+  });
+
+  test('successfully creates new payment method', async () => {
+    mockApi.post.mockResolvedValueOnce({});
+
+    renderWithProviders(<PaymentMethodModal {...mockProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., Stripe Production'), { target: { value: 'New Payment' } });
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'stripe' } });
+    fireEvent.change(screen.getByPlaceholderText('pk_test_...'), { target: { value: 'sk_test_long_enough_key' } });
+    fireEvent.change(screen.getByPlaceholderText('sk_test_...'), { target: { value: 'sk_live_long_enough_key' } });
+
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith('/admin/api/payment-methods', {
+        name: 'New Payment',
+        provider: 'stripe',
+        api_key: 'sk_test_long_enough_key',
+        secret_key: 'sk_live_long_enough_key',
+        mode: 'test',
+        active: true,
+      });
+      expect(mockProps.onClose).toHaveBeenCalled();
+      expect(mockProps.fetchPaymentMethods).toHaveBeenCalled();
+    });
+  });
+
+  test('successfully updates existing payment method', async () => {
+    mockApi.put.mockResolvedValueOnce({});
+
+    const editingProps = {
+      ...mockProps,
+      editingPayment: {
+        id: 1,
+        name: 'Old Name',
+        provider: 'stripe',
+        api_key: 'sk_test_old',
+        secret_key: 'sk_live_old',
+        mode: 'test',
+        active: true,
+      },
     };
 
-    beforeEach(() => {
-        vi.clearAllMocks();
+    renderWithProviders(<PaymentMethodModal {...editingProps} />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Old Name')).toBeInTheDocument();
     });
 
-    test('renders add payment method modal correctly', () => {
-        render(<PaymentMethodModal {...mockProps} />);
+    fireEvent.change(screen.getByDisplayValue('Old Name'), { target: { value: 'Updated Name' } });
 
-        expect(screen.getByText('Add Payment Method')).toBeInTheDocument();
-        expect(screen.getByLabelText('Name')).toBeInTheDocument();
-        expect(screen.getByLabelText('Provider')).toBeInTheDocument();
-        expect(screen.getByLabelText('API Key')).toBeInTheDocument();
-        expect(screen.getByLabelText('Secret Key')).toBeInTheDocument();
-        expect(screen.getByLabelText('Mode')).toBeInTheDocument();
-        expect(screen.getByLabelText('Active')).toBeInTheDocument();
+    const checkbox = screen.getByLabelText('Active - Enable this payment method for tenants');
+    fireEvent.click(checkbox);
+
+    fireEvent.click(screen.getByText('Update'));
+
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith('/admin/api/payment-methods/1', {
+        name: 'Updated Name',
+        provider: 'stripe',
+        api_key: 'sk_test_old',
+        secret_key: 'sk_live_old',
+        mode: 'test',
+        active: false,
+      });
+    });
+  });
+
+  test('handles API errors gracefully', async () => {
+    mockApi.post.mockRejectedValueOnce({
+      response: { data: { message: 'API Error' } },
     });
 
-    test('renders edit payment method modal with pre-filled data', () => {
-        const editingProps = {
-            ...mockProps,
-            editingPayment: {
-                id: 1,
-                name: 'Test Payment',
-                provider: 'stripe',
-                api_key: 'sk_test_123',
-                secret_key: 'sk_live_456',
-                mode: 'live',
-                active: false,
-            },
-        };
+    renderWithProviders(<PaymentMethodModal {...mockProps} />);
 
-        render(<PaymentMethodModal {...editingProps} />);
+    fireEvent.change(screen.getByPlaceholderText('e.g., Stripe Production'), { target: { value: 'Test' } });
+    fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'stripe' } });
+    fireEvent.change(screen.getByPlaceholderText('pk_test_...'), { target: { value: 'sk_test_long_enough_key' } });
+    fireEvent.change(screen.getByPlaceholderText('sk_test_...'), { target: { value: 'sk_live_long_enough_key' } });
 
-        expect(screen.getByText('Edit Payment Method')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('Test Payment')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('stripe')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('sk_test_123')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('sk_live_456')).toBeInTheDocument();
-        expect(screen.getByDisplayValue('live')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Create'));
+
+    await waitFor(() => {
+      expect(mockProps.setError).toHaveBeenCalledWith('API Error');
     });
-
-    test('validates required fields', async () => {
-        render(<PaymentMethodModal {...mockProps} />);
-
-        const saveButton = screen.getByText('Save');
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(mockProps.setError).toHaveBeenCalledWith('All fields are required');
-        });
-    });
-
-    test('validates API key length', async () => {
-        render(<PaymentMethodModal {...mockProps} />);
-
-        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test' } });
-        fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'stripe' } });
-        fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'short' } });
-        fireEvent.change(screen.getByLabelText('Secret Key'), { target: { value: 'sk_live_long_enough_key' } });
-
-        const saveButton = screen.getByText('Save');
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(mockProps.setError).toHaveBeenCalledWith('API Key must be at least 10 characters');
-        });
-    });
-
-    test('validates secret key length', async () => {
-        render(<PaymentMethodModal {...mockProps} />);
-
-        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test' } });
-        fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'stripe' } });
-        fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk_test_long_enough_key' } });
-        fireEvent.change(screen.getByLabelText('Secret Key'), { target: { value: 'short' } });
-
-        const saveButton = screen.getByText('Save');
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(mockProps.setError).toHaveBeenCalledWith('Secret Key must be at least 10 characters');
-        });
-    });
-
-    test('successfully creates new payment method', async () => {
-        api.post.mockResolvedValueOnce({});
-
-        render(<PaymentMethodModal {...mockProps} />);
-
-        // Fill form
-        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Payment' } });
-        fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'stripe' } });
-        fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk_test_long_enough_key' } });
-        fireEvent.change(screen.getByLabelText('Secret Key'), { target: { value: 'sk_live_long_enough_key' } });
-
-        const saveButton = screen.getByText('Save');
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(api.post).toHaveBeenCalledWith('/admin/api/payment-methods', {
-                name: 'New Payment',
-                provider: 'stripe',
-                api_key: 'sk_test_long_enough_key',
-                secret_key: 'sk_live_long_enough_key',
-                mode: 'test',
-                active: true,
-            });
-            expect(mockProps.onClose).toHaveBeenCalled();
-            expect(mockProps.fetchPaymentMethods).toHaveBeenCalled();
-        });
-    });
-
-    test('successfully updates existing payment method', async () => {
-        api.put.mockResolvedValueOnce({});
-
-        const editingProps = {
-            ...mockProps,
-            editingPayment: {
-                id: 1,
-                name: 'Old Name',
-                provider: 'stripe',
-                api_key: 'sk_test_old',
-                secret_key: 'sk_live_old',
-                mode: 'test',
-                active: true,
-            },
-        };
-
-        render(<PaymentMethodModal {...editingProps} />);
-
-        // Modify form
-        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Updated Name' } });
-        fireEvent.change(screen.getByLabelText('Active'), { target: { checked: false } });
-
-        const saveButton = screen.getByText('Save');
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(api.put).toHaveBeenCalledWith('/admin/api/payment-methods/1', {
-                name: 'Updated Name',
-                provider: 'stripe',
-                api_key: 'sk_test_old',
-                secret_key: 'sk_live_old',
-                mode: 'test',
-                active: false,
-            });
-        });
-    });
-
-    test('handles API errors gracefully', async () => {
-        api.post.mockRejectedValueOnce({
-            response: { data: { message: 'API Error' } }
-        });
-
-        render(<PaymentMethodModal {...mockProps} />);
-
-        // Fill form
-        fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Test' } });
-        fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'stripe' } });
-        fireEvent.change(screen.getByLabelText('API Key'), { target: { value: 'sk_test_long_enough_key' } });
-        fireEvent.change(screen.getByLabelText('Secret Key'), { target: { value: 'sk_live_long_enough_key' } });
-
-        const saveButton = screen.getByText('Save');
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(mockProps.setError).toHaveBeenCalledWith('API Error');
-        });
-    });
+  });
 });

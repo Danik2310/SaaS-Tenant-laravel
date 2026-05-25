@@ -1,0 +1,188 @@
+import { vi } from 'vitest';
+import React from 'react';
+import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
+import DomainModal from '@/modules/landlord/modals/DomainModal';
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+const activeTenant = {
+  id: 't-1',
+  name: 'Acme Corp',
+  email: 'admin@acme.com',
+  status: 'Active',
+  plan_name: 'Pro',
+  plan_slug: 'pro',
+  created_at: '2025-01-15T00:00:00Z',
+  is_on_trial: false,
+  trial_has_expired: false,
+  all_domains: [
+    { domain: 'acme.localhost', is_primary: true },
+    { domain: 'acme-backup.localhost', is_primary: false },
+  ],
+};
+
+const suspendedTenant = {
+  ...activeTenant,
+  status: 'Suspended',
+  plan_name: 'Free',
+  plan_slug: 'free',
+};
+
+const trialTenant = {
+  ...activeTenant,
+  is_on_trial: true,
+  trial_has_expired: false,
+  trial_ends_at: '2025-06-01T00:00:00Z',
+};
+
+const expiredTrialTenant = {
+  ...activeTenant,
+  is_on_trial: true,
+  trial_has_expired: true,
+  trial_ends_at: '2024-12-01T00:00:00Z',
+};
+
+describe('DomainModal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockResolvedValue() },
+    });
+  });
+
+  test('returns null when tenant is null', () => {
+    const { container } = renderWithProviders(
+      <DomainModal tenant={null} onClose={vi.fn()} />
+    );
+    expect(container.innerHTML).toBe('');
+  });
+
+  test('renders tenant name and ID', () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    expect(screen.getByText(/ID: t-1/)).toBeInTheDocument();
+  });
+
+  test('shows Active chip for active tenant', () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText('Active')).toBeInTheDocument();
+  });
+
+  test('shows Suspended chip for suspended tenant', () => {
+    renderWithProviders(
+      <DomainModal tenant={suspendedTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText('Suspended')).toBeInTheDocument();
+  });
+
+  test('displays tenant email', () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText('admin@acme.com')).toBeInTheDocument();
+  });
+
+  test('displays plan name and slug chip', () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText(/Pro/)).toBeInTheDocument();
+    expect(screen.getByText('pro')).toBeInTheDocument();
+  });
+
+  test('shows trial active section', () => {
+    renderWithProviders(
+      <DomainModal tenant={trialTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText(/Trial active/)).toBeInTheDocument();
+  });
+
+  test('shows trial expired section', () => {
+    renderWithProviders(
+      <DomainModal tenant={expiredTrialTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText(/Trial expired/)).toBeInTheDocument();
+  });
+
+  test('lists all domains', () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText('acme.localhost')).toBeInTheDocument();
+    expect(screen.getByText('acme-backup.localhost')).toBeInTheDocument();
+  });
+
+  test('shows empty state when no domains', () => {
+    const noDomains = { ...activeTenant, all_domains: [] };
+    renderWithProviders(
+      <DomainModal tenant={noDomains} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText('No domains configured')).toBeInTheDocument();
+  });
+
+  test('copies domain to clipboard on copy click', async () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    const copyButtons = screen.getAllByRole('button', { name: /copy/i });
+    fireEvent.click(copyButtons[0]);
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('acme.localhost');
+    });
+  });
+
+  test('shows Quick Action cards and fires callbacks', () => {
+    const onImpersonate = vi.fn();
+    const onViewDatabase = vi.fn();
+    const onRunMigrations = vi.fn();
+
+    renderWithProviders(
+      <DomainModal
+        tenant={activeTenant}
+        onClose={vi.fn()}
+        onImpersonate={onImpersonate}
+        onViewDatabase={onViewDatabase}
+        onRunMigrations={onRunMigrations}
+      />
+    );
+
+    expect(screen.getByText('Impersonate')).toBeInTheDocument();
+    expect(screen.getByText('Database Info')).toBeInTheDocument();
+    expect(screen.getByText('Run Migrations')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Impersonate'));
+    expect(onImpersonate).toHaveBeenCalledWith(activeTenant);
+
+    fireEvent.click(screen.getByText('Database Info'));
+    expect(onViewDatabase).toHaveBeenCalledWith(activeTenant);
+
+    fireEvent.click(screen.getByText('Run Migrations'));
+    expect(onRunMigrations).toHaveBeenCalledWith(activeTenant);
+  });
+
+  test('close button fires onClose', () => {
+    const onClose = vi.fn();
+
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={onClose} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    fireEvent.click(screen.getByText('Close'));
+    expect(onClose).toHaveBeenCalled();
+  });
+});
