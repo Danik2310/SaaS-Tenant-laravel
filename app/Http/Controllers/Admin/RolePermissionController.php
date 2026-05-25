@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Commands\Domain\SyncRolePermissionsCommand;
 use App\Factories\PermissionPrerequisiteStrategyFactory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePermissionRequest;
@@ -12,7 +13,7 @@ use App\Http\Resources\PermissionResource;
 use App\Http\Resources\RoleResource;
 use App\Models\Permission;
 use App\Models\Role;
-use App\Services\PermissionPrerequisiteValidator;
+use Illuminate\Support\Facades\Auth;
 
 class RolePermissionController extends Controller
 {
@@ -39,10 +40,17 @@ class RolePermissionController extends Controller
         ]);
 
         if (! empty($request->validated('permissions'))) {
-            $permissionIds = $request->validated('permissions');
-            $this->validatePermissionDependencies($permissionIds);
-            $role->syncPermissions($permissionIds);
+            app(SyncRolePermissionsCommand::class, [
+                'role' => $role,
+                'permissionIds' => $request->validated('permissions'),
+            ])->execute();
         }
+
+        activity('permission')
+            ->causedBy(Auth::guard('admin')->user())
+            ->performedOn($role)
+            ->withProperties(['name' => $role->name, 'permissions' => $request->validated('permissions', [])])
+            ->log("Created role: {$role->name}");
 
         return response()->json([
             'message' => 'Role created successfully',
@@ -61,10 +69,17 @@ class RolePermissionController extends Controller
         ]);
 
         if (isset($request->validated()['permissions'])) {
-            $permissionIds = $request->validated('permissions');
-            $this->validatePermissionDependencies($permissionIds);
-            $role->syncPermissions($permissionIds);
+            app(SyncRolePermissionsCommand::class, [
+                'role' => $role,
+                'permissionIds' => $request->validated('permissions'),
+            ])->execute();
         }
+
+        activity('permission')
+            ->causedBy(Auth::guard('admin')->user())
+            ->performedOn($role)
+            ->withProperties(['name' => $role->name, 'permissions' => $request->validated('permissions', [])])
+            ->log("Updated role: {$role->name}");
 
         return response()->json([
             'message' => 'Role updated successfully',
@@ -79,6 +94,12 @@ class RolePermissionController extends Controller
         if ($role->users()->exists()) {
             return response()->json(['message' => 'Cannot delete role with assigned users'], 422);
         }
+
+        activity('permission')
+            ->causedBy(Auth::guard('admin')->user())
+            ->performedOn($role)
+            ->withProperties(['name' => $role->name])
+            ->log("Deleted role: {$role->name}");
 
         $role->delete();
 
@@ -108,6 +129,12 @@ class RolePermissionController extends Controller
             'is_active' => true,
         ]);
 
+        activity('permission')
+            ->causedBy(Auth::guard('admin')->user())
+            ->performedOn($permission)
+            ->withProperties(['name' => $permission->name, 'module' => $permission->module])
+            ->log("Created permission: {$permission->name}");
+
         return response()->json([
             'message' => 'Permission created successfully',
             'permission' => new PermissionResource($permission),
@@ -118,6 +145,12 @@ class RolePermissionController extends Controller
     {
         $permission = Permission::where('guard_name', 'admin')->findOrFail($id);
         $permission->update($request->validated());
+
+        activity('permission')
+            ->causedBy(Auth::guard('admin')->user())
+            ->performedOn($permission)
+            ->withProperties(['name' => $permission->name, 'module' => $permission->module])
+            ->log("Updated permission: {$permission->name}");
 
         return response()->json([
             'message' => 'Permission updated successfully',
@@ -145,28 +178,15 @@ class RolePermissionController extends Controller
             }
         }
 
+        activity('permission')
+            ->causedBy(Auth::guard('admin')->user())
+            ->performedOn($permission)
+            ->withProperties(['name' => $permission->name, 'module' => $permission->module])
+            ->log("Deleted permission: {$permission->name}");
+
         $permission->delete();
 
         return response()->noContent();
     }
 
-    private function validatePermissionDependencies(array $permissionIds): void
-    {
-        $permissionNames = Permission::whereIn('id', $permissionIds)
-            ->pluck('name')
-            ->all();
-
-        $validator = app(PermissionPrerequisiteValidator::class);
-        $errors = $validator->validateAll($permissionNames);
-
-        if (! empty($errors)) {
-            $messages = collect($errors)->map(
-                fn (array $error, string $perm) => "The permission '{$perm}' requires: "
-                    .implode(', ', $error['missing'])
-                    .'. '.$error['explanation']
-            )->values()->all();
-
-            abort(422, implode(' ', $messages));
-        }
-    }
 }

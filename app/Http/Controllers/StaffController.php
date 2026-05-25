@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Commands\Domain\SyncStaffRolesCommand;
 use App\Http\Requests\Admin\AssignRolesRequest;
 use App\Http\Requests\Admin\StoreStaffRequest;
 use App\Http\Requests\Admin\UpdateStaffRequest;
@@ -15,7 +16,11 @@ class StaffController extends Controller
 {
     public function index()
     {
-        $staff = AdminUser::with(['roles.permissions', 'permissions'])->paginate(25);
+        $staff = AdminUser::with([
+            'roles' => fn ($q) => $q->where('guard_name', 'admin'),
+            'roles.permissions' => fn ($q) => $q->where('guard_name', 'admin'),
+            'permissions' => fn ($q) => $q->where('guard_name', 'admin'),
+        ])->paginate(25);
 
         return response()->json([
             'staff' => StaffResource::collection($staff->items()),
@@ -66,9 +71,17 @@ class StaffController extends Controller
         ]);
 
         if (! empty($request->validated('roles'))) {
-            $roles = Role::whereIn('id', $request->validated('roles'))->get();
-            $admin->syncRoles($roles);
+            app(SyncStaffRolesCommand::class, [
+                'user' => $admin,
+                'roleIds' => $request->validated('roles'),
+            ])->execute();
         }
+
+        activity('staff')
+            ->causedBy(auth('admin')->user())
+            ->performedOn($admin)
+            ->withProperties(['name' => $admin->name, 'email' => $admin->email])
+            ->log("Created staff member: {$admin->name}");
 
         return response()->json([
             'message' => 'Staff member created successfully',
@@ -96,9 +109,17 @@ class StaffController extends Controller
         $admin->save();
 
         if (isset($request->validated()['roles'])) {
-            $roles = Role::whereIn('id', $request->validated('roles'))->get();
-            $admin->syncRoles($roles);
+            app(SyncStaffRolesCommand::class, [
+                'user' => $admin,
+                'roleIds' => $request->validated('roles'),
+            ])->execute();
         }
+
+        activity('staff')
+            ->causedBy(auth('admin')->user())
+            ->performedOn($admin)
+            ->withProperties(['name' => $admin->name, 'email' => $admin->email])
+            ->log("Updated staff member: {$admin->name}");
 
         return response()->json([
             'message' => 'Staff member updated successfully',
@@ -114,6 +135,12 @@ class StaffController extends Controller
             return response()->json(['error' => 'Cannot delete your own account'], 422);
         }
 
+        activity('staff')
+            ->causedBy(auth('admin')->user())
+            ->performedOn($admin)
+            ->withProperties(['name' => $admin->name])
+            ->log("Deleted staff member: {$admin->name}");
+
         $admin->delete();
 
         return response()->noContent();
@@ -123,6 +150,12 @@ class StaffController extends Controller
     {
         $admin = AdminUser::withTrashed()->findOrFail($id);
         $admin->restore();
+
+        activity('staff')
+            ->causedBy(auth('admin')->user())
+            ->performedOn($admin)
+            ->withProperties(['name' => $admin->name])
+            ->log("Restored staff member: {$admin->name}");
 
         return response()->json([
             'message' => 'Staff member restored successfully',
@@ -177,9 +210,17 @@ class StaffController extends Controller
     public function assignRoles(AssignRolesRequest $request, string $id)
     {
         $admin = AdminUser::findOrFail($id);
-        $roles = Role::whereIn('id', $request->validated('role_ids'))->get();
-        $roleNames = $roles->pluck('name')->implode(', ');
-        $admin->syncRoles($roles);
+
+        $command = app(SyncStaffRolesCommand::class, [
+            'user' => $admin,
+            'roleIds' => $request->validated('role_ids'),
+        ]);
+        $command->execute();
+
+        $roles = Role::whereIn('id', $request->validated('role_ids'))
+            ->where('guard_name', 'admin')
+            ->pluck('name');
+        $roleNames = $roles->implode(', ');
 
         activity('staff')
             ->performedOn($admin)
@@ -217,4 +258,5 @@ class StaffController extends Controller
             'staff' => new StaffResource($admin),
         ]);
     }
+
 }

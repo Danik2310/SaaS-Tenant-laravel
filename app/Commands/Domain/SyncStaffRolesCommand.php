@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Commands\Domain;
+
+use App\Models\AdminUser;
+
+class SyncStaffRolesCommand
+{
+    private AdminUser $user;
+    private array $roleIds;
+    private array $previousRoleIds;
+
+    public function __construct(AdminUser $user, array $roleIds)
+    {
+        $this->user = $user;
+        $this->roleIds = $roleIds;
+        $this->previousRoleIds = $user->roles()->pluck('id')->toArray();
+    }
+
+    public function execute(): void
+    {
+        $service = app(\App\Contracts\RoleServiceInterface::class);
+        $service->syncRoles($this->user, $this->roleIds);
+    }
+
+    public function undo(): void
+    {
+        $this->user->syncRoles($this->previousRoleIds);
+    }
+}
