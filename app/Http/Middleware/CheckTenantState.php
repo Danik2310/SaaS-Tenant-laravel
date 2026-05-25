@@ -15,7 +15,7 @@ class CheckTenantState
     {
         $tenant = tenant();
 
-        if ($tenant && $tenant instanceof Tenant && $tenant->status !== 'Active') {
+        if ($tenant && $tenant instanceof Tenant && !in_array($tenant->status, ['Active', 'Trial'])) {
             $isDeleted = $tenant->status === 'Deleted';
 
             if ($request->expectsJson()) {

@@ -6,11 +6,16 @@ namespace App\Listeners;
 
 use App\Events\TenantSuspended;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class HandleTenantSuspension
 {
     public function handle(TenantSuspended $event): void
     {
-        Cache::tags(['tenant_'.$event->tenant->id])->flush();
+        try {
+            Cache::tags(['tenant_'.$event->tenant->id])->flush();
+        } catch (\BadMethodCallException $e) {
+            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$event->tenant->id);
+        }
     }
 }

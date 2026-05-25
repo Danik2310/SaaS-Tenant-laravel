@@ -8,6 +8,7 @@ use App\Events\TenantReactivated;
 use App\Events\TenantSuspended;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
 class TenantStateManager
@@ -51,6 +52,10 @@ class TenantStateManager
             event(new TenantReactivated($tenant));
         }
 
-        Cache::tags(['tenant_'.$tenant->id])->flush();
+        try {
+            Cache::tags(['tenant_'.$tenant->id])->flush();
+        } catch (\BadMethodCallException $e) {
+            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$tenant->id);
+        }
     }
 }

@@ -19,8 +19,27 @@ class HandleInertiaRequests extends Middleware
     {
         $currentTenant = tenant();
 
+        $planData = null;
         if ($currentTenant && $currentTenant instanceof Tenant) {
             $currentTenant->load('plan');
+            $plan = $currentTenant->plan;
+
+            $planData = [
+                'id' => $plan?->id,
+                'name' => $plan?->name,
+                'slug' => $plan?->slug,
+                'price' => $plan?->price,
+                'features' => $plan?->features ?? [],
+                'limits' => [
+                    'users' => $currentTenant->getLimit('users'),
+                    'storage' => $currentTenant->getLimit('storage'),
+                    'warehouses' => $currentTenant->getLimit('warehouses'),
+                    'categories' => $currentTenant->getLimit('categories'),
+                    'products' => $currentTenant->getLimit('products'),
+                ],
+                'is_on_trial' => $currentTenant->isOnTrial(),
+                'trial_has_expired' => $currentTenant->trialHasExpired(),
+            ];
         }
 
         return [
@@ -28,14 +47,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user()?->only(['id', 'name', 'email']),
             ],
-            'plan' => $currentTenant && $currentTenant instanceof Tenant ? [
-                'name' => $currentTenant->plan?->name,
-                'features' => $currentTenant->plan?->features ?? [],
-                'limits' => [
-                    'users' => $currentTenant->getLimit('users'),
-                    'storage' => $currentTenant->getLimit('storage'),
-                ],
-            ] : null,
+            'plan' => $planData,
         ];
     }
 }

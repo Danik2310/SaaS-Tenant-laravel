@@ -13,7 +13,13 @@ class HandlePlanChange
 {
     public function handle(PlanChanged $event): void
     {
-        Cache::tags(['tenant_'.$event->tenant->id])->flush();
+        tenancy()->initialize($event->tenant);
+
+        try {
+            Cache::tags(['tenant_'.$event->tenant->id])->flush();
+        } catch (\BadMethodCallException $e) {
+            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$event->tenant->id);
+        }
 
         $oldPrice = $event->oldPlan->price ?? 0;
         $newPrice = $event->newPlan->price ?? 0;
@@ -40,5 +46,7 @@ class HandlePlanChange
                 'new_plan' => $event->newPlan->slug,
             ]);
         }
+
+        tenancy()->end();
     }
 }

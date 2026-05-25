@@ -11,6 +11,7 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\States\TenantStateManager;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class TenantManager implements TenantManagerInterface
 {
@@ -50,7 +51,11 @@ class TenantManager implements TenantManagerInterface
         $tenant->plan_id = $newPlan->id;
         $tenant->save();
 
-        Cache::tags(['tenant_'.$tenant->id])->flush();
+        try {
+            Cache::tags(['tenant_'.$tenant->id])->flush();
+        } catch (\BadMethodCallException $e) {
+            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$tenant->id);
+        }
 
         event(new PlanChanged($tenant, $oldPlan, $newPlan));
     }
