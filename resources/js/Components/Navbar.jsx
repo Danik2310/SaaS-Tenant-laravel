@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuthContext } from '../context/AuthContext';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import GroupIcon from '@mui/icons-material/Group';
@@ -39,7 +40,8 @@ const views = [
     { id: 'profile', label: 'My Profile', icon: <PersonIcon />, section: 'Account' },
 ];
 
-export default function Navbar({ user, permissions = [], view, setView }) {
+export default function Navbar({ view, setView }) {
+    const { user, permissions = [] } = useAuthContext();
     const filtered = views.filter(v => !permissionMap[v.id] || permissions.includes(permissionMap[v.id]));
     const grouped = filtered.reduce((acc, v) => {
         if (!acc[v.section]) acc[v.section] = [];

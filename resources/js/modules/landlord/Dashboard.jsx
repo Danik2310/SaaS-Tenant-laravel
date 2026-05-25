@@ -1,18 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import api from '../../services/api';
-import TenantList from './tenants/TenantList';
-import TenantForm from './tenants/TenantForm';
 import Navbar from '../../components/Navbar';
 import DataTable from '@/Components/DataTable';
-import Staff from './staff/StaffList';
-import Plans from './billing/Plans';
-import RolePermissions from './staff/RolePermissions';
-import DashboardOverview from './DashboardOverview';
-import Profile from './profile/Profile';
-import Subscriptions from './subscriptions/Subscriptions';
-import ActivityLog from './activity/ActivityLog';
-import Settings from './settings/Settings';
-import ResourceUsage from './resource-usage/ResourceUsage';
 import BlockIcon from '@mui/icons-material/Block';
 import LanguageIcon from '@mui/icons-material/Language';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -23,26 +12,33 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import RestoreIcon from '@mui/icons-material/Restore';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { toast } from 'sonner';
-import DatabaseModal from './modals/DatabaseModal';
-import MigrationModal from './modals/MigrationModal';
-import DomainModal from './modals/DomainModal';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
-import FormControl from '@mui/material/FormControl';
-import FormLabel from '@mui/material/FormLabel';
-import CircularProgress from '@mui/material/CircularProgress';
 import Switch from '@mui/material/Switch';
+import CircularProgress from '@mui/material/CircularProgress';
+import ErrorBoundary from '@/Components/ErrorBoundary';
+import { useAuthContext } from '@/context/AuthContext';
 
-export default function Dashboard({ user, permissions = [], setUser }) {
+const DashboardOverview = React.lazy(() => import('./DashboardOverview'));
+const TenantList = React.lazy(() => import('./tenants/TenantList'));
+const TenantForm = React.lazy(() => import('./tenants/TenantForm'));
+const Staff = React.lazy(() => import('./staff/StaffList'));
+const Plans = React.lazy(() => import('./billing/Plans'));
+const RolePermissions = React.lazy(() => import('./staff/RolePermissions'));
+const Profile = React.lazy(() => import('./profile/Profile'));
+const Subscriptions = React.lazy(() => import('./subscriptions/Subscriptions'));
+const ActivityLog = React.lazy(() => import('./activity/ActivityLog'));
+const Settings = React.lazy(() => import('./settings/Settings'));
+const ResourceUsage = React.lazy(() => import('./resource-usage/ResourceUsage'));
+const DatabaseModal = React.lazy(() => import('./modals/DatabaseModal'));
+const MigrationModal = React.lazy(() => import('./modals/MigrationModal'));
+const DomainModal = React.lazy(() => import('./modals/DomainModal'));
+const ChangePlanModal = React.lazy(() => import('./modals/ChangePlanModal'));
+
+export default function Dashboard() {
+    const { user, permissions = [] } = useAuthContext();
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -52,9 +48,6 @@ export default function Dashboard({ user, permissions = [], setUser }) {
 
     const [activeModal, setActiveModal] = useState(null);
     const [planChangeTenant, setPlanChangeTenant] = useState(null);
-    const [plans, setPlans] = useState([]);
-    const [selectedPlanId, setSelectedPlanId] = useState(null);
-    const [changingPlan, setChangingPlan] = useState(false);
     const [showDeleted, setShowDeleted] = useState(false);
 
     const [page, setPage] = useState(0);
@@ -62,6 +55,7 @@ export default function Dashboard({ user, permissions = [], setUser }) {
     const [total, setTotal] = useState(0);
     const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
     const [bulkLoading, setBulkLoading] = useState(false);
+    const [bulkPlanChangeOpen, setBulkPlanChangeOpen] = useState(false);
 
     useEffect(() => {
         if (permissions.includes('manage tenants')) {
@@ -70,13 +64,6 @@ export default function Dashboard({ user, permissions = [], setUser }) {
             setLoading(false);
         }
     }, [showDeleted, page, rowsPerPage, permissions]);
-
-    useEffect(() => {
-        if (planChangeTenant) {
-            fetchPlans();
-            setSelectedPlanId(planChangeTenant.plan?.id || '');
-        }
-    }, [planChangeTenant]);
 
     const fetchTenants = async () => {
         setLoading(true);
@@ -163,7 +150,7 @@ export default function Dashboard({ user, permissions = [], setUser }) {
 
     const handleUpdateTenant = async (tenantOrOriginal, values = null) => {
         // support two calling conventions:
-        // - from TenantForm: payload object includes id, name, email
+        // - from TenantForm: payload object includes id, name, email, plan_id
         // - from inline row save: first arg is original row, second arg is values changed
         let id;
         let data;
@@ -171,6 +158,9 @@ export default function Dashboard({ user, permissions = [], setUser }) {
             // form submission
             id = tenantOrOriginal.id;
             data = { name: tenantOrOriginal.name, email: tenantOrOriginal.email };
+            if (tenantOrOriginal.plan_id) {
+                data.plan_id = tenantOrOriginal.plan_id;
+            }
         } else {
             // inline edit from table
             id = tenantOrOriginal.id;
@@ -236,30 +226,6 @@ export default function Dashboard({ user, permissions = [], setUser }) {
         }
     };
 
-    const fetchPlans = async () => {
-        try {
-            const res = await api.get('/admin/api/plans');
-            setPlans(res.data.plans || []);
-        } catch {
-            toast.error('Failed to load plans');
-        }
-    };
-
-    const handleChangePlan = async () => {
-        if (!planChangeTenant || !selectedPlanId) return;
-        setChangingPlan(true);
-        try {
-            await api.put(`/admin/api/tenants/${planChangeTenant.id}/plan`, { plan_id: selectedPlanId });
-            toast.success('Plan changed successfully');
-            setPlanChangeTenant(null);
-            fetchTenants();
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to change plan');
-        } finally {
-            setChangingPlan(false);
-        }
-    };
-
     const handleViewSubscriptions = (tenant) => {
         setView('subscriptions');
     };
@@ -267,6 +233,12 @@ export default function Dashboard({ user, permissions = [], setUser }) {
     const handleBulkAction = async (action) => {
         const ids = Array.from(selectedTenantIds);
         if (ids.length === 0) return;
+
+        if (action === 'change_plan') {
+            setBulkPlanChangeOpen(true);
+            return;
+        }
+
         setBulkLoading(true);
         try {
             await api.post('/admin/api/tenants/bulk', {
@@ -287,7 +259,7 @@ export default function Dashboard({ user, permissions = [], setUser }) {
 
     return (
         <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex' }}>
-            <Navbar user={user} permissions={permissions} view={view} setView={setView} />
+            <Navbar view={view} setView={setView} />
             <div style={{ flex: 1 }}>
                 <header
                     style={{
@@ -354,6 +326,7 @@ export default function Dashboard({ user, permissions = [], setUser }) {
 
                 <main style={{ padding: '24px 32px' }}>
                     <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+                        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '64px 0' }}><CircularProgress /></div>}>
                         {error && (
                             <div
                                 style={{
@@ -369,11 +342,21 @@ export default function Dashboard({ user, permissions = [], setUser }) {
                             </div>
                         )}
 
-                        {view === 'overview' && <DashboardOverview />}
-                        {view === 'staff' && <Staff />}
-                        {view === 'roles' && <RolePermissions />}
-                        {view === 'plans' && <Plans />}
-                        {view === 'resource-usage' && <ResourceUsage />}
+                        <ErrorBoundary fallbackMessage="Overview failed to load">
+                            {view === 'overview' && <DashboardOverview />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Staff management failed to load">
+                            {view === 'staff' && <Staff />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Roles & permissions failed to load">
+                            {view === 'roles' && <RolePermissions />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Plans failed to load">
+                            {view === 'plans' && <Plans />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Resource usage failed to load">
+                            {view === 'resource-usage' && <ResourceUsage />}
+                        </ErrorBoundary>
                         {view === 'tenants' && (showForm || editingTenant) && (
                             <TenantForm
                                 tenant={editingTenant}
@@ -431,10 +414,18 @@ export default function Dashboard({ user, permissions = [], setUser }) {
                                 onBulkAction={handleBulkAction}
                             />
                         )}
-                        {view === 'subscriptions' && <Subscriptions />}
-                        {view === 'activity' && <ActivityLog />}
-                        {view === 'settings' && <Settings />}
-                        {view === 'profile' && <Profile user={user} />}
+                        <ErrorBoundary fallbackMessage="Subscriptions failed to load">
+                            {view === 'subscriptions' && <Subscriptions />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Activity log failed to load">
+                            {view === 'activity' && <ActivityLog />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Settings failed to load">
+                            {view === 'settings' && <Settings />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Profile failed to load">
+                            {view === 'profile' && <Profile />}
+                        </ErrorBoundary>
                         {view === 'impersonate' && (
                             <>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -525,68 +516,46 @@ export default function Dashboard({ user, permissions = [], setUser }) {
                                 )}
                             </>
                         )}
+                        </Suspense>
                     </div>
 
-                    <DatabaseModal
-                        tenant={activeModal?.type === 'database' ? activeModal.tenant : null}
-                        onClose={() => setActiveModal(null)}
+                    <Suspense fallback={null}>
+                        <DatabaseModal
+                            tenant={activeModal?.type === 'database' ? activeModal.tenant : null}
+                            onClose={() => setActiveModal(null)}
+                            />
+
+                        <MigrationModal
+                            tenant={activeModal?.type === 'migration' ? activeModal.tenant : null}
+                            onClose={() => setActiveModal(null)}
+                            />
+
+                        <DomainModal
+                            tenant={activeModal?.type === 'domain' ? activeModal.tenant : null}
+                            onClose={() => setActiveModal(null)}
+                            onImpersonate={handleImpersonateTenant}
+                            onViewDatabase={(tenant) => openModal('database', tenant)}
+                            onRunMigrations={(tenant) => openModal('migration', tenant)}
+                            />
+
+                        <ChangePlanModal
+                            open={!!planChangeTenant}
+                            tenants={planChangeTenant ? [planChangeTenant] : []}
+                            onClose={() => setPlanChangeTenant(null)}
+                            onChanged={fetchTenants}
                         />
 
-                    <MigrationModal
-                        tenant={activeModal?.type === 'migration' ? activeModal.tenant : null}
-                        onClose={() => setActiveModal(null)}
+                        <ChangePlanModal
+                            open={bulkPlanChangeOpen}
+                            tenants={tenants.filter(t => selectedTenantIds.has(t.id))}
+                            onClose={() => setBulkPlanChangeOpen(false)}
+                            onChanged={() => {
+                                setBulkPlanChangeOpen(false);
+                                setSelectedTenantIds(new Set());
+                                fetchTenants();
+                            }}
                         />
-
-                    <DomainModal
-                        tenant={activeModal?.type === 'domain' ? activeModal.tenant : null}
-                        onClose={() => setActiveModal(null)}
-                        onImpersonate={handleImpersonateTenant}
-                        onViewDatabase={(tenant) => openModal('database', tenant)}
-                        onRunMigrations={(tenant) => openModal('migration', tenant)}
-                        />
-
-                    <Dialog
-                        open={!!planChangeTenant}
-                        onClose={() => setPlanChangeTenant(null)}
-                        maxWidth="xs"
-                        fullWidth
-                    >
-                        <DialogTitle>Change Plan</DialogTitle>
-                        <DialogContent>
-                            <Typography variant="body2" sx={{ mb: 2, color: '#64748b' }}>
-                                Select a new plan for <strong>{planChangeTenant?.name}</strong>
-                            </Typography>
-                            {plans.length === 0 ? (
-                                <CircularProgress size={24} />
-                            ) : (
-                                <FormControl component="fieldset">
-                                    <RadioGroup value={selectedPlanId} onChange={(e) => setSelectedPlanId(Number(e.target.value))}>
-                                        {plans.map((p) => (
-                                            <FormControlLabel
-                                                key={p.id}
-                                                value={p.id}
-                                                control={<Radio />}
-                                                label={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{p.name}</Typography>
-                                                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                                            {p.price > 0 ? `$${p.price}/mo` : 'Free'}
-                                                        </Typography>
-                                                    </Box>
-                                                }
-                                            />
-                                        ))}
-                                    </RadioGroup>
-                                </FormControl>
-                            )}
-                        </DialogContent>
-                        <DialogActions>
-                            <Button onClick={() => setPlanChangeTenant(null)}>Cancel</Button>
-                            <Button onClick={handleChangePlan} variant="contained" disabled={changingPlan || !selectedPlanId}>
-                                {changingPlan ? 'Changing...' : 'Change Plan'}
-                            </Button>
-                        </DialogActions>
-                    </Dialog>
+                    </Suspense>
                 </main>
             </div>
         </div>

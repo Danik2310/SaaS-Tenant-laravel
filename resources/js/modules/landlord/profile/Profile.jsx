@@ -11,8 +11,10 @@ import Avatar from '@mui/material/Avatar';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import PersonIcon from '@mui/icons-material/Person';
+import { useAuthContext } from '../../../context/AuthContext';
 
-export default function Profile({ user }) {
+export default function Profile() {
+    const { user } = useAuthContext();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);

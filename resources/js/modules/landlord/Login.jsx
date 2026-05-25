@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../services/api';
 
-export default function Login({ setUser }) {
-    const [email, setEmail] = useState('admin@example.com');
-    const [password, setPassword] = useState('password');
+export default function Login() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -146,9 +146,7 @@ export default function Login({ setUser }) {
                     </button>
                 </form>
 
-                <p style={{ textAlign: 'center', color: '#999', fontSize: '12px', marginTop: '20px' }}>
-                    Default credentials: admin@example.com / secret
-                </p>
+                
             </div>
         </div>
     );

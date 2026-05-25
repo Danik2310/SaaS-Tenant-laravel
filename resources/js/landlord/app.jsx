@@ -2,35 +2,33 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from '@mui/material/styles';
 import { Toaster } from 'sonner';
+import CircularProgress from '@mui/material/CircularProgress';
 import theme from '../theme';
 import Login from '../modules/landlord/Login';
 import Dashboard from '../modules/landlord/Dashboard';
-import useAuth from '../hooks/useAuth';
+import { AuthProvider, useAuthContext } from '../context/AuthContext';
 
-export default function LandlordApp() {
-    const { user, permissions, loading, setUser } = useAuth();
+function AppContent() {
+    const { user, loading } = useAuthContext();
 
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-                <div style={{ fontSize: '18px', color: '#666' }}>Loading...</div>
+                <CircularProgress />
             </div>
         );
     }
 
+    return user ? <Dashboard /> : <Login />;
+}
+
+export default function LandlordApp() {
     return (
         <ThemeProvider theme={theme}>
-            {user ? (
-                <>
-                    <Dashboard user={user} permissions={permissions} setUser={setUser} />
-                    <Toaster richColors position="top-right" />
-                </>
-            ) : (
-                <>
-                    <Login setUser={setUser} />
-                    <Toaster richColors position="top-right" />
-                </>
-            )}
+            <AuthProvider>
+                <AppContent />
+                <Toaster richColors position="top-right" />
+            </AuthProvider>
         </ThemeProvider>
     );
 }
