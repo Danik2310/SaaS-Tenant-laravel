@@ -7,6 +7,18 @@ export default defineConfig({
         environment: 'jsdom',
         setupFiles: ['./tests/setup.js'],
         globals: true,
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'html', 'lcov'],
+            include: ['resources/js/**/*.{jsx,js,tsx,ts}'],
+            exclude: [
+                'resources/js/**/*.test.*',
+                'resources/js/**/*.spec.*',
+                'resources/js/bootstrap.js',
+                'resources/js/ziggy-js.js',
+            ],
+            reportsDirectory: './coverage',
+        },
     },
     resolve: {
         alias: {
