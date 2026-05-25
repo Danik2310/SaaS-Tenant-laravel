@@ -17,17 +17,27 @@ return new class extends Migration
         $tableNames = config('permission.table_names');
         throw_if(empty($tableNames), Exception::class, 'Error: config/permission.php not loaded. Run [php artisan config:clear] and try again.');
 
-        // Add columns to permissions table
-        Schema::table($tableNames['permissions'], function (Blueprint $table) {
-            $table->text('description')->nullable()->after('guard_name');
-            $table->string('module')->nullable()->after('description');
-            $table->boolean('is_active')->default(true)->after('module');
+        // Add columns to permissions table — skip if already present
+        Schema::table($tableNames['permissions'], function (Blueprint $table) use ($tableNames) {
+            if (! Schema::hasColumn($tableNames['permissions'], 'description')) {
+                $table->text('description')->nullable()->after('guard_name');
+            }
+            if (! Schema::hasColumn($tableNames['permissions'], 'module')) {
+                $table->string('module')->nullable()->after('description');
+            }
+            if (! Schema::hasColumn($tableNames['permissions'], 'is_active')) {
+                $table->boolean('is_active')->default(true)->after('module');
+            }
         });
 
-        // Add columns to roles table
-        Schema::table($tableNames['roles'], function (Blueprint $table) {
-            $table->text('description')->nullable()->after('guard_name');
-            $table->boolean('is_active')->default(true)->after('description');
+        // Add columns to roles table — skip if already present
+        Schema::table($tableNames['roles'], function (Blueprint $table) use ($tableNames) {
+            if (! Schema::hasColumn($tableNames['roles'], 'description')) {
+                $table->text('description')->nullable()->after('guard_name');
+            }
+            if (! Schema::hasColumn($tableNames['roles'], 'is_active')) {
+                $table->boolean('is_active')->default(true)->after('description');
+            }
         });
     }
 

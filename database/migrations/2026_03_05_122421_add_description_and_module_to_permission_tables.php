@@ -11,17 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Agregar columnas a la tabla permissions
+        // Add columns to permissions table — skip if already present
         Schema::table('permissions', function (Blueprint $table) {
-            $table->text('description')->nullable()->after('guard_name');
-            $table->string('module')->nullable()->after('description');
-            $table->boolean('is_active')->default(true)->after('module');
+            if (! Schema::hasColumn('permissions', 'description')) {
+                $table->text('description')->nullable()->after('guard_name');
+            }
+            if (! Schema::hasColumn('permissions', 'module')) {
+                $table->string('module')->nullable()->after('description');
+            }
+            if (! Schema::hasColumn('permissions', 'is_active')) {
+                $table->boolean('is_active')->default(true)->after('module');
+            }
         });
 
-        // Agregar columnas a la tabla roles
+        // Add columns to roles table — skip if already present
         Schema::table('roles', function (Blueprint $table) {
-            $table->text('description')->nullable()->after('guard_name');
-            $table->boolean('is_active')->default(true)->after('description');
+            if (! Schema::hasColumn('roles', 'description')) {
+                $table->text('description')->nullable()->after('guard_name');
+            }
+            if (! Schema::hasColumn('roles', 'is_active')) {
+                $table->boolean('is_active')->default(true)->after('description');
+            }
         });
     }
 
@@ -30,14 +40,26 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Remover columnas de la tabla permissions
+        // Drop columns from permissions table — only if they exist
         Schema::table('permissions', function (Blueprint $table) {
-            $table->dropColumn(['description', 'module', 'is_active']);
+            $columns = array_intersect(
+                ['description', 'module', 'is_active'],
+                Schema::getColumnListing('permissions')
+            );
+            if (! empty($columns)) {
+                $table->dropColumn($columns);
+            }
         });
 
-        // Remover columnas de la tabla roles
+        // Drop columns from roles table — only if they exist
         Schema::table('roles', function (Blueprint $table) {
-            $table->dropColumn(['description', 'is_active']);
+            $columns = array_intersect(
+                ['description', 'is_active'],
+                Schema::getColumnListing('roles')
+            );
+            if (! empty($columns)) {
+                $table->dropColumn($columns);
+            }
         });
     }
 };
