@@ -19,8 +19,45 @@ class SecurityHeaders
         $response->headers->set('X-XSS-Protection', '1; mode=block');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-        $response->headers->set('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:;");
+
+        if (app()->environment('local', 'testing')) {
+            $response->headers->set('Content-Security-Policy', $this->devCsp());
+        } else {
+            $response->headers->set('Content-Security-Policy', $this->productionCsp());
+        }
 
         return $response;
+    }
+
+    private function devCsp(): string
+    {
+        return implode('; ', [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://127.0.0.1:5174",
+            "connect-src 'self' ws://127.0.0.1:5174 http://127.0.0.1:5174",
+            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+            "font-src 'self' data: https://fonts.bunny.net",
+            "img-src 'self' data:",
+            "frame-ancestors 'none'",
+            "form-action 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+        ]);
+    }
+
+    private function productionCsp(): string
+    {
+        return implode('; ', [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'",
+            "connect-src 'self'",
+            "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+            "font-src 'self' data: https://fonts.bunny.net",
+            "img-src 'self' data:",
+            "frame-ancestors 'none'",
+            "form-action 'self'",
+            "base-uri 'self'",
+            "object-src 'none'",
+        ]);
     }
 }

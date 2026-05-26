@@ -21,3 +21,5 @@ yarn-error.log
 /.claude
 /.opencode
 AGENTS.md
+/coverage
+/build-stats.html
