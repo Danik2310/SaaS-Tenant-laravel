@@ -8,7 +8,7 @@ class StoreSubscriptionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check();
+        return auth('admin')->check() && auth('admin')->user()->can('manage subscriptions');
     }
 
     public function rules(): array

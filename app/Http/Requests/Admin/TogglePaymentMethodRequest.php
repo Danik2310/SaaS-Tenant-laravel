@@ -8,11 +8,13 @@ class TogglePaymentMethodRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return auth('admin')->check() && auth('admin')->user()->can('manage payment methods');
     }
 
     public function rules(): array
     {
-        return [];
+        return [
+            'active' => 'required|boolean',
+        ];
     }
 }

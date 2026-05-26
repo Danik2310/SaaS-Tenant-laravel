@@ -8,7 +8,7 @@ class ImpersonateTenantRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check();
+        return auth('admin')->check() && auth('admin')->user()->can('impersonate tenants');
     }
 
     public function rules(): array
