@@ -21,9 +21,13 @@ class RunExportJob implements ShouldQueue
     public int $timeout = 300;
 
     private string $entity;
+
     private string $format;
+
     private array $columns;
+
     private array $filters;
+
     private string $jobId;
 
     public function __construct(string $entity, string $format, array $columns, array $filters)

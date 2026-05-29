@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\ExportServiceInterface;
 use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -15,7 +16,7 @@ use OpenSpout\Writer\CSV\Writer as CsvWriter;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 use Spatie\Activitylog\Models\Activity;
 
-class ExportService
+class ExportService implements ExportServiceInterface
 {
     private const EXPIRY_HOURS = 24;
 

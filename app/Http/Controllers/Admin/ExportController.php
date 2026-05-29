@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin;
 
+use App\Contracts\ExportServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ExportRequest;
 use App\Jobs\RunExportJob;
-use App\Services\ExportService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class ExportController extends Controller
 {
     public function __construct(
-        private ExportService $exportService,
+        private ExportServiceInterface $exportService,
     ) {}
 
     public function export(ExportRequest $request, string $entity)
