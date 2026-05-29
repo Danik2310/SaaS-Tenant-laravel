@@ -10,7 +10,7 @@ class OrderItemTest extends TenantTestCase
 {
     public function test_order_item_has_required_fillable_attributes(): void
     {
-        $fillable = ['order_id', 'product_id', 'quantity', 'price', 'subtotal'];
+        $fillable = ['order_id', 'product_id', 'quantity', 'price', 'unit_price', 'discount', 'subtotal'];
         $this->assertEquals($fillable, (new OrderItem)->getFillable());
     }
 
@@ -78,9 +78,10 @@ class OrderItemTest extends TenantTestCase
 
     public function test_order_item_discount_cast_as_decimal(): void
     {
-        // Since discount column doesn't exist in the schema, we'll skip this test
-        $item = OrderItem::factory()->create();
-        $this->assertInstanceOf(OrderItem::class, $item);
+        $item = OrderItem::factory()->create(['discount' => 15.50]);
+
+        $this->assertIsString($item->discount);
+        $this->assertEquals('15.50', $item->discount);
     }
 
     public function test_order_item_subtotal_cast_as_decimal(): void

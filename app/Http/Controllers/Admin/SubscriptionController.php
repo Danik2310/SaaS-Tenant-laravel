@@ -25,8 +25,10 @@ class SubscriptionController extends Controller
 
         if ($search = $request->query('search')) {
             $query->whereHas('tenant', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
             });
         }
 

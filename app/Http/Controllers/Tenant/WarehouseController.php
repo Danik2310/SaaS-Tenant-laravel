@@ -23,6 +23,8 @@ class WarehouseController extends Controller
     {
         Warehouse::create($request->validated());
 
+        $this->flushTenantCache();
+
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse created successfully.');
     }
@@ -31,6 +33,8 @@ class WarehouseController extends Controller
     {
         $warehouse->update($request->validated());
 
+        $this->flushTenantCache();
+
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse updated successfully.');
     }
@@ -38,6 +42,8 @@ class WarehouseController extends Controller
     public function destroy(Warehouse $warehouse)
     {
         $warehouse->delete();
+
+        $this->flushTenantCache();
 
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse deleted successfully.');

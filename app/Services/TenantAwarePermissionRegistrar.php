@@ -10,7 +10,7 @@ class TenantAwarePermissionRegistrar extends SpatiePermissionRegistrar
     private function getTenantScopeSuffix(): string
     {
         if (tenancy()->initialized) {
-            return '_tenant_' . tenant('id');
+            return '_tenant_'.tenant('id');
         }
 
         return '_central';
@@ -19,7 +19,7 @@ class TenantAwarePermissionRegistrar extends SpatiePermissionRegistrar
     private function withScopedCacheKey(callable $fn): mixed
     {
         $originalKey = $this->cacheKey;
-        $this->cacheKey = $originalKey . $this->getTenantScopeSuffix();
+        $this->cacheKey = $originalKey.$this->getTenantScopeSuffix();
 
         try {
             return $fn();
@@ -40,6 +40,6 @@ class TenantAwarePermissionRegistrar extends SpatiePermissionRegistrar
 
     public function getCacheKey(): string
     {
-        return $this->cacheKey . $this->getTenantScopeSuffix();
+        return $this->cacheKey.$this->getTenantScopeSuffix();
     }
 }

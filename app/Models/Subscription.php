@@ -23,9 +23,24 @@ class Subscription extends Model
         'ends_at' => 'date',
     ];
 
+    public static function createForTenant(Tenant $tenant, ?Plan $plan, string $status = 'active', ?\DateTimeInterface $endsAt = null): self
+    {
+        if (! $plan) {
+            throw new \InvalidArgumentException('Cannot create subscription without a plan. Tenant: '.$tenant->id);
+        }
+
+        return static::create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+            'starts_at' => now(),
+            'ends_at' => $endsAt,
+            'status' => $status,
+        ]);
+    }
+
     public function tenant(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Tenant::class)->withTrashed();
     }
 
     public function plan(): BelongsTo

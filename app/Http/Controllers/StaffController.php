@@ -258,5 +258,4 @@ class StaffController extends Controller
             'staff' => new StaffResource($admin),
         ]);
     }
-
 }

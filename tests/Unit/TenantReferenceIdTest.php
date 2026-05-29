@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Models\Plan;
+use App\Http\Resources\TenantResource;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -96,7 +96,7 @@ class TenantReferenceIdTest extends TestCase
             'name' => 'Resource Test',
         ]);
 
-        $resource = new \App\Http\Resources\TenantResource($tenant);
+        $resource = new TenantResource($tenant);
         $data = $resource->toArray(request());
 
         $this->assertArrayHasKey('reference_id', $data);

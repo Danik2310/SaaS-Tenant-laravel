@@ -2,12 +2,15 @@
 
 namespace App\Commands\Domain;
 
+use App\Contracts\PermissionServiceInterface;
 use App\Models\Role;
 
 class SyncRolePermissionsCommand
 {
     private Role $role;
+
     private array $permissionIds;
+
     private array $previousPermissionIds;
 
     public function __construct(Role $role, array $permissionIds)
@@ -19,7 +22,7 @@ class SyncRolePermissionsCommand
 
     public function execute(): void
     {
-        $service = app(\App\Contracts\PermissionServiceInterface::class);
+        $service = app(PermissionServiceInterface::class);
         $service->syncPermissions($this->role, $this->permissionIds);
     }
 

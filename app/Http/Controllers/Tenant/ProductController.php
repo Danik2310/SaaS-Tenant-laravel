@@ -36,6 +36,8 @@ class ProductController extends Controller
     {
         Product::create($request->validated());
 
+        $this->flushTenantCache();
+
         return redirect()->route('tenant.products.index')
             ->with('success', 'Product created successfully.');
     }
@@ -55,6 +57,8 @@ class ProductController extends Controller
     {
         $product->update($request->validated());
 
+        $this->flushTenantCache();
+
         return redirect()->route('tenant.products.index')
             ->with('success', 'Product updated successfully.');
     }
@@ -62,6 +66,8 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         $product->delete();
+
+        $this->flushTenantCache();
 
         return redirect()->route('tenant.products.index')
             ->with('success', 'Product deleted successfully.');

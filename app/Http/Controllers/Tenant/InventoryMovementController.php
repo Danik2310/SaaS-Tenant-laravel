@@ -38,6 +38,8 @@ class InventoryMovementController extends Controller
     {
         InventoryMovement::create($request->validated());
 
+        $this->flushTenantCache();
+
         return redirect()->route('tenant.inventory.index')
             ->with('success', 'Inventory movement recorded successfully.');
     }

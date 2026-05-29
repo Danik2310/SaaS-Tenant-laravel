@@ -2,12 +2,15 @@
 
 namespace App\Commands\Domain;
 
+use App\Contracts\RoleServiceInterface;
 use App\Models\AdminUser;
 
 class SyncStaffRolesCommand
 {
     private AdminUser $user;
+
     private array $roleIds;
+
     private array $previousRoleIds;
 
     public function __construct(AdminUser $user, array $roleIds)
@@ -19,7 +22,7 @@ class SyncStaffRolesCommand
 
     public function execute(): void
     {
-        $service = app(\App\Contracts\RoleServiceInterface::class);
+        $service = app(RoleServiceInterface::class);
         $service->syncRoles($this->user, $this->roleIds);
     }
 

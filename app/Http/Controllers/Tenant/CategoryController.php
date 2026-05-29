@@ -30,6 +30,8 @@ class CategoryController extends Controller
 
         Category::create($validated);
 
+        $this->flushTenantCache();
+
         return redirect()->route('tenant.categories.index')
             ->with('success', 'Category created successfully.');
     }
@@ -37,6 +39,8 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category)
     {
         $category->update($request->validated());
+
+        $this->flushTenantCache();
 
         return redirect()->route('tenant.categories.index')
             ->with('success', 'Category updated successfully.');
@@ -50,6 +54,8 @@ class CategoryController extends Controller
         }
 
         $category->delete();
+
+        $this->flushTenantCache();
 
         return redirect()->route('tenant.categories.index')
             ->with('success', 'Category deleted successfully.');

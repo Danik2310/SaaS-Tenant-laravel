@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -14,7 +13,7 @@ class AdminProfileController extends Controller
      */
     public function show()
     {
-        $user = Auth::user();
+        $user = auth('admin')->user();
 
         if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
@@ -36,7 +35,7 @@ class AdminProfileController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        $user = Auth::user();
+        $user = auth('admin')->user();
 
         if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
@@ -72,7 +71,7 @@ class AdminProfileController extends Controller
      */
     public function updatePassword(Request $request)
     {
-        $user = Auth::user();
+        $user = auth('admin')->user();
 
         if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
@@ -106,7 +105,7 @@ class AdminProfileController extends Controller
      */
     public function deleteAccount(Request $request)
     {
-        $user = Auth::user();
+        $user = auth('admin')->user();
 
         if (! $user) {
             return response()->json(['message' => 'Unauthorized'], 401);
@@ -126,7 +125,7 @@ class AdminProfileController extends Controller
 
         // Delete user and logout
         $user->delete();
-        Auth::logout();
+        auth('admin')->logout();
 
         return response()->json([
             'message' => 'Account deleted successfully',

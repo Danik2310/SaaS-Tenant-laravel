@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Listeners;
 
 use App\Events\PlanChanged;
-use App\Models\Plan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -13,14 +12,6 @@ class HandlePlanChange
 {
     public function handle(PlanChanged $event): void
     {
-        tenancy()->initialize($event->tenant);
-
-        try {
-            Cache::tags(['tenant_'.$event->tenant->id])->flush();
-        } catch (\BadMethodCallException $e) {
-            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$event->tenant->id);
-        }
-
         $oldPrice = $event->oldPlan->price ?? 0;
         $newPrice = $event->newPlan->price ?? 0;
         $direction = $newPrice < $oldPrice ? 'downgrade' : ($newPrice > $oldPrice ? 'upgrade' : 'lateral');
@@ -37,7 +28,7 @@ class HandlePlanChange
             'lost_features' => $lostFeatures,
         ]);
 
-        if ($direction === 'downgrade' && !empty($lostFeatures)) {
+        if ($direction === 'downgrade' && ! empty($lostFeatures)) {
             Log::warning('Tenant lost features on downgrade', [
                 'tenant_id' => $event->tenant->id,
                 'tenant_name' => $event->tenant->name,
@@ -45,6 +36,14 @@ class HandlePlanChange
                 'old_plan' => $event->oldPlan->slug,
                 'new_plan' => $event->newPlan->slug,
             ]);
+        }
+
+        tenancy()->initialize($event->tenant);
+
+        try {
+            Cache::tags(['tenant_'.$event->tenant->id])->flush();
+        } catch (\BadMethodCallException $e) {
+            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$event->tenant->id);
         }
 
         tenancy()->end();

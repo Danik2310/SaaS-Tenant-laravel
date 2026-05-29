@@ -107,24 +107,6 @@ class OrderTest extends TenantTestCase
         $this->assertEquals(1000, $order->balanceDue());
     }
 
-    public function test_generate_order_number_increments(): void
-    {
-        // Since generateOrderNumber is  removed, skip this test
-        $this->assertTrue(true);
-    }
-
-    public function test_generate_order_number_pads_with_zeros(): void
-    {
-        // Since generateOrderNumber is removed, skip this test
-        $this->assertTrue(true);
-    }
-
-    public function test_generate_order_number_handles_first_order(): void
-    {
-        // Since generateOrderNumber is removed, skip this test
-        $this->assertTrue(true);
-    }
-
     public function test_order_subtotal_cast_as_decimal(): void
     {
         $order = Order::factory()->create(['total' => 999.99]);

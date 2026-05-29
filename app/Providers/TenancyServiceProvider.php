@@ -29,9 +29,17 @@ class TenancyServiceProvider extends ServiceProvider
     public function events()
     {
         return [
-            // Tenant events — provisioning is handled by TenantBuilder synchronously
+            // Tenant events — provisioning pipeline runs asynchronously
             Events\CreatingTenant::class => [],
-            Events\TenantCreated::class => [],
+            Events\TenantCreated::class => [
+                JobPipeline::make([
+                    Jobs\CreateDatabase::class,
+                    Jobs\MigrateDatabase::class,
+                    Jobs\SeedDatabase::class,
+                ])->send(function (Events\TenantCreated $event) {
+                    return $event->tenant;
+                })->shouldBeQueued(true)->toListener(),
+            ],
 
             Events\SavingTenant::class => [],
             Events\TenantSaved::class => [],

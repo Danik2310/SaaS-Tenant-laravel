@@ -8,7 +8,6 @@ use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\Product;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -24,19 +23,18 @@ class DashboardController extends Controller
 
     public function index()
     {
-        $tag = 'tenant_' . tenant('id');
+        $tag = 'tenant_'.tenant('id');
 
         $totalProducts = $this->cachedWithFallback($tag, 'dash_total_products', 300, fn () => Product::count());
         $activeProducts = $this->cachedWithFallback($tag, 'dash_active_products', 300, fn () => Product::where('active', true)->count());
         $totalOrders = $this->cachedWithFallback($tag, 'dash_total_orders', 300, fn () => Order::count());
         $totalCustomers = $this->cachedWithFallback($tag, 'dash_total_customers', 300, fn () => Customer::count());
-        $lowStockCount = $this->cachedWithFallback($tag, 'dash_low_stock', 300, fn () =>
-            Product::where('active', true)
-                ->whereRaw('(
+        $lowStockCount = $this->cachedWithFallback($tag, 'dash_low_stock', 300, fn () => Product::where('active', true)
+            ->whereRaw('(
                     SELECT COALESCE(SUM(CASE WHEN type = \'out\' THEN -quantity ELSE quantity END), 0)
                     FROM inventory_movements WHERE product_id = products.id
                 ) < 10')
-                ->count()
+            ->count()
         );
 
         $previousActiveProducts = $this->cachedWithFallback($tag, 'dashboard_prev_active_products', 3600, function () {

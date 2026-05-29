@@ -188,5 +188,4 @@ class RolePermissionController extends Controller
 
         return response()->noContent();
     }
-
 }
