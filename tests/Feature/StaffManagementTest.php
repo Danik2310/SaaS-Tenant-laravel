@@ -182,4 +182,39 @@ class StaffManagementTest extends TestCase
                 ],
             ]);
     }
+
+    /**
+     * 👥 Test: Returns 404 for non-existent staff member
+     */
+    public function test_returns_404_for_nonexistent_staff()
+    {
+        $this->getJson('/admin/api/staff/99999')->assertStatus(404);
+        $this->putJson('/admin/api/staff/99999', [
+            'name' => 'Ghost', 'email' => 'ghost@example.com',
+        ])->assertStatus(404);
+        $this->deleteJson('/admin/api/staff/99999')->assertStatus(404);
+    }
+
+    /**
+     * 👥 Test: Users without permission cannot manage staff
+     */
+    public function test_unauthorized_user_cannot_manage_staff()
+    {
+        $admin = AdminUser::factory()->create();
+        $this->actingAs($admin, 'admin');
+
+        $this->getJson('/admin/api/staff')->assertStatus(403);
+        $this->postJson('/admin/api/staff', [
+            'name' => 'Test', 'email' => 'test@example.com', 'password' => 'Password123!',
+        ])->assertStatus(403);
+        $this->deleteJson('/admin/api/staff/1')->assertStatus(403);
+    }
+
+    /**
+     * 👥 Test: Guest is redirected to login
+     */
+    public function test_guest_cannot_access_staff()
+    {
+        $this->getJson('/admin/api/staff')->assertStatus(401);
+    }
 }

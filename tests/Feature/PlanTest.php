@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AdminUser;
 use App\Models\Plan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\AdminAuthSetup;
@@ -56,7 +57,11 @@ class PlanTest extends TestCase
             'name' => 'Old Plan',
             'slug' => 'old',
             'price' => 5.00,
-            'features' => ['Old Feature'],
+        ]);
+
+        $plan->featureGates()->create([
+            'feature_key' => 'Old Feature',
+            'is_enabled' => true,
         ]);
 
         $updateData = [
@@ -115,5 +120,38 @@ class PlanTest extends TestCase
             ]]);
 
         $this->assertCount(3, $response->json('plans'));
+    }
+
+    /**
+     * 🧪 Test: Returns 404 for non-existent plan
+     */
+    public function test_returns_404_for_nonexistent_plan()
+    {
+        $this->getJson('/admin/api/plans/99999')->assertStatus(404);
+        $this->putJson('/admin/api/plans/99999', [
+            'name' => 'Ghost', 'slug' => 'ghost', 'price' => 0, 'features' => 'none',
+        ])->assertStatus(404);
+    }
+
+    /**
+     * 🧪 Test: Users without permission cannot manage plans
+     */
+    public function test_unauthorized_user_cannot_manage_plans()
+    {
+        $admin = AdminUser::factory()->create();
+        $this->actingAs($admin, 'admin');
+
+        $this->getJson('/admin/api/plans')->assertStatus(403);
+        $this->postJson('/admin/api/plans', [
+            'name' => 'Test', 'slug' => 'test', 'price' => 0, 'features' => 'none',
+        ])->assertStatus(403);
+    }
+
+    /**
+     * 🧪 Test: Guest is redirected to login
+     */
+    public function test_guest_cannot_access_plans()
+    {
+        $this->getJson('/admin/api/plans')->assertStatus(401);
     }
 }

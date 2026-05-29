@@ -223,6 +223,25 @@ class UserObserverTest extends TestCase
     }
 
     // -------------------------------------------------------------------
+    //  Observer registration
+    // -------------------------------------------------------------------
+
+    public function test_user_observer_is_registered(): void
+    {
+        $this->assertTrue(
+            User::getEventDispatcher()->hasListeners('eloquent.created: '.User::class),
+            'User model should have a listener for the created event'
+        );
+
+        User::factory()->create();
+
+        $this->assertEquals(
+            1,
+            TenantResourceUsage::where('tenant_id', $this->tenant->id)->value('users_count')
+        );
+    }
+
+    // -------------------------------------------------------------------
     //  Rapid successive operations
     // -------------------------------------------------------------------
 

@@ -229,6 +229,26 @@ class OrderObserverTest extends TestCase
     }
 
     // -------------------------------------------------------------------
+    //  Observer registration
+    // -------------------------------------------------------------------
+
+    public function test_order_observer_is_registered(): void
+    {
+        $this->assertTrue(
+            Order::getEventDispatcher()->hasListeners('eloquent.created: '.Order::class),
+            'Order model should have a listener for the created event'
+        );
+
+        $customer = Customer::factory()->create();
+        Order::factory()->forCustomer($customer)->create();
+
+        $this->assertEquals(
+            1,
+            TenantResourceUsage::where('tenant_id', $this->tenant->id)->value('orders_count')
+        );
+    }
+
+    // -------------------------------------------------------------------
     //  Rapid successive operations
     // -------------------------------------------------------------------
 

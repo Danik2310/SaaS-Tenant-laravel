@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Tenant\Auth;
 
+use App\Models\Tenant;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
-use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;

@@ -148,6 +148,26 @@ class ProductObserverTest extends TestCase
         );
     }
 
+    public function test_product_restore_fires_on_non_deleted_model_and_still_counts(): void
+    {
+        // Eloquent fires the restored event even when the model was not soft-deleted.
+        // The observer is a simple counter — it cannot distinguish "restored from trash"
+        // from "restore called but wasn't deleted". This test documents that behavior.
+        $product = Product::factory()->create();
+        $this->assertEquals(
+            1,
+            TenantResourceUsage::where('tenant_id', $this->tenant->id)->value('products_count')
+        );
+
+        $product->restore();
+
+        // The restored event fires, so the observer increments again
+        $this->assertEquals(
+            2,
+            TenantResourceUsage::where('tenant_id', $this->tenant->id)->value('products_count')
+        );
+    }
+
     public function test_restoring_multiple_products(): void
     {
         $products = Product::factory()->count(3)->create();
@@ -267,6 +287,25 @@ class ProductObserverTest extends TestCase
             1,
             TenantResourceUsage::where('tenant_id', $this->tenant->id)->value('products_count'),
             'Tenant A product count should be unchanged'
+        );
+    }
+
+    // -------------------------------------------------------------------
+    //  Observer registration
+    // -------------------------------------------------------------------
+
+    public function test_product_observer_is_registered(): void
+    {
+        $this->assertTrue(
+            Product::getEventDispatcher()->hasListeners('eloquent.created: '.Product::class),
+            'Product model should have a listener for the created event'
+        );
+
+        Product::factory()->create();
+
+        $this->assertEquals(
+            1,
+            TenantResourceUsage::where('tenant_id', $this->tenant->id)->value('products_count')
         );
     }
 

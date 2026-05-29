@@ -2,24 +2,35 @@
 
 namespace Database\Seeders;
 
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-
+use Database\Seeders\Central\ActivityLogSeeder;
+use Database\Seeders\Central\GlobalSettingSeeder;
+use Database\Seeders\Central\PaymentMethodSeeder;
+use Database\Seeders\Central\StaffSeeder;
+use Database\Seeders\Central\TenantResourceUsageSeeder;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        // Central seeders
         $this->call([
-            // ensure permissions and roles exist before creating users
+            // Foundation: permissions, plans, roles
             CentralRolePermissionSeeder::class,
             PlanSeeder::class,
-            AdminUserSeeder::class,
+
+            // Central admin staff (must be after permissions)
+            StaffSeeder::class,
+
+            // Central scaffolding: settings, payment methods
+            GlobalSettingSeeder::class,
+            PaymentMethodSeeder::class,
+
+            // Tenants: provisions each tenant with DB, migrations, permissions, and sample data
             TenantSeeder::class,
+
+            // Post-tenant central data: usage metrics, activity log
+            TenantResourceUsageSeeder::class,
+            ActivityLogSeeder::class,
         ]);
     }
 }

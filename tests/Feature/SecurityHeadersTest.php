@@ -6,7 +6,6 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Models\AdminUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
-use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
 class SecurityHeadersTest extends TestCase
@@ -25,12 +24,12 @@ class SecurityHeadersTest extends TestCase
         $request = Request::create('/');
         $response = $middleware->handle($request, fn ($req) => response('OK'));
 
-        $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        $response->assertHeader('X-Frame-Options', 'DENY');
-        $response->assertHeader('X-XSS-Protection', '1; mode=block');
-        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-        $response->assertHeader('Content-Security-Policy');
+        $this->assertEquals('nosniff', $response->headers->get('X-Content-Type-Options'));
+        $this->assertEquals('DENY', $response->headers->get('X-Frame-Options'));
+        $this->assertEquals('1; mode=block', $response->headers->get('X-XSS-Protection'));
+        $this->assertEquals('strict-origin-when-cross-origin', $response->headers->get('Referrer-Policy'));
+        $this->assertEquals('max-age=31536000; includeSubDomains', $response->headers->get('Strict-Transport-Security'));
+        $this->assertNotNull($response->headers->get('Content-Security-Policy'));
     }
 
     public function test_dev_csp_includes_vite_dev_server_url(): void

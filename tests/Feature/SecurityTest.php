@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AdminUser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -11,10 +12,30 @@ class SecurityTest extends TestCase
 {
     use AdminAuthSetup, RefreshDatabase;
 
+    /** @var array<int, string> */
+    protected array $createdTenantDbNames = [];
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpAdminAuth();
+    }
+
+    protected function tearDown(): void
+    {
+        if (tenancy()->initialized) {
+            tenancy()->end();
+        }
+
+        foreach ($this->createdTenantDbNames as $dbName) {
+            try {
+                DB::statement("DROP DATABASE IF EXISTS `{$dbName}`");
+            } catch (\Exception) {
+                // Silently ignore — DB may already be gone
+            }
+        }
+
+        parent::tearDown();
     }
 
     /**
@@ -23,6 +44,7 @@ class SecurityTest extends TestCase
     public function test_tenant_database_endpoint_does_not_expose_credentials()
     {
         $tenant = $this->createTestTenant();
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
 
         $response = $this->getJson("/admin/api/tenants/{$tenant->id}/database");
 
@@ -71,6 +93,7 @@ class SecurityTest extends TestCase
     public function test_tenants_api_does_not_expose_sensitive_fields()
     {
         $tenant = $this->createTestTenant();
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
 
         $response = $this->getJson('/admin/api/tenants');
 

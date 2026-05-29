@@ -6,8 +6,8 @@ use App\Models\AdminUser;
 use App\Models\Tenant;
 use App\Services\TenantAwarePermissionRegistrar;
 use Database\Seeders\CentralRolePermissionSeeder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
@@ -47,43 +47,8 @@ class PermissionCacheTest extends TestCase
 
     protected function createTestTenant(): Tenant
     {
-        $tenant = Tenant::withoutEvents(function () {
-            $t = Tenant::create(['id' => 'test-'.uniqid()]);
-            $t->database()->makeCredentials();
-            $t->database()->manager()->createDatabase($t);
-            $t->save();
-            $t->refresh();
-
-            return $t;
-        });
-
-        $dbName = $tenant->database()->getName();
-        $this->createdDatabases[] = $dbName;
-
-        config([
-            'database.connections.tenant' => [
-                'driver' => env('DB_CONNECTION', 'mysql'),
-                'host' => env('DB_HOST', '127.0.0.1'),
-                'port' => env('DB_PORT', '3306'),
-                'database' => $dbName,
-                'username' => env('DB_USERNAME', 'root'),
-                'password' => env('DB_PASSWORD', ''),
-                'charset' => 'utf8mb4',
-                'collation' => 'utf8mb4_unicode_ci',
-                'prefix' => '',
-                'prefix_indexes' => true,
-                'strict' => true,
-                'engine' => null,
-            ],
-        ]);
-
-        DB::purge('tenant');
-
-        Artisan::call('migrate', [
-            '--path' => 'database/migrations/tenant',
-            '--database' => 'tenant',
-            '--force' => true,
-        ]);
+        $tenant = parent::createTestTenant();
+        $this->createdDatabases[] = $tenant->database()->getName();
 
         return $tenant;
     }
@@ -165,7 +130,7 @@ class PermissionCacheTest extends TestCase
         $registrar = app(PermissionRegistrar::class);
         $permissions = $registrar->getPermissions();
 
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Collection::class, $permissions);
+        $this->assertInstanceOf(Collection::class, $permissions);
         $this->assertCount(0, $permissions);
 
         tenancy()->end();

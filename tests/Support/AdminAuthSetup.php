@@ -20,6 +20,7 @@ trait AdminAuthSetup
             'manage staff',
             'manage plans',
             'manage payment methods',
+            'manage subscriptions',
             'impersonate tenants',
             'manage profile',
         ];

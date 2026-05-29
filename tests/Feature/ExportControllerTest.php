@@ -6,7 +6,9 @@ use App\Models\AdminUser;
 use App\Models\Permission;
 use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ExportControllerTest extends TestCase
@@ -258,8 +260,8 @@ class ExportControllerTest extends TestCase
     {
         $this->authenticateAsSuperAdmin();
 
-        $jobId = (string) \Illuminate\Support\Str::uuid();
-        \Illuminate\Support\Facades\Cache::put("export:{$jobId}:status", 'completed', 60);
+        $jobId = (string) Str::uuid();
+        Cache::put("export:{$jobId}:status", 'completed', 60);
 
         $this->getJson("/admin/api/export/status/{$jobId}")
             ->assertOk()

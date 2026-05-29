@@ -180,6 +180,18 @@ class PlanGatingTest extends TestCase
 
         $tenant->refresh();
         $this->assertEquals($plan2->id, $tenant->plan_id);
+
+        $this->assertDatabaseHas('subscriptions', [
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan1->id,
+            'status' => 'cancelled',
+        ]);
+
+        $this->assertDatabaseHas('subscriptions', [
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan2->id,
+            'status' => 'active',
+        ]);
     }
 
     public function test_change_tenant_plan_requires_manage_tenants_permission()

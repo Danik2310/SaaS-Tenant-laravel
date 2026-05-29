@@ -12,6 +12,14 @@ class CheckTenantStateTest extends TestCase
 {
     use RefreshDatabase;
 
+    /**
+     * Note: These tests create tenants directly via Tenant::create() rather than
+     * using createTestTenant() + initializeTenant() because:
+     * 1. The middleware only reads tenant()->status from the central DB
+     * 2. No tenant database is needed — we never write to tenant tables
+     * 3. initializeTenant() would set config('database.default' => 'tenant')
+     *    pointing to a non-existent database, causing failures
+     */
     public function test_active_tenant_passes_middleware()
     {
         $tenant = Tenant::create([

@@ -6,9 +6,9 @@ use App\Models\AdminUser;
 use App\Models\Tenant;
 use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class TenantPermissionIsolationTest extends TestCase
@@ -16,6 +16,7 @@ class TenantPermissionIsolationTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private array $createdDatabases = [];
 
     protected function setUp(): void
@@ -47,43 +48,8 @@ class TenantPermissionIsolationTest extends TestCase
 
     protected function createTestTenant(): Tenant
     {
-        $tenant = Tenant::withoutEvents(function () {
-            $t = Tenant::create(['id' => 'test-'.uniqid()]);
-            $t->database()->makeCredentials();
-            $t->database()->manager()->createDatabase($t);
-            $t->save();
-            $t->refresh();
-
-            return $t;
-        });
-
-        $dbName = $tenant->database()->getName();
-        $this->createdDatabases[] = $dbName;
-
-        config([
-            'database.connections.tenant' => [
-                'driver' => env('DB_CONNECTION', 'mysql'),
-                'host' => env('DB_HOST', '127.0.0.1'),
-                'port' => env('DB_PORT', '3306'),
-                'database' => $dbName,
-                'username' => env('DB_USERNAME', 'root'),
-                'password' => env('DB_PASSWORD', ''),
-                'charset' => 'utf8mb4',
-                'collation' => 'utf8mb4_unicode_ci',
-                'prefix' => '',
-                'prefix_indexes' => true,
-                'strict' => true,
-                'engine' => null,
-            ],
-        ]);
-
-        DB::purge('tenant');
-
-        Artisan::call('migrate', [
-            '--path' => 'database/migrations/tenant',
-            '--database' => 'tenant',
-            '--force' => true,
-        ]);
+        $tenant = parent::createTestTenant();
+        $this->createdDatabases[] = $tenant->database()->getName();
 
         return $tenant;
     }
@@ -128,12 +94,12 @@ class TenantPermissionIsolationTest extends TestCase
     {
         $tenantA = $this->createTestTenant();
         tenancy()->initialize($tenantA);
-        $cacheKeyA = app(\Spatie\Permission\PermissionRegistrar::class)->getCacheKey();
+        $cacheKeyA = app(PermissionRegistrar::class)->getCacheKey();
         tenancy()->end();
 
         $tenantB = $this->createTestTenant();
         tenancy()->initialize($tenantB);
-        $cacheKeyB = app(\Spatie\Permission\PermissionRegistrar::class)->getCacheKey();
+        $cacheKeyB = app(PermissionRegistrar::class)->getCacheKey();
         tenancy()->end();
 
         $this->assertNotEquals($cacheKeyA, $cacheKeyB);
@@ -141,13 +107,13 @@ class TenantPermissionIsolationTest extends TestCase
 
     public function test_central_cache_key_differs_from_tenant_cache_key(): void
     {
-        $centralRegistrar = app(\Spatie\Permission\PermissionRegistrar::class);
+        $centralRegistrar = app(PermissionRegistrar::class);
         $centralKey = $centralRegistrar->getCacheKey();
 
         $this->tenant = $this->createTestTenant();
         tenancy()->initialize($this->tenant);
 
-        $tenantRegistrar = app(\Spatie\Permission\PermissionRegistrar::class);
+        $tenantRegistrar = app(PermissionRegistrar::class);
         $tenantKey = $tenantRegistrar->getCacheKey();
         tenancy()->end();
 
@@ -159,7 +125,7 @@ class TenantPermissionIsolationTest extends TestCase
         $this->tenant = $this->createTestTenant();
         tenancy()->initialize($this->tenant);
 
-        $key = app(\Spatie\Permission\PermissionRegistrar::class)->getCacheKey();
+        $key = app(PermissionRegistrar::class)->getCacheKey();
 
         $this->assertStringContainsString('_tenant_', $key);
         $this->assertStringContainsString($this->tenant->id, $key);
@@ -168,7 +134,7 @@ class TenantPermissionIsolationTest extends TestCase
 
     public function test_cache_key_contains_central_suffix_when_not_in_tenant_context(): void
     {
-        $key = app(\Spatie\Permission\PermissionRegistrar::class)->getCacheKey();
+        $key = app(PermissionRegistrar::class)->getCacheKey();
 
         $this->assertStringContainsString('_central', $key);
         $this->assertStringNotContainsString('_tenant_', $key);
