@@ -31,6 +31,7 @@ export default defineConfig({
                 manualChunks: {
                     'vendor-react':  ['react', 'react-dom', '@inertiajs/react'],
                     'vendor-mui':    ['@mui/material', '@mui/icons-material'],
+                    'vendor-mrt':    ['material-react-table'],
                     'vendor-utils':  ['axios'],
                 },
             },

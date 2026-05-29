@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Tenant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -21,25 +22,29 @@ class HandleInertiaRequests extends Middleware
 
         $planData = null;
         if ($currentTenant && $currentTenant instanceof Tenant) {
-            $currentTenant->load('plan');
-            $plan = $currentTenant->plan;
+            $tenantId = $currentTenant->id;
 
-            $planData = [
-                'id' => $plan?->id,
-                'name' => $plan?->name,
-                'slug' => $plan?->slug,
-                'price' => $plan?->price,
-                'features' => $plan?->features ?? [],
-                'limits' => [
-                    'users' => $currentTenant->getLimit('users'),
-                    'storage' => $currentTenant->getLimit('storage'),
-                    'warehouses' => $currentTenant->getLimit('warehouses'),
-                    'categories' => $currentTenant->getLimit('categories'),
-                    'products' => $currentTenant->getLimit('products'),
-                ],
-                'is_on_trial' => $currentTenant->isOnTrial(),
-                'trial_has_expired' => $currentTenant->trialHasExpired(),
-            ];
+            $planData = Cache::tags(['tenant_'.$tenantId])->remember("tenant.{$tenantId}.plan_data", 3600, function () use ($currentTenant) {
+                $currentTenant->load('plan');
+                $plan = $currentTenant->plan;
+
+                return [
+                    'id' => $plan?->id,
+                    'name' => $plan?->name,
+                    'slug' => $plan?->slug,
+                    'price' => $plan?->price,
+                    'features' => $plan?->features ?? [],
+                    'limits' => [
+                        'users' => $currentTenant->getLimit('users'),
+                        'storage' => $currentTenant->getLimit('storage'),
+                        'warehouses' => $currentTenant->getLimit('warehouses'),
+                        'categories' => $currentTenant->getLimit('categories'),
+                        'products' => $currentTenant->getLimit('products'),
+                    ],
+                    'is_on_trial' => $currentTenant->isOnTrial(),
+                    'trial_has_expired' => $currentTenant->trialHasExpired(),
+                ];
+            });
         }
 
         return [
