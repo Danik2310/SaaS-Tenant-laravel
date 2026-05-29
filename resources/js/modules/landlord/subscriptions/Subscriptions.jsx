@@ -14,7 +14,12 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Paper from '@mui/material/Paper';
 import Alert from '@mui/material/Alert';
+import Link from '@mui/material/Link';
+import Tooltip from '@mui/material/Tooltip';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import LaunchIcon from '@mui/icons-material/Launch';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 const statusColors = {
     active: '#22c55e',
@@ -23,7 +28,7 @@ const statusColors = {
     expired: '#64748b',
 };
 
-export default function Subscriptions() {
+export default function Subscriptions({ onViewTenant }) {
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -63,25 +68,95 @@ export default function Subscriptions() {
         fetchSubscriptions();
     };
 
-    useEffect(() => {
-        fetchSubscriptions();
-    }, [statusFilter, search]);
-
     const columns = [
         { accessorKey: 'id', header: 'ID' },
         {
-            accessorKey: 'tenant_name',
+            id: 'tenant',
             header: 'Tenant',
-            Cell: ({ cell, row }) => (
-                <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13 }}>
-                        {cell.getValue()}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {row.original.tenant_id}
-                    </Typography>
-                </Box>
-            ),
+            Cell: ({ row }) => {
+                const tenantName = row.original.tenant_name;
+                const tenantStatus = row.original.tenant_status;
+                const tenantId = row.original.tenant_id;
+
+                if (tenantStatus === 'missing') {
+                    return (
+                        <Box>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="body2" sx={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic', fontWeight: 400 }}>
+                                    {tenantName}
+                                </Typography>
+                                <Tooltip title="The tenant record no longer exists in the database">
+                                    <Chip
+                                        icon={<ErrorOutlineIcon sx={{ fontSize: 14 }} />}
+                                        label="Missing"
+                                        size="small"
+                                        variant="outlined"
+                                        color="error"
+                                        sx={{ height: 20, '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 0.5 } }}
+                                    />
+                                </Tooltip>
+                            </Stack>
+                            <Typography variant="caption" color="#94a3b8" sx={{ display: 'block', mt: 0.25 }}>
+                                {tenantId}
+                            </Typography>
+                        </Box>
+                    );
+                }
+
+                if (tenantStatus === 'deleted') {
+                    return (
+                        <Box>
+                            <Stack direction="row" spacing={1} alignItems="center">
+                                <Typography variant="body2" sx={{ fontSize: 13, color: '#d97706', fontWeight: 500, textDecoration: 'line-through' }}>
+                                    {tenantName}
+                                </Typography>
+                                <Tooltip title="This tenant has been soft-deleted">
+                                    <Chip
+                                        icon={<WarningAmberIcon sx={{ fontSize: 14 }} />}
+                                        label="Deleted"
+                                        size="small"
+                                        variant="outlined"
+                                        color="warning"
+                                        sx={{ height: 20, '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 0.5 } }}
+                                    />
+                                </Tooltip>
+                            </Stack>
+                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    {tenantId}
+                                </Typography>
+                                <Link
+                                    component="button"
+                                    variant="caption"
+                                    underline="hover"
+                                    onClick={() => onViewTenant?.(tenantId)}
+                                    sx={{ color: '#d97706', fontWeight: 500, fontSize: 11 }}
+                                >
+                                    View details
+                                </Link>
+                            </Stack>
+                        </Box>
+                    );
+                }
+
+                return (
+                    <Box>
+                        <Link
+                            component="button"
+                            variant="body2"
+                            underline="hover"
+                            onClick={() => onViewTenant?.(tenantId)}
+                            sx={{ fontWeight: 600, fontSize: 13, color: '#3b82f6', textAlign: 'left' }}
+                        >
+                            {tenantName}
+                            <LaunchIcon sx={{ fontSize: 13, ml: 0.5, verticalAlign: 'middle' }} />
+                        </Link>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                            {tenantId}
+                        </Typography>
+                    </Box>
+                );
+            },
         },
         {
             accessorKey: 'plan_name',

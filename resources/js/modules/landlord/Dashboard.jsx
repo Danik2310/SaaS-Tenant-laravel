@@ -255,6 +255,21 @@ export default function Dashboard() {
         }
     };
 
+    const handleViewTenant = async (tenantId) => {
+        setView('tenants');
+        try {
+            const res = await api.get(`/admin/api/tenants/${tenantId}`);
+            openModal('domain', res.data.tenant);
+        } catch (err) {
+            const status = err.response?.status;
+            const message = status === 404
+                ? `Tenant #${tenantId} no longer exists. It may have been permanently deleted.`
+                : err.response?.data?.message || 'Failed to load tenant details';
+            toast.error(message);
+            setError(message);
+        }
+    };
+
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
 
     return (
@@ -415,7 +430,7 @@ export default function Dashboard() {
                             />
                         )}
                         <ErrorBoundary fallbackMessage="Subscriptions failed to load">
-                            {view === 'subscriptions' && <Subscriptions />}
+                            {view === 'subscriptions' && <Subscriptions onViewTenant={handleViewTenant} />}
                         </ErrorBoundary>
                         <ErrorBoundary fallbackMessage="Activity log failed to load">
                             {view === 'activity' && <ActivityLog />}
