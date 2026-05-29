@@ -52,10 +52,14 @@ class TenantStateManager
             event(new TenantReactivated($tenant));
         }
 
+        tenancy()->initialize($tenant);
+
         try {
             Cache::tags(['tenant_'.$tenant->id])->flush();
         } catch (\BadMethodCallException $e) {
             Log::warning('Cache driver does not support tags, skipped flush for tenant '.$tenant->id);
         }
+
+        tenancy()->end();
     }
 }

@@ -8,9 +8,11 @@ use App\Builders\TenantBuilder;
 use App\Contracts\TenantManagerInterface;
 use App\Events\PlanChanged;
 use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\States\TenantStateManager;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class TenantManager implements TenantManagerInterface
@@ -20,9 +22,6 @@ class TenantManager implements TenantManagerInterface
         return (new TenantBuilder($data))
             ->withDomain($data['domain'])
             ->withPlan($data['plan'] ?? null)
-            ->withDatabase()
-            ->withMigrations()
-            ->withSeed()
             ->build();
     }
 
@@ -46,17 +45,26 @@ class TenantManager implements TenantManagerInterface
 
     public function changePlan(Tenant $tenant, Plan $newPlan): void
     {
-        $oldPlan = $tenant->plan ?? Plan::where('slug', 'free')->firstOrNew([]);
+        DB::transaction(function () use ($tenant, $newPlan) {
+            $oldPlan = $tenant->plan ?? Plan::where('slug', 'free')->firstOrNew([]);
 
-        $tenant->plan_id = $newPlan->id;
-        $tenant->save();
+            $tenant->activeSubscription?->update([
+                'status' => 'cancelled',
+                'ends_at' => now()->subDay(),
+            ]);
 
-        try {
-            Cache::tags(['tenant_'.$tenant->id])->flush();
-        } catch (\BadMethodCallException $e) {
-            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$tenant->id);
-        }
+            Subscription::createForTenant($tenant, $newPlan, 'active');
 
-        event(new PlanChanged($tenant, $oldPlan, $newPlan));
+            $tenant->plan_id = $newPlan->id;
+            $tenant->save();
+
+            try {
+                Cache::tags(['tenant_'.$tenant->id])->flush();
+            } catch (\BadMethodCallException $e) {
+                Log::warning('Cache driver does not support tags, skipped flush for tenant '.$tenant->id);
+            }
+
+            event(new PlanChanged($tenant, $oldPlan, $newPlan));
+        });
     }
 }

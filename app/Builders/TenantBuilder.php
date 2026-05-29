@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Builders;
 
 use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\Tenant;
-use Database\Seeders\TenantUserRolePermissionSeeder;
-use Illuminate\Support\Facades\Artisan;
+use InvalidArgumentException;
 
 class TenantBuilder
 {
@@ -15,14 +15,20 @@ class TenantBuilder
 
     public function __construct(array $data)
     {
-        $status = isset($data['trial_ends_at']) ? 'Trial' : 'Active';
+        $status = $data['status'] ?? (isset($data['trial_ends_at']) ? 'Trial' : 'Active');
 
-        $this->tenant = Tenant::create([
+        $attributes = [
             'name' => $data['name'],
             'email' => $data['email'],
             'status' => $status,
             'trial_ends_at' => $data['trial_ends_at'] ?? null,
-        ]);
+        ];
+
+        if (isset($data['id'])) {
+            $attributes['id'] = $data['id'];
+        }
+
+        $this->tenant = Tenant::create($attributes);
     }
 
     public function withDomain(string $domain): static
@@ -32,47 +38,24 @@ class TenantBuilder
         return $this;
     }
 
-    public function withDatabase(): static
-    {
-        $this->tenant->database()->makeCredentials();
-        $this->tenant->database()->manager()->createDatabase($this->tenant);
-        $this->tenant->save();
-
-        return $this;
-    }
-
-    public function withMigrations(): static
-    {
-        Artisan::call('tenants:migrate', ['--tenants' => [$this->tenant->id]]);
-
-        return $this;
-    }
-
     public function withPlan(?string $planSlug = null): static
     {
         if ($planSlug) {
             $plan = Plan::where('slug', $planSlug)->first();
             if ($plan) {
+                if ($plan->max_users === 0) {
+                    throw new InvalidArgumentException("Plan '{$plan->name}' does not support any users.");
+                }
+
                 $this->tenant->plan_id = $plan->id;
                 $this->tenant->save();
+
+                if (! $this->tenant->activeSubscription) {
+                    $endsAt = $this->tenant->trial_ends_at;
+                    Subscription::createForTenant($this->tenant, $plan, 'active', $endsAt);
+                }
             }
         }
-
-        return $this;
-    }
-
-    public function withSeed(?string $seederClass = null): static
-    {
-        tenancy()->initialize($this->tenant);
-        try {
-            Artisan::call('db:seed', [
-                '--class' => $seederClass ?? TenantUserRolePermissionSeeder::class,
-                '--force' => true,
-            ]);
-        } catch (\Exception $e) {
-            \Log::warning('Failed to seed tenant: '.$e->getMessage(), ['tenant_id' => $this->tenant->id]);
-        }
-        tenancy()->end();
 
         return $this;
     }
