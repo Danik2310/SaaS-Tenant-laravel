@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Plan extends Model
 {
@@ -18,7 +19,6 @@ class Plan extends Model
         'max_warehouses',
         'max_categories',
         'max_products',
-        'features',
     ];
 
     protected $casts = [
@@ -28,16 +28,35 @@ class Plan extends Model
         'max_warehouses' => 'integer',
         'max_categories' => 'integer',
         'max_products' => 'integer',
-        'features' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
+    public function featureGates(): HasMany
+    {
+        return $this->hasMany(PlanFeature::class);
+    }
+
+    public function getFeaturesAttribute(): array
+    {
+        $gates = $this->relationLoaded('featureGates')
+            ? $this->featureGates
+            : $this->featureGates()->get();
+
+        return $gates->where('is_enabled', true)->pluck('feature_key')->values()->toArray();
+    }
+
     public function hasFeature(string $feature): bool
     {
-        $features = $this->features ?? [];
+        if ($this->relationLoaded('featureGates')) {
+            $found = $this->featureGates->firstWhere('feature_key', $feature);
 
-        return in_array($feature, $features, true) || ($features[$feature] ?? false) === true;
+            return $found?->is_enabled ?? false;
+        }
+
+        return $this->featureGates()
+            ->where('feature_key', $feature)
+            ->value('is_enabled') ?? false;
     }
 
     public function getLimit(string $limit): int

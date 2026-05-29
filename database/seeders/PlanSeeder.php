@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Plan;
+use App\Models\PlanFeature;
 use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
@@ -22,7 +23,18 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => 1,
                 'max_categories' => 5,
                 'max_products' => 25,
-                'features' => ['basic'],
+                '_features' => ['basic'],
+            ],
+            [
+                'name' => 'Growth',
+                'slug' => 'growth',
+                'price' => 15,
+                'max_users' => 5,
+                'max_storage' => 500,
+                'max_warehouses' => 3,
+                'max_categories' => 20,
+                'max_products' => 200,
+                '_features' => ['advanced', 'api_access'],
             ],
             [
                 'name' => 'Pro',
@@ -33,7 +45,7 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => 10,
                 'max_categories' => 50,
                 'max_products' => 500,
-                'features' => ['advanced', 'api_access', 'custom_domain'],
+                '_features' => ['advanced', 'api_access', 'custom_domain'],
             ],
             [
                 'name' => 'Enterprise',
@@ -44,12 +56,27 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => null,
                 'max_categories' => null,
                 'max_products' => null,
-                'features' => ['all', 'api_access', 'custom_domain', 'white_label'],
+                '_features' => ['all', 'api_access', 'custom_domain', 'white_label'],
             ],
         ];
 
-        foreach ($plans as $plan) {
-            Plan::updateOrCreate(['slug' => $plan['slug']], $plan);
+        foreach ($plans as $planData) {
+            $features = $planData['_features'] ?? [];
+            unset($planData['_features']);
+
+            $planModel = Plan::updateOrCreate(['slug' => $planData['slug']], $planData);
+
+            if (! empty($features)) {
+                $featureKeys = is_array($features) ? $features : [$features];
+                foreach ($featureKeys as $feature) {
+                    PlanFeature::updateOrCreate([
+                        'plan_id' => $planModel->id,
+                        'feature_key' => $feature,
+                    ], [
+                        'is_enabled' => true,
+                    ]);
+                }
+            }
         }
 
     }
