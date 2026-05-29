@@ -25,7 +25,7 @@ class TenantFactory extends Factory
         return $this->afterCreating(function (Tenant $tenant) {
             if (! $tenant->domains()->exists()) {
                 $tenant->domains()->create([
-                    'domain' => $tenant->id . '.localhost',
+                    'domain' => $tenant->id.'.localhost',
                 ]);
             }
         });

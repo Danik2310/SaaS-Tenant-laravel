@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Tenant;
-use Stancl\Tenancy\Database\Models\Domain;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Stancl\Tenancy\Database\Models\Domain;
 
 class DomainFactory extends Factory
 {
