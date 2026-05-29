@@ -15,22 +15,34 @@ class CheckTenantState
     {
         $tenant = tenant();
 
-        if ($tenant && $tenant instanceof Tenant && !in_array($tenant->status, ['Active', 'Trial'])) {
-            $isDeleted = $tenant->status === 'Deleted';
+        if ($tenant && $tenant instanceof Tenant) {
+            if ($tenant->trashed()) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'This account has been deleted. Please contact support.',
+                    ], 403);
+                }
 
-            if ($request->expectsJson()) {
-                $message = $isDeleted
-                    ? 'This account has been deleted. Please contact support.'
-                    : 'Your account has been suspended. Please contact support.';
-
-                return response()->json(['message' => $message], 403);
+                return response()->view('admin.tenant-state', [
+                    'status' => 'Deleted',
+                    'isDeleted' => true,
+                    'tenantName' => $tenant->name,
+                ]);
             }
 
-            return response()->view('admin.tenant-state', [
-                'status' => $tenant->status,
-                'isDeleted' => $isDeleted,
-                'tenantName' => $tenant->name,
-            ]);
+            if (! in_array($tenant->status, ['Active', 'Trial'])) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Your account has been suspended. Please contact support.',
+                    ], 403);
+                }
+
+                return response()->view('admin.tenant-state', [
+                    'status' => $tenant->status,
+                    'isDeleted' => false,
+                    'tenantName' => $tenant->name,
+                ]);
+            }
         }
 
         return $next($request);

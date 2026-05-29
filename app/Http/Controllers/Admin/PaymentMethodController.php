@@ -21,8 +21,7 @@ class PaymentMethodController extends Controller
             ob_end_clean();
         }
 
-        $methods = Cache::remember('payment_methods_all', 3600, fn () =>
-            PaymentMethodResource::collection(PaymentMethod::all())
+        $methods = Cache::remember('payment_methods_all', 3600, fn () => PaymentMethodResource::collection(PaymentMethod::all())
         );
 
         try {
@@ -62,8 +61,6 @@ class PaymentMethodController extends Controller
             'provider' => $method->provider,
             'mode' => $method->mode,
             'active' => $method->active,
-            'api_key' => $method->getAttributes()['api_key'] ?? null,
-            'secret_key' => $method->getAttributes()['secret_key'] ?? null,
         ];
 
         $method->update($request->validated());

@@ -14,7 +14,7 @@ class TogglePaymentMethodRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'active' => 'required|boolean',
+            'active' => 'sometimes|boolean',
         ];
     }
 }
