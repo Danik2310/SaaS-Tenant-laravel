@@ -23,7 +23,7 @@ class Subscription extends Model
         'ends_at' => 'date',
     ];
 
-    public static function createForTenant(Tenant $tenant, ?Plan $plan, string $status = 'active', ?\DateTimeInterface $endsAt = null): self
+    public static function createForTenant(Tenant $tenant, ?Plan $plan, string $status = 'active', ?\DateTimeInterface $endsAt = null, ?\DateTimeInterface $startsAt = null): self
     {
         if (! $plan) {
             throw new \InvalidArgumentException('Cannot create subscription without a plan. Tenant: '.$tenant->id);
@@ -32,7 +32,7 @@ class Subscription extends Model
         return static::create([
             'tenant_id' => $tenant->id,
             'plan_id' => $plan->id,
-            'starts_at' => now(),
+            'starts_at' => $startsAt ?? now(),
             'ends_at' => $endsAt,
             'status' => $status,
         ]);

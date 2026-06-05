@@ -27,11 +27,21 @@ class TenantManager implements TenantManagerInterface
 
     public function suspend(Tenant $tenant): void
     {
+        $tenant->activeSubscription?->update([
+            'status' => 'cancelled',
+            'ends_at' => now(),
+        ]);
+
         TenantStateManager::transitionTo($tenant, 'Suspended');
     }
 
     public function delete(Tenant $tenant): void
     {
+        $tenant->activeSubscription?->update([
+            'status' => 'cancelled',
+            'ends_at' => now(),
+        ]);
+
         TenantStateManager::transitionTo($tenant, 'Deleted');
         $tenant->delete();
     }
@@ -41,6 +51,15 @@ class TenantManager implements TenantManagerInterface
         TenantStateManager::transitionTo($tenant, 'Active');
         $tenant->deleted_at = null;
         $tenant->save();
+
+        $tenant->subscriptions()
+            ->where('status', 'cancelled')
+            ->latest()
+            ->first()
+            ?->update([
+                'status' => 'active',
+                'ends_at' => null,
+            ]);
     }
 
     public function changePlan(Tenant $tenant, Plan $newPlan): void

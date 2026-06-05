@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Contracts\TenantManagerInterface;
 use App\Models\Plan;
-use App\Models\Subscription;
 use App\Models\Tenant;
 use Database\Seeders\Tenant\TenantDataSeeder;
 use Illuminate\Database\Seeder;
@@ -107,12 +106,8 @@ class TenantSeeder extends Seeder
             $tenant->restore();
         }
 
-        $tenant->load('plan', 'activeSubscription');
+        $tenant->load('plan');
         $plan = $tenant->plan;
-
-        if (! $tenant->activeSubscription && $plan) {
-            Subscription::createForTenant($tenant, $plan, 'active');
-        }
 
         $this->seedTenantData($tenant, $config['email'], $plan);
 

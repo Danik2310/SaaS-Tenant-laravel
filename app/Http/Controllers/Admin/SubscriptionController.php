@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSubscriptionRequest;
 use App\Http\Requests\Admin\UpdateSubscriptionRequest;
 use App\Http\Resources\SubscriptionResource;
+use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 
 class SubscriptionController extends Controller
@@ -57,7 +59,21 @@ class SubscriptionController extends Controller
 
     public function store(StoreSubscriptionRequest $request)
     {
-        $subscription = Subscription::create($request->validated());
+        $tenant = Tenant::findOrFail($request->tenant_id);
+        $plan = Plan::findOrFail($request->plan_id);
+
+        $tenant->activeSubscription?->update([
+            'status' => 'cancelled',
+            'ends_at' => now()->subDay(),
+        ]);
+
+        $subscription = Subscription::createForTenant(
+            $tenant,
+            $plan,
+            $request->status,
+            $request->ends_at ? now()->parse($request->ends_at) : null,
+            $request->starts_at ? now()->parse($request->starts_at) : null,
+        );
 
         return response()->json([
             'message' => 'Subscription created successfully',
