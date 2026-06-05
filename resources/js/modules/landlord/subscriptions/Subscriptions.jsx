@@ -17,6 +17,7 @@ import Alert from '@mui/material/Alert';
 import Link from '@mui/material/Link';
 import Tooltip from '@mui/material/Tooltip';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import ClearIcon from '@mui/icons-material/Clear';
 import LaunchIcon from '@mui/icons-material/Launch';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -28,26 +29,31 @@ const statusColors = {
     expired: '#64748b',
 };
 
-export default function Subscriptions({ onViewTenant }) {
+export default function Subscriptions({ onViewTenant, initialSearch = '' }) {
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     const [statusFilter, setStatusFilter] = useState('');
-    const [search, setSearch] = useState('');
+    const [search, setSearch] = useState(initialSearch);
 
-    useEffect(() => {
-        fetchSubscriptions();
-    }, []);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(25);
 
-    const fetchSubscriptions = async () => {
+    const fetchSubscriptions = async (customPage, customPerPage) => {
         setLoading(true);
         try {
+            const p = customPage ?? page;
+            const rpp = customPerPage ?? rowsPerPage;
             const params = new URLSearchParams();
             if (statusFilter) params.append('status', statusFilter);
             if (search) params.append('search', search);
+            if (p > 0) params.append('page', p + 1);
+            params.append('per_page', rpp);
             const res = await api.get(`/admin/api/subscriptions?${params.toString()}`);
             setSubscriptions(res.data.subscriptions);
+            setTotal(res.data.meta.total);
             setError(null);
         } catch (err) {
             const message = 'Failed to fetch subscriptions';
@@ -58,14 +64,26 @@ export default function Subscriptions({ onViewTenant }) {
         }
     };
 
+    useEffect(() => {
+        fetchSubscriptions(page, rowsPerPage);
+    }, [page, rowsPerPage]);
+
     const handleFilter = () => {
-        fetchSubscriptions();
+        if (page !== 0) {
+            setPage(0);
+        } else {
+            fetchSubscriptions(0, rowsPerPage);
+        }
     };
 
     const handleClear = () => {
         setStatusFilter('');
         setSearch('');
-        fetchSubscriptions();
+        if (page !== 0) {
+            setPage(0);
+        } else {
+            fetchSubscriptions(0, rowsPerPage);
+        }
     };
 
     const columns = [
@@ -73,10 +91,10 @@ export default function Subscriptions({ onViewTenant }) {
         {
             id: 'tenant',
             header: 'Tenant',
-            Cell: ({ row }) => {
-                const tenantName = row.original.tenant_name;
-                const tenantStatus = row.original.tenant_status;
-                const tenantId = row.original.tenant_id;
+            Cell: ({ cell }) => {
+                const tenantName = cell.row.tenant_name;
+                const tenantStatus = cell.row.tenant_status;
+                const tenantId = cell.row.tenant_id;
 
                 if (tenantStatus === 'missing') {
                     return (
@@ -218,14 +236,27 @@ export default function Subscriptions({ onViewTenant }) {
                         onChange={(e) => setSearch(e.target.value)}
                         sx={{ minWidth: 200 }}
                     />
-                    <Button variant="outlined" size="small" onClick={handleClear} startIcon={<FilterListIcon />}>
+                    <Button variant="contained" size="small" onClick={handleFilter} startIcon={<FilterListIcon />}>
+                        Apply
+                    </Button>
+                    <Button variant="outlined" size="small" onClick={handleClear} startIcon={<ClearIcon />}>
                         Clear
                     </Button>
                 </Stack>
             </Paper>
 
             {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                <Alert
+                    severity="error"
+                    sx={{ mb: 2 }}
+                    action={
+                        <Button size="small" color="inherit" onClick={() => fetchSubscriptions(page, rowsPerPage)}>
+                            Retry
+                        </Button>
+                    }
+                >
+                    {error}
+                </Alert>
             )}
 
             <DataTable
@@ -233,6 +264,14 @@ export default function Subscriptions({ onViewTenant }) {
                 data={subscriptions}
                 loading={loading}
                 emptyMessage="No subscriptions found."
+                total={total}
+                page={page}
+                rowsPerPage={rowsPerPage}
+                onPageChange={(newPage) => setPage(newPage)}
+                onRowsPerPageChange={(newRowsPerPage) => {
+                    setRowsPerPage(newRowsPerPage);
+                    setPage(0);
+                }}
             />
         </Box>
     );

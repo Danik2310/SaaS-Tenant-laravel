@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense } from 'react';
+import { useState, useEffect, Suspense, lazy } from 'react';
 import api from '../../services/api';
 import Navbar from '../../components/Navbar';
 import DataTable from '@/Components/DataTable';
@@ -14,6 +14,8 @@ import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { toast } from 'sonner';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
@@ -21,21 +23,21 @@ import CircularProgress from '@mui/material/CircularProgress';
 import ErrorBoundary from '@/Components/ErrorBoundary';
 import { useAuthContext } from '@/context/AuthContext';
 
-const DashboardOverview = React.lazy(() => import('./DashboardOverview'));
-const TenantList = React.lazy(() => import('./tenants/TenantList'));
-const TenantForm = React.lazy(() => import('./tenants/TenantForm'));
-const Staff = React.lazy(() => import('./staff/StaffList'));
-const Plans = React.lazy(() => import('./billing/Plans'));
-const RolePermissions = React.lazy(() => import('./staff/RolePermissions'));
-const Profile = React.lazy(() => import('./profile/Profile'));
-const Subscriptions = React.lazy(() => import('./subscriptions/Subscriptions'));
-const ActivityLog = React.lazy(() => import('./activity/ActivityLog'));
-const Settings = React.lazy(() => import('./settings/Settings'));
-const ResourceUsage = React.lazy(() => import('./resource-usage/ResourceUsage'));
-const DatabaseModal = React.lazy(() => import('./modals/DatabaseModal'));
-const MigrationModal = React.lazy(() => import('./modals/MigrationModal'));
-const DomainModal = React.lazy(() => import('./modals/DomainModal'));
-const ChangePlanModal = React.lazy(() => import('./modals/ChangePlanModal'));
+const DashboardOverview = lazy(() => import('./DashboardOverview'));
+const TenantList = lazy(() => import('./tenants/TenantList'));
+const TenantForm = lazy(() => import('./tenants/TenantForm'));
+const Staff = lazy(() => import('./staff/StaffList'));
+const Plans = lazy(() => import('./billing/Plans'));
+const RolePermissions = lazy(() => import('./staff/RolePermissions'));
+const Profile = lazy(() => import('./profile/Profile'));
+const Subscriptions = lazy(() => import('./subscriptions/Subscriptions'));
+const ActivityLog = lazy(() => import('./activity/ActivityLog'));
+const Settings = lazy(() => import('./settings/Settings'));
+const ResourceUsage = lazy(() => import('./resource-usage/ResourceUsage'));
+const DatabaseModal = lazy(() => import('./modals/DatabaseModal'));
+const MigrationModal = lazy(() => import('./modals/MigrationModal'));
+const DomainModal = lazy(() => import('./modals/DomainModal'));
+const ChangePlanModal = lazy(() => import('./modals/ChangePlanModal'));
 
 export default function Dashboard() {
     const { user, permissions = [] } = useAuthContext();
@@ -49,6 +51,7 @@ export default function Dashboard() {
     const [activeModal, setActiveModal] = useState(null);
     const [planChangeTenant, setPlanChangeTenant] = useState(null);
     const [showDeleted, setShowDeleted] = useState(false);
+    const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(25);
@@ -227,6 +230,7 @@ export default function Dashboard() {
     };
 
     const handleViewSubscriptions = (tenant) => {
+        setSubscriptionSearchTerm(tenant.name);
         setView('subscriptions');
     };
 
@@ -273,22 +277,24 @@ export default function Dashboard() {
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', display: 'flex' }}>
+        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex' }}>
             <Navbar view={view} setView={setView} />
-            <div style={{ flex: 1 }}>
-                <header
-                    style={{
-                        background: '#ffffff',
-                        padding: '16px 32px',
+            <Box sx={{ flex: 1 }}>
+                <Box
+                    component="header"
+                    sx={{
+                        bgcolor: 'background.paper',
+                        px: 4,
+                        py: 2,
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        borderBottom: '1px solid #e2e8f0',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        borderBottom: 1,
+                        borderColor: 'divider',
                     }}
                 >
-                    <div>
-                        <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#0f172a' }}>
+                    <Box>
+                        <Typography variant="h5" component="h1">
                             {view === 'overview' && 'Dashboard Overview'}
                             {view === 'resource-usage' && 'Resource Usage'}
                             {view === 'tenants' && 'Tenant Management'}
@@ -300,61 +306,37 @@ export default function Dashboard() {
                             {view === 'settings' && 'System Settings'}
                             {view === 'profile' && 'My Profile'}
                             {view === 'impersonate' && 'God Mode'}
-                        </h1>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                             {user?.name}
-                        </p>
-                    </div>
+                        </Typography>
+                    </Box>
                     {(showForm || editingTenant) && (
-                        <button
+                        <Button
+                            variant="outlined"
+                            size="small"
                             onClick={() => { setEditingTenant(null); setShowForm(false); }}
-                            style={{
-                                padding: '8px 20px',
-                                background: '#f1f5f9',
-                                color: '#334155',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                fontWeight: 600,
-                            }}
                         >
                             Cancel
-                        </button>
+                        </Button>
                     )}
-                    <button
+                    <Button
+                        variant="contained"
+                        color="error"
+                        size="small"
                         onClick={handleLogout}
-                        style={{
-                            padding: '8px 20px',
-                            background: '#ef4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                        }}
                     >
                         Logout
-                    </button>
-                </header>
+                    </Button>
+                </Box>
 
-                <main style={{ padding: '24px 32px' }}>
-                    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-                        <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '64px 0' }}><CircularProgress /></div>}>
+                <Box component="main" sx={{ px: 4, py: 3 }}>
+                    <Box sx={{ maxWidth: 1280, mx: 'auto' }}>
+                        <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>}>
                         {error && (
-                            <div
-                                style={{
-                                    background: '#fef2f2',
-                                    color: '#dc2626',
-                                    padding: '12px 16px',
-                                    borderRadius: '6px',
-                                    marginBottom: '20px',
-                                    border: '1px solid #fecaca',
-                                }}
-                            >
+                            <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2.5 }}>
                                 {error}
-                            </div>
+                            </Alert>
                         )}
 
                         <ErrorBoundary fallbackMessage="Overview failed to load">
@@ -430,7 +412,7 @@ export default function Dashboard() {
                             />
                         )}
                         <ErrorBoundary fallbackMessage="Subscriptions failed to load">
-                            {view === 'subscriptions' && <Subscriptions onViewTenant={handleViewTenant} />}
+                            {view === 'subscriptions' && <Subscriptions key={subscriptionSearchTerm} onViewTenant={handleViewTenant} initialSearch={subscriptionSearchTerm} />}
                         </ErrorBoundary>
                         <ErrorBoundary fallbackMessage="Activity log failed to load">
                             {view === 'activity' && <ActivityLog />}
@@ -444,35 +426,27 @@ export default function Dashboard() {
                         {view === 'impersonate' && (
                             <>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                    <div>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                                    <Box>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                             Impersonate Tenant
                                         </Typography>
-                                        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+                                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                                             Select a tenant to impersonate. You will be redirected to their domain.
                                         </Typography>
-                                    </div>
+                                    </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                         <FormControlLabel
                                             control={<Switch size="small" checked={showDeleted} onChange={() => setShowDeleted(s => !s)} />}
-                                            label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
+                                            label={<Typography variant="caption" sx={{ color: 'text.secondary' }}>Show deleted</Typography>}
                                             sx={{ mr: 0 }}
                                         />
-                                        <button
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
                                             onClick={() => { setView('tenants'); if (permissions.includes('manage tenants')) fetchTenants(); }}
-                                            style={{
-                                                padding: '8px 16px',
-                                                background: '#f1f5f9',
-                                                color: '#334155',
-                                                border: '1px solid #e2e8f0',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontSize: '13px',
-                                                fontWeight: 600,
-                                            }}
                                         >
                                             Back to Tenants
-                                        </button>
+                                        </Button>
                                     </Box>
                                 </Box>
                                 {permissions.includes('manage tenants') ? (
@@ -484,32 +458,31 @@ export default function Dashboard() {
                                                 accessorKey: 'domain',
                                                 header: 'Domain',
                                                 Cell: ({ cell }) => (
-                                                    <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '3px', fontSize: '13px', fontFamily: 'monospace' }}>
+                                                    <Typography
+                                                        component="code"
+                                                        variant="body2"
+                                                        sx={{ bgcolor: 'grey.100', px: 0.75, py: 0.25, borderRadius: 0.5, fontFamily: 'monospace' }}
+                                                    >
                                                         {cell.getValue()}
-                                                    </code>
+                                                    </Typography>
                                                 ),
                                             },
                                             {
                                                 accessorKey: 'status',
                                                 header: 'Status',
                                                 Cell: ({ cell }) => {
-                                                    const status = cell.getValue();
-                                                    const chipStyle = status === 'Active'
-                                                        ? { background: '#dcfce7', color: '#166534' }
-                                                        : status === 'Suspended'
-                                                            ? { background: '#fee2e2', color: '#991b1b' }
-                                                            : { background: '#f1f5f9', color: '#64748b', fontStyle: 'italic' };
+                                                    const s = cell.getValue();
                                                     return (
-                                                        <span style={{
-                                                            display: 'inline-block',
-                                                            padding: '4px 8px',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: 600,
-                                                            ...chipStyle,
-                                                        }}>
-                                                            {status}
-                                                        </span>
+                                                        <Chip
+                                                            label={s}
+                                                            size="small"
+                                                            color={
+                                                                s === 'Active' ? 'success'
+                                                                : s === 'Suspended' ? 'error'
+                                                                : 'default'
+                                                            }
+                                                            variant={s === 'Active' || s === 'Suspended' ? 'filled' : 'outlined'}
+                                                        />
                                                     );
                                                 },
                                             },
@@ -532,7 +505,7 @@ export default function Dashboard() {
                             </>
                         )}
                         </Suspense>
-                    </div>
+                    </Box>
 
                     <Suspense fallback={null}>
                         <DatabaseModal
@@ -571,8 +544,8 @@ export default function Dashboard() {
                             }}
                         />
                     </Suspense>
-                </main>
-            </div>
-        </div>
+                </Box>
+            </Box>
+        </Box>
     );
 }
