@@ -57,7 +57,7 @@ class StaffController extends Controller
                     ])->toArray(),
             ]);
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Staff member not found'], 404);
+            return response()->json(['message' => 'Staff member not found'], 404);
         }
     }
 
@@ -132,7 +132,7 @@ class StaffController extends Controller
         $admin = AdminUser::findOrFail($id);
 
         if (auth('admin')->id() === (int) $id) {
-            return response()->json(['error' => 'Cannot delete your own account'], 422);
+            return response()->json(['message' => 'Cannot delete your own account'], 422);
         }
 
         activity('staff')
@@ -239,7 +239,7 @@ class StaffController extends Controller
         $admin = AdminUser::findOrFail($id);
 
         if (auth('admin')->id() === (int) $id) {
-            return response()->json(['error' => 'Cannot deactivate your own account'], 422);
+            return response()->json(['message' => 'Cannot deactivate your own account'], 422);
         }
 
         $admin->is_active = ! $admin->is_active;
