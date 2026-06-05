@@ -5,9 +5,10 @@ namespace Tests\Feature;
 use App\Exceptions\PlanLimitExceededException;
 use App\Models\AdminUser;
 use App\Models\Plan;
+use App\Models\Role;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -23,8 +24,10 @@ class PlanGatingTest extends TestCase
 
     public function test_plan_has_feature_returns_true_for_existing_feature()
     {
-        $plan = Plan::factory()->create([
-            'features' => ['api_access', 'custom_domain'],
+        $plan = Plan::factory()->create();
+        $plan->featureGates()->createMany([
+            ['feature_key' => 'api_access', 'is_enabled' => true],
+            ['feature_key' => 'custom_domain', 'is_enabled' => true],
         ]);
 
         $this->assertTrue($plan->hasFeature('api_access'));
@@ -33,8 +36,9 @@ class PlanGatingTest extends TestCase
 
     public function test_plan_has_feature_returns_false_for_missing_feature()
     {
-        $plan = Plan::factory()->create([
-            'features' => ['api_access'],
+        $plan = Plan::factory()->create();
+        $plan->featureGates()->create([
+            'feature_key' => 'api_access', 'is_enabled' => true,
         ]);
 
         $this->assertFalse($plan->hasFeature('white_label'));
@@ -60,8 +64,9 @@ class PlanGatingTest extends TestCase
 
     public function test_tenant_has_feature_delegates_to_plan()
     {
-        $plan = Plan::factory()->create([
-            'features' => ['api_access'],
+        $plan = Plan::factory()->create();
+        $plan->featureGates()->create([
+            'feature_key' => 'api_access', 'is_enabled' => true,
         ]);
 
         $tenant = Tenant::create([
@@ -154,8 +159,11 @@ class PlanGatingTest extends TestCase
     {
         $exception = new PlanLimitExceededException('products', 100);
 
-        $response = $this->getJson('/admin/api/plans');
-        $this->assertTrue(true);
+        $response = $exception->render();
+        $data = $response->getData(true);
+
+        $this->assertEquals('You have reached the products limit of 100 on your current plan.', $data['message']);
+        $this->assertEquals(403, $response->getStatusCode());
     }
 
     public function test_can_change_tenant_plan_via_api()
@@ -170,6 +178,8 @@ class PlanGatingTest extends TestCase
             'status' => 'Active',
             'plan_id' => $plan1->id,
         ]);
+
+        Subscription::createForTenant($tenant, $plan1, 'active');
 
         $response = $this->putJson("/admin/api/tenants/{$tenant->id}/plan", [
             'plan_id' => $plan2->id,
@@ -230,12 +240,11 @@ class PlanGatingTest extends TestCase
             'plan' => 'pro',
         ]);
 
-        if ($response->status() === 201) {
-            $tenantId = $response->json('tenant.id');
-            $tenant = Tenant::with('plan')->find($tenantId);
-            $this->assertNotNull($tenant->plan);
-            $this->assertEquals($plan->id, $tenant->plan->id);
-        }
+        $response->assertStatus(201);
+        $tenantId = $response->json('tenant.id');
+        $tenant = Tenant::with('plan')->find($tenantId);
+        $this->assertNotNull($tenant->plan);
+        $this->assertEquals($plan->id, $tenant->plan->id);
     }
 
     public function test_create_tenant_with_invalid_plan_slug_fails()

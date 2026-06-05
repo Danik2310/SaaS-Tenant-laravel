@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\AdminUser;
 use App\Models\PaymentMethod;
+use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 

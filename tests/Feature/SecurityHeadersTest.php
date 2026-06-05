@@ -118,10 +118,10 @@ class SecurityHeadersTest extends TestCase
     {
         $response = $this->get('/central/login');
 
-        $response->assertHeader('Content-Security-Policy');
-        $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        $response->assertHeader('X-Frame-Options', 'DENY');
-        $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $this->assertNotNull($response->headers->get('Content-Security-Policy'));
+        $this->assertEquals('nosniff', $response->headers->get('X-Content-Type-Options'));
+        $this->assertEquals('DENY', $response->headers->get('X-Frame-Options'));
+        $this->assertEquals('strict-origin-when-cross-origin', $response->headers->get('Referrer-Policy'));
     }
 
     public function test_security_headers_present_on_admin_dashboard(): void
@@ -132,8 +132,8 @@ class SecurityHeadersTest extends TestCase
 
         $response = $this->get('/admin/dashboard');
 
-        $response->assertHeader('Content-Security-Policy');
-        $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        $response->assertHeader('X-Frame-Options', 'DENY');
+        $this->assertNotNull($response->headers->get('Content-Security-Policy'));
+        $this->assertEquals('nosniff', $response->headers->get('X-Content-Type-Options'));
+        $this->assertEquals('DENY', $response->headers->get('X-Frame-Options'));
     }
 }

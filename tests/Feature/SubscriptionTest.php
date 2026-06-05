@@ -3,14 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\AdminUser;
+use App\Models\Permission;
 use App\Models\Plan;
+use App\Models\Role;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use Database\Seeders\TenantSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -347,14 +347,16 @@ class SubscriptionTest extends TestCase
 
     public function test_database_has_subscriptions_after_tenant_seeder(): void
     {
-        $plan = Plan::where('slug', 'free')->first() ?? Plan::factory()->create(['slug' => 'free']);
+        Plan::factory()->create(['slug' => 'free', 'max_users' => 10]);
+        Plan::factory()->create(['slug' => 'pro', 'max_users' => 50]);
+        Plan::factory()->create(['slug' => 'enterprise', 'max_users' => 999]);
 
         $tenant = Tenant::create([
             'id' => 'test-seeder-'.uniqid(),
             'name' => 'Seeder Test',
             'email' => 'seeder@test.com',
             'status' => 'Active',
-            'plan_id' => $plan->id,
+            'plan_id' => Plan::where('slug', 'free')->first()->id,
         ]);
 
         Artisan::call('db:seed', [

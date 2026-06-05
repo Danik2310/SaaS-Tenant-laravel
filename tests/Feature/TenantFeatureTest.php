@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\AdminUser;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class TenantFeatureTest extends TestCase
