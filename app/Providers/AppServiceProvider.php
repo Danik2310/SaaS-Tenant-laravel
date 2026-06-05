@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Contracts\ExportServiceInterface;
 use App\Contracts\PermissionServiceInterface;
 use App\Contracts\RoleServiceInterface;
 use App\Contracts\TenantManagerInterface;
+use App\Services\ExportService;
 use App\Services\PermissionService;
 use App\Services\RoleService;
 use App\Services\TenantAwarePermissionRegistrar;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(TenantManagerInterface::class, TenantManager::class);
         $this->app->singleton(RoleServiceInterface::class, RoleService::class);
         $this->app->singleton(PermissionServiceInterface::class, PermissionService::class);
+        $this->app->singleton(ExportServiceInterface::class, ExportService::class);
     }
 
     public function boot(): void
