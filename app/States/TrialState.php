@@ -13,6 +13,6 @@ class TrialState extends TenantState
 
     public static function allowedTransitions(): array
     {
-        return ['Active', 'Suspended', 'Deleted'];
+        return ['Active', 'Suspended', 'Cancelled', 'Deleted'];
     }
 }

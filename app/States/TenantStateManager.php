@@ -51,15 +51,16 @@ class TenantStateManager
         if ($targetStatus === 'Active' && $oldStatus !== 'Active') {
             event(new TenantReactivated($tenant));
         }
+    }
 
-        tenancy()->initialize($tenant);
-
+    public static function flushTenantCache(Tenant $tenant): void
+    {
         try {
+            tenancy()->initialize($tenant);
             Cache::tags(['tenant_'.$tenant->id])->flush();
-        } catch (\BadMethodCallException $e) {
-            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$tenant->id);
+            tenancy()->end();
+        } catch (\Throwable $e) {
+            Log::warning('Could not flush cache for tenant '.$tenant->id.': '.$e->getMessage());
         }
-
-        tenancy()->end();
     }
 }
