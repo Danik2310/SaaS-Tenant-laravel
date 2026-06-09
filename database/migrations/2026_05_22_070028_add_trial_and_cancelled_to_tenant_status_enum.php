@@ -14,6 +14,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE tenants MODIFY COLUMN status ENUM('Active', 'Suspended', 'Deleted') NOT NULL DEFAULT 'Active'");
+        throw new RuntimeException('Cannot revert this migration — rows may contain the "Trial" or "Cancelled" status values');
     }
 };

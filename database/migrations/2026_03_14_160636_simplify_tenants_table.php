@@ -48,10 +48,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Add back the data column
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->json('data')->nullable();
-        });
+        // Add back the data column (only if it doesn't already exist)
+        if (! Schema::hasColumn('tenants', 'data')) {
+            Schema::table('tenants', function (Blueprint $table) {
+                $table->json('data')->nullable();
+            });
+        }
 
         // Remove the added columns (check if they exist first)
         Schema::table('tenants', function (Blueprint $table) {
@@ -66,5 +68,12 @@ return new class extends Migration
                 $table->dropColumn('data_placeholder');
             }
         });
+
+        // Remove the data column if it was recreated and now duplicates
+        if (Schema::hasColumn('tenants', 'data')) {
+            Schema::table('tenants', function (Blueprint $table) {
+                $table->dropColumn('data');
+            });
+        }
     }
 };
