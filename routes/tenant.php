@@ -34,9 +34,7 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 |
 */
 
-$tenancyMiddleware = app()->environment('testing')
-    ? []
-    : [InitializeTenancyByDomain::class, PreventAccessFromCentralDomains::class];
+$tenancyMiddleware = [InitializeTenancyByDomain::class, PreventAccessFromCentralDomains::class];
 
 Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->group(function () {
     // Public routes (no auth required)

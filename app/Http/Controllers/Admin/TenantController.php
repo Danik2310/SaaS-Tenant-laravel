@@ -16,12 +16,30 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use InvalidArgumentException;
 
+/**
+ * @group Tenant Management
+ *
+ * APIs for managing tenants in the admin panel.
+ * Includes CRUD, bulk operations, state transitions, plan changes, and database management.
+ */
 class TenantController extends Controller
 {
     public function __construct(
         private TenantManagerInterface $tenantManager,
     ) {}
 
+    /**
+     * List all tenants.
+     *
+     * Paginated list of tenants with optional trashed filtering.
+     *
+     * @queryParam trashed boolean Include soft-deleted tenants. Default false. Example: true
+     * @queryParam per_page integer Number of results per page (max 100). Default 25. Example: 10
+     *
+     * @responseField tenants array[] List of tenant resources.
+     * @responseField total integer Total number of tenants matching the query.
+     * @responseField meta object Pagination metadata (current_page, last_page, per_page, total).
+     */
     public function index()
     {
         $query = Tenant::with(['domains', 'plan']);
@@ -45,6 +63,13 @@ class TenantController extends Controller
         ]);
     }
 
+    /**
+     * Get a single tenant.
+     *
+     * @urlParam id string required The tenant ID. Example: tenant-abc-123
+     *
+     * @responseField tenant object The tenant resource.
+     */
     public function show(string $id)
     {
         $tenant = Tenant::withTrashed()->with(['domains', 'plan'])->findOrFail($id);
@@ -54,6 +79,18 @@ class TenantController extends Controller
         ]);
     }
 
+    /**
+     * Create a new tenant.
+     *
+     * Provisions a new tenant with database, migrations, and seed data.
+     *
+     * @bodyParam name string required The tenant name. Example: Acme Corp
+     * @bodyParam email string required Tenant admin email. Example: admin@acme.com
+     * @bodyParam domain string required Primary domain. Example: acme.example.com
+     * @bodyParam plan string optional Plan slug to assign. Example: pro
+     *
+     * @response 201 {"message":"Tenant created successfully","tenant":{"id":"...","name":"Acme Corp","email":"admin@acme.com","status":"Trial"}}
+     */
     public function store(StoreTenantRequest $request)
     {
         $tenant = $this->tenantManager->provision($request->validated());
@@ -64,6 +101,23 @@ class TenantController extends Controller
         ], 201);
     }
 
+    /**
+     * Update a tenant.
+     *
+     * Update tenant attributes, status, and/or plan. Status transition uses the state machine.
+     *
+     * @urlParam id string required The tenant ID.
+     *
+     * @bodyParam name string optional Tenant name.
+     * @bodyParam email string optional Tenant email.
+     * @bodyParam status string optional New status (Active, Suspended, Deleted). Uses state machine.
+     * @bodyParam plan_id integer optional New plan ID. Triggers plan change.
+     *
+     * @responseField message string Success message.
+     * @responseField tenant object The updated tenant resource.
+     *
+     * @throws 422 If status transition or plan change is invalid.
+     */
     public function update(string $id, UpdateTenantRequest $request)
     {
         $tenant = Tenant::with(['plan'])->findOrFail($id);
@@ -73,9 +127,10 @@ class TenantController extends Controller
         $planId = $data['plan_id'] ?? null;
         unset($data['status'], $data['plan_id']);
 
-        foreach ($data as $key => $value) {
-            if ($value !== null) {
-                $tenant->$key = $value;
+        $fillable = ['name', 'email', 'domain', 'plan_id'];
+        foreach ($fillable as $key) {
+            if (array_key_exists($key, $data) && $data[$key] !== null) {
+                $tenant->$key = $data[$key];
             }
         }
 
@@ -105,24 +160,69 @@ class TenantController extends Controller
         ]);
     }
 
+    /**
+     * Delete (suspend) a tenant.
+     *
+     * Soft-deletes the tenant and transitions to Suspended/Deleted state.
+     *
+     * @urlParam id string required The tenant ID.
+     *
+     * @response 204 No content.
+     *
+     * @throws 422 If the tenant cannot be deleted in its current state.
+     */
     public function destroy(string $id)
     {
         $tenant = Tenant::findOrFail($id);
 
-        $this->tenantManager->delete($tenant);
+        try {
+            $this->tenantManager->delete($tenant);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->noContent();
     }
 
+    /**
+     * Restore a soft-deleted tenant.
+     *
+     * @urlParam id string required The tenant ID.
+     *
+     * @responseField message string Success message.
+     * @responseField tenant object The restored tenant resource.
+     *
+     * @throws 422 If the tenant cannot be restored in its current state.
+     */
     public function restore(string $id)
     {
         $tenant = Tenant::withTrashed()->findOrFail($id);
 
-        $this->tenantManager->restore($tenant);
+        try {
+            $this->tenantManager->restore($tenant);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['message' => 'Tenant restored successfully', 'tenant' => new TenantResource($tenant)]);
     }
 
+    /**
+     * Perform bulk operations on tenants.
+     *
+     * Supported actions: suspend, activate, delete, restore, change_plan, extend_trial.
+     *
+     * @bodyParam tenant_ids string[] required Array of tenant IDs. Example: ["tenant-1","tenant-2"]
+     * @bodyParam action string required Action to perform. Example: suspend
+     * @bodyParam payload object optional Additional payload for the action.
+     * @bodyParam payload.plan_id integer required_if action=change_plan Target plan ID.
+     * @bodyParam payload.days integer required_if action=extend_trial Number of days to extend trial (1-365).
+     *
+     * @responseField total integer Total number of tenants processed.
+     * @responseField succeeded integer Number of successful operations.
+     * @responseField failed integer Number of failed operations.
+     * @responseField results object[] Per-tenant results with status and optional error.
+     */
     public function bulkOperation(BulkTenantOperationRequest $request)
     {
         $validated = $request->validated();
@@ -131,7 +231,11 @@ class TenantController extends Controller
         $tenantIds = $validated['tenant_ids'];
         $adminUser = auth('admin')->user();
 
-        $tenants = Tenant::withTrashed()->whereIn('id', $tenantIds)->get()->keyBy('id');
+        $tenants = Tenant::withTrashed()
+            ->with(['plan', 'subscriptions', 'activeSubscription'])
+            ->whereIn('id', $tenantIds)
+            ->get()
+            ->keyBy('id');
 
         if ($action === 'change_plan') {
             $newPlan = Plan::findOrFail($payload['plan_id']);
@@ -151,9 +255,7 @@ class TenantController extends Controller
 
                 match ($action) {
                     'suspend' => $this->tenantManager->suspend($tenant),
-                    'activate' => $tenant->trashed()
-                        ? $this->tenantManager->restore($tenant)
-                        : TenantStateManager::transitionTo($tenant, 'Active'),
+                    'activate' => $this->tenantManager->activate($tenant),
                     'delete' => $this->tenantManager->delete($tenant),
                     'restore' => $this->tenantManager->restore($tenant),
                     'change_plan' => $this->tenantManager->changePlan($tenant, $newPlan),
@@ -168,7 +270,7 @@ class TenantController extends Controller
 
                 $results[] = ['tenant_id' => $id, 'status' => 'success'];
                 $succeeded++;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 \Log::warning("Bulk operation failed for tenant {$id}: {$e->getMessage()}");
                 $results[] = ['tenant_id' => $id, 'status' => 'failed', 'error' => 'An error occurred while processing this tenant.'];
                 $failed++;
@@ -183,9 +285,17 @@ class TenantController extends Controller
         ]);
     }
 
+    /**
+     * Get tenant database info.
+     *
+     * @urlParam id string required The tenant ID.
+     *
+     * @responseField database.name string The tenant database name.
+     * @responseField database.connection string The database driver.
+     */
     public function database(string $id)
     {
-        $tenant = Tenant::withTrashed()->findOrFail($id);
+        $tenant = Tenant::findOrFail($id);
         $db = $tenant->database();
 
         return response()->json([
@@ -196,6 +306,17 @@ class TenantController extends Controller
         ]);
     }
 
+    /**
+     * Run migrations for a tenant.
+     *
+     * @urlParam id string required The tenant ID.
+     *
+     * @responseField message string Status message.
+     * @responseField output string Console output from the migration command.
+     * @responseField exit integer Exit code (0 = success).
+     *
+     * @throws 500 If migration fails.
+     */
     public function migrate(string $id)
     {
         try {
@@ -227,6 +348,18 @@ class TenantController extends Controller
         }
     }
 
+    /**
+     * Change a tenant's plan.
+     *
+     * @urlParam id string required The tenant ID.
+     *
+     * @bodyParam plan_id integer required The target plan ID. Example: 2
+     *
+     * @responseField message string Success message.
+     * @responseField tenant object The tenant resource with updated plan.
+     *
+     * @throws 422 If the plan change is invalid.
+     */
     public function changePlan(Request $request, string $id)
     {
         $request->validate(['plan_id' => 'required|integer|exists:plans,id']);
@@ -235,7 +368,11 @@ class TenantController extends Controller
         $newPlan = Plan::findOrFail($request->input('plan_id'));
         $oldPlanName = $tenant->plan?->name ?? 'None';
 
-        $this->tenantManager->changePlan($tenant, $newPlan);
+        try {
+            $this->tenantManager->changePlan($tenant, $newPlan);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         $tenant->refresh();
 
@@ -255,6 +392,13 @@ class TenantController extends Controller
         ]);
     }
 
+    /**
+     * List all available plans.
+     *
+     * Cached for 1 hour.
+     *
+     * @responseField plans object[] List of plan resources.
+     */
     public function plans()
     {
         $plans = Cache::remember('admin_plans_list', 3600, fn () => Plan::all());
@@ -266,6 +410,10 @@ class TenantController extends Controller
 
     private function extendTrial(Tenant $tenant, int $days): void
     {
+        if ($tenant->status !== 'Trial') {
+            throw new InvalidArgumentException('Can only extend trial for tenants in Trial status.');
+        }
+
         $currentEnd = $tenant->trial_ends_at ? $tenant->trial_ends_at->copy() : now();
         $tenant->trial_ends_at = $currentEnd->addDays($days);
         $tenant->save();

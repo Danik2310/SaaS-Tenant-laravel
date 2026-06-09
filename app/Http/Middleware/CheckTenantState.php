@@ -16,16 +16,32 @@ class CheckTenantState
         $tenant = tenant();
 
         if ($tenant && $tenant instanceof Tenant) {
-            if ($tenant->trashed()) {
+            if ($tenant->trashed() || $tenant->status === 'Deleted') {
+                $message = 'This account has been deleted. Please contact support.';
+
                 if ($request->expectsJson()) {
                     return response()->json([
-                        'message' => 'This account has been deleted. Please contact support.',
+                        'message' => $message,
                     ], 403);
                 }
 
                 return response()->view('admin.tenant-state', [
                     'status' => 'Deleted',
                     'isDeleted' => true,
+                    'tenantName' => $tenant->name,
+                ]);
+            }
+
+            if ($tenant->status === 'Trial' && $tenant->trialHasExpired()) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Your trial has expired. Please upgrade to continue.',
+                    ], 403);
+                }
+
+                return response()->view('admin.tenant-state', [
+                    'status' => 'Trial',
+                    'isDeleted' => false,
                     'tenantName' => $tenant->name,
                 ]);
             }

@@ -32,7 +32,7 @@ class CollectTenantMetrics extends TenantAwareJob
 
         $storageKb = 0;
         try {
-            $tenantStorage = storage_path("tenant/{$tenant->id}");
+            $tenantStorage = storage_path();
             if (is_dir($tenantStorage)) {
                 $size = 0;
                 $iterator = new \RecursiveIteratorIterator(

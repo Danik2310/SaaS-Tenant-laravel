@@ -13,6 +13,8 @@ interface TenantManagerInterface
 
     public function suspend(Tenant $tenant): void;
 
+    public function activate(Tenant $tenant): void;
+
     public function delete(Tenant $tenant): void;
 
     public function restore(Tenant $tenant): void;

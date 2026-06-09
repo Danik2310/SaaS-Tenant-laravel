@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class BulkTenantOperationRequest extends FormRequest
 {
@@ -18,7 +18,24 @@ class BulkTenantOperationRequest extends FormRequest
     {
         return [
             'tenant_ids' => ['required', 'array', 'min:1', 'max:100'],
-            'tenant_ids.*' => ['required', 'string', Rule::exists('tenants', 'id')->whereNull('deleted_at')],
+            'tenant_ids.*' => [
+                'required',
+                'string',
+                function ($attribute, $value, $fail) {
+                    $query = Tenant::query();
+                    $action = $this->input('action');
+
+                    if (! in_array($action, ['restore', 'activate'], true)) {
+                        $query->whereNull('deleted_at');
+                    } else {
+                        $query->withTrashed();
+                    }
+
+                    if (! $query->where('id', $value)->exists()) {
+                        $fail('One or more selected tenants are invalid or unavailable for this action.');
+                    }
+                },
+            ],
             'action' => ['required', 'string', 'in:suspend,activate,delete,restore,change_plan,extend_trial'],
             'payload' => ['nullable', 'array'],
             'payload.plan_id' => ['required_if:action,change_plan', 'integer', 'exists:plans,id'],

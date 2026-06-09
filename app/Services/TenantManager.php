@@ -7,13 +7,13 @@ namespace App\Services;
 use App\Builders\TenantBuilder;
 use App\Contracts\TenantManagerInterface;
 use App\Events\PlanChanged;
+use App\Models\Domain;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\States\TenantStateManager;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class TenantManager implements TenantManagerInterface
 {
@@ -27,45 +27,93 @@ class TenantManager implements TenantManagerInterface
 
     public function suspend(Tenant $tenant): void
     {
-        $tenant->activeSubscription?->update([
-            'status' => 'cancelled',
-            'ends_at' => now(),
-        ]);
+        DB::transaction(function () use ($tenant) {
+            $tenant->activeSubscription?->update([
+                'status' => 'cancelled',
+                'ends_at' => now(),
+            ]);
 
-        TenantStateManager::transitionTo($tenant, 'Suspended');
+            TenantStateManager::transitionTo($tenant, 'Suspended');
+        });
+
+        TenantStateManager::flushTenantCache($tenant);
+    }
+
+    public function activate(Tenant $tenant): void
+    {
+        DB::transaction(function () use ($tenant) {
+            $tenant->subscriptions()
+                ->where('status', 'cancelled')
+                ->latest()
+                ->first()
+                ?->update([
+                    'status' => 'active',
+                    'ends_at' => null,
+                ]);
+
+            TenantStateManager::transitionTo($tenant, 'Active');
+        });
+
+        TenantStateManager::flushTenantCache($tenant);
     }
 
     public function delete(Tenant $tenant): void
     {
-        $tenant->activeSubscription?->update([
-            'status' => 'cancelled',
-            'ends_at' => now(),
-        ]);
+        DB::transaction(function () use ($tenant) {
+            $tenant->activeSubscription?->update([
+                'status' => 'cancelled',
+                'ends_at' => now(),
+            ]);
 
-        TenantStateManager::transitionTo($tenant, 'Deleted');
-        $tenant->delete();
+            TenantStateManager::transitionTo($tenant, 'Deleted');
+
+            // Detach domains so they don't block re-use
+            $tenant->domains()->delete();
+
+            $tenant->delete();
+        });
+
+        TenantStateManager::flushTenantCache($tenant);
     }
 
     public function restore(Tenant $tenant): void
     {
-        TenantStateManager::transitionTo($tenant, 'Active');
-        $tenant->deleted_at = null;
-        $tenant->save();
+        DB::transaction(function () use ($tenant) {
+            // Restore tenant first so Domain tenant() relation works (Tenant model uses SoftDeletes)
+            $tenant->deleted_at = null;
+            $tenant->save();
 
-        $tenant->subscriptions()
-            ->where('status', 'cancelled')
-            ->latest()
-            ->first()
-            ?->update([
-                'status' => 'active',
-                'ends_at' => null,
+            $tenant->subscriptions()
+                ->where('status', 'cancelled')
+                ->where('plan_id', $tenant->plan_id)
+                ->latest()
+                ->first()
+                ?->update([
+                    'status' => 'active',
+                    'ends_at' => null,
+                ]);
+
+            // Re-create primary domain record (the domain column may be null for legacy tenants)
+            $tenant->domains()->create([
+                'domain' => $tenant->domain ?? $tenant->id.'.localhost',
+                'is_primary' => true,
             ]);
+
+            TenantStateManager::transitionTo($tenant, 'Active');
+        });
+
+        TenantStateManager::flushTenantCache($tenant);
     }
 
     public function changePlan(Tenant $tenant, Plan $newPlan): void
     {
-        DB::transaction(function () use ($tenant, $newPlan) {
-            $oldPlan = $tenant->plan ?? Plan::where('slug', 'free')->firstOrNew([]);
+        $oldPlan = null;
+
+        DB::transaction(function () use ($tenant, $newPlan, &$oldPlan) {
+            $oldPlan = $tenant->plan ?? Plan::where('slug', 'free')->firstOrCreate(
+                ['slug' => 'free'],
+                ['name' => 'Free Plan', 'price' => 0]
+            );
 
             $tenant->activeSubscription?->update([
                 'status' => 'cancelled',
@@ -77,13 +125,10 @@ class TenantManager implements TenantManagerInterface
             $tenant->plan_id = $newPlan->id;
             $tenant->save();
 
-            try {
-                Cache::tags(['tenant_'.$tenant->id])->flush();
-            } catch (\BadMethodCallException $e) {
-                Log::warning('Cache driver does not support tags, skipped flush for tenant '.$tenant->id);
-            }
-
             event(new PlanChanged($tenant, $oldPlan, $newPlan));
         });
+
+        TenantStateManager::flushTenantCache($tenant);
     }
 }
+

@@ -40,7 +40,7 @@ Route::get('/', function () {
 
 // Central admin login/logout (public)
 Route::get('/central/login', [AdminAuthController::class, 'showLogin'])->name('central.login');
-Route::post('/central/login', [AdminAuthController::class, 'login']);
+Route::post('/central/login', [AdminAuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/central/logout', [AdminAuthController::class, 'logout'])->middleware('auth:admin')->name('central.logout');
 
 // Unauthorized page (accessible to authenticated admin users)
