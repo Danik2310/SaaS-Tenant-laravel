@@ -11,7 +11,10 @@ class StaffSeeder extends Seeder
     public function run(): void
     {
         $email = env('ADMIN_EMAIL', 'admin@example.com');
-        $password = env('ADMIN_PASSWORD', 'password');
+        $password = env('ADMIN_PASSWORD');
+        if (! $password) {
+            throw new \RuntimeException('ADMIN_PASSWORD environment variable is not set.');
+        }
 
         $staff = [
             [
@@ -24,21 +27,21 @@ class StaffSeeder extends Seeder
             [
                 'name' => 'Staff Manager',
                 'email' => 'manager@example.com',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($password),
                 'is_active' => true,
                 'role' => 'staff',
             ],
             [
                 'name' => 'Staff Viewer',
                 'email' => 'viewer@example.com',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($password),
                 'is_active' => true,
                 'role' => 'staff',
             ],
             [
                 'name' => 'Inactive Staff',
                 'email' => 'inactive@example.com',
-                'password' => Hash::make('password'),
+                'password' => Hash::make($password),
                 'is_active' => false,
                 'role' => 'staff',
             ],

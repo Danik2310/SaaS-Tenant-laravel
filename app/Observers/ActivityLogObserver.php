@@ -8,6 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class ActivityLogObserver
 {
+    private const array SENSITIVE_FIELDS = [
+        'password',
+        'remember_token',
+        'api_key',
+        'secret_key',
+    ];
+
     private const array SKIP_UPDATE_MODELS = [
         'Category',
         'Warehouse',
@@ -62,8 +69,8 @@ class ActivityLogObserver
         ];
 
         if ($event === 'updated') {
-            $properties['old'] = $model->getOriginal();
-            $properties['new'] = $model->getChanges();
+            $properties['old'] = collect($model->getOriginal())->except(self::SENSITIVE_FIELDS)->toArray();
+            $properties['new'] = collect($model->getChanges())->except(self::SENSITIVE_FIELDS)->toArray();
         }
 
         $log = activity($logName)

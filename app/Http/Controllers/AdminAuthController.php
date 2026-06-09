@@ -21,7 +21,7 @@ class AdminAuthController extends Controller
     public function login(AdminLoginRequest $request)
     {
         if (Auth::guard('admin')->attempt(
-            $request->only('email', 'password'),
+            $request->only('email', 'password') + ['is_active' => true],
             $request->filled('remember')
         )) {
             $request->session()->regenerate();

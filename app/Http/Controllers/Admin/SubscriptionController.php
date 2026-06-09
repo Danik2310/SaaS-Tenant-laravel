@@ -59,8 +59,9 @@ class SubscriptionController extends Controller
 
     public function store(StoreSubscriptionRequest $request)
     {
-        $tenant = Tenant::findOrFail($request->tenant_id);
-        $plan = Plan::findOrFail($request->plan_id);
+        $validated = $request->validated();
+        $tenant = Tenant::findOrFail($validated['tenant_id']);
+        $plan = Plan::findOrFail($validated['plan_id']);
 
         $tenant->activeSubscription?->update([
             'status' => 'cancelled',
@@ -70,9 +71,9 @@ class SubscriptionController extends Controller
         $subscription = Subscription::createForTenant(
             $tenant,
             $plan,
-            $request->status,
-            $request->ends_at ? now()->parse($request->ends_at) : null,
-            $request->starts_at ? now()->parse($request->starts_at) : null,
+            $validated['status'],
+            isset($validated['ends_at']) ? now()->parse($validated['ends_at']) : null,
+            isset($validated['starts_at']) ? now()->parse($validated['starts_at']) : null,
         );
 
         return response()->json([
