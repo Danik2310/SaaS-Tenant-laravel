@@ -51,14 +51,16 @@ class EventServiceProvider extends ServiceProvider
         GlobalSetting::observe(ActivityLogObserver::class);
         Setting::observe(ActivityLogObserver::class);
 
-        // Tenant models
-        User::observe(ActivityLogObserver::class);
-        Customer::observe(ActivityLogObserver::class);
-        Product::observe(ActivityLogObserver::class);
-        Order::observe(ActivityLogObserver::class);
-        Payment::observe(ActivityLogObserver::class);
-        Category::observe(ActivityLogObserver::class);
-        Warehouse::observe(ActivityLogObserver::class);
+        // Tenant models — guarded to prevent activity-logging in central context
+        if (tenancy()->initialized) {
+            User::observe(ActivityLogObserver::class);
+            Customer::observe(ActivityLogObserver::class);
+            Product::observe(ActivityLogObserver::class);
+            Order::observe(ActivityLogObserver::class);
+            Payment::observe(ActivityLogObserver::class);
+            Category::observe(ActivityLogObserver::class);
+            Warehouse::observe(ActivityLogObserver::class);
+        }
 
         // Tenant resource usage observers (event-driven incremental counting)
         User::observe(UserObserver::class);

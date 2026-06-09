@@ -12,14 +12,12 @@ class HandleTenantReactivation
 {
     public function handle(TenantReactivated $event): void
     {
-        tenancy()->initialize($event->tenant);
-
         try {
+            tenancy()->initialize($event->tenant);
             Cache::tags(['tenant_'.$event->tenant->id])->flush();
-        } catch (\BadMethodCallException $e) {
-            Log::warning('Cache driver does not support tags, skipped flush for tenant '.$event->tenant->id);
+            tenancy()->end();
+        } catch (\Throwable $e) {
+            Log::warning('Could not flush cache for tenant '.$event->tenant->id.' after reactivation: '.$e->getMessage());
         }
-
-        tenancy()->end();
     }
 }

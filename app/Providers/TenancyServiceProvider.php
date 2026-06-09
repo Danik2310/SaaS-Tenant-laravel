@@ -9,9 +9,12 @@ use App\Events\TenantReactivated;
 use App\Events\TenantSuspended;
 use App\Listeners\HandlePlanChange;
 use App\Listeners\HandleTenantReactivation;
-use App\Listeners\HandleTenantSuspension;
+
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\PermissionRegistrar;
@@ -62,9 +65,7 @@ class TenancyServiceProvider extends ServiceProvider
             ],
 
             // Custom domain events
-            TenantSuspended::class => [
-                HandleTenantSuspension::class,
-            ],
+            TenantSuspended::class => [],
             TenantReactivated::class => [
                 HandleTenantReactivation::class,
             ],
@@ -134,6 +135,7 @@ class TenancyServiceProvider extends ServiceProvider
         $this->mapRoutes();
 
         $this->makeTenancyMiddlewareHighestPriority();
+        $this->registerTenantJobFailureHandler();
     }
 
     protected function bootEvents()
@@ -173,5 +175,21 @@ class TenancyServiceProvider extends ServiceProvider
         foreach (array_reverse($tenancyMiddleware) as $middleware) {
             $this->app[Kernel::class]->prependToMiddlewarePriority($middleware);
         }
+    }
+
+    protected function registerTenantJobFailureHandler(): void
+    {
+        Queue::failing(function (JobFailed $event) {
+            $payload = $event->job->payload();
+            $jobClass = $payload['displayName'] ?? get_class($event->job);
+
+            if (str_contains($jobClass, 'Stancl\Tenancy\Jobs')) {
+                Log::error('Tenant provisioning job failed', [
+                    'job' => $jobClass,
+                    'exception' => $event->exception->getMessage(),
+                    'trace' => $event->exception->getTraceAsString(),
+                ]);
+            }
+        });
     }
 }
