@@ -215,6 +215,7 @@ class StaffManagementTest extends TestCase
      */
     public function test_guest_cannot_access_staff()
     {
+        auth('admin')->logout();
         $this->getJson('/admin/api/staff')->assertStatus(401);
     }
 }

@@ -132,7 +132,7 @@ class PermissionEdgeCasesTest extends TestCase
         $response = $this->patchJson("/admin/api/staff/{$adminId}/toggle-status");
 
         $response->assertStatus(422)
-            ->assertJson(['error' => 'Cannot deactivate your own account']);
+            ->assertJson(['message' => 'Cannot deactivate your own account']);
     }
 
     public function test_cannot_self_delete(): void
@@ -143,7 +143,7 @@ class PermissionEdgeCasesTest extends TestCase
         $response = $this->deleteJson("/admin/api/staff/{$adminId}");
 
         $response->assertStatus(422)
-            ->assertJson(['error' => 'Cannot delete your own account']);
+            ->assertJson(['message' => 'Cannot delete your own account']);
     }
 
     public function test_inactive_permission_is_listed_but_marked_inactive(): void

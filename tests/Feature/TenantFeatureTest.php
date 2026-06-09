@@ -37,7 +37,7 @@ class TenantFeatureTest extends TestCase
             'tenant_id' => $tenant->id,
         ]);
 
-        $this->assertCount(1, $tenant->domains);
+        $this->assertCount(2, $tenant->domains);
     }
 
     /**
@@ -50,10 +50,17 @@ class TenantFeatureTest extends TestCase
             'id' => 'test-migration-'.uniqid(),
         ]);
         $tenant->database()->makeCredentials();
+        // Drop existing tenant DB to avoid collision from interrupted runs
+        $tenantDbName = $tenant->database()->getName();
+        try {
+            DB::statement("DROP DATABASE IF EXISTS `$tenantDbName`");
+        } catch (\Exception $e) {
+            // ignore
+        }
         $tenant->database()->manager()->createDatabase($tenant);
         $tenant->save();
 
-        $this->createdTenantDbNames[] = $tenant->database()->getName();
+        $this->createdTenantDbNames[] = $tenantDbName;
 
         // run the migration endpoint (bypass middleware for test simplicity)
         $response = $this->withoutMiddleware()->post("/admin/api/tenants/{$tenant->id}/migrate");

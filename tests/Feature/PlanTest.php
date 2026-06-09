@@ -152,6 +152,7 @@ class PlanTest extends TestCase
      */
     public function test_guest_cannot_access_plans()
     {
+        auth('admin')->logout();
         $this->getJson('/admin/api/plans')->assertStatus(401);
     }
 }

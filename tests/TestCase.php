@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Models\Domain;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Artisan;
@@ -22,13 +23,22 @@ abstract class TestCase extends BaseTestCase
     protected function createTestTenant(): Tenant
     {
         $tenant = Tenant::withoutEvents(function () {
+            $tenantId = 'test-'.uniqid();
             $t = Tenant::create([
-                'id' => 'test-'.uniqid(),
+                'id' => $tenantId,
+                'domain' => $tenantId.'.localhost',
             ]);
 
             $t->database()->makeCredentials();
             $t->database()->manager()->createDatabase($t);
             $t->save();
+
+            // Create a domain record so the InitializeTenancyByDomain middleware can identify this tenant
+            Domain::create([
+                'tenant_id' => $t->id,
+                'domain' => $t->domain,
+                'is_primary' => true,
+            ]);
 
             // Refresh from DB to pick up column defaults (e.g. status = 'Active')
             $t->refresh();
@@ -76,6 +86,11 @@ abstract class TestCase extends BaseTestCase
         tenancy()->initialize($tenant);
         // point default connection at tenant so Eloquent models hit the right DB
         config(['database.default' => 'tenant']);
+
+        // Set the host header so InitializeTenancyByDomain middleware can identify this tenant
+        if ($tenant->domain) {
+            $this->withHeader('Host', $tenant->domain);
+        }
     }
 
     /**
