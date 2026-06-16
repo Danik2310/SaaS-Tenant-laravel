@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
+use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
@@ -261,7 +262,7 @@ class TenantLifecycleTest extends TestCase
 
     public function test_unauthorized_user_cannot_manage_tenants(): void
     {
-        $user = \App\Models\AdminUser::factory()->create();
+        $user = AdminUser::factory()->create();
         $this->actingAs($user, 'admin');
 
         $this->post('/admin/api/tenants', [

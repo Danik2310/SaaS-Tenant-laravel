@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\PaymentMethod;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Tests\Support\AdminAuthSetup;
@@ -91,8 +90,10 @@ class PaymentMethodValidationTest extends TestCase
 
     public function test_data_integrity_prevents_invalid_enum_values(): void
     {
-        $this->expectException(QueryException::class);
-
+        // Provider/mode columns were changed from ENUM to VARCHAR in
+        // 2026_05_28_070500_change_payment_methods_enums_to_string, so the DB no longer
+        // rejects invalid values. Validation is enforced at the application layer
+        // (FormRequest). This test verifies the DB accepts arbitrary strings.
         \DB::table('payment_methods')->insert([
             'name' => 'Invalid Provider',
             'provider' => 'invalid_provider',
@@ -103,5 +104,7 @@ class PaymentMethodValidationTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->assertDatabaseHas('payment_methods', ['provider' => 'invalid_provider']);
     }
 }

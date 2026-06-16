@@ -11,7 +11,7 @@ class OrderTest extends TenantTestCase
 {
     public function test_order_has_required_fillable_attributes(): void
     {
-        $fillable = ['customer_id', 'status', 'total'];
+        $fillable = ['customer_id', 'user_id', 'status', 'total'];
         $this->assertEquals($fillable, (new Order)->getFillable());
     }
 

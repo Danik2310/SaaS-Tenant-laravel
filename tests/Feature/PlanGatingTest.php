@@ -8,7 +8,9 @@ use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -158,8 +160,11 @@ class PlanGatingTest extends TestCase
     public function test_plan_limit_exceeded_exception_is_rendered_as_json()
     {
         $exception = new PlanLimitExceededException('products', 100);
+        $request = Request::create('/admin/api/test', 'GET');
+        $request->headers->set('Accept', 'application/json');
 
-        $response = $exception->render();
+        $handler = $this->app->make(ExceptionHandler::class);
+        $response = $handler->render($request, $exception);
         $data = $response->getData(true);
 
         $this->assertEquals('You have reached the products limit of 100 on your current plan.', $data['message']);
