@@ -32,12 +32,17 @@ class RouteServiceProvider extends ServiceProvider
         $router->aliasMiddleware('role', RoleMiddleware::class);
 
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            $tenantId = tenant('id');
+            $key = $request->user()
+                ? 'tenant_'.$tenantId.'_user_'.$request->user()->id
+                : 'tenant_'.$tenantId.'_ip_'.$request->ip();
+
+            return Limit::perMinute(60)->by($key);
         });
 
         $this->routes(function () {
             Route::middleware('api')
-                ->prefix('api')
+                ->prefix('api/v1')
                 ->group(base_path('routes/api.php'));
 
             Route::middleware('web')

@@ -3,27 +3,40 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\SettingResource;
 use App\Models\GlobalSetting;
 use Illuminate\Http\Request;
 
+/**
+ * @group Global Settings
+ *
+ * APIs for managing global application settings.
+ */
 class SettingController extends Controller
 {
+    /**
+     * List all settings.
+     *
+     * @authenticated
+     */
     public function index()
     {
-        $settings = GlobalSetting::orderBy('key')->get()->map(function ($setting) {
-            return [
-                'id' => $setting->id,
-                'key' => $setting->key,
-                'value' => $setting->value,
-                'updated_at' => $setting->updated_at?->format('Y-m-d H:i'),
-            ];
-        });
+        $settings = GlobalSetting::orderBy('key')->get();
 
         return response()->json([
-            'settings' => $settings,
+            'data' => SettingResource::collection($settings),
         ]);
     }
 
+    /**
+     * Update settings.
+     *
+     * @authenticated
+     *
+     * @bodyParam settings array required Array of settings with key and value pairs.
+     * @bodyParam settings.*.key string required Setting key.
+     * @bodyParam settings.*.value string required Setting value.
+     */
     public function update(Request $request)
     {
         $validated = $request->validate([
@@ -40,10 +53,19 @@ class SettingController extends Controller
 
         return response()->json([
             'message' => 'Settings updated successfully',
-            'settings' => GlobalSetting::orderBy('key')->get(),
+            'data' => SettingResource::collection(GlobalSetting::orderBy('key')->get()),
         ]);
     }
 
+    /**
+     * Get a single setting by key.
+     *
+     * @authenticated
+     *
+     * @urlParam key string required The setting key.
+     *
+     * @response 404 {"message":"Setting not found"}
+     */
     public function get(string $key)
     {
         $setting = GlobalSetting::where('key', $key)->first();
@@ -53,11 +75,7 @@ class SettingController extends Controller
         }
 
         return response()->json([
-            'setting' => [
-                'id' => $setting->id,
-                'key' => $setting->key,
-                'value' => $setting->value,
-            ],
+            'data' => new SettingResource($setting),
         ]);
     }
 }

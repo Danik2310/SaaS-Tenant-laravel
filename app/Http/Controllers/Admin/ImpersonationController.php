@@ -6,8 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImpersonateTenantRequest;
 use App\Models\Tenant;
 
+/**
+ * @group Tenant Impersonation
+ *
+ * APIs for impersonating tenants (god mode).
+ */
 class ImpersonationController extends Controller
 {
+    /**
+     * Start impersonating a tenant.
+     *
+     * @authenticated
+     *
+     * @bodyParam tenant_id string required The tenant ID to impersonate.
+     *
+     * @response 422 {"message":"Tenant has no domain configured"}
+     */
     public function start(ImpersonateTenantRequest $request)
     {
         $tenant = Tenant::with('domains')->find($request->validated('tenant_id'));
@@ -31,6 +45,11 @@ class ImpersonationController extends Controller
         return response()->json(['message' => 'Impersonation started', 'domain' => $domain]);
     }
 
+    /**
+     * Stop impersonating.
+     *
+     * @authenticated
+     */
     public function stop()
     {
         session()->forget(['impersonate_tenant', 'impersonate_started_at']);

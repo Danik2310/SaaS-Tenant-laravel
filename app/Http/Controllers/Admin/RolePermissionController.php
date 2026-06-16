@@ -15,8 +15,20 @@ use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * @group Role & Permission Management
+ *
+ * APIs for managing admin roles and permissions.
+ */
 class RolePermissionController extends Controller
 {
+    /**
+     * List all roles.
+     *
+     * Paginated list of admin roles with their permissions.
+     *
+     * @authenticated
+     */
     public function indexRoles()
     {
         $roles = RoleResource::collection(
@@ -24,12 +36,27 @@ class RolePermissionController extends Controller
                 ->with('permissions')
                 ->where('guard_name', 'admin')
                 ->orderBy('name')
-                ->get()
+                ->paginate(50)
         );
 
-        return response()->json(['roles' => $roles]);
+        return response()->json(['data' => $roles]);
     }
 
+    /**
+     * Create a role.
+     *
+     * @authenticated
+     *
+     * @bodyParam name string required Role name.
+     * @bodyParam description string optional Role description.
+     * @bodyParam permissions integer[] optional Array of permission IDs.
+     *
+     * @apiResource App\Http\Resources\RoleResource
+     *
+     * @apiResourceModel App\Models\Role
+     *
+     * @response 201 {"message":"Role created successfully","data":{...}}
+     */
     public function storeRole(StoreRoleRequest $request)
     {
         $role = Role::create([
@@ -54,7 +81,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Role created successfully',
-            'role' => new RoleResource($role->load('permissions')),
+            'data' => new RoleResource($role->load('permissions')),
         ], 201);
     }
 
@@ -83,10 +110,21 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Role updated successfully',
-            'role' => new RoleResource($role->load('permissions')),
+            'data' => new RoleResource($role->load('permissions')),
         ]);
     }
 
+    /**
+     * Delete a role.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The role ID.
+     *
+     * @response 204 No content.
+     *
+     * @throws 422 If role has assigned users.
+     */
     public function destroyRole(string $id)
     {
         $role = Role::where('guard_name', 'admin')->findOrFail($id);
@@ -106,19 +144,47 @@ class RolePermissionController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * List all permissions.
+     *
+     * Paginated list grouped by module.
+     *
+     * @authenticated
+     */
     public function indexPermissions()
     {
         $permissions = Permission::select(['id', 'name', 'description', 'module', 'is_active'])
             ->where('guard_name', 'admin')
             ->orderBy('module')
             ->orderBy('name')
-            ->get()
+            ->paginate(100);
+
+        $grouped = collect($permissions->items())
             ->groupBy('module')
             ->map(fn ($perms) => PermissionResource::collection($perms));
 
-        return response()->json(['permissions' => $permissions]);
+        return response()->json([
+            'data' => $grouped,
+            'meta' => [
+                'current_page' => $permissions->currentPage(),
+                'last_page' => $permissions->lastPage(),
+                'per_page' => $permissions->perPage(),
+                'total' => $permissions->total(),
+            ],
+        ]);
     }
 
+    /**
+     * Create a permission.
+     *
+     * @authenticated
+     *
+     * @bodyParam name string required Permission name.
+     * @bodyParam module string required Permission module.
+     * @bodyParam description string optional Permission description.
+     *
+     * @response 201 {"message":"Permission created successfully","data":{...}}
+     */
     public function storePermission(StorePermissionRequest $request)
     {
         $permission = Permission::create([
@@ -137,7 +203,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Permission created successfully',
-            'permission' => new PermissionResource($permission),
+            'data' => new PermissionResource($permission),
         ], 201);
     }
 
@@ -154,10 +220,21 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Permission updated successfully',
-            'permission' => new PermissionResource($permission),
+            'data' => new PermissionResource($permission),
         ]);
     }
 
+    /**
+     * Delete a permission.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The permission ID.
+     *
+     * @response 204 No content.
+     *
+     * @throws 422 If permission is assigned to roles.
+     */
     public function destroyPermission(string $id)
     {
         $permission = Permission::where('guard_name', 'admin')->findOrFail($id);

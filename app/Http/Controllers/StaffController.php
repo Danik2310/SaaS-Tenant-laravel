@@ -12,8 +12,20 @@ use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * @group Staff Management
+ *
+ * APIs for managing admin staff members.
+ */
 class StaffController extends Controller
 {
+    /**
+     * List all staff.
+     *
+     * Paginated list of admin staff members with their roles and permissions.
+     *
+     * @authenticated
+     */
     public function index()
     {
         $staff = AdminUser::with([
@@ -23,8 +35,7 @@ class StaffController extends Controller
         ])->paginate(25);
 
         return response()->json([
-            'staff' => StaffResource::collection($staff->items()),
-            'total' => $staff->total(),
+            'data' => StaffResource::collection($staff->items()),
             'meta' => [
                 'current_page' => $staff->currentPage(),
                 'last_page' => $staff->lastPage(),
@@ -34,13 +45,20 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Get a single staff member.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The staff member ID.
+     */
     public function show(string $id)
     {
         try {
             $admin = AdminUser::with('roles.permissions')->findOrFail($id);
 
             return response()->json([
-                'staff' => new StaffResource($admin),
+                'data' => new StaffResource($admin),
                 'available_roles' => Role::with('permissions')
                     ->where('guard_name', 'admin')
                     ->get()
@@ -61,6 +79,22 @@ class StaffController extends Controller
         }
     }
 
+    /**
+     * Create a staff member.
+     *
+     * @authenticated
+     *
+     * @bodyParam name string required Staff member name.
+     * @bodyParam email string required Staff member email.
+     * @bodyParam password string required Initial password.
+     * @bodyParam roles integer[] optional Array of role IDs.
+     *
+     * @apiResource App\Http\Resources\StaffResource
+     *
+     * @apiResourceModel App\Models\AdminUser
+     *
+     * @response 201 {"message":"Staff member created successfully","data":{...}}
+     */
     public function store(StoreStaffRequest $request)
     {
         $admin = AdminUser::create([
@@ -85,7 +119,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff member created successfully',
-            'staff' => new StaffResource($admin),
+            'data' => new StaffResource($admin),
         ], 201);
     }
 
@@ -123,10 +157,19 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff member updated successfully',
-            'staff' => new StaffResource($admin),
+            'data' => new StaffResource($admin),
         ]);
     }
 
+    /**
+     * Delete a staff member.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The staff member ID.
+     *
+     * @response 204 No content.
+     */
     public function destroy(string $id)
     {
         $admin = AdminUser::findOrFail($id);
@@ -159,32 +202,23 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff member restored successfully',
-            'staff' => new StaffResource($admin),
+            'data' => new StaffResource($admin),
         ]);
     }
 
     public function getRoles()
     {
-        $roles = Role::with('permissions')
+        $roles = Role::withCount('permissions')
             ->where('guard_name', 'admin')
             ->active()
-            ->get()
-            ->map(fn ($role) => [
-                'id' => $role->id,
-                'name' => $role->name,
-                'description' => $role->description,
-                'permissions_count' => $role->permissions->count(),
-                'permissions' => $role->permissions->map(fn ($perm) => [
-                    'id' => $perm->id,
-                    'name' => $perm->name,
-                    'description' => $perm->description,
-                    'module' => $perm->module,
-                ])->toArray(),
-            ]);
+            ->orderBy('name')
+            ->paginate(50);
 
         return response()->json([
-            'roles' => $roles,
-            'total' => $roles->count(),
+            'data' => RoleResource::collection($roles),
+            'meta' => [
+                'total' => $roles->total(),
+            ],
         ]);
     }
 
@@ -202,8 +236,10 @@ class StaffController extends Controller
             ]);
 
         return response()->json([
-            'permissions' => $permissions,
-            'total' => $permissions->count(),
+            'data' => $permissions,
+            'meta' => [
+                'total' => $permissions->count(),
+            ],
         ]);
     }
 
@@ -230,7 +266,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Roles assigned successfully',
-            'staff' => new StaffResource($admin),
+            'data' => new StaffResource($admin),
         ]);
     }
 
@@ -255,7 +291,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff status updated successfully',
-            'staff' => new StaffResource($admin),
+            'data' => new StaffResource($admin),
         ]);
     }
 }

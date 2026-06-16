@@ -7,8 +7,26 @@ use App\Models\AdminUser;
 use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 
+/**
+ * @group Activity Logs
+ *
+ * APIs for viewing and filtering activity logs.
+ */
 class ActivityLogController extends Controller
 {
+    /**
+     * List activity logs.
+     *
+     * Paginated list with optional filtering by log name, causer, search, or date range.
+     *
+     * @authenticated
+     *
+     * @queryParam log_name string Filter by log name. Example: staff
+     * @queryParam causer_id integer Filter by causer user ID.
+     * @queryParam search string Search in description, subject type, or causer type.
+     * @queryParam date_from string Filter by start date (Y-m-d).
+     * @queryParam date_to string Filter by end date (Y-m-d).
+     */
     public function index(Request $request)
     {
         $query = Activity::query();
@@ -56,8 +74,7 @@ class ActivityLogController extends Controller
         });
 
         return response()->json([
-            'activities' => $items,
-            'total' => $activities->total(),
+            'data' => $items,
             'meta' => [
                 'current_page' => $activities->currentPage(),
                 'last_page' => $activities->lastPage(),
@@ -67,12 +84,19 @@ class ActivityLogController extends Controller
         ]);
     }
 
+    /**
+     * Get a single activity log entry.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The activity log ID.
+     */
     public function show(string $id)
     {
         $activity = Activity::findOrFail($id);
 
         return response()->json([
-            'activity' => [
+            'data' => [
                 'id' => $activity->id,
                 'log_name' => $activity->log_name,
                 'description' => $activity->description,
@@ -86,6 +110,11 @@ class ActivityLogController extends Controller
         ]);
     }
 
+    /**
+     * Get distinct log names.
+     *
+     * @authenticated
+     */
     public function logNames()
     {
         $names = Activity::select('log_name')
@@ -95,16 +124,29 @@ class ActivityLogController extends Controller
             ->filter()
             ->values();
 
-        return response()->json(['log_names' => $names]);
+        return response()->json(['data' => $names]);
     }
 
+    /**
+     * Get causer users.
+     *
+     * Paginated list of admin users who have performed activities.
+     *
+     * @authenticated
+     */
     public function causers()
     {
         $users = AdminUser::select('id', 'name', 'email')
             ->orderBy('name')
-            ->get()
-            ->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email]);
+            ->paginate(50);
 
-        return response()->json(['causers' => $users]);
+        return response()->json([
+            'data' => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email]),
+            'meta' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'total' => $users->total(),
+            ],
+        ]);
     }
 }

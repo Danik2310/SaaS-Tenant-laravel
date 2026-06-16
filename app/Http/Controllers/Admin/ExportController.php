@@ -11,12 +11,31 @@ use App\Jobs\RunExportJob;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * @group Data Export
+ *
+ * APIs for exporting data entities (sync and async).
+ */
 class ExportController extends Controller
 {
     public function __construct(
         private ExportServiceInterface $exportService,
     ) {}
 
+    /**
+     * Export data.
+     *
+     * Supports sync and async export of various data entities.
+     *
+     * @authenticated
+     *
+     * @urlParam entity string required The entity type (tenants, staff, etc).
+     *
+     * @bodyParam format string Export format (csv, xlsx). Example: csv
+     * @bodyParam async boolean Whether to queue the export. Example: false
+     *
+     * @response 202 scenario="Async" {"data":{"job_id":"...","status":"queued"}}
+     */
     public function export(ExportRequest $request, string $entity)
     {
         $validated = $request->validated();
@@ -82,6 +101,13 @@ class ExportController extends Controller
         }
     }
 
+    /**
+     * Download an export file.
+     *
+     * @authenticated
+     *
+     * @urlParam filename string required The export filename.
+     */
     public function download(string $filename)
     {
         $allowedExtensions = ['csv', 'xlsx'];
@@ -110,6 +136,13 @@ class ExportController extends Controller
         ]);
     }
 
+    /**
+     * Check export job status.
+     *
+     * @authenticated
+     *
+     * @urlParam jobId string required The export job ID.
+     */
     public function status(string $jobId)
     {
         $status = Cache::get("export:{$jobId}:status", 'unknown');

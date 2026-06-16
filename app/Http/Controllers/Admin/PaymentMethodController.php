@@ -11,16 +11,22 @@ use App\Models\PaymentMethod;
 use App\Traits\AuditablePaymentMethods;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @group Payment Method Management
+ *
+ * APIs for managing payment methods in the admin panel.
+ */
 class PaymentMethodController extends Controller
 {
     use AuditablePaymentMethods;
 
+    /**
+     * List all payment methods.
+     *
+     * @authenticated
+     */
     public function index()
     {
-        if (ob_get_level()) {
-            ob_end_clean();
-        }
-
         $methods = Cache::remember('payment_methods_all', 3600, fn () => PaymentMethodResource::collection(PaymentMethod::all())
         );
 
@@ -30,9 +36,24 @@ class PaymentMethodController extends Controller
             \Log::error('Failed to log payment method access: '.$e->getMessage());
         }
 
-        return response()->json(['methods' => $methods]);
+        return response()->json(['data' => $methods]);
     }
 
+    /**
+     * Create a payment method.
+     *
+     * @authenticated
+     *
+     * @bodyParam name string required Payment method name.
+     * @bodyParam provider string required Provider identifier.
+     * @bodyParam mode string required Mode (test, live).
+     *
+     * @apiResource App\Http\Resources\PaymentMethodResource
+     *
+     * @apiResourceModel App\Models\PaymentMethod
+     *
+     * @response 201 {"message":"Payment method created","data":{...}}
+     */
     public function store(StorePaymentMethodRequest $request)
     {
         $method = PaymentMethod::create($request->validated());
@@ -40,18 +61,32 @@ class PaymentMethodController extends Controller
         Cache::forget('payment_methods_all');
         $this->logPaymentMethodCreated($method);
 
-        return response()->json(['method' => new PaymentMethodResource($method)], 201);
+        return response()->json(['data' => new PaymentMethodResource($method)], 201);
     }
 
+    /**
+     * Get a single payment method.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The payment method ID.
+     */
     public function show(string $id)
     {
         $method = PaymentMethod::findOrFail($id);
 
         $this->logPaymentMethodAccessed($method, 'view');
 
-        return response()->json(['method' => new PaymentMethodResource($method)]);
+        return response()->json(['data' => new PaymentMethodResource($method)]);
     }
 
+    /**
+     * Update a payment method.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The payment method ID.
+     */
     public function update(UpdatePaymentMethodRequest $request, string $id)
     {
         $method = PaymentMethod::findOrFail($id);
@@ -68,7 +103,7 @@ class PaymentMethodController extends Controller
         Cache::forget('payment_methods_all');
         $this->logPaymentMethodUpdated($method, $oldData);
 
-        return response()->json(['method' => new PaymentMethodResource($method)]);
+        return response()->json(['data' => new PaymentMethodResource($method)]);
     }
 
     public function toggleActive(TogglePaymentMethodRequest $request, string $id)
@@ -81,9 +116,18 @@ class PaymentMethodController extends Controller
         Cache::forget('payment_methods_all');
         $this->logPaymentMethodToggled($method, $oldActive);
 
-        return response()->json(['method' => new PaymentMethodResource($method)]);
+        return response()->json(['data' => new PaymentMethodResource($method)]);
     }
 
+    /**
+     * Delete a payment method.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The payment method ID.
+     *
+     * @response 204 No content.
+     */
     public function destroy(string $id)
     {
         $method = PaymentMethod::findOrFail($id);

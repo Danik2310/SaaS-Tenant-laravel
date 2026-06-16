@@ -84,8 +84,6 @@ class Handler extends ExceptionHandler
 
                 if (config('app.debug')) {
                     $response['error'] = $e->getMessage();
-                    $response['file'] = $e->getFile();
-                    $response['line'] = $e->getLine();
                 }
 
                 $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
