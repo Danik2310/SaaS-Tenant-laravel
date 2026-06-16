@@ -11,6 +11,25 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * ┌─────────────────────────────────────────────────────────┐
+     * │ Seeding Pipeline                                         │
+     * ├─────────────────────────────────────────────────────────┤
+     * │ 1. CentralRolePermissionSeeder — Spatie roles/permissions│
+     * │    for admin guard (manage tenants, staff, plans, etc.)  │
+     * │ 2. PlanSeeder — Free, Growth, Pro, Enterprise plans      │
+     * │ 3. StaffSeeder — 4 AdminUser records                     │
+     * │    ⚡ Requires ADMIN_PASSWORD env variable               │
+     * │ 4. GlobalSettingSeeder — system-level settings           │
+     * │ 5. PaymentMethodSeeder — Stripe, PayPal, Transfer        │
+     * │ 6. TenantSeeder — provisions N tenants, each triggers:  │
+     * │      a. CreateDatabase / MigrateDatabase / SeedDatabase │
+     * │         (TenantUserRolePermissionSeeder — tenant roles)  │
+     * │      b. TenantDataSeeder → User, Customer, Product, etc. │
+     * │ 7. TenantResourceUsageSeeder — usage metrics             │
+     * │ 8. ActivityLogSeeder — sample activity log entries       │
+     * └─────────────────────────────────────────────────────────┘
+     */
     public function run(): void
     {
         $this->call([

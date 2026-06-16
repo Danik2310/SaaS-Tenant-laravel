@@ -16,7 +16,10 @@ class AdminUserSeeder extends Seeder
         $email = env('ADMIN_EMAIL', 'admin@example.com');
         $password = env('ADMIN_PASSWORD');
         if (! $password) {
-            throw new \RuntimeException('ADMIN_PASSWORD environment variable is not set.');
+            if (app()->environment('production')) {
+                throw new \RuntimeException('ADMIN_PASSWORD environment variable is not set.');
+            }
+            $password = 'password';
         }
 
         $user = AdminUser::updateOrCreate(

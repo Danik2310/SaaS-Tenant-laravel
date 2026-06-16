@@ -44,4 +44,12 @@ class TenantFactory extends Factory
             'status' => 'Deleted',
         ]);
     }
+
+    public function trial(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => 'Trial',
+            'trial_ends_at' => now()->addDays(14),
+        ]);
+    }
 }

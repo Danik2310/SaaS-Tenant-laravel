@@ -13,9 +13,31 @@ class TenantSeeder extends Seeder
 {
     public function run(): void
     {
+        if (config('queue.default') !== 'sync') {
+            throw new \RuntimeException(
+                'TenantSeeder requires QUEUE_CONNECTION=sync. '
+                .'The TenantCreated job pipeline (CreateDatabase, MigrateDatabase, SeedDatabase) '
+                .'runs asynchronously and will not complete before seedTenantData() is called.'
+            );
+        }
+
+        if (config('cache.default') === 'file') {
+            throw new \RuntimeException(
+                'TenantSeeder requires CACHE_DRIVER=array or redis. '
+                .'The "file" driver does not support Cache::lock() (needed for reference ID generation) '
+                .'or Cache::tags() (needed by the CacheTenancyBootstrapper).'
+            );
+        }
+
         $tenantManager = app(TenantManagerInterface::class);
 
         $plans = Plan::pluck('slug', 'slug')->toArray();
+
+        if (empty($plans)) {
+            throw new \RuntimeException(
+                'No plans found. Ensure PlanSeeder has run before TenantSeeder.'
+            );
+        }
 
         $configs = $this->buildAllConfigs($plans);
 
@@ -104,6 +126,15 @@ class TenantSeeder extends Seeder
         $tenant->update(['status' => 'Active']);
         if ($tenant->trashed()) {
             $tenant->restore();
+        }
+
+        // Domains are hard-deleted when TenantManager::delete() is called.
+        // Recreate the primary domain if missing so the tenant is accessible.
+        if ($tenant->domains()->count() === 0) {
+            $tenant->domains()->create([
+                'domain' => $config['domain'],
+                'is_primary' => true,
+            ]);
         }
 
         $tenant->load('plan');
