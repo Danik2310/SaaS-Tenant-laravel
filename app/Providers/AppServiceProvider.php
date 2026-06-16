@@ -29,6 +29,12 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::preventLazyLoading(! $this->app->isProduction());
 
+        if ($this->app->isProduction()) {
+            Model::handleLazyLoadingViolationUsing(function ($model, $relation) {
+                \Log::warning("Lazy loading {$relation} on ".get_class($model));
+            });
+        }
+
         $this->app->forgetInstance(PermissionRegistrar::class);
         $this->app->singleton(PermissionRegistrar::class, TenantAwarePermissionRegistrar::class);
     }

@@ -12,6 +12,8 @@ class Category extends Model
     protected $fillable = [
         'name',
         'slug',
+        'description',
+        'active',
         'parent_id',
     ];
 
@@ -50,6 +52,8 @@ class Category extends Model
     public function allProducts()
     {
         return Product::where('category_id', $this->id)
-            ->orWhereIn('category_id', $this->children()->pluck('id'));
+            ->orWhereIn('category_id', function ($q) {
+                $q->select('id')->from('categories')->where('parent_id', $this->id);
+            });
     }
 }

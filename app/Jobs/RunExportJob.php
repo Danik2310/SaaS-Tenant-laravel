@@ -30,24 +30,32 @@ class RunExportJob implements ShouldQueue
 
     private string $jobId;
 
-    public function __construct(string $entity, string $format, array $columns, array $filters)
+    private ?string $tenantId;
+
+    public function __construct(string $entity, string $format, array $columns, array $filters, ?string $tenantId = null)
     {
         $this->entity = $entity;
         $this->format = $format;
         $this->columns = $columns;
         $this->filters = $filters;
         $this->jobId = (string) Str::uuid();
+        $this->tenantId = $tenantId;
     }
 
     public function handle(ExportService $exportService): void
     {
-        Cache::put("export:{$this->jobId}:status", 'processing', 3600);
+        $prefix = $this->tenantId ? "tenant:{$this->tenantId}:export" : 'export';
+        Cache::put("{$prefix}:{$this->jobId}:status", 'processing', 3600);
 
         try {
+            if ($this->tenantId) {
+                tenancy()->initialize($this->tenantId);
+            }
+
             $result = $exportService->export($this->entity, $this->format, $this->columns, $this->filters);
 
-            Cache::put("export:{$this->jobId}:result", $result, 3600);
-            Cache::put("export:{$this->jobId}:status", 'completed', 3600);
+            Cache::put("{$prefix}:{$this->jobId}:result", $result, 3600);
+            Cache::put("{$prefix}:{$this->jobId}:status", 'completed', 3600);
 
             Log::info('Export completed via job', [
                 'job_id' => $this->jobId,
@@ -56,14 +64,19 @@ class RunExportJob implements ShouldQueue
                 'record_count' => $result['record_count'],
             ]);
         } catch (\Exception $e) {
-            Cache::put("export:{$this->jobId}:status", 'failed', 3600);
-            Cache::put("export:{$this->jobId}:error", $e->getMessage(), 3600);
+            Cache::put("{$prefix}:{$this->jobId}:status", 'failed', 3600);
+            Cache::put("{$prefix}:{$this->jobId}:error", $e->getMessage(), 3600);
 
             Log::error('Export job failed', [
                 'job_id' => $this->jobId,
                 'entity' => $this->entity,
+                'tenant_id' => $this->tenantId,
                 'error' => $e->getMessage(),
             ]);
+        } finally {
+            if ($this->tenantId) {
+                tenancy()->end();
+            }
         }
     }
 

@@ -39,11 +39,11 @@ class Plan extends Model
 
     public function getFeaturesAttribute(): array
     {
-        $gates = $this->relationLoaded('featureGates')
-            ? $this->featureGates
-            : $this->featureGates()->get();
-
-        return $gates->where('is_enabled', true)->pluck('feature_key')->values()->toArray();
+        return $this->featureGates
+            ->where('is_enabled', true)
+            ->pluck('feature_key')
+            ->values()
+            ->toArray();
     }
 
     public function hasFeature(string $feature): bool

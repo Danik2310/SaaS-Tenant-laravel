@@ -16,6 +16,40 @@ class HandleInertiaRequests extends Middleware
         return parent::version($request);
     }
 
+    /**
+     * Retrieve plan data from cache with a fallback for non-taggable cache stores.
+     */
+    private function cachedPlanData(Tenant $currentTenant, string $tenantId): ?array
+    {
+        $computePlanData = function () use ($currentTenant) {
+            $currentTenant->load('plan');
+            $plan = $currentTenant->plan;
+
+            return [
+                'id' => $plan?->id,
+                'name' => $plan?->name,
+                'slug' => $plan?->slug,
+                'price' => $plan?->price,
+                'features' => $plan?->features ?? [],
+                'limits' => [
+                    'users' => $currentTenant->getLimit('users'),
+                    'storage' => $currentTenant->getLimit('storage'),
+                    'warehouses' => $currentTenant->getLimit('warehouses'),
+                    'categories' => $currentTenant->getLimit('categories'),
+                    'products' => $currentTenant->getLimit('products'),
+                ],
+                'is_on_trial' => $currentTenant->isOnTrial(),
+                'trial_has_expired' => $currentTenant->trialHasExpired(),
+            ];
+        };
+
+        try {
+            return Cache::tags(['tenant_'.$tenantId])->remember("tenant.{$tenantId}.plan_data", 3600, $computePlanData);
+        } catch (\BadMethodCallException) {
+            return $computePlanData();
+        }
+    }
+
     public function share(Request $request): array
     {
         $currentTenant = tenant();
@@ -24,27 +58,7 @@ class HandleInertiaRequests extends Middleware
         if ($currentTenant && $currentTenant instanceof Tenant) {
             $tenantId = $currentTenant->id;
 
-            $planData = Cache::tags(['tenant_'.$tenantId])->remember("tenant.{$tenantId}.plan_data", 3600, function () use ($currentTenant) {
-                $currentTenant->load('plan');
-                $plan = $currentTenant->plan;
-
-                return [
-                    'id' => $plan?->id,
-                    'name' => $plan?->name,
-                    'slug' => $plan?->slug,
-                    'price' => $plan?->price,
-                    'features' => $plan?->features ?? [],
-                    'limits' => [
-                        'users' => $currentTenant->getLimit('users'),
-                        'storage' => $currentTenant->getLimit('storage'),
-                        'warehouses' => $currentTenant->getLimit('warehouses'),
-                        'categories' => $currentTenant->getLimit('categories'),
-                        'products' => $currentTenant->getLimit('products'),
-                    ],
-                    'is_on_trial' => $currentTenant->isOnTrial(),
-                    'trial_has_expired' => $currentTenant->trialHasExpired(),
-                ];
-            });
+            $planData = $this->cachedPlanData($currentTenant, $tenantId);
         }
 
         return [
