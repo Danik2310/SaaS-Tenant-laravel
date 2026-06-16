@@ -8,6 +8,11 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * @group Admin Dashboard
+ *
+ * APIs for admin dashboard statistics and overview.
+ */
 class DashboardController extends Controller
 {
     public function index()
@@ -15,6 +20,15 @@ class DashboardController extends Controller
         return view('admin.dashboard');
     }
 
+    /**
+     * Get dashboard statistics.
+     *
+     * Cached for 5 minutes. Includes tenant counts, staff counts, recent tenants, and trends.
+     *
+     * @authenticated
+     *
+     * @queryParam trashed boolean Include trashed tenants in statistics. Example: true
+     */
     public function stats()
     {
         $cacheKey = 'admin_dashboard_stats_'.(request()->boolean('trashed') ? 'trashed' : 'active');
@@ -65,18 +79,20 @@ class DashboardController extends Controller
         ];
 
         return response()->json([
-            'stats' => [
-                'total_tenants' => $totalTenants,
-                'active_tenants' => $activeTenants,
-                'suspended_tenants' => $suspendedTenants,
-                'deleted_tenants' => $deletedTenants,
-                'total_staff' => $staffCount,
-                'active_staff' => $activeStaff,
-                'total_plans' => $plansCount,
+            'data' => [
+                'stats' => [
+                    'total_tenants' => $totalTenants,
+                    'active_tenants' => $activeTenants,
+                    'suspended_tenants' => $suspendedTenants,
+                    'deleted_tenants' => $deletedTenants,
+                    'total_staff' => $staffCount,
+                    'active_staff' => $activeStaff,
+                    'total_plans' => $plansCount,
+                ],
+                'recent_tenants' => $recentTenants,
+                'tenants_by_month' => $tenantsByMonth,
+                'status_distribution' => $statusDistribution,
             ],
-            'recent_tenants' => $recentTenants,
-            'tenants_by_month' => $tenantsByMonth,
-            'status_distribution' => $statusDistribution,
         ]);
     }
 }

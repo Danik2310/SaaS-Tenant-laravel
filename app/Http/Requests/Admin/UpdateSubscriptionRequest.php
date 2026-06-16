@@ -13,12 +13,18 @@ class UpdateSubscriptionRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'plan_id' => 'sometimes|integer|exists:plans,id',
             'starts_at' => 'sometimes|date',
-            'ends_at' => 'nullable|date|after:starts_at',
+            'ends_at' => 'nullable|date',
             'status' => 'sometimes|string|in:active,pending,cancelled,expired',
         ];
+
+        if ($this->has('starts_at') && $this->has('ends_at')) {
+            $rules['ends_at'] = 'nullable|date|after:starts_at';
+        }
+
+        return $rules;
     }
 
     public function messages(): array

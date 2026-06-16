@@ -7,6 +7,7 @@ use App\Http\Requests\Tenant\StoreInventoryMovementRequest;
 use App\Models\InventoryMovement;
 use App\Models\Product;
 use App\Models\Warehouse;
+use App\States\TenantStateManager;
 use Inertia\Inertia;
 
 class InventoryMovementController extends Controller
@@ -38,7 +39,7 @@ class InventoryMovementController extends Controller
     {
         InventoryMovement::create($request->validated());
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.inventory.index')
             ->with('success', 'Inventory movement recorded successfully.');

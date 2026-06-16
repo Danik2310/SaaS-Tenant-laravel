@@ -81,18 +81,24 @@ class DashboardController extends Controller
                     'status' => $o->status,
                     'created_at' => $o->created_at->toDateString(),
                 ])),
-            'recentMovements' => Inertia::lazy(fn () => InventoryMovement::with('product', 'warehouse')
-                ->latest()
-                ->take(5)
-                ->get()
-                ->map(fn ($m) => [
-                    'id' => $m->id,
-                    'product_name' => $m->product?->name,
-                    'warehouse_name' => $m->warehouse?->name,
-                    'type' => $m->type,
-                    'quantity' => $m->quantity,
-                    'created_at' => $m->created_at->toDateString(),
-                ])),
+            'recentMovements' => Inertia::lazy(function () {
+                if (! tenant()->hasFeature('advanced')) {
+                    return [];
+                }
+
+                return InventoryMovement::with('product', 'warehouse')
+                    ->latest()
+                    ->take(5)
+                    ->get()
+                    ->map(fn ($m) => [
+                        'id' => $m->id,
+                        'product_name' => $m->product?->name,
+                        'warehouse_name' => $m->warehouse?->name,
+                        'type' => $m->type,
+                        'quantity' => $m->quantity,
+                        'created_at' => $m->created_at->toDateString(),
+                    ]);
+            }),
         ]);
     }
 }

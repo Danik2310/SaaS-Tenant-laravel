@@ -30,7 +30,7 @@ export function usePlan() {
       return plan.slug === slug;
     },
     isAtLeast(slug) {
-      const tiers = ['free', 'pro', 'enterprise'];
+      const tiers = ['free', 'starter', 'growth', 'pro', 'enterprise'];
       if (!plan) return false;
       const planIndex = tiers.indexOf(plan.slug);
       const targetIndex = tiers.indexOf(slug);
