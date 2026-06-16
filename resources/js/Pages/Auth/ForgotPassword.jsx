@@ -27,6 +27,9 @@ export default function ForgotPassword({ status }) {
             {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
 
             <form onSubmit={submit}>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email
+                </label>
                 <TextInput
                     id="email"
                     type="email"

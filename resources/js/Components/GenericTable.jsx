@@ -2,6 +2,7 @@ import React from 'react';
 import { MaterialReactTable } from 'material-react-table';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
@@ -11,7 +12,7 @@ import Delete from '@mui/icons-material/Delete';
 import LoginIcon from '@mui/icons-material/Login';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 
-export default function GenericTable({
+const GenericTable = React.memo(function GenericTable({
     columns,
     data,
     onEdit,
@@ -21,42 +22,61 @@ export default function GenericTable({
     rowMenuActions = [],
     ...props
 }) {
+    const [menuAnchor, setMenuAnchor] = React.useState({});
+
+    const handleMenuOpen = (rowId, e) => {
+        setMenuAnchor((prev) => ({ ...prev, [rowId]: e.currentTarget }));
+    };
+
+    const handleMenuClose = (rowId) => {
+        setMenuAnchor((prev) => {
+            const next = { ...prev };
+            delete next[rowId];
+            return next;
+        });
+    };
+
     const renderRowActions = ({ row }) => {
-        // state per row for menu anchor
-        const [anchorEl, setAnchorEl] = React.useState(null);
-        const open = Boolean(anchorEl);
-        const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
-        const handleMenuClose = () => setAnchorEl(null);
+        const rowId = row.id;
+        const open = Boolean(menuAnchor[rowId]);
 
         return (
             <Box sx={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 {onEdit && (
-                    <IconButton color="primary" onClick={() => onEdit(row.original)}>
-                        <Edit />
-                    </IconButton>
+                    <Tooltip title="Edit">
+                        <IconButton color="primary" onClick={() => onEdit(row.original)}>
+                            <Edit />
+                        </IconButton>
+                    </Tooltip>
                 )}
                 {onDelete && (
-                    <IconButton color="error" onClick={() => onDelete(row.original.id)}>
-                        <Delete />
-                    </IconButton>
+                    <Tooltip title="Delete">
+                        <IconButton color="error" onClick={() => onDelete(row.original.id)}>
+                            <Delete />
+                        </IconButton>
+                    </Tooltip>
                 )}
                 {onImpersonate && (
-                    <IconButton color="secondary" onClick={() => onImpersonate(row.original)}>
-                        <LoginIcon />
-                    </IconButton>
+                    <Tooltip title="Impersonate">
+                        <IconButton color="secondary" onClick={() => onImpersonate(row.original)}>
+                            <LoginIcon />
+                        </IconButton>
+                    </Tooltip>
                 )}
                 {rowMenuActions && rowMenuActions.length > 0 && (
                     <>
-                        <IconButton size="small" onClick={handleMenuOpen}>
-                            <MoreVertIcon />
-                        </IconButton>
-                        <Menu anchorEl={anchorEl} open={open} onClose={handleMenuClose}>
+                        <Tooltip title="More actions">
+                            <IconButton size="small" onClick={(e) => handleMenuOpen(rowId, e)}>
+                                <MoreVertIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Menu anchorEl={menuAnchor[rowId]} open={open} onClose={() => handleMenuClose(rowId)}>
                             {(typeof rowMenuActions === 'function' ? rowMenuActions(row.original) : rowMenuActions).map((action, idx) => (
                                 <MenuItem
                                     key={idx}
                                     onClick={() => {
                                         action.onClick(row.original);
-                                        handleMenuClose();
+                                        handleMenuClose(rowId);
                                     }}
                                 >
                                     {action.icon && <ListItemIcon>{action.icon}</ListItemIcon>}
@@ -70,7 +90,6 @@ export default function GenericTable({
         );
     };
 
-    // handler for editing row save
     const handleSaveRow = async ({ exitEditingMode, row, values }) => {
         if (onRowSave) {
             await onRowSave(row.original, values);
@@ -94,4 +113,6 @@ export default function GenericTable({
             {...props}
         />
     );
-}
+});
+
+export default GenericTable;

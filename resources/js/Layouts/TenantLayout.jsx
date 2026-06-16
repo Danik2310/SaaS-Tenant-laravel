@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import InventoryIcon from '@mui/icons-material/Inventory';
@@ -18,7 +18,7 @@ const navItems = [
 
 const sectionLabels = { Main: 'Main', Inventory: 'Inventory', System: 'System' };
 
-export default function TenantLayout({ children }) {
+const TenantLayout = React.memo(function TenantLayout({ children }) {
     const { auth } = usePage().props;
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -31,10 +31,10 @@ export default function TenantLayout({ children }) {
         }
     };
 
-    const handleNav = (routeName) => {
+    const handleNav = useCallback((routeName) => {
         router.visit(route(routeName));
         setMobileOpen(false);
-    };
+    }, []);
 
     const sidebarWidth = collapsed ? 64 : 260;
 
@@ -55,6 +55,7 @@ export default function TenantLayout({ children }) {
                     </div>
                 )}
                 <button onClick={() => setCollapsed(!collapsed)}
+                    aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
                     style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}>
                     <MenuOpenIcon sx={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
                 </button>
@@ -82,6 +83,8 @@ export default function TenantLayout({ children }) {
                             <button
                                 key={item.id}
                                 onClick={() => handleNav(item.id)}
+                                aria-label={item.label}
+                                aria-current={isActive(item.id) ? 'page' : undefined}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -134,6 +137,7 @@ export default function TenantLayout({ children }) {
                 )}
                 <button
                     onClick={() => router.post(route('admin.logout'))}
+                    aria-label="Logout"
                     style={{
                         display: 'flex', alignItems: 'center', gap: 8, width: '100%',
                         padding: collapsed ? '10px' : '10px 12px',
@@ -159,12 +163,12 @@ export default function TenantLayout({ children }) {
             )}
 
             {/* Mobile sidebar */}
-            <aside style={{
+            <aside className="tenant-sidebar-mobile" style={{
                 position: 'fixed', top: 0, left: 0, bottom: 0, width: 260,
                 background: '#0f172a', zIndex: 999,
                 transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
                 transition: 'transform 0.3s ease',
-                display: { xs: 'block', md: 'none' },
+                display: 'none',
             }}>
                 {navContent}
             </aside>
@@ -187,6 +191,7 @@ export default function TenantLayout({ children }) {
             <button
                 className="tenant-mobile-toggle"
                 onClick={() => setMobileOpen(true)}
+                aria-label="Open navigation menu"
                 style={{
                     position: 'fixed', top: 12, left: 12, zIndex: 1000,
                     display: 'none',
@@ -207,10 +212,13 @@ export default function TenantLayout({ children }) {
             <style>{`
                 @media (max-width: 900px) {
                     .tenant-sidebar-desktop { display: none !important; }
+                    .tenant-sidebar-mobile { display: block !important; }
                     .tenant-mobile-toggle { display: flex !important; }
                     main { padding: 16px !important; }
                 }
             `}</style>
         </div>
     );
-}
+});
+
+export default TenantLayout;
