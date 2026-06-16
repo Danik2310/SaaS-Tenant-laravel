@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Builders;
 
+use App\Contracts\TenantBuilderInterface;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use InvalidArgumentException;
 
-class TenantBuilder
+class TenantBuilder implements TenantBuilderInterface
 {
     private Tenant $tenant;
 
@@ -42,18 +43,23 @@ class TenantBuilder
     {
         if ($planSlug) {
             $plan = Plan::where('slug', $planSlug)->first();
-            if ($plan) {
-                if ($plan->max_users === 0) {
-                    throw new InvalidArgumentException("Plan '{$plan->name}' does not support any users.");
-                }
+            if (! $plan) {
+                throw new InvalidArgumentException(
+                    "Plan '{$planSlug}' not found. Available plans: "
+                    .Plan::pluck('slug')->implode(', ')
+                );
+            }
 
-                $this->tenant->plan_id = $plan->id;
-                $this->tenant->save();
+            if ($plan->max_users === 0) {
+                throw new InvalidArgumentException("Plan '{$plan->name}' does not support any users.");
+            }
 
-                if (! $this->tenant->activeSubscription) {
-                    $endsAt = $this->tenant->trial_ends_at;
-                    Subscription::createForTenant($this->tenant, $plan, 'active', $endsAt);
-                }
+            $this->tenant->plan_id = $plan->id;
+            $this->tenant->save();
+
+            if (! $this->tenant->activeSubscription) {
+                $endsAt = $this->tenant->trial_ends_at;
+                Subscription::createForTenant($this->tenant, $plan, 'active', $endsAt);
             }
         }
 

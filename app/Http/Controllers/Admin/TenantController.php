@@ -5,15 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Contracts\TenantManagerInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkTenantOperationRequest;
+use App\Http\Requests\Admin\ChangeTenantPlanRequest;
 use App\Http\Requests\Admin\StoreTenantRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
 use App\Http\Resources\PlanResource;
 use App\Http\Resources\TenantResource;
 use App\Models\Plan;
 use App\Models\Tenant;
-use App\States\TenantStateManager;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 /**
@@ -52,8 +52,7 @@ class TenantController extends Controller
         $tenants = $query->paginate($perPage);
 
         return response()->json([
-            'tenants' => TenantResource::collection($tenants->items()),
-            'total' => $tenants->total(),
+            'data' => TenantResource::collection($tenants->items()),
             'meta' => [
                 'current_page' => $tenants->currentPage(),
                 'last_page' => $tenants->lastPage(),
@@ -75,7 +74,7 @@ class TenantController extends Controller
         $tenant = Tenant::withTrashed()->with(['domains', 'plan'])->findOrFail($id);
 
         return response()->json([
-            'tenant' => new TenantResource($tenant),
+            'data' => new TenantResource($tenant),
         ]);
     }
 
@@ -97,7 +96,7 @@ class TenantController extends Controller
 
         return response()->json([
             'message' => 'Tenant created successfully',
-            'tenant' => new TenantResource($tenant),
+            'data' => new TenantResource($tenant),
         ], 201);
     }
 
@@ -144,7 +143,7 @@ class TenantController extends Controller
 
         if ($status !== null) {
             try {
-                TenantStateManager::transitionTo($tenant, $status);
+                $this->tenantManager->setStatus($tenant, $status);
             } catch (InvalidArgumentException $e) {
                 return response()->json(['message' => $e->getMessage()], 422);
             }
@@ -156,7 +155,7 @@ class TenantController extends Controller
 
         return response()->json([
             'message' => 'Tenant updated successfully',
-            'tenant' => new TenantResource($tenant),
+            'data' => new TenantResource($tenant),
         ]);
     }
 
@@ -204,7 +203,7 @@ class TenantController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['message' => 'Tenant restored successfully', 'tenant' => new TenantResource($tenant)]);
+        return response()->json(['message' => 'Tenant restored successfully', 'data' => new TenantResource($tenant)]);
     }
 
     /**
@@ -245,36 +244,47 @@ class TenantController extends Controller
         $succeeded = 0;
         $failed = 0;
 
-        foreach ($tenantIds as $id) {
-            try {
-                $tenant = $tenants->get($id);
+        DB::beginTransaction();
 
-                if (! $tenant) {
-                    throw new \RuntimeException('Tenant not found');
+        try {
+            foreach ($tenantIds as $id) {
+                try {
+                    $tenant = $tenants->get($id);
+
+                    if (! $tenant) {
+                        throw new \RuntimeException('Tenant not found');
+                    }
+
+                    match ($action) {
+                        'suspend' => $this->tenantManager->suspend($tenant),
+                        'activate' => $this->tenantManager->activate($tenant),
+                        'delete' => $this->tenantManager->delete($tenant),
+                        'restore' => $this->tenantManager->restore($tenant),
+                        'change_plan' => $this->tenantManager->changePlan($tenant, $newPlan),
+                        'extend_trial' => $this->extendTrial($tenant, $payload['days']),
+                    };
+
+                    activity($action === 'delete' ? 'tenant' : 'tenant')
+                        ->performedOn($tenant)
+                        ->causedBy($adminUser)
+                        ->withProperties(['tenant_name' => $tenant->name, 'action' => $action, 'payload' => $payload])
+                        ->log("Bulk {$action} for tenant {$tenant->name}");
+
+                    $results[] = ['tenant_id' => $id, 'status' => 'success'];
+                    $succeeded++;
+                } catch (\Throwable $e) {
+                    \Log::warning("Bulk operation failed for tenant {$id}: {$e->getMessage()}");
+                    $results[] = ['tenant_id' => $id, 'status' => 'failed', 'error' => 'An error occurred while processing this tenant.'];
+                    $failed++;
                 }
-
-                match ($action) {
-                    'suspend' => $this->tenantManager->suspend($tenant),
-                    'activate' => $this->tenantManager->activate($tenant),
-                    'delete' => $this->tenantManager->delete($tenant),
-                    'restore' => $this->tenantManager->restore($tenant),
-                    'change_plan' => $this->tenantManager->changePlan($tenant, $newPlan),
-                    'extend_trial' => $this->extendTrial($tenant, $payload['days']),
-                };
-
-                activity($action === 'delete' ? 'tenant' : 'tenant')
-                    ->performedOn($tenant)
-                    ->causedBy($adminUser)
-                    ->withProperties(['tenant_name' => $tenant->name, 'action' => $action, 'payload' => $payload])
-                    ->log("Bulk {$action} for tenant {$tenant->name}");
-
-                $results[] = ['tenant_id' => $id, 'status' => 'success'];
-                $succeeded++;
-            } catch (\Throwable $e) {
-                \Log::warning("Bulk operation failed for tenant {$id}: {$e->getMessage()}");
-                $results[] = ['tenant_id' => $id, 'status' => 'failed', 'error' => 'An error occurred while processing this tenant.'];
-                $failed++;
             }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            \Log::error('Bulk operation transaction failed: '.$e->getMessage());
+
+            return response()->json(['message' => 'Bulk operation failed'], 500);
         }
 
         return response()->json([
@@ -360,12 +370,10 @@ class TenantController extends Controller
      *
      * @throws 422 If the plan change is invalid.
      */
-    public function changePlan(Request $request, string $id)
+    public function changePlan(ChangeTenantPlanRequest $request, string $id)
     {
-        $request->validate(['plan_id' => 'required|integer|exists:plans,id']);
-
         $tenant = Tenant::with('plan')->findOrFail($id);
-        $newPlan = Plan::findOrFail($request->input('plan_id'));
+        $newPlan = Plan::findOrFail($request->validated('plan_id'));
         $oldPlanName = $tenant->plan?->name ?? 'None';
 
         try {
@@ -388,7 +396,7 @@ class TenantController extends Controller
 
         return response()->json([
             'message' => 'Tenant plan changed successfully',
-            'tenant' => new TenantResource($tenant),
+            'data' => new TenantResource($tenant),
         ]);
     }
 
@@ -404,7 +412,7 @@ class TenantController extends Controller
         $plans = Cache::remember('admin_plans_list', 3600, fn () => Plan::all());
 
         return response()->json([
-            'plans' => PlanResource::collection($plans),
+            'data' => PlanResource::collection($plans),
         ]);
     }
 

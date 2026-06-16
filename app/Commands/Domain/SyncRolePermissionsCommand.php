@@ -2,10 +2,11 @@
 
 namespace App\Commands\Domain;
 
+use App\Contracts\CommandInterface;
 use App\Contracts\PermissionServiceInterface;
 use App\Models\Role;
 
-class SyncRolePermissionsCommand
+class SyncRolePermissionsCommand implements CommandInterface
 {
     private Role $role;
 

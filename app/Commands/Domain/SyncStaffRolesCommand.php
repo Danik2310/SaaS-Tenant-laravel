@@ -2,10 +2,11 @@
 
 namespace App\Commands\Domain;
 
+use App\Contracts\CommandInterface;
 use App\Contracts\RoleServiceInterface;
 use App\Models\AdminUser;
 
-class SyncStaffRolesCommand
+class SyncStaffRolesCommand implements CommandInterface
 {
     private AdminUser $user;
 

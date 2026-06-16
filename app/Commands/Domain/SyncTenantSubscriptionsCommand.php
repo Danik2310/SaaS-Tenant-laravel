@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Commands\Domain;
 
+use App\Contracts\CommandInterface;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\Log;
 
-class SyncTenantSubscriptionsCommand
+class SyncTenantSubscriptionsCommand implements CommandInterface
 {
     private array $createdSubscriptionIds = [];
 

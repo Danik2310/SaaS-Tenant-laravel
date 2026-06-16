@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Contracts;
 
 use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\Tenant;
+use Carbon\Carbon;
 
 interface TenantManagerInterface
 {
@@ -20,4 +22,8 @@ interface TenantManagerInterface
     public function restore(Tenant $tenant): void;
 
     public function changePlan(Tenant $tenant, Plan $newPlan): void;
+
+    public function createSubscription(Tenant $tenant, Plan $plan, string $status, ?Carbon $endsAt = null, ?Carbon $startsAt = null): Subscription;
+
+    public function setStatus(Tenant $tenant, string $status): void;
 }

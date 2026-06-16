@@ -12,7 +12,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\States\TenantStateManager;
-use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class TenantManager implements TenantManagerInterface
@@ -67,9 +67,6 @@ class TenantManager implements TenantManagerInterface
 
             TenantStateManager::transitionTo($tenant, 'Deleted');
 
-            // Detach domains so they don't block re-use
-            $tenant->domains()->delete();
-
             $tenant->delete();
         });
 
@@ -93,11 +90,13 @@ class TenantManager implements TenantManagerInterface
                     'ends_at' => null,
                 ]);
 
-            // Re-create primary domain record (the domain column may be null for legacy tenants)
-            $tenant->domains()->create([
-                'domain' => $tenant->domain ?? $tenant->id.'.localhost',
-                'is_primary' => true,
-            ]);
+            // If no domains exist, create a primary one
+            if ($tenant->domains()->count() === 0) {
+                $tenant->domains()->create([
+                    'domain' => $tenant->domain ?? $tenant->id.'.localhost',
+                    'is_primary' => true,
+                ]);
+            }
 
             TenantStateManager::transitionTo($tenant, 'Active');
         });
@@ -110,10 +109,15 @@ class TenantManager implements TenantManagerInterface
         $oldPlan = null;
 
         DB::transaction(function () use ($tenant, $newPlan, &$oldPlan) {
-            $oldPlan = $tenant->plan ?? Plan::where('slug', 'free')->firstOrCreate(
-                ['slug' => 'free'],
-                ['name' => 'Free Plan', 'price' => 0]
-            );
+            if (! $tenant->plan) {
+                $defaultSlug = config('tenancy.default_plan_slug', 'free');
+                $oldPlan = Plan::firstOrCreate(
+                    ['slug' => $defaultSlug],
+                    ['name' => 'Free Plan', 'price' => 0, 'slug' => $defaultSlug]
+                );
+            } else {
+                $oldPlan = $tenant->plan;
+            }
 
             $tenant->activeSubscription?->update([
                 'status' => 'cancelled',
@@ -130,5 +134,46 @@ class TenantManager implements TenantManagerInterface
 
         TenantStateManager::flushTenantCache($tenant);
     }
-}
 
+    public function createSubscription(Tenant $tenant, Plan $plan, string $status, ?Carbon $endsAt = null, ?Carbon $startsAt = null): Subscription
+    {
+        return DB::transaction(function () use ($tenant, $plan, $status, $endsAt, $startsAt) {
+            $tenant = Tenant::lockForUpdate()->findOrFail($tenant->id);
+            $oldPlan = $tenant->plan;
+
+            $tenant->activeSubscription?->update([
+                'status' => 'cancelled',
+                'ends_at' => now()->subDay(),
+            ]);
+
+            $subscription = Subscription::createForTenant(
+                $tenant,
+                $plan,
+                $status,
+                $endsAt,
+                $startsAt,
+            );
+
+            $tenant->plan_id = $plan->id;
+            $tenant->save();
+
+            if ($oldPlan && $oldPlan->id !== $plan->id) {
+                event(new PlanChanged($tenant, $oldPlan, $plan));
+            }
+
+            TenantStateManager::flushTenantCache($tenant);
+
+            return $subscription;
+        });
+    }
+
+    public function setStatus(Tenant $tenant, string $status): void
+    {
+        match ($status) {
+            'Active' => $this->activate($tenant),
+            'Suspended' => $this->suspend($tenant),
+            'Deleted' => $this->delete($tenant),
+            default => TenantStateManager::transitionTo($tenant, $status),
+        };
+    }
+}
