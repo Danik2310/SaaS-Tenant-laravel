@@ -48,8 +48,8 @@ Route::middleware(['auth:admin'])->get('/admin/unauthorized', function () {
     return Inertia::render('Unauthorized');
 })->name('admin.unauthorized');
 
-// Protected admin routes
-Route::middleware(['auth:admin', 'throttle:100,1'])->prefix('admin')->group(function () {
+// Protected admin routes — only accessible on central domains
+Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'central.domain'])->prefix('admin')->group(function () {
     Route::get('/user', [AdminAuthController::class, 'user']);
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::get('/api/dashboard-stats', [DashboardController::class, 'stats'])->middleware('permission:manage tenants,admin');

@@ -4,8 +4,10 @@ namespace App\Http;
 
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\CheckImpersonationExpiry;
+use App\Http\Middleware\CheckStorageLimit;
 use App\Http\Middleware\CheckTenantState;
 use App\Http\Middleware\EncryptCookies;
+use App\Http\Middleware\EnsureCentralDomain;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\PaymentMethodRateLimit;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
@@ -33,6 +35,7 @@ use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 class Kernel extends HttpKernel
 {
@@ -72,7 +75,7 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
-            // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            EnsureFrontendRequestsAreStateful::class,
             ThrottleRequests::class.':api',
             SubstituteBindings::class,
         ],
@@ -101,5 +104,7 @@ class Kernel extends HttpKernel
         'feature' => RequiresPlanFeature::class,
         'tenant.state' => CheckTenantState::class,
         'impersonation.expiry' => CheckImpersonationExpiry::class,
+        'storage.limit' => CheckStorageLimit::class,
+        'central.domain' => EnsureCentralDomain::class,
     ];
 }

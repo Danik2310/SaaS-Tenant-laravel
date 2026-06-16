@@ -44,19 +44,27 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->dropIndex(['plan_id', 'status']);
+            if ($this->indexExists('tenants', 'tenants_plan_id_status_index')) {
+                $table->dropIndex(['plan_id', 'status']);
+            }
         });
 
         Schema::table('domains', function (Blueprint $table) {
-            $table->dropIndex(['tenant_id']);
+            if ($this->indexExists('domains', 'domains_tenant_id_index')) {
+                $table->dropIndex(['tenant_id']);
+            }
         });
 
         Schema::table('subscriptions', function (Blueprint $table) {
-            $table->dropIndex(['plan_id', 'status']);
+            if ($this->indexExists('subscriptions', 'subscriptions_plan_id_status_index')) {
+                $table->dropIndex(['plan_id', 'status']);
+            }
         });
 
         Schema::table('payment_methods', function (Blueprint $table) {
-            $table->dropIndex(['active']);
+            if ($this->indexExists('payment_methods', 'payment_methods_active_index')) {
+                $table->dropIndex(['active']);
+            }
         });
     }
 };

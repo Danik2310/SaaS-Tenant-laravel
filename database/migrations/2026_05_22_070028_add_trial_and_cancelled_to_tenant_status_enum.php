@@ -14,6 +14,17 @@ return new class extends Migration
 
     public function down(): void
     {
-        throw new RuntimeException('Cannot revert this migration — rows may contain the "Trial" or "Cancelled" status values');
+        $hasTrialOrCancelled = DB::table('tenants')
+            ->whereIn('status', ['Trial', 'Cancelled'])
+            ->exists();
+
+        if ($hasTrialOrCancelled) {
+            throw new RuntimeException(
+                'Cannot revert — some tenants have status "Trial" or "Cancelled". '
+                .'Change those records to a different status first.'
+            );
+        }
+
+        DB::statement("ALTER TABLE tenants MODIFY COLUMN status ENUM('Active', 'Suspended', 'Deleted') NOT NULL DEFAULT 'Active'");
     }
 };

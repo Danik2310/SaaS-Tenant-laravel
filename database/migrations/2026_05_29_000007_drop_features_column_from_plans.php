@@ -9,14 +9,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('plans', function (Blueprint $table) {
-            $table->dropColumn('features');
+            if (Schema::hasColumn('plans', 'features')) {
+                $table->dropColumn('features');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('plans', function (Blueprint $table) {
-            $table->json('features')->nullable()->after('max_products');
+            if (! Schema::hasColumn('plans', 'features')) {
+                $table->json('features')->nullable()->after('max_products');
+            }
         });
     }
 };

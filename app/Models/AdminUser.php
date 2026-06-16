@@ -70,8 +70,11 @@ class AdminUser extends Authenticatable
      */
     public function getAllPermissions()
     {
-        return $this->permissions()->union(
-            $this->roles()->with('permissions')->get()->flatMap->permissions
-        )->unique('id')->values();
+        $this->loadMissing('roles.permissions', 'permissions');
+
+        return $this->permissions
+            ->merge($this->roles->flatMap->permissions)
+            ->unique('id')
+            ->values();
     }
 }

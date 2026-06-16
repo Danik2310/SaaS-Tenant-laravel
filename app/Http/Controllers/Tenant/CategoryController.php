@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreCategoryRequest;
 use App\Http\Requests\Tenant\UpdateCategoryRequest;
 use App\Models\Category;
+use App\States\TenantStateManager;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -30,7 +31,7 @@ class CategoryController extends Controller
 
         Category::create($validated);
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.categories.index')
             ->with('success', 'Category created successfully.');
@@ -40,7 +41,7 @@ class CategoryController extends Controller
     {
         $category->update($request->validated());
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.categories.index')
             ->with('success', 'Category updated successfully.');
@@ -55,7 +56,7 @@ class CategoryController extends Controller
 
         $category->delete();
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.categories.index')
             ->with('success', 'Category deleted successfully.');

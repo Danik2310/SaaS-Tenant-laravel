@@ -38,12 +38,18 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('inventory_movements', function (Blueprint $table) {
-            $table->dropIndex(['warehouse_id']);
-            $table->dropIndex(['product_id', 'created_at']);
+            if ($this->indexExists('inventory_movements', 'inventory_movements_warehouse_id_index')) {
+                $table->dropIndex(['warehouse_id']);
+            }
+            if ($this->indexExists('inventory_movements', 'inventory_movements_product_id_created_at_index')) {
+                $table->dropIndex(['product_id', 'created_at']);
+            }
         });
 
         Schema::table('order_items', function (Blueprint $table) {
-            $table->dropIndex(['order_id', 'product_id']);
+            if ($this->indexExists('order_items', 'order_items_order_id_product_id_index')) {
+                $table->dropIndex(['order_id', 'product_id']);
+            }
         });
     }
 };

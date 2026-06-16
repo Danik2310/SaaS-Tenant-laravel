@@ -33,7 +33,15 @@ return new class extends Migration
     {
         Schema::table('tenants', function (Blueprint $table) {
             $table->dropIndex(['email']);
-            $table->dropColumn(['name', 'email', 'status']);
+            $columns = [];
+            foreach (['name', 'email', 'status'] as $col) {
+                if (Schema::hasColumn('tenants', $col)) {
+                    $columns[] = $col;
+                }
+            }
+            if ($columns !== []) {
+                $table->dropColumn($columns);
+            }
         });
     }
 };

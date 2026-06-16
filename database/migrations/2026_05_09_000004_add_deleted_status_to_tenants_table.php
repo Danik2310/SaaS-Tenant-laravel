@@ -14,6 +14,17 @@ return new class extends Migration
 
     public function down(): void
     {
-        throw new RuntimeException('Cannot revert this migration — rows may contain the "Deleted" status value');
+        $hasDeleted = DB::table('tenants')
+            ->where('status', 'Deleted')
+            ->exists();
+
+        if ($hasDeleted) {
+            throw new RuntimeException(
+                'Cannot revert — some tenants have status "Deleted". '
+                .'Force-restore or permanently delete those records first.'
+            );
+        }
+
+        DB::statement("ALTER TABLE tenants MODIFY COLUMN status ENUM('Active', 'Suspended') NOT NULL DEFAULT 'Active'");
     }
 };

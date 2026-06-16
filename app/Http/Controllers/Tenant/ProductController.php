@@ -7,6 +7,7 @@ use App\Http\Requests\Tenant\StoreProductRequest;
 use App\Http\Requests\Tenant\UpdateProductRequest;
 use App\Models\Category;
 use App\Models\Product;
+use App\States\TenantStateManager;
 use Inertia\Inertia;
 
 class ProductController extends Controller
@@ -36,7 +37,7 @@ class ProductController extends Controller
     {
         Product::create($request->validated());
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.products.index')
             ->with('success', 'Product created successfully.');
@@ -57,7 +58,7 @@ class ProductController extends Controller
     {
         $product->update($request->validated());
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.products.index')
             ->with('success', 'Product updated successfully.');
@@ -67,7 +68,7 @@ class ProductController extends Controller
     {
         $product->delete();
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.products.index')
             ->with('success', 'Product deleted successfully.');

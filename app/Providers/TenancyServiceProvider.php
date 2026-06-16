@@ -9,7 +9,7 @@ use App\Events\TenantReactivated;
 use App\Events\TenantSuspended;
 use App\Listeners\HandlePlanChange;
 use App\Listeners\HandleTenantReactivation;
-
+use App\Listeners\HandleTenantSuspension;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
@@ -51,21 +51,18 @@ class TenancyServiceProvider extends ServiceProvider
             Events\DeletingTenant::class => [],
             Events\TenantDeleted::class => [
                 function (Events\TenantDeleted $event) {
-                    // Only drop database on force delete, not soft delete
-                    if ($event->tenant->isForceDeleting()) {
-                        $pipeline = JobPipeline::make([
-                            Jobs\DeleteDatabase::class,
-                        ])->send(function () use ($event) {
-                            return $event->tenant;
-                        })->shouldBeQueued(false);
+                    $pipeline = JobPipeline::make([
+                        Jobs\DeleteDatabase::class,
+                    ])->send(function () use ($event) {
+                        return $event->tenant;
+                    })->shouldBeQueued(false);
 
-                        $pipeline->toListener()($event);
-                    }
+                    $pipeline->toListener()($event);
                 },
             ],
 
             // Custom domain events
-            TenantSuspended::class => [],
+            TenantSuspended::class => [HandleTenantSuspension::class],
             TenantReactivated::class => [
                 HandleTenantReactivation::class,
             ],

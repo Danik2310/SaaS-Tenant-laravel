@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreWarehouseRequest;
 use App\Http\Requests\Tenant\UpdateWarehouseRequest;
 use App\Models\Warehouse;
+use App\States\TenantStateManager;
 use Inertia\Inertia;
 
 class WarehouseController extends Controller
@@ -23,7 +24,7 @@ class WarehouseController extends Controller
     {
         Warehouse::create($request->validated());
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse created successfully.');
@@ -33,7 +34,7 @@ class WarehouseController extends Controller
     {
         $warehouse->update($request->validated());
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse updated successfully.');
@@ -43,7 +44,7 @@ class WarehouseController extends Controller
     {
         $warehouse->delete();
 
-        $this->flushTenantCache();
+        TenantStateManager::flushTenantCache(tenancy()->tenant);
 
         return redirect()->route('tenant.warehouses.index')
             ->with('success', 'Warehouse deleted successfully.');
