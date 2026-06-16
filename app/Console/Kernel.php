@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
 
         // Collect tenant resource usage metrics hourly
         $schedule->command('tenants:collect-metrics')->hourly();
+
+        // Expire trial tenants daily
+        $schedule->command('tenants:expire-trials')->daily();
     }
 
     /**
