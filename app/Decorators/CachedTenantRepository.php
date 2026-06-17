@@ -16,7 +16,7 @@ class CachedTenantRepository implements TenantRepositoryInterface
 
     public function findById(string $id): ?Tenant
     {
-        return Cache::remember("tenant:{$id}", 3600, function () use ($id) {
+        return Cache::tags(['tenant_'.$id])->remember("tenant:{$id}", 3600, function () use ($id) {
             return $this->inner->findById($id);
         });
     }

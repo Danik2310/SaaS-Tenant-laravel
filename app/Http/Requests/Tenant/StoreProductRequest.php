@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Tenant;
 
 use App\Exceptions\PlanLimitExceededException;
+use App\Factories\ResourceEnforcementFactory;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -10,12 +11,14 @@ class StoreProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        if (! tenant()) {
+        if ($this->user() === null || ! tenant()) {
             return false;
         }
 
+        $strategy = ResourceEnforcementFactory::make(tenant());
+        $limit = $strategy->maxProducts();
+
         $currentCount = Product::count();
-        $limit = tenant()->getLimit('products');
 
         if ($limit !== PHP_INT_MAX && $currentCount >= $limit) {
             throw new PlanLimitExceededException('products', $limit);

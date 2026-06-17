@@ -20,11 +20,13 @@ class CheckStorageLimit
             return $next($request);
         }
 
-        $limitKb = tenant()->getLimit('storage');
+        $limitMb = tenant()->getLimit('storage');
 
-        if ($limitKb === PHP_INT_MAX) {
+        if ($limitMb === PHP_INT_MAX) {
             return $next($request);
         }
+
+        $limitKb = $limitMb * 1024;
 
         $usage = TenantResourceUsage::where('tenant_id', $tenantId)->first();
         $currentKb = $usage ? (int) $usage->storage_kb : 0;
@@ -32,7 +34,7 @@ class CheckStorageLimit
         $neededKb = $requiredKb !== null ? (int) $requiredKb : 1;
 
         if (($currentKb + $neededKb) > $limitKb) {
-            throw new PlanLimitExceededException('storage', $limitKb);
+            throw new PlanLimitExceededException('storage', $limitMb);
         }
 
         return $next($request);

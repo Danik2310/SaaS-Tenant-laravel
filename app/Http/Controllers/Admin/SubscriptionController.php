@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Contracts\TenantManagerInterface;
-use App\Events\PlanChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSubscriptionRequest;
 use App\Http\Requests\Admin\UpdateSubscriptionRequest;
@@ -12,6 +11,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @group Subscription Management
@@ -134,28 +134,22 @@ class SubscriptionController extends Controller
      */
     public function update(UpdateSubscriptionRequest $request, string $id)
     {
-        $subscription = Subscription::with('tenant.plan')->findOrFail($id);
-        $validated = $request->validated();
+        return DB::transaction(function () use ($request, $id) {
+            $subscription = Subscription::with('tenant.plan')->lockForUpdate()->findOrFail($id);
+            $validated = $request->validated();
 
-        $subscription->update($validated);
+            $subscription->update($validated);
 
-        if (isset($validated['plan_id']) && (int) $validated['plan_id'] !== $subscription->tenant->plan_id) {
-            $tenant = $subscription->tenant;
-            $oldPlan = $tenant->plan;
-            $newPlan = Plan::findOrFail($validated['plan_id']);
-
-            $tenant->plan_id = $newPlan->id;
-            $tenant->save();
-
-            if ($oldPlan && $oldPlan->id !== $newPlan->id) {
-                event(new PlanChanged($tenant, $oldPlan, $newPlan));
+            if (isset($validated['plan_id']) && (int) $validated['plan_id'] !== $subscription->tenant->fresh()->plan_id) {
+                $newPlan = Plan::findOrFail($validated['plan_id']);
+                $this->tenantManager->changePlan($subscription->tenant, $newPlan);
             }
-        }
 
-        return response()->json([
-            'message' => 'Subscription updated successfully',
-            'data' => new SubscriptionResource($subscription->fresh()->load(['tenant', 'plan'])),
-        ]);
+            return response()->json([
+                'message' => 'Subscription updated successfully',
+                'data' => new SubscriptionResource($subscription->fresh()->load(['tenant', 'plan'])),
+            ]);
+        });
     }
 
     /**

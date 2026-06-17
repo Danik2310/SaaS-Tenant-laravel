@@ -19,9 +19,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     $user = $request->user();
 
+    if (! $user instanceof AdminUser) {
+        abort(401, 'Unauthorized');
+    }
+
     return response()->json([
-        'data' => $user instanceof AdminUser
-            ? new AdminUserResource($user)
-            : ['id' => $user->id, 'name' => $user->name, 'email' => $user->email],
+        'data' => new AdminUserResource($user),
     ]);
 });

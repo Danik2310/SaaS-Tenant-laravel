@@ -33,9 +33,10 @@ class RouteServiceProvider extends ServiceProvider
 
         RateLimiter::for('api', function (Request $request) {
             $tenantId = tenant('id');
+            $prefix = $tenantId ? 'tenant_'.$tenantId : 'central';
             $key = $request->user()
-                ? 'tenant_'.$tenantId.'_user_'.$request->user()->id
-                : 'tenant_'.$tenantId.'_ip_'.$request->ip();
+                ? $prefix.'_user_'.$request->user()->id
+                : $prefix.'_ip_'.$request->ip();
 
             return Limit::perMinute(60)->by($key);
         });

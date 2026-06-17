@@ -126,7 +126,7 @@ class TenantController extends Controller
         $planId = $data['plan_id'] ?? null;
         unset($data['status'], $data['plan_id']);
 
-        $fillable = ['name', 'email', 'domain', 'plan_id'];
+        $fillable = ['name', 'email', 'domain'];
         foreach ($fillable as $key) {
             if (array_key_exists($key, $data) && $data[$key] !== null) {
                 $tenant->$key = $data[$key];
@@ -307,10 +307,13 @@ class TenantController extends Controller
     {
         $tenant = Tenant::findOrFail($id);
         $db = $tenant->database();
+        $dbName = $db->getName();
+
+        $redacted = substr($dbName, 0, 6).'***'.substr($dbName, -4);
 
         return response()->json([
             'database' => [
-                'name' => $db->getName(),
+                'name' => $redacted,
                 'connection' => $db->connection()['driver'] ?? 'mysql',
             ],
         ]);
@@ -336,7 +339,11 @@ class TenantController extends Controller
                 '--tenants' => [$tenant->id],
             ]);
 
-            $output = \Artisan::output();
+            $output = preg_replace(
+                '/[A-Za-z]:(?:\\\\[^\\\\\s]+)+|(?:\/[^\s]+)+\.php/i',
+                '[redacted]',
+                \Artisan::output()
+            );
 
             activity('tenant')
                 ->performedOn($tenant)

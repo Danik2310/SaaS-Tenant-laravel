@@ -27,6 +27,11 @@ return [
     'central_domains' => explode(',', env('CENTRAL_DOMAINS', '127.0.0.1,localhost')),
 
     /**
+     * The default plan slug used when a tenant doesn't have a plan assigned.
+     */
+    'default_plan_slug' => env('DEFAULT_PLAN_SLUG', 'free'),
+
+    /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
      * Their responsibility is making Laravel features tenant-aware.
      *

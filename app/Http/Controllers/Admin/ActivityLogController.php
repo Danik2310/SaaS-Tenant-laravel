@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\ListActivityLogsRequest;
 use App\Models\AdminUser;
-use Illuminate\Http\Request;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -27,7 +27,7 @@ class ActivityLogController extends Controller
      * @queryParam date_from string Filter by start date (Y-m-d).
      * @queryParam date_to string Filter by end date (Y-m-d).
      */
-    public function index(Request $request)
+    public function index(ListActivityLogsRequest $request)
     {
         $query = Activity::query();
 

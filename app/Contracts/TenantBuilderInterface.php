@@ -8,6 +8,8 @@ use App\Models\Tenant;
 
 interface TenantBuilderInterface
 {
+    public function withData(array $data): static;
+
     public function withDomain(string $domain): static;
 
     public function withPlan(?string $planSlug = null): static;

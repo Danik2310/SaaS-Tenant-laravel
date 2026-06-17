@@ -8,7 +8,7 @@ class UpdateProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return tenant() !== null;
+        return $this->user() !== null && tenant() !== null;
     }
 
     public function rules(): array

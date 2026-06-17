@@ -27,8 +27,8 @@ class PaymentMethodController extends Controller
      */
     public function index()
     {
-        $methods = Cache::remember('payment_methods_all', 3600, fn () => PaymentMethodResource::collection(PaymentMethod::all())
-        );
+        $perPage = min((int) request('per_page', 50), 100);
+        $paymentMethods = PaymentMethod::paginate($perPage);
 
         try {
             $this->logPaymentMethodAccessed(null, 'list');
@@ -36,7 +36,15 @@ class PaymentMethodController extends Controller
             \Log::error('Failed to log payment method access: '.$e->getMessage());
         }
 
-        return response()->json(['data' => $methods]);
+        return response()->json([
+            'data' => PaymentMethodResource::collection($paymentMethods->items()),
+            'meta' => [
+                'current_page' => $paymentMethods->currentPage(),
+                'last_page' => $paymentMethods->lastPage(),
+                'per_page' => $paymentMethods->perPage(),
+                'total' => $paymentMethods->total(),
+            ],
+        ]);
     }
 
     /**

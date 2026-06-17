@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Http\Resources\SettingResource;
 use App\Models\GlobalSetting;
-use Illuminate\Http\Request;
 
 /**
  * @group Global Settings
@@ -37,13 +37,9 @@ class SettingController extends Controller
      * @bodyParam settings.*.key string required Setting key.
      * @bodyParam settings.*.value string required Setting value.
      */
-    public function update(Request $request)
+    public function update(UpdateSettingsRequest $request)
     {
-        $validated = $request->validate([
-            'settings' => 'required|array',
-            'settings.*.key' => 'required|string|max:255',
-            'settings.*.value' => 'nullable|string|max:65535',
-        ]);
+        $validated = $request->validated();
 
         foreach ($validated['settings'] as $setting) {
             GlobalSetting::set($setting['key'], $setting['value']);

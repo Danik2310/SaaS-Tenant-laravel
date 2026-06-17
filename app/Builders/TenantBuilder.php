@@ -14,7 +14,12 @@ class TenantBuilder implements TenantBuilderInterface
 {
     private Tenant $tenant;
 
-    public function __construct(array $data)
+    public function __construct()
+    {
+        $this->tenant = new Tenant;
+    }
+
+    public function withData(array $data): static
     {
         $status = $data['status'] ?? (isset($data['trial_ends_at']) ? 'Trial' : 'Active');
 
@@ -30,6 +35,8 @@ class TenantBuilder implements TenantBuilderInterface
         }
 
         $this->tenant = Tenant::create($attributes);
+
+        return $this;
     }
 
     public function withDomain(string $domain): static

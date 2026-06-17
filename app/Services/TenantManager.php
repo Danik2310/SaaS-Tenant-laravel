@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\Builders\TenantBuilder;
+use App\Contracts\TenantBuilderInterface;
 use App\Contracts\TenantManagerInterface;
 use App\Events\PlanChanged;
-use App\Models\Domain;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
@@ -17,9 +16,14 @@ use Illuminate\Support\Facades\DB;
 
 class TenantManager implements TenantManagerInterface
 {
+    public function __construct(
+        private TenantBuilderInterface $tenantBuilder,
+    ) {}
+
     public function provision(array $data): Tenant
     {
-        return (new TenantBuilder($data))
+        return $this->tenantBuilder
+            ->withData($data)
             ->withDomain($data['domain'])
             ->withPlan($data['plan'] ?? null)
             ->build();
@@ -111,10 +115,7 @@ class TenantManager implements TenantManagerInterface
         DB::transaction(function () use ($tenant, $newPlan, &$oldPlan) {
             if (! $tenant->plan) {
                 $defaultSlug = config('tenancy.default_plan_slug', 'free');
-                $oldPlan = Plan::firstOrCreate(
-                    ['slug' => $defaultSlug],
-                    ['name' => 'Free Plan', 'price' => 0, 'slug' => $defaultSlug]
-                );
+                $oldPlan = Plan::where('slug', $defaultSlug)->firstOrFail();
             } else {
                 $oldPlan = $tenant->plan;
             }

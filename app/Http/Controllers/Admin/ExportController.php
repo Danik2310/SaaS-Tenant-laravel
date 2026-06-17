@@ -8,6 +8,7 @@ use App\Contracts\ExportServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ExportRequest;
 use App\Jobs\RunExportJob;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
@@ -143,11 +144,13 @@ class ExportController extends Controller
      *
      * @urlParam jobId string required The export job ID.
      */
-    public function status(string $jobId)
+    public function status(string $jobId, Request $request)
     {
-        $status = Cache::get("export:{$jobId}:status", 'unknown');
-        $result = Cache::get("export:{$jobId}:result");
-        $error = Cache::get("export:{$jobId}:error");
+        $tenantId = $request->query('tenant_id');
+        $prefix = $tenantId ? "tenant:{$tenantId}:export" : 'export';
+        $status = Cache::get("{$prefix}:{$jobId}:status", 'unknown');
+        $result = Cache::get("{$prefix}:{$jobId}:result");
+        $error = Cache::get("{$prefix}:{$jobId}:error");
 
         $response = [
             'data' => [

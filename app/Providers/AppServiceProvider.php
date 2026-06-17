@@ -2,10 +2,17 @@
 
 namespace App\Providers;
 
+use App\Adapters\StripePaymentAdapter;
+use App\Builders\TenantBuilder;
 use App\Contracts\ExportServiceInterface;
+use App\Contracts\PaymentGatewayInterface;
 use App\Contracts\PermissionServiceInterface;
 use App\Contracts\RoleServiceInterface;
+use App\Contracts\TenantBuilderInterface;
 use App\Contracts\TenantManagerInterface;
+use App\Contracts\TenantRepositoryInterface;
+use App\Decorators\CachedTenantRepository;
+use App\Repositories\TenantRepository;
 use App\Services\ExportService;
 use App\Services\PermissionService;
 use App\Services\RoleService;
@@ -23,6 +30,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(RoleServiceInterface::class, RoleService::class);
         $this->app->singleton(PermissionServiceInterface::class, PermissionService::class);
         $this->app->singleton(ExportServiceInterface::class, ExportService::class);
+
+        $this->app->singleton(TenantRepositoryInterface::class, function () {
+            return new CachedTenantRepository(app(TenantRepository::class));
+        });
+
+        $this->app->bind(PaymentGatewayInterface::class, StripePaymentAdapter::class);
+
+        $this->app->bind(TenantBuilderInterface::class, TenantBuilder::class);
     }
 
     public function boot(): void

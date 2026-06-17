@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Tenant;
 
 use App\Exceptions\PlanLimitExceededException;
+use App\Factories\ResourceEnforcementFactory;
 use App\Models\Category;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -10,12 +11,14 @@ class StoreCategoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        if (! tenant()) {
+        if ($this->user() === null || ! tenant()) {
             return false;
         }
 
+        $strategy = ResourceEnforcementFactory::make(tenant());
+        $limit = $strategy->maxCategories();
+
         $currentCount = Category::count();
-        $limit = tenant()->getLimit('categories');
 
         if ($limit !== PHP_INT_MAX && $currentCount >= $limit) {
             throw new PlanLimitExceededException('categories', $limit);

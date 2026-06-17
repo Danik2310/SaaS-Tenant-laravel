@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\Tenant;
+use App\States\ActiveState;
+use App\States\DeletedState;
+use App\States\TrialState;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,7 +19,7 @@ class CheckTenantState
         $tenant = tenant();
 
         if ($tenant && $tenant instanceof Tenant) {
-            if ($tenant->trashed() || $tenant->status === 'Deleted') {
+            if ($tenant->trashed() || $tenant->status === DeletedState::label()) {
                 $message = 'This account has been deleted. Please contact support.';
 
                 if ($request->expectsJson()) {
@@ -26,13 +29,13 @@ class CheckTenantState
                 }
 
                 return response()->view('admin.tenant-state', [
-                    'status' => 'Deleted',
+                    'status' => DeletedState::label(),
                     'isDeleted' => true,
                     'tenantName' => $tenant->name,
                 ]);
             }
 
-            if ($tenant->status === 'Trial' && $tenant->trialHasExpired()) {
+            if ($tenant->status === TrialState::label() && $tenant->trialHasExpired()) {
                 if ($request->expectsJson()) {
                     return response()->json([
                         'message' => 'Your trial has expired. Please upgrade to continue.',
@@ -40,13 +43,13 @@ class CheckTenantState
                 }
 
                 return response()->view('admin.tenant-state', [
-                    'status' => 'Trial',
+                    'status' => TrialState::label(),
                     'isDeleted' => false,
                     'tenantName' => $tenant->name,
                 ]);
             }
 
-            if (! in_array($tenant->status, ['Active', 'Trial'])) {
+            if (! in_array($tenant->status, [ActiveState::label(), TrialState::label()])) {
                 if ($request->expectsJson()) {
                     return response()->json([
                         'message' => 'Your account has been suspended. Please contact support.',
