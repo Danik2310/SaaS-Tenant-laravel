@@ -202,9 +202,11 @@ const DataTable = React.memo(function DataTable({
                         const menuActions = typeof rowMenuActions === 'function' ? rowMenuActions(row) : rowMenuActions;
                         return (
                             <React.Fragment key={idx}>
+                                <Tooltip title="More actions">
                                 <IconButton size="small" sx={{ color: '#64748b' }} onClick={(e) => handleMenuOpen(e, row)}>
                                     <MoreVertIcon fontSize="small" />
                                 </IconButton>
+                                </Tooltip>
                                 <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor) && menuRow?.id === row.id} onClose={handleMenuClose}>
                                     {menuActions.map((action, aIdx) =>
                                         action.divider ? (

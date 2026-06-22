@@ -10,7 +10,16 @@ const api = axios.create({
 });
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        if (response.data && typeof response.data.data === 'object' && !Array.isArray(response.data.data)) {
+            // Promote nested data keys for consistency across API responses
+            const meta = response.data.meta;
+            Object.assign(response.data, response.data.data);
+            delete response.data.data;
+            if (meta) response.data.meta = meta;
+        }
+        return response;
+    },
     (error) => {
         if (error.response?.status === 403) {
             const message = error.response?.data?.message;
