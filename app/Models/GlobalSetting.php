@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class GlobalSetting extends Model
 {
+    protected $connection = 'mysql_central';
+
     protected $table = 'global_settings';
 
     protected $fillable = [

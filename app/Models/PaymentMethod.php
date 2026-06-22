@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Crypt;
 
 class PaymentMethod extends Model
 {
+    protected $connection = 'mysql_central';
+
     use HasFactory;
 
     protected $fillable = [

@@ -13,8 +13,9 @@ class TenantResourceUsage extends Model
     /**
      * Always use the central MySQL connection, even when tenancy is active.
      * This ensures increment/decrement operations always hit the central DB.
+     * mysql_central is a dedicated connection NOT switched by DatabaseTenancyBootstrapper.
      */
-    protected $connection = 'mysql';
+    protected $connection = 'mysql_central';
 
     protected $table = 'tenant_resource_usage';
 

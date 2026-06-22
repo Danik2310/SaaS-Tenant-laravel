@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Subscription extends Model
 {
+    protected $connection = 'mysql_central';
+
     use HasFactory;
 
     protected $fillable = [

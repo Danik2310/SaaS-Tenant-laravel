@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Plan extends Model
 {
+    protected $connection = 'mysql_central';
+
     use HasFactory;
 
     protected $fillable = [

@@ -12,6 +12,15 @@ class AdminUser extends Authenticatable
 {
     use HasFactory, HasRoles, Notifiable, SoftDeletes;
 
+    // NOTE: $connection intentionally NOT set to 'mysql_central'. Spatie's HasRoles trait
+    // resolves the database connection from the model, and permission tables are migrated
+    // on the default (mysql) connection. Using a different connection causes InnoDB lock
+    // conflicts when Spatie operations (assignRole, givePermissionTo) create pivot records
+    // across connections. AdminUser is only accessed in central-domain context where
+    // DatabaseTenancyBootstrapper does not switch the connection, so the default is safe.
+    // If tenancy initialization becomes possible during admin requests, Spatie permission
+    // operations must first be migrated to also use 'mysql_central'.
+
     protected $table = 'admin_users';
 
     protected $guard_name = 'admin';

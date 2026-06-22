@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Domain extends Model
 {
+    protected $connection = 'mysql_central';
+
     protected $fillable = [
         'tenant_id',
         'domain',

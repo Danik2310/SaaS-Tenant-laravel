@@ -93,6 +93,12 @@ return [
             'driver' => 'octane',
         ],
 
+        'global' => [
+            'driver' => env('CACHE_DRIVER', 'redis'),
+            'connection' => env('GLOBAL_CACHE_CONNECTION', 'cache'),
+            'lock_connection' => env('GLOBAL_CACHE_LOCK_CONNECTION', 'default'),
+        ],
+
     ],
 
     /*
