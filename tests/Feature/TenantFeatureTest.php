@@ -356,6 +356,10 @@ class TenantFeatureTest extends TestCase
 
     protected function tearDown(): void
     {
+        if (tenancy()->initialized) {
+            $this->forgetTenant();
+        }
+
         foreach ($this->createdTenantDbNames as $name) {
             try {
                 DB::statement("DROP DATABASE IF EXISTS `$name`");

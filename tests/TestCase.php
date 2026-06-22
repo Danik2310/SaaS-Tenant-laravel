@@ -72,7 +72,7 @@ abstract class TestCase extends BaseTestCase
         Artisan::call('migrate', [
             '--path' => 'database/migrations/tenant',
             '--database' => 'tenant',
-            '--force' => true,
+            '--env' => 'testing',
         ]);
 
         return $tenant;

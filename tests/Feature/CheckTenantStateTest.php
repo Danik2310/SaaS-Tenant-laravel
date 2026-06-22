@@ -12,6 +12,17 @@ class CheckTenantStateTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->beforeApplicationDestroyed(function () {
+            if (tenancy()->initialized) {
+                tenancy()->end();
+            }
+        });
+    }
+
     /**
      * Note: These tests create tenants directly via Tenant::create() rather than
      * using createTestTenant() + initializeTenant() because:

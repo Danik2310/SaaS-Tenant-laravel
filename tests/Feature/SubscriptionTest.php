@@ -362,7 +362,7 @@ class SubscriptionTest extends TestCase
 
         Artisan::call('db:seed', [
             '--class' => TenantSeeder::class,
-            '--force' => true,
+            '--env' => 'testing',
         ]);
 
         $this->assertDatabaseHas('subscriptions', [

@@ -32,7 +32,7 @@ class AdminAuthTest extends TestCase
         $response->assertStatus(200)
             ->assertJson(['success' => true]);
 
-        $this->assertAuthenticated('web');
+        $this->assertAuthenticated('admin');
     }
 
     public function test_admin_login_fails_with_invalid_credentials(): void
@@ -48,9 +48,9 @@ class AdminAuthTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJson(['message' => 'The provided credentials do not match our records.']);
+            ->assertJson(['message' => 'Invalid credentials']);
 
-        $this->assertGuest('web');
+        $this->assertGuest('admin');
     }
 
     public function test_guest_cannot_access_admin_routes(): void
@@ -63,11 +63,12 @@ class AdminAuthTest extends TestCase
     public function test_admin_can_logout(): void
     {
         $admin = AdminUser::factory()->create();
-        $this->actingAs($admin, 'web');
+        $this->actingAs($admin, 'admin');
 
         $response = $this->post('/central/logout');
 
-        $response->assertStatus(302);
-        $this->assertGuest('web');
+        $response->assertStatus(200)
+            ->assertJson(['success' => true, 'message' => 'Logged out']);
+        $this->assertGuest('admin');
     }
 }
