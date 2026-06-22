@@ -55,10 +55,22 @@ class TenantStateManager
 
     public static function flushTenantCache(Tenant $tenant): void
     {
+        // IMPORTANT: Do NOT call tenancy()->initialize() here. When this is called after
+        // $tenant->delete(), the tenant's database has already been dropped, so
+        // DatabaseTenancyBootstrapper::bootstrap() will throw
+        // TenantDatabaseDoesNotExistException. The subsequent tenancy()->end() triggers
+        // RevertToCentralContext -> CacheTenancyBootstrapper::revert(), which corrupts the
+        // cache manager because bootstrap() was never called (the Guarded method).
+        // Instead, flush the tenant's cache tags directly without initializing tenancy.
+
         try {
-            tenancy()->initialize($tenant);
-            Cache::tags(['tenant_'.$tenant->id])->flush();
-            tenancy()->end();
+            Cache::tags([config('tenancy.cache.tag_base').$tenant->getTenantKey()])->flush();
+        } catch (\BadMethodCallException $e) {
+            try {
+                Cache::flush();
+            } catch (\Throwable $inner) {
+                Log::warning('Could not flush cache for tenant '.$tenant->id.': '.$inner->getMessage());
+            }
         } catch (\Throwable $e) {
             Log::warning('Could not flush cache for tenant '.$tenant->id.': '.$e->getMessage());
         }

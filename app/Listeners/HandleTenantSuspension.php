@@ -13,9 +13,9 @@ class HandleTenantSuspension
     public function handle(TenantSuspended $event): void
     {
         try {
-            tenancy()->initialize($event->tenant);
-            Cache::tags(['tenant_'.$event->tenant->id])->flush();
-            tenancy()->end();
+            Cache::tags([config('tenancy.cache.tag_base').$event->tenant->getTenantKey()])->flush();
+        } catch (\BadMethodCallException) {
+            // Cache driver does not support tags (array/file)
         } catch (\Throwable $e) {
             Log::warning('Could not flush cache for tenant '.$event->tenant->id.' after suspension: '.$e->getMessage());
         }

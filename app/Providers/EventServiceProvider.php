@@ -49,22 +49,20 @@ class EventServiceProvider extends ServiceProvider
         Permission::observe(ActivityLogObserver::class);
         Domain::observe(ActivityLogObserver::class);
         GlobalSetting::observe(ActivityLogObserver::class);
-        // Tenant models — guarded to prevent activity-logging in central context
-        if (tenancy()->initialized) {
-            User::observe(ActivityLogObserver::class);
-            Customer::observe(ActivityLogObserver::class);
-            Product::observe(ActivityLogObserver::class);
-            Order::observe(ActivityLogObserver::class);
-            Payment::observe(ActivityLogObserver::class);
-            Category::observe(ActivityLogObserver::class);
-            Warehouse::observe(ActivityLogObserver::class);
-            Setting::observe(ActivityLogObserver::class);
+        // Tenant models — observers guard themselves with tenancy checks
+        User::observe(ActivityLogObserver::class);
+        Customer::observe(ActivityLogObserver::class);
+        Product::observe(ActivityLogObserver::class);
+        Order::observe(ActivityLogObserver::class);
+        Payment::observe(ActivityLogObserver::class);
+        Category::observe(ActivityLogObserver::class);
+        Warehouse::observe(ActivityLogObserver::class);
+        Setting::observe(ActivityLogObserver::class);
 
-            // Tenant resource usage observers (event-driven incremental counting)
-            User::observe(UserObserver::class);
-            Product::observe(ProductObserver::class);
-            Order::observe(OrderObserver::class);
-        }
+        // Tenant resource usage observers (event-driven incremental counting)
+        User::observe(UserObserver::class);
+        Product::observe(ProductObserver::class);
+        Order::observe(OrderObserver::class);
     }
 
     public function shouldDiscoverEvents(): bool

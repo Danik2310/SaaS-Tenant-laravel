@@ -102,6 +102,10 @@ class HandlePlanChange
                 'error' => $e->getMessage(),
             ]);
 
+            if (tenancy()->initialized) {
+                tenancy()->end();
+            }
+
             return 0;
         }
     }

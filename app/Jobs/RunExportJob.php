@@ -44,18 +44,18 @@ class RunExportJob implements ShouldQueue
 
     public function handle(ExportService $exportService): void
     {
-        $prefix = $this->tenantId ? "tenant:{$this->tenantId}:export" : 'export';
-        Cache::put("{$prefix}:{$this->jobId}:status", 'processing', 3600);
-
         try {
             if ($this->tenantId) {
                 tenancy()->initialize($this->tenantId);
             }
 
+            $prefix = $this->tenantId ? "tenant:{$this->tenantId}:export" : 'export';
+            Cache::store('global')->put("{$prefix}:{$this->jobId}:status", 'processing', 3600);
+
             $result = $exportService->export($this->entity, $this->format, $this->columns, $this->filters);
 
-            Cache::put("{$prefix}:{$this->jobId}:result", $result, 3600);
-            Cache::put("{$prefix}:{$this->jobId}:status", 'completed', 3600);
+            Cache::store('global')->put("{$prefix}:{$this->jobId}:result", $result, 3600);
+            Cache::store('global')->put("{$prefix}:{$this->jobId}:status", 'completed', 3600);
 
             Log::info('Export completed via job', [
                 'job_id' => $this->jobId,
@@ -64,8 +64,9 @@ class RunExportJob implements ShouldQueue
                 'record_count' => $result['record_count'],
             ]);
         } catch (\Exception $e) {
-            Cache::put("{$prefix}:{$this->jobId}:status", 'failed', 3600);
-            Cache::put("{$prefix}:{$this->jobId}:error", $e->getMessage(), 3600);
+            $prefix = $this->tenantId ? "tenant:{$this->tenantId}:export" : 'export';
+            Cache::store('global')->put("{$prefix}:{$this->jobId}:status", 'failed', 3600);
+            Cache::store('global')->put("{$prefix}:{$this->jobId}:error", $e->getMessage(), 3600);
 
             Log::error('Export job failed', [
                 'job_id' => $this->jobId,

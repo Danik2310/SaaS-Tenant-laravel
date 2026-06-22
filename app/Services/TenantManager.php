@@ -13,6 +13,8 @@ use App\Models\Tenant;
 use App\States\TenantStateManager;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use InvalidArgumentException;
 
 class TenantManager implements TenantManagerInterface
 {
@@ -70,9 +72,13 @@ class TenantManager implements TenantManagerInterface
             ]);
 
             TenantStateManager::transitionTo($tenant, 'Deleted');
-
-            $tenant->delete();
         });
+
+        // $tenant->delete() must run AFTER the transaction because it triggers
+        // TenantDeleted -> DeleteDatabase -> DROP DATABASE (MySQL DDL).
+        // MySQL implicitly commits any active transaction when executing DDL,
+        // which would cause PDO::commit() to throw "no active transaction".
+        $tenant->delete();
 
         TenantStateManager::flushTenantCache($tenant);
     }
@@ -176,5 +182,37 @@ class TenantManager implements TenantManagerInterface
             'Deleted' => $this->delete($tenant),
             default => TenantStateManager::transitionTo($tenant, $status),
         };
+    }
+
+    public function extendTrial(Tenant $tenant, int $days): void
+    {
+        if ($tenant->status !== 'Trial') {
+            throw new InvalidArgumentException('Can only extend trial for tenants in Trial status.');
+        }
+
+        $currentEnd = $tenant->trial_ends_at ? $tenant->trial_ends_at->copy() : now();
+        $tenant->trial_ends_at = $currentEnd->addDays($days);
+        $tenant->save();
+
+        TenantStateManager::flushTenantCache($tenant);
+    }
+
+    public function migrateTenant(Tenant $tenant): array
+    {
+        $exitCode = \Artisan::call('tenants:migrate', [
+            '--tenants' => [$tenant->id],
+        ]);
+
+        $output = \Artisan::output();
+
+        Log::info('Tenant migration executed', [
+            'tenant_id' => $tenant->id,
+            'exit_code' => $exitCode,
+        ]);
+
+        return [
+            'exit_code' => $exitCode,
+            'output' => $output,
+        ];
     }
 }
