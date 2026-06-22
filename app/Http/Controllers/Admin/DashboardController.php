@@ -49,7 +49,8 @@ class DashboardController extends Controller
                 : Tenant::query();
 
             $recentTenants = $tenantQuery->clone()
-                ->with('domains')
+                ->select(['id', 'name', 'status', 'created_at'])
+                ->with('domains:tenant_id,domain')
                 ->latest()
                 ->take(7)
                 ->get()
@@ -79,20 +80,18 @@ class DashboardController extends Controller
         ];
 
         return response()->json([
-            'data' => [
-                'stats' => [
-                    'total_tenants' => $totalTenants,
-                    'active_tenants' => $activeTenants,
-                    'suspended_tenants' => $suspendedTenants,
-                    'deleted_tenants' => $deletedTenants,
-                    'total_staff' => $staffCount,
-                    'active_staff' => $activeStaff,
-                    'total_plans' => $plansCount,
-                ],
-                'recent_tenants' => $recentTenants,
-                'tenants_by_month' => $tenantsByMonth,
-                'status_distribution' => $statusDistribution,
+            'stats' => [
+                'total_tenants' => $totalTenants,
+                'active_tenants' => $activeTenants,
+                'suspended_tenants' => $suspendedTenants,
+                'deleted_tenants' => $deletedTenants,
+                'total_staff' => $staffCount,
+                'active_staff' => $activeStaff,
+                'total_plans' => $plansCount,
             ],
+            'recent_tenants' => $recentTenants,
+            'tenants_by_month' => $tenantsByMonth,
+            'status_distribution' => $statusDistribution,
         ]);
     }
 }

@@ -25,7 +25,7 @@ class AdminProfileController extends Controller
     public function show()
     {
         return response()->json([
-            'data' => new AdminUserResource(auth('admin')->user()),
+            'profile' => new AdminUserResource(auth('admin')->user()),
         ]);
     }
 
@@ -47,7 +47,7 @@ class AdminProfileController extends Controller
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'data' => new AdminUserResource($user->fresh()),
+            'profile' => new AdminUserResource($user->fresh()),
         ]);
     }
 

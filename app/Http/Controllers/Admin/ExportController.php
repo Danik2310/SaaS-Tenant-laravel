@@ -148,9 +148,9 @@ class ExportController extends Controller
     {
         $tenantId = $request->query('tenant_id');
         $prefix = $tenantId ? "tenant:{$tenantId}:export" : 'export';
-        $status = Cache::get("{$prefix}:{$jobId}:status", 'unknown');
-        $result = Cache::get("{$prefix}:{$jobId}:result");
-        $error = Cache::get("{$prefix}:{$jobId}:error");
+        $status = Cache::store('global')->get("{$prefix}:{$jobId}:status", 'unknown');
+        $result = Cache::store('global')->get("{$prefix}:{$jobId}:result");
+        $error = Cache::store('global')->get("{$prefix}:{$jobId}:error");
 
         $response = [
             'data' => [

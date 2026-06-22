@@ -24,7 +24,7 @@ class SettingController extends Controller
         $settings = GlobalSetting::orderBy('key')->get();
 
         return response()->json([
-            'data' => SettingResource::collection($settings),
+            'settings' => SettingResource::collection($settings),
         ]);
     }
 
@@ -49,7 +49,7 @@ class SettingController extends Controller
 
         return response()->json([
             'message' => 'Settings updated successfully',
-            'data' => SettingResource::collection(GlobalSetting::orderBy('key')->get()),
+            'settings' => SettingResource::collection(GlobalSetting::orderBy('key')->get()),
         ]);
     }
 
@@ -71,7 +71,7 @@ class SettingController extends Controller
         }
 
         return response()->json([
-            'data' => new SettingResource($setting),
+            'setting' => new SettingResource($setting),
         ]);
     }
 }

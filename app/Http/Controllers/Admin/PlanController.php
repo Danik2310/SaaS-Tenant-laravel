@@ -30,7 +30,7 @@ class PlanController extends Controller
         $plans = Plan::with('featureGates')->paginate(25);
 
         return response()->json([
-            'data' => PlanResource::collection($plans->items()),
+            'plans' => PlanResource::collection($plans->items()),
             'meta' => [
                 'current_page' => $plans->currentPage(),
                 'last_page' => $plans->lastPage(),
@@ -79,7 +79,7 @@ class PlanController extends Controller
         Cache::forget('admin_plans_list');
         Log::info('Plan created by user: '.auth('admin')->id());
 
-        return response()->json(['data' => new PlanResource($plan)], 201);
+        return response()->json(['plan' => new PlanResource($plan)], 201);
     }
 
     /**
@@ -93,7 +93,7 @@ class PlanController extends Controller
     {
         $plan = Plan::with('featureGates')->findOrFail($id);
 
-        return response()->json(['data' => new PlanResource($plan)]);
+        return response()->json(['plan' => new PlanResource($plan)]);
     }
 
     /**
@@ -128,7 +128,7 @@ class PlanController extends Controller
         Cache::forget('admin_plans_list');
         Log::info('Plan updated by user: '.auth('admin')->id());
 
-        return response()->json(['data' => new PlanResource($plan)]);
+        return response()->json(['plan' => new PlanResource($plan)]);
     }
 
     /**

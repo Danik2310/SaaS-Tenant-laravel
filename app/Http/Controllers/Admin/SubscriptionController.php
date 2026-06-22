@@ -59,7 +59,7 @@ class SubscriptionController extends Controller
         $subscriptions = $query->orderBy('created_at', 'desc')->paginate(25);
 
         return response()->json([
-            'data' => SubscriptionResource::collection($subscriptions->items()),
+            'subscriptions' => SubscriptionResource::collection($subscriptions->items()),
             'meta' => [
                 'current_page' => $subscriptions->currentPage(),
                 'last_page' => $subscriptions->lastPage(),
@@ -81,7 +81,7 @@ class SubscriptionController extends Controller
         $sub = Subscription::with(['tenant', 'plan'])->findOrFail($id);
 
         return response()->json([
-            'data' => new SubscriptionResource($sub),
+            'subscription' => new SubscriptionResource($sub),
         ]);
     }
 
@@ -121,7 +121,7 @@ class SubscriptionController extends Controller
 
         return response()->json([
             'message' => 'Subscription created successfully',
-            'data' => new SubscriptionResource($subscription->load(['tenant', 'plan'])),
+            'subscription' => new SubscriptionResource($subscription->load(['tenant', 'plan'])),
         ], 201);
     }
 
@@ -147,7 +147,7 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'message' => 'Subscription updated successfully',
-                'data' => new SubscriptionResource($subscription->fresh()->load(['tenant', 'plan'])),
+                'subscription' => new SubscriptionResource($subscription->fresh()->load(['tenant', 'plan'])),
             ]);
         });
     }

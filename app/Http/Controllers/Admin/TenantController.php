@@ -52,7 +52,7 @@ class TenantController extends Controller
         $tenants = $query->paginate($perPage);
 
         return response()->json([
-            'data' => TenantResource::collection($tenants->items()),
+            'tenants' => TenantResource::collection($tenants->items()),
             'meta' => [
                 'current_page' => $tenants->currentPage(),
                 'last_page' => $tenants->lastPage(),
@@ -74,7 +74,7 @@ class TenantController extends Controller
         $tenant = Tenant::withTrashed()->with(['domains', 'plan'])->findOrFail($id);
 
         return response()->json([
-            'data' => new TenantResource($tenant),
+            'tenant' => new TenantResource($tenant),
         ]);
     }
 
@@ -96,7 +96,7 @@ class TenantController extends Controller
 
         return response()->json([
             'message' => 'Tenant created successfully',
-            'data' => new TenantResource($tenant),
+            'tenant' => new TenantResource($tenant),
         ], 201);
     }
 
@@ -155,7 +155,7 @@ class TenantController extends Controller
 
         return response()->json([
             'message' => 'Tenant updated successfully',
-            'data' => new TenantResource($tenant),
+            'tenant' => new TenantResource($tenant),
         ]);
     }
 
@@ -203,7 +203,7 @@ class TenantController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['message' => 'Tenant restored successfully', 'data' => new TenantResource($tenant)]);
+        return response()->json(['message' => 'Tenant restored successfully', 'tenant' => new TenantResource($tenant)]);
     }
 
     /**
@@ -335,14 +335,12 @@ class TenantController extends Controller
         try {
             $tenant = Tenant::findOrFail($id);
 
-            $exitCode = \Artisan::call('tenants:migrate', [
-                '--tenants' => [$tenant->id],
-            ]);
+            $result = $this->tenantManager->migrateTenant($tenant);
 
-            $output = preg_replace(
+            $redactedOutput = preg_replace(
                 '/[A-Za-z]:(?:\\\\[^\\\\\s]+)+|(?:\/[^\s]+)+\.php/i',
                 '[redacted]',
-                \Artisan::output()
+                $result['output']
             );
 
             activity('tenant')
@@ -351,16 +349,18 @@ class TenantController extends Controller
                 ->withProperties(['tenant_name' => $tenant->name])
                 ->log("Ran migrations for tenant {$tenant->name}");
 
+            $exitCode = $result['exit_code'];
+
             return response()->json([
                 'message' => $exitCode === 0 ? 'Migrations executed successfully' : 'Migrations completed with warnings',
-                'output' => $output,
+                'output' => $redactedOutput,
                 'exit' => $exitCode,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Migration failed',
                 'error' => $e->getMessage(),
-                'output' => isset($output) ? $output : '',
+                'output' => '',
             ], 500);
         }
     }
@@ -403,7 +403,7 @@ class TenantController extends Controller
 
         return response()->json([
             'message' => 'Tenant plan changed successfully',
-            'data' => new TenantResource($tenant),
+            'tenant' => new TenantResource($tenant),
         ]);
     }
 
@@ -419,18 +419,12 @@ class TenantController extends Controller
         $plans = Cache::remember('admin_plans_list', 3600, fn () => Plan::all());
 
         return response()->json([
-            'data' => PlanResource::collection($plans),
+            'plans' => PlanResource::collection($plans),
         ]);
     }
 
     private function extendTrial(Tenant $tenant, int $days): void
     {
-        if ($tenant->status !== 'Trial') {
-            throw new InvalidArgumentException('Can only extend trial for tenants in Trial status.');
-        }
-
-        $currentEnd = $tenant->trial_ends_at ? $tenant->trial_ends_at->copy() : now();
-        $tenant->trial_ends_at = $currentEnd->addDays($days);
-        $tenant->save();
+        $this->tenantManager->extendTrial($tenant, $days);
     }
 }

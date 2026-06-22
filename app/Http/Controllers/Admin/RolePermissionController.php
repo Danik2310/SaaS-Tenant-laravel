@@ -31,15 +31,21 @@ class RolePermissionController extends Controller
      */
     public function indexRoles()
     {
-        $roles = RoleResource::collection(
-            Role::select(['id', 'name', 'description', 'is_active'])
-                ->with('permissions')
-                ->where('guard_name', 'admin')
-                ->orderBy('name')
-                ->paginate(50)
-        );
+        $roles = Role::select(['id', 'name', 'description', 'is_active'])
+            ->with('permissions')
+            ->where('guard_name', 'admin')
+            ->orderBy('name')
+            ->paginate(50);
 
-        return response()->json(['data' => $roles]);
+        return response()->json([
+            'roles' => RoleResource::collection($roles->items()),
+            'meta' => [
+                'current_page' => $roles->currentPage(),
+                'last_page' => $roles->lastPage(),
+                'per_page' => $roles->perPage(),
+                'total' => $roles->total(),
+            ],
+        ]);
     }
 
     /**
@@ -81,10 +87,24 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Role created successfully',
-            'data' => new RoleResource($role->load('permissions')),
+            'role' => new RoleResource($role->load('permissions')),
         ], 201);
     }
 
+    /**
+     * Update a role.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The role ID.
+     *
+     * @bodyParam name string required Role name.
+     * @bodyParam description string optional Role description.
+     * @bodyParam permissions integer[] optional Array of permission IDs.
+     *
+     * @responseField message string Success message.
+     * @responseField data object The updated role resource.
+     */
     public function updateRole(UpdateRoleRequest $request, string $id)
     {
         $role = Role::where('guard_name', 'admin')->findOrFail($id);
@@ -110,7 +130,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Role updated successfully',
-            'data' => new RoleResource($role->load('permissions')),
+            'role' => new RoleResource($role->load('permissions')),
         ]);
     }
 
@@ -164,7 +184,7 @@ class RolePermissionController extends Controller
             ->map(fn ($perms) => PermissionResource::collection($perms));
 
         return response()->json([
-            'data' => $grouped,
+            'permissions' => $grouped,
             'meta' => [
                 'current_page' => $permissions->currentPage(),
                 'last_page' => $permissions->lastPage(),
@@ -203,10 +223,24 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Permission created successfully',
-            'data' => new PermissionResource($permission),
+            'permission' => new PermissionResource($permission),
         ], 201);
     }
 
+    /**
+     * Update a permission.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The permission ID.
+     *
+     * @bodyParam name string required Permission name.
+     * @bodyParam module string required Permission module.
+     * @bodyParam description string optional Permission description.
+     *
+     * @responseField message string Success message.
+     * @responseField data object The updated permission resource.
+     */
     public function updatePermission(UpdatePermissionRequest $request, string $id)
     {
         $permission = Permission::where('guard_name', 'admin')->findOrFail($id);
@@ -220,7 +254,7 @@ class RolePermissionController extends Controller
 
         return response()->json([
             'message' => 'Permission updated successfully',
-            'data' => new PermissionResource($permission),
+            'permission' => new PermissionResource($permission),
         ]);
     }
 

@@ -24,6 +24,10 @@ class ImpersonationController extends Controller
      */
     public function start(ImpersonateTenantRequest $request)
     {
+        if (session()->has('impersonate_tenant')) {
+            return response()->json(['message' => 'Already impersonating a tenant. Stop current impersonation first.'], 422);
+        }
+
         $tenant = Tenant::with('domains')->find($request->validated('tenant_id'));
         $domain = $tenant->domains->first()?->domain ?? null;
 

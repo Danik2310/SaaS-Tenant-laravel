@@ -50,7 +50,7 @@ class TenantMetricsController extends Controller
         $metrics = $query->orderBy('collected_at', 'desc')->paginate($perPage);
 
         return response()->json([
-            'data' => TenantResourceUsageResource::collection($metrics->items()),
+            'metrics' => TenantResourceUsageResource::collection($metrics->items()),
             'meta' => [
                 'current_page' => $metrics->currentPage(),
                 'last_page' => $metrics->lastPage(),
@@ -75,7 +75,7 @@ class TenantMetricsController extends Controller
         $plan = $tenant->plan;
 
         return response()->json([
-            'data' => [
+            'metrics' => [
                 'tenant' => [
                     'id' => $tenant->id,
                     'name' => $tenant->name,

@@ -37,7 +37,7 @@ class PaymentMethodController extends Controller
         }
 
         return response()->json([
-            'data' => PaymentMethodResource::collection($paymentMethods->items()),
+            'methods' => PaymentMethodResource::collection($paymentMethods->items()),
             'meta' => [
                 'current_page' => $paymentMethods->currentPage(),
                 'last_page' => $paymentMethods->lastPage(),
@@ -69,7 +69,7 @@ class PaymentMethodController extends Controller
         Cache::forget('payment_methods_all');
         $this->logPaymentMethodCreated($method);
 
-        return response()->json(['data' => new PaymentMethodResource($method)], 201);
+        return response()->json(['method' => new PaymentMethodResource($method)], 201);
     }
 
     /**
@@ -85,7 +85,7 @@ class PaymentMethodController extends Controller
 
         $this->logPaymentMethodAccessed($method, 'view');
 
-        return response()->json(['data' => new PaymentMethodResource($method)]);
+        return response()->json(['method' => new PaymentMethodResource($method)]);
     }
 
     /**
@@ -111,7 +111,7 @@ class PaymentMethodController extends Controller
         Cache::forget('payment_methods_all');
         $this->logPaymentMethodUpdated($method, $oldData);
 
-        return response()->json(['data' => new PaymentMethodResource($method)]);
+        return response()->json(['method' => new PaymentMethodResource($method)]);
     }
 
     public function toggleActive(TogglePaymentMethodRequest $request, string $id)
@@ -124,7 +124,7 @@ class PaymentMethodController extends Controller
         Cache::forget('payment_methods_all');
         $this->logPaymentMethodToggled($method, $oldActive);
 
-        return response()->json(['data' => new PaymentMethodResource($method)]);
+        return response()->json(['method' => new PaymentMethodResource($method)]);
     }
 
     /**

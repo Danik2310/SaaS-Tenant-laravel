@@ -6,6 +6,7 @@ use App\Commands\Domain\SyncStaffRolesCommand;
 use App\Http\Requests\Admin\AssignRolesRequest;
 use App\Http\Requests\Admin\StoreStaffRequest;
 use App\Http\Requests\Admin\UpdateStaffRequest;
+use App\Http\Resources\RoleResource;
 use App\Http\Resources\StaffResource;
 use App\Models\AdminUser;
 use App\Models\Permission;
@@ -35,7 +36,7 @@ class StaffController extends Controller
         ])->paginate(25);
 
         return response()->json([
-            'data' => StaffResource::collection($staff->items()),
+            'staff' => StaffResource::collection($staff->items()),
             'meta' => [
                 'current_page' => $staff->currentPage(),
                 'last_page' => $staff->lastPage(),
@@ -58,7 +59,7 @@ class StaffController extends Controller
             $admin = AdminUser::with('roles.permissions')->findOrFail($id);
 
             return response()->json([
-                'data' => new StaffResource($admin),
+                'staff' => new StaffResource($admin),
                 'available_roles' => Role::with('permissions')
                     ->where('guard_name', 'admin')
                     ->get()
@@ -119,7 +120,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff member created successfully',
-            'data' => new StaffResource($admin),
+            'staff' => new StaffResource($admin),
         ], 201);
     }
 
@@ -157,7 +158,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff member updated successfully',
-            'data' => new StaffResource($admin),
+            'staff' => new StaffResource($admin),
         ]);
     }
 
@@ -202,7 +203,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff member restored successfully',
-            'data' => new StaffResource($admin),
+            'staff' => new StaffResource($admin),
         ]);
     }
 
@@ -215,7 +216,7 @@ class StaffController extends Controller
             ->paginate(50);
 
         return response()->json([
-            'data' => RoleResource::collection($roles),
+            'roles' => RoleResource::collection($roles),
             'meta' => [
                 'total' => $roles->total(),
             ],
@@ -236,7 +237,7 @@ class StaffController extends Controller
             ]);
 
         return response()->json([
-            'data' => $permissions,
+            'permissions' => $permissions,
             'meta' => [
                 'total' => $permissions->count(),
             ],
@@ -266,7 +267,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Roles assigned successfully',
-            'data' => new StaffResource($admin),
+            'staff' => new StaffResource($admin),
         ]);
     }
 
@@ -291,7 +292,7 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Staff status updated successfully',
-            'data' => new StaffResource($admin),
+            'staff' => new StaffResource($admin),
         ]);
     }
 }

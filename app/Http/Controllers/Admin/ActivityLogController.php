@@ -74,7 +74,7 @@ class ActivityLogController extends Controller
         });
 
         return response()->json([
-            'data' => $items,
+            'activities' => $items,
             'meta' => [
                 'current_page' => $activities->currentPage(),
                 'last_page' => $activities->lastPage(),
@@ -96,7 +96,7 @@ class ActivityLogController extends Controller
         $activity = Activity::findOrFail($id);
 
         return response()->json([
-            'data' => [
+            'activity' => [
                 'id' => $activity->id,
                 'log_name' => $activity->log_name,
                 'description' => $activity->description,
@@ -124,7 +124,7 @@ class ActivityLogController extends Controller
             ->filter()
             ->values();
 
-        return response()->json(['data' => $names]);
+        return response()->json(['log_names' => $names]);
     }
 
     /**
@@ -136,12 +136,12 @@ class ActivityLogController extends Controller
      */
     public function causers()
     {
-        $users = AdminUser::select('id', 'name', 'email')
+        $users = AdminUser::select(['id', 'name', 'email'])
             ->orderBy('name')
             ->paginate(50);
 
         return response()->json([
-            'data' => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email]),
+            'causers' => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email]),
             'meta' => [
                 'current_page' => $users->currentPage(),
                 'last_page' => $users->lastPage(),
