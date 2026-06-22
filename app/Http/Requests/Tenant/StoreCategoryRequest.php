@@ -15,6 +15,10 @@ class StoreCategoryRequest extends FormRequest
             return false;
         }
 
+        if (! $this->user()->can('manage categories')) {
+            return false;
+        }
+
         $strategy = ResourceEnforcementFactory::make(tenant());
         $limit = $strategy->maxCategories();
 

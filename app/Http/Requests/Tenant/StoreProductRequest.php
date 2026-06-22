@@ -15,6 +15,10 @@ class StoreProductRequest extends FormRequest
             return false;
         }
 
+        if (! $this->user()->can('manage products')) {
+            return false;
+        }
+
         $strategy = ResourceEnforcementFactory::make(tenant());
         $limit = $strategy->maxProducts();
 

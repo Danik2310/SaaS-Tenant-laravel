@@ -15,6 +15,10 @@ class StoreWarehouseRequest extends FormRequest
             return false;
         }
 
+        if (! $this->user()->can('manage inventory')) {
+            return false;
+        }
+
         $strategy = ResourceEnforcementFactory::make(tenant());
         $limit = $strategy->maxWarehouses();
 

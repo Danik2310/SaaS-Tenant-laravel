@@ -8,7 +8,11 @@ class UpdateWarehouseRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null && tenant() !== null;
+        if ($this->user() === null || tenant() === null) {
+            return false;
+        }
+
+        return $this->user()->can('manage inventory');
     }
 
     public function rules(): array
