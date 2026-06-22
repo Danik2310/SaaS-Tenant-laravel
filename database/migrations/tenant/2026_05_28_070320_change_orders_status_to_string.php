@@ -18,8 +18,10 @@ return new class extends Migration
             ->whereNotIn('status', ['pending', 'paid', 'cancelled'])
             ->exists();
 
-        if (! $invalid) {
-            DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending' NOT NULL");
+        if ($invalid) {
+            throw new RuntimeException('Cannot revert: orders have status values outside [pending, paid, cancelled]');
         }
+
+        DB::statement("ALTER TABLE orders MODIFY COLUMN status ENUM('pending', 'paid', 'cancelled') DEFAULT 'pending' NOT NULL");
     }
 };

@@ -11,25 +11,27 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('subscriptions', function (Blueprint $table) {
-            $table->id();
+        if (! Schema::hasTable('subscriptions')) {
+            Schema::create('subscriptions', function (Blueprint $table) {
+                $table->id();
 
-            // tenant uses string PK
-            $table->string('tenant_id');
-            $table->foreign('tenant_id')
-                ->references('id')
-                ->on('tenants')
-                ->cascadeOnDelete();
+                // tenant uses string PK
+                $table->string('tenant_id');
+                $table->foreign('tenant_id')
+                    ->references('id')
+                    ->on('tenants')
+                    ->cascadeOnDelete();
 
-            $table->foreignId('plan_id')->constrained()->cascadeOnDelete();
+                $table->foreignId('plan_id')->constrained()->cascadeOnDelete();
 
-            $table->date('starts_at');
-            $table->date('ends_at')->nullable();
+                $table->date('starts_at');
+                $table->date('ends_at')->nullable();
 
-            $table->string('status')->default('active');
+                $table->string('status')->default('active');
 
-            $table->timestamps();
-        });
+                $table->timestamps();
+            });
+        }
     }
 
     /**

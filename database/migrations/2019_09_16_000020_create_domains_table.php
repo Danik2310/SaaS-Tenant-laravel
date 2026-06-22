@@ -13,21 +13,23 @@ class CreateDomainsTable extends Migration
      */
     public function up(): void
     {
-        Schema::create('domains', function (Blueprint $table) {
-            $table->id();
+        if (! Schema::hasTable('domains')) {
+            Schema::create('domains', function (Blueprint $table) {
+                $table->id();
 
-            // tenants use string primary keys, so tenant_id must match
-            $table->string('tenant_id');
-            $table->foreign('tenant_id')
-                ->references('id')
-                ->on('tenants')
-                ->cascadeOnDelete();
+                // tenants use string primary keys, so tenant_id must match
+                $table->string('tenant_id');
+                $table->foreign('tenant_id')
+                    ->references('id')
+                    ->on('tenants')
+                    ->cascadeOnDelete();
 
-            $table->string('domain')->unique();
-            $table->boolean('is_primary')->default(true);
+                $table->string('domain')->unique();
+                $table->boolean('is_primary')->default(true);
 
-            $table->timestamps();
-        });
+                $table->timestamps();
+            });
+        }
     }
 
     /**

@@ -24,9 +24,11 @@ return new class extends Migration
                     ->whereNotIn('status', ['Active', 'Suspended'])
                     ->exists();
 
-                if (! $invalid) {
-                    DB::statement('ALTER TABLE tenants MODIFY COLUMN status ENUM(\'Active\', \'Suspended\') DEFAULT \'Active\'');
+                if ($invalid) {
+                    throw new RuntimeException('Cannot revert: tenants have status values outside [Active, Suspended]');
                 }
+
+                DB::statement('ALTER TABLE tenants MODIFY COLUMN status ENUM(\'Active\', \'Suspended\') DEFAULT \'Active\'');
             }
         });
     }

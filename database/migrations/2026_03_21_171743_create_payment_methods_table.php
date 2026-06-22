@@ -11,16 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('payment_methods', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->enum('provider', ['stripe', 'paypal', 'other']);
-            $table->text('api_key')->nullable();
-            $table->text('secret_key')->nullable();
-            $table->enum('mode', ['test', 'live'])->default('test');
-            $table->boolean('active')->default(true);
-            $table->timestamps();
-        });
+        // WARNING: api_key and secret_key contain sensitive payment gateway credentials.
+        // These columns are encrypted in production by migration
+        // 2026_05_26_230926_encrypt_existing_payment_method_keys.php.
+        // Any new code inserting into this table must encrypt these values using Crypt::encryptString().
+        if (! Schema::hasTable('payment_methods')) {
+            Schema::create('payment_methods', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->enum('provider', ['stripe', 'paypal', 'other']);
+                $table->text('api_key')->nullable();
+                $table->text('secret_key')->nullable();
+                $table->enum('mode', ['test', 'live'])->default('test');
+                $table->boolean('active')->default(true);
+                $table->timestamps();
+            });
+        }
     }
 
     /**

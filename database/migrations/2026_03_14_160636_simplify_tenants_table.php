@@ -14,9 +14,15 @@ return new class extends Migration
     {
         // First, add the domain column
         Schema::table('tenants', function (Blueprint $table) {
-            $table->string('domain')->nullable()->unique()->after('email');
-            $table->string('tenancy_db_name')->nullable()->after('domain');
-            $table->json('data_placeholder')->nullable()->after('tenancy_db_name');
+            if (! Schema::hasColumn('tenants', 'domain')) {
+                $table->string('domain')->nullable()->unique()->after('email');
+            }
+            if (! Schema::hasColumn('tenants', 'tenancy_db_name')) {
+                $table->string('tenancy_db_name')->nullable()->after('domain');
+            }
+            if (! Schema::hasColumn('tenants', 'data_placeholder')) {
+                $table->json('data_placeholder')->nullable()->after('tenancy_db_name');
+            }
         });
 
         // Migrate primary domains to the tenants table
@@ -38,9 +44,11 @@ return new class extends Migration
         });
 
         // Remove the data column
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->dropColumn('data');
-        });
+        if (Schema::hasColumn('tenants', 'data')) {
+            Schema::table('tenants', function (Blueprint $table) {
+                $table->dropColumn('data');
+            });
+        }
     }
 
     /**

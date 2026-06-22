@@ -11,14 +11,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->string('reference_id', 20)->nullable()->unique()->after('id');
+            if (! Schema::hasColumn('tenants', 'reference_id')) {
+                $table->string('reference_id', 20)->nullable()->unique()->after('id');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->dropColumn('reference_id');
+            if (Schema::hasColumn('tenants', 'reference_id')) {
+                $table->dropColumn('reference_id');
+            }
         });
     }
 };

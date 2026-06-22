@@ -11,18 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('products', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('sku')->unique();
-            $table->text('description')->nullable();
-            $table->decimal('price', 12, 2);
-            $table->decimal('cost', 12, 2)->nullable();
-            $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete();
-            $table->boolean('active')->default(true);
-            $table->timestamps();
-            $table->softDeletes();
-        });
+        if (! Schema::hasTable('products')) {
+            Schema::create('products', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->string('sku')->unique();
+                $table->text('description')->nullable();
+                $table->decimal('price', 12, 2);
+                $table->decimal('cost', 12, 2)->nullable();
+                $table->foreignId('category_id')->nullable()->constrained()->nullOnDelete();
+                $table->boolean('active')->default(true);
+                $table->timestamps();
+                $table->softDeletes();
+            });
+        }
     }
 
     /**

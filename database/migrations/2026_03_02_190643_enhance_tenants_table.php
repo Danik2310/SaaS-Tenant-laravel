@@ -11,6 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // NOTE: `email` is stored as plaintext PII. If GDPR compliance or data minimization is required,
+        // consider hashing or encrypting this column, or moving it to a separate encrypted store.
         Schema::table('tenants', function (Blueprint $table) {
             if (! Schema::hasColumn('tenants', 'name')) {
                 $table->string('name')->nullable()->after('id');

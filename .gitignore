@@ -23,3 +23,9 @@ yarn-error.log
 AGENTS.md
 /coverage
 /build-stats.html
+/debug_*.php
+/check_*.php
+/clean_*.php
+/cleanup_*.php
+/force_*.php
+/tenancy-audit-report.md

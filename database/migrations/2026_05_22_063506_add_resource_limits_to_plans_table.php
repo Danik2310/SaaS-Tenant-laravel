@@ -12,16 +12,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('plans', function (Blueprint $table) {
-            $table->unsignedInteger('max_warehouses')->nullable()->after('max_storage');
-            $table->unsignedInteger('max_categories')->nullable()->after('max_warehouses');
-            $table->unsignedInteger('max_products')->nullable()->after('max_categories');
+            if (! Schema::hasColumn('plans', 'max_warehouses')) {
+                $table->unsignedInteger('max_warehouses')->nullable()->after('max_storage');
+            }
+            if (! Schema::hasColumn('plans', 'max_categories')) {
+                $table->unsignedInteger('max_categories')->nullable()->after('max_warehouses');
+            }
+            if (! Schema::hasColumn('plans', 'max_products')) {
+                $table->unsignedInteger('max_products')->nullable()->after('max_categories');
+            }
         });
     }
 
     public function down(): void
     {
         Schema::table('plans', function (Blueprint $table) {
-            $table->dropColumn(['max_products', 'max_categories', 'max_warehouses']);
+            if (Schema::hasColumn('plans', 'max_warehouses') && Schema::hasColumn('plans', 'max_categories') && Schema::hasColumn('plans', 'max_products')) {
+                $table->dropColumn(['max_products', 'max_categories', 'max_warehouses']);
+            }
         });
     }
 };

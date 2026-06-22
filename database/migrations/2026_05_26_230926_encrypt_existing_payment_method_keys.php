@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 return new class extends Migration
@@ -16,20 +17,24 @@ return new class extends Migration
             ->orWhereNotNull('secret_key')
             ->orderBy('id')
             ->each(function (object $method) {
-                $updates = [];
+                try {
+                    $updates = [];
 
-                if ($method->api_key !== null && ! Str::startsWith($method->api_key, 'eyJpdiI6')) {
-                    $updates['api_key'] = Crypt::encryptString($method->api_key);
-                }
+                    if ($method->api_key !== null && ! Str::startsWith($method->api_key, 'eyJpdiI6')) {
+                        $updates['api_key'] = Crypt::encryptString($method->api_key);
+                    }
 
-                if ($method->secret_key !== null && ! Str::startsWith($method->secret_key, 'eyJpdiI6')) {
-                    $updates['secret_key'] = Crypt::encryptString($method->secret_key);
-                }
+                    if ($method->secret_key !== null && ! Str::startsWith($method->secret_key, 'eyJpdiI6')) {
+                        $updates['secret_key'] = Crypt::encryptString($method->secret_key);
+                    }
 
-                if ($updates !== []) {
-                    DB::table('payment_methods')
-                        ->where('id', $method->id)
-                        ->update($updates);
+                    if ($updates !== []) {
+                        DB::table('payment_methods')
+                            ->where('id', $method->id)
+                            ->update($updates);
+                    }
+                } catch (Throwable $e) {
+                    Log::warning("Failed to encrypt api_key for payment method {$method->id}: {$e->getMessage()}");
                 }
             });
     }
@@ -58,7 +63,10 @@ return new class extends Migration
                             ->update($updates);
                     }
                 } catch (Exception $e) {
-                    // Skip rows that aren't encrypted or use a different cipher
+                    Log::warning('Skipping payment method {id} during decryption rollback: {error}', [
+                        'id' => $method->id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             });
     }

@@ -18,8 +18,10 @@ return new class extends Migration
             ->whereNotIn('type', ['in', 'out', 'adjustment'])
             ->exists();
 
-        if (! $invalid) {
-            DB::statement("ALTER TABLE inventory_movements MODIFY COLUMN type ENUM('in', 'out', 'adjustment') NOT NULL DEFAULT 'in'");
+        if ($invalid) {
+            throw new RuntimeException('Cannot revert: inventory_movements have type values outside [in, out, adjustment]');
         }
+
+        DB::statement("ALTER TABLE inventory_movements MODIFY COLUMN type ENUM('in', 'out', 'adjustment') NOT NULL DEFAULT 'in'");
     }
 };

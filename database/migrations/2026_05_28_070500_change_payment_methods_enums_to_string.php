@@ -23,9 +23,21 @@ return new class extends Migration
             ->whereNotIn('mode', ['test', 'live'])
             ->exists();
 
-        if (! $invalidProviders && ! $invalidModes) {
-            DB::statement("ALTER TABLE payment_methods MODIFY COLUMN mode ENUM('test', 'live') NOT NULL DEFAULT 'test'");
-            DB::statement("ALTER TABLE payment_methods MODIFY COLUMN provider ENUM('stripe', 'paypal', 'other') NOT NULL DEFAULT 'other'");
+        if ($invalidProviders) {
+            throw new RuntimeException(
+                'Cannot revert — some payment methods have provider values outside [stripe, paypal, other]. '
+                .'Update those records to a valid enum value first.'
+            );
         }
+
+        if ($invalidModes) {
+            throw new RuntimeException(
+                'Cannot revert — some payment methods have mode values outside [test, live]. '
+                .'Update those records to a valid enum value first.'
+            );
+        }
+
+        DB::statement("ALTER TABLE payment_methods MODIFY COLUMN mode ENUM('test', 'live') NOT NULL DEFAULT 'test'");
+        DB::statement("ALTER TABLE payment_methods MODIFY COLUMN provider ENUM('stripe', 'paypal', 'other') NOT NULL DEFAULT 'other'");
     }
 };
