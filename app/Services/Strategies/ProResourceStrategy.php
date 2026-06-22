@@ -45,6 +45,6 @@ class ProResourceStrategy implements ResourceEnforcementInterface
 
     public function hasFeature(string $feature): bool
     {
-        return in_array($feature, ['basic_reports', 'advanced_reports', 'api_access', 'bulk_operations'], true);
+        return $this->plan->hasFeature($feature);
     }
 }

@@ -45,6 +45,6 @@ class GrowthResourceStrategy implements ResourceEnforcementInterface
 
     public function hasFeature(string $feature): bool
     {
-        return in_array($feature, ['basic_reports', 'advanced_reports', 'bulk_operations'], true);
+        return $this->plan->hasFeature($feature);
     }
 }

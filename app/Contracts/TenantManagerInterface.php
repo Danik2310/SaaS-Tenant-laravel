@@ -26,4 +26,8 @@ interface TenantManagerInterface
     public function createSubscription(Tenant $tenant, Plan $plan, string $status, ?Carbon $endsAt = null, ?Carbon $startsAt = null): Subscription;
 
     public function setStatus(Tenant $tenant, string $status): void;
+
+    public function extendTrial(Tenant $tenant, int $days): void;
+
+    public function migrateTenant(Tenant $tenant): array;
 }

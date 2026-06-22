@@ -45,6 +45,6 @@ class EnterpriseResourceStrategy implements ResourceEnforcementInterface
 
     public function hasFeature(string $feature): bool
     {
-        return true;
+        return $this->plan->hasFeature($feature);
     }
 }
