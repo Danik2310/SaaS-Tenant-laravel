@@ -15,27 +15,27 @@ class EnterpriseResourceStrategy implements ResourceEnforcementInterface
 
     public function maxUsers(): int
     {
-        return $this->plan->max_users ?? 999999;
+        return $this->plan->max_users ?? PHP_INT_MAX;
     }
 
     public function maxStorageMb(): int
     {
-        return $this->plan->max_storage ?? 10240;
+        return $this->plan->max_storage ?? PHP_INT_MAX;
     }
 
     public function maxWarehouses(): int
     {
-        return $this->plan->max_warehouses ?? 999999;
+        return $this->plan->max_warehouses ?? PHP_INT_MAX;
     }
 
     public function maxCategories(): int
     {
-        return $this->plan->max_categories ?? 999999;
+        return $this->plan->max_categories ?? PHP_INT_MAX;
     }
 
     public function maxProducts(): int
     {
-        return $this->plan->max_products ?? 999999;
+        return $this->plan->max_products ?? PHP_INT_MAX;
     }
 
     public function allowedExportFormats(): array

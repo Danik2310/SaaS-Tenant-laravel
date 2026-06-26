@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Tenant;
 
 use App\Exceptions\PlanLimitExceededException;
+use App\Factories\ResourceEnforcementFactory;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules;
@@ -11,14 +12,16 @@ class StoreUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        if (! tenant()) {
+        $tenant = tenant();
+
+        if (! $tenant) {
             return false;
         }
 
-        $currentCount = User::count();
-        $limit = tenant()->getLimit('users');
+        $strategy = ResourceEnforcementFactory::make($tenant);
+        $limit = $strategy->maxUsers();
 
-        if ($limit !== PHP_INT_MAX && $currentCount >= $limit) {
+        if ($limit !== PHP_INT_MAX && User::count() >= $limit) {
             throw new PlanLimitExceededException('users', $limit);
         }
 

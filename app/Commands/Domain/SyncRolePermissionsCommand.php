@@ -21,13 +21,15 @@ class SyncRolePermissionsCommand implements CommandInterface
         $this->previousPermissionIds = $role->permissions()->pluck('id')->toArray();
     }
 
-    public function execute(): void
+    public function execute(): mixed
     {
         $service = app(PermissionServiceInterface::class);
         $service->syncPermissions($this->role, $this->permissionIds);
+
+        return null;
     }
 
-    public function undo(): void
+    public function rollback(): void
     {
         $this->role->syncPermissions($this->previousPermissionIds);
     }

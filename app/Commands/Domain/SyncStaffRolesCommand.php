@@ -21,13 +21,15 @@ class SyncStaffRolesCommand implements CommandInterface
         $this->previousRoleIds = $user->roles()->pluck('id')->toArray();
     }
 
-    public function execute(): void
+    public function execute(): mixed
     {
         $service = app(RoleServiceInterface::class);
         $service->syncRoles($this->user, $this->roleIds);
+
+        return null;
     }
 
-    public function undo(): void
+    public function rollback(): void
     {
         $this->user->syncRoles($this->previousRoleIds);
     }

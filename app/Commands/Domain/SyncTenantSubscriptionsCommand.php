@@ -52,11 +52,9 @@ class SyncTenantSubscriptionsCommand implements CommandInterface
         return $created;
     }
 
-    public function undo(): int
+    public function rollback(): void
     {
-        $count = Subscription::whereIn('id', $this->createdSubscriptionIds)->delete();
+        Subscription::whereIn('id', $this->createdSubscriptionIds)->delete();
         $this->createdSubscriptionIds = [];
-
-        return $count;
     }
 }

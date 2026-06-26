@@ -15,27 +15,27 @@ class ProResourceStrategy implements ResourceEnforcementInterface
 
     public function maxUsers(): int
     {
-        return $this->plan->max_users ?? 50;
+        return $this->plan->max_users ?? PHP_INT_MAX;
     }
 
     public function maxStorageMb(): int
     {
-        return $this->plan->max_storage ?? 1024;
+        return $this->plan->max_storage ?? PHP_INT_MAX;
     }
 
     public function maxWarehouses(): int
     {
-        return $this->plan->max_warehouses ?? 5;
+        return $this->plan->max_warehouses ?? PHP_INT_MAX;
     }
 
     public function maxCategories(): int
     {
-        return $this->plan->max_categories ?? 50;
+        return $this->plan->max_categories ?? PHP_INT_MAX;
     }
 
     public function maxProducts(): int
     {
-        return $this->plan->max_products ?? 500;
+        return $this->plan->max_products ?? PHP_INT_MAX;
     }
 
     public function allowedExportFormats(): array

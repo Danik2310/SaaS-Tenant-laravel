@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Builders;
 
 use App\Contracts\TenantBuilderInterface;
+use App\Models\Domain;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
@@ -41,6 +42,12 @@ class TenantBuilder implements TenantBuilderInterface
 
     public function withDomain(string $domain): static
     {
+        $existing = Domain::where('domain', $domain)->exists();
+
+        if ($existing) {
+            throw new InvalidArgumentException("Domain '{$domain}' is already in use by another tenant.");
+        }
+
         $this->tenant->domains()->create(['domain' => $domain]);
 
         return $this;
@@ -75,6 +82,20 @@ class TenantBuilder implements TenantBuilderInterface
 
     public function build(): Tenant
     {
+        if (! $this->tenant->exists) {
+            throw new InvalidArgumentException(
+                'TenantBuilder::build() failed: withData() must be called before build(). '
+                .'Ensure tenant data is provided before building.'
+            );
+        }
+
+        if (empty($this->tenant->id)) {
+            throw new InvalidArgumentException(
+                'TenantBuilder::build() failed: tenant has no ID. '
+                .'The tenant was not properly persisted.'
+            );
+        }
+
         return $this->tenant->fresh();
     }
 }

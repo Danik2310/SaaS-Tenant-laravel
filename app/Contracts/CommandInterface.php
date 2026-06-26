@@ -6,5 +6,7 @@ namespace App\Contracts;
 
 interface CommandInterface
 {
-    public function undo(): void;
+    public function execute(): mixed;
+
+    public function rollback(): void;
 }

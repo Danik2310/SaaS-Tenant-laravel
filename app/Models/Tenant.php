@@ -123,7 +123,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     public function getLimit(string $limit): int
     {
-        return $this->plan?->getLimit($limit) ?? 0;
+        return $this->plan?->getLimit($limit) ?? PHP_INT_MAX;
     }
 
     public function isOnTrial(): bool
