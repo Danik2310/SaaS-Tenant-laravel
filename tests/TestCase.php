@@ -4,6 +4,7 @@ namespace Tests;
 
 use App\Models\Domain;
 use App\Models\Tenant;
+use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,12 @@ use Illuminate\Support\Facades\DB;
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
+
+    protected function setUp(): void
+    {
+        RefreshDatabaseState::$migrated = false;
+        parent::setUp();
+    }
 
     /**
      * Create a test tenant for testing, with tenant migrations run.

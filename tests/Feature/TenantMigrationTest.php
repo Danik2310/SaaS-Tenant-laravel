@@ -137,7 +137,7 @@ class TenantMigrationTest extends TestCase
             });
         } catch (\Throwable $e) {
             // Log but don't throw during cleanup
-            fwrite(STDERR, "Warning: tenant cleanup failed: ".$e->getMessage().PHP_EOL);
+            fwrite(STDERR, 'Warning: tenant cleanup failed: '.$e->getMessage().PHP_EOL);
         }
     }
 

@@ -7,6 +7,8 @@ use App\Models\PaymentMethod;
 use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -44,7 +46,7 @@ class PaymentMethodTest extends TestCase
             'provider' => 'stripe',
             'mode' => 'test',
             'active' => true,
-        ]);
+        ], 'mysql_central');
 
         // Verify encryption: the stored value should not be the plain text
         $method = PaymentMethod::first();
@@ -84,7 +86,7 @@ class PaymentMethodTest extends TestCase
             'provider' => 'paypal',
             'mode' => 'live',
             'active' => false,
-        ]);
+        ], 'mysql_central');
 
         // Verify the method is updated and encrypted
         $updatedMethod = PaymentMethod::find($method->id);
@@ -195,7 +197,7 @@ class PaymentMethodTest extends TestCase
 
         $response->assertStatus(204);
 
-        $this->assertDatabaseMissing('payment_methods', ['id' => $method->id]);
+        $this->assertDatabaseMissing('payment_methods', ['id' => $method->id], 'mysql_central');
     }
 
     /**
@@ -366,7 +368,7 @@ class PaymentMethodTest extends TestCase
             'provider' => 'stripe',
             'mode' => 'test',
             'active' => true,
-        ]);
+        ], 'mysql_central');
 
         $method = PaymentMethod::first();
         $this->assertNull($method->api_key);
@@ -499,5 +501,181 @@ class PaymentMethodTest extends TestCase
         // API keys should NOT be included in the response for security
         $this->assertArrayNotHasKey('api_key', $methodData);
         $this->assertArrayNotHasKey('secret_key', $methodData);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Ported from PaymentMethodValidationTest (unique tests)
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 🧪 Test: Duplicate name returns validation error
+     */
+    public function test_duplicate_name_returns_validation_error()
+    {
+        $this->postJson('/admin/api/payment-methods', [
+            'name' => 'Unique Name',
+            'provider' => 'stripe',
+            'api_key' => 'pk_test_123456789012345678901234567890',
+            'secret_key' => 'sk_live_123456789012345678901234567890',
+            'mode' => 'test',
+            'active' => true,
+        ])->assertStatus(201);
+
+        $this->postJson('/admin/api/payment-methods', [
+            'name' => 'Unique Name',
+            'provider' => 'paypal',
+            'api_key' => 'paypal_api_123456789012345678901234567890',
+            'secret_key' => 'paypal_secret_123456789012345678901234567890',
+            'mode' => 'live',
+            'active' => true,
+        ])->assertStatus(422);
+    }
+
+    /**
+     * 🧪 Test: SQL injection attempt is safely handled
+     */
+    public function test_sql_injection_attempt_is_safely_handled()
+    {
+        $response = $this->postJson('/admin/api/payment-methods', [
+            'name' => "'; DROP TABLE payment_methods; --",
+            'provider' => 'stripe',
+            'api_key' => 'pk_test_123456789012345678901234567890',
+            'secret_key' => 'sk_live_123456789012345678901234567890',
+            'mode' => 'test',
+            'active' => true,
+        ]);
+        $response->assertStatus(201);
+
+        $method = PaymentMethod::where('name', "'; DROP TABLE payment_methods; --")->first();
+        $this->assertNotNull($method);
+    }
+
+    /**
+     * 🧪 Test: Can filter methods by active status
+     */
+    public function test_can_filter_methods_by_active_status()
+    {
+        PaymentMethod::factory()->create(['name' => 'Active One', 'active' => true]);
+        PaymentMethod::factory()->create(['name' => 'Active Two', 'active' => true]);
+        PaymentMethod::factory()->create(['name' => 'Inactive One', 'active' => false]);
+
+        $this->assertCount(2, PaymentMethod::where('active', true)->get());
+        $this->assertCount(1, PaymentMethod::where('active', false)->get());
+    }
+
+    /**
+     * 🧪 Test: Can filter methods by provider
+     */
+    public function test_can_filter_methods_by_provider()
+    {
+        PaymentMethod::factory()->create(['name' => 'Stripe 1', 'provider' => 'stripe']);
+        PaymentMethod::factory()->create(['name' => 'Stripe 2', 'provider' => 'stripe']);
+        PaymentMethod::factory()->create(['name' => 'PayPal 1', 'provider' => 'paypal']);
+
+        $this->assertCount(2, PaymentMethod::where('provider', 'stripe')->get());
+        $this->assertCount(1, PaymentMethod::where('provider', 'paypal')->get());
+    }
+
+    /**
+     * 🧪 Test: Data integrity prevents invalid enum values
+     */
+    public function test_data_integrity_prevents_invalid_enum_values()
+    {
+        DB::connection('mysql_central')->table('payment_methods')->insert([
+            'name' => 'Invalid Provider',
+            'provider' => 'invalid_provider',
+            'api_key' => Crypt::encryptString('test_key'),
+            'secret_key' => Crypt::encryptString('test_secret'),
+            'mode' => 'test',
+            'active' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->assertDatabaseHas('payment_methods', ['provider' => 'invalid_provider'], 'mysql_central');
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Ported from PaymentMethodFrontendTest (unique tests)
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 🧪 Test: Can update payment method with same name
+     */
+    public function test_can_update_payment_method_with_same_name()
+    {
+        $paymentMethod = PaymentMethod::factory()->create([
+            'name' => 'Original Name',
+            'active' => true,
+        ]);
+
+        $updateData = [
+            'name' => 'Original Name',
+            'provider' => 'paypal',
+            'api_key' => 'pk_test_updated_key_12345678901234567890',
+            'secret_key' => 'sk_live_updated_key_12345678901234567890',
+            'mode' => 'live',
+            'active' => false,
+        ];
+
+        $response = $this->putJson("/admin/api/payment-methods/{$paymentMethod->id}", $updateData);
+
+        $response->assertStatus(200);
+    }
+
+    /**
+     * 🧪 Test: Cannot update payment method with duplicate name
+     */
+    public function test_cannot_update_payment_method_with_duplicate_name()
+    {
+        $method1 = PaymentMethod::factory()->create(['name' => 'Method One']);
+        $method2 = PaymentMethod::factory()->create(['name' => 'Method Two']);
+
+        $updateData = [
+            'name' => 'Method One',
+            'provider' => 'stripe',
+            'api_key' => 'pk_test_updated_key_12345678901234567890',
+            'secret_key' => 'sk_live_updated_key_12345678901234567890',
+            'mode' => 'test',
+            'active' => true,
+        ];
+
+        $response = $this->putJson("/admin/api/payment-methods/{$method2->id}", $updateData);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+    }
+
+    /**
+     * 🧪 Test: Can toggle payment method active status
+     */
+    public function test_can_toggle_payment_method_active_status()
+    {
+        $paymentMethod = PaymentMethod::factory()->create([
+            'name' => 'Toggle Test Method',
+            'active' => true,
+        ]);
+
+        $response = $this->patchJson("/admin/api/payment-methods/{$paymentMethod->id}/toggle-active");
+
+        $response->assertStatus(200);
+        $response->assertJsonStructure(['method' => ['id', 'name', 'active']]);
+
+        $this->assertFalse($response->json()['method']['active']);
+
+        $response2 = $this->patchJson("/admin/api/payment-methods/{$paymentMethod->id}/toggle-active");
+
+        $response2->assertStatus(200);
+        $this->assertTrue($response2->json()['method']['active']);
+    }
+
+    /**
+     * 🧪 Test: Cannot toggle nonexistent payment method
+     */
+    public function test_cannot_toggle_nonexistent_payment_method()
+    {
+        $response = $this->patchJson('/admin/api/payment-methods/99999/toggle-active');
+
+        $response->assertStatus(404);
     }
 }

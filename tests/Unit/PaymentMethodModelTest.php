@@ -271,4 +271,42 @@ class PaymentMethodModelTest extends TestCase
         $this->assertInstanceOf(Carbon::class, $retrievedMethod->created_at);
         $this->assertInstanceOf(Carbon::class, $retrievedMethod->updated_at);
     }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Ported from PaymentMethodEncryptionTest (unique test)
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 🧪 Test: Encryption is consistent across multiple methods
+     */
+    public function test_encryption_is_consistent_across_multiple_methods()
+    {
+        $originalApiKey = 'pk_test_consistency_123456789012345678901234567890';
+
+        $method1 = PaymentMethod::create([
+            'name' => 'Consistency Test 1',
+            'provider' => 'stripe',
+            'api_key' => $originalApiKey,
+            'secret_key' => 'sk_live_consistency_123456789012345678901234567890',
+            'mode' => 'test',
+            'active' => true,
+        ]);
+
+        $method2 = PaymentMethod::create([
+            'name' => 'Consistency Test 2',
+            'provider' => 'stripe',
+            'api_key' => $originalApiKey,
+            'secret_key' => 'sk_live_consistency_123456789012345678901234567890',
+            'mode' => 'test',
+            'active' => true,
+        ]);
+
+        // Encrypted values differ due to random IV, but decrypted values match
+        $this->assertNotEquals(
+            $method1->getAttributes()['api_key'],
+            $method2->getAttributes()['api_key']
+        );
+        $this->assertEquals($originalApiKey, $method1->api_key);
+        $this->assertEquals($originalApiKey, $method2->api_key);
+    }
 }

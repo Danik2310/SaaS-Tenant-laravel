@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\PlanChanged;
 use App\Models\AdminUser;
 use App\Models\Permission;
 use App\Models\Plan;
@@ -11,6 +12,7 @@ use App\Models\Tenant;
 use Database\Seeders\TenantSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Event;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -491,5 +493,99 @@ class SubscriptionTest extends TestCase
 
         // Force-deleted tenant cascades subscription deletes, so sub3 won't appear
         $this->assertArrayNotHasKey($sub3->id, $subsById);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Ported from SubscriptionPlanSyncTest (unique tests)
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /**
+     * 🧪 Test: Subscription plan update syncs tenant plan_id
+     */
+    public function test_subscription_update_syncs_tenant_plan_id()
+    {
+        $oldPlan = Plan::factory()->create(['slug' => 'starter']);
+        $newPlan = Plan::factory()->create(['slug' => 'pro']);
+        $tenant = Tenant::factory()->create(['plan_id' => $oldPlan->id]);
+        $subscription = Subscription::factory()->create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $oldPlan->id,
+        ]);
+
+        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
+            'plan_id' => $newPlan->id,
+        ]);
+
+        $response->assertStatus(200);
+
+        $tenant->refresh();
+        $this->assertEquals($newPlan->id, $tenant->plan_id);
+    }
+
+    /**
+     * 🧪 Test: Subscription plan update dispatches PlanChanged event
+     */
+    public function test_subscription_update_dispatches_plan_changed_event()
+    {
+        Event::fake();
+
+        $oldPlan = Plan::factory()->create(['slug' => 'starter']);
+        $newPlan = Plan::factory()->create(['slug' => 'pro']);
+        $tenant = Tenant::factory()->create(['plan_id' => $oldPlan->id]);
+        $subscription = Subscription::factory()->create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $oldPlan->id,
+        ]);
+
+        $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
+            'plan_id' => $newPlan->id,
+        ]);
+
+        Event::assertDispatched(PlanChanged::class, function ($event) use ($tenant, $oldPlan, $newPlan) {
+            return $event->tenant->id === $tenant->id
+                && $event->oldPlan->id === $oldPlan->id
+                && $event->newPlan->id === $newPlan->id;
+        });
+    }
+
+    /**
+     * 🧪 Test: Subscription update does not sync plan_id when unchanged
+     */
+    public function test_subscription_update_does_not_sync_when_plan_id_unchanged()
+    {
+        $plan = Plan::factory()->create(['slug' => 'starter']);
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+        $subscription = Subscription::factory()->create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+        ]);
+
+        $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
+            'status' => 'cancelled',
+        ]);
+
+        $tenant->refresh();
+        $this->assertEquals($plan->id, $tenant->plan_id);
+    }
+
+    /**
+     * 🧪 Test: Subscription update does not dispatch PlanChanged when plan_id unchanged
+     */
+    public function test_subscription_update_does_not_dispatch_plan_changed_when_plan_id_unchanged()
+    {
+        Event::fake();
+
+        $plan = Plan::factory()->create(['slug' => 'starter']);
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+        $subscription = Subscription::factory()->create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+        ]);
+
+        $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
+            'status' => 'cancelled',
+        ]);
+
+        Event::assertNotDispatched(PlanChanged::class);
     }
 }
