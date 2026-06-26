@@ -23,6 +23,9 @@ class Kernel extends ConsoleKernel
 
         // Expire trial tenants daily
         $schedule->command('tenants:expire-trials')->daily();
+
+        // Expire subscriptions daily
+        $schedule->command('tenants:expire-subscriptions')->daily();
     }
 
     /**

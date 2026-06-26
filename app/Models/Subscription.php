@@ -52,12 +52,17 @@ class Subscription extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('status', 'active');
+        return $query->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('ends_at')
+                    ->orWhere('ends_at', '>', now());
+            });
     }
 
     public function scopeExpired($query)
     {
-        return $query->where('ends_at', '<', now());
+        return $query->where('status', 'active')
+            ->where('ends_at', '<', now());
     }
 
     public function scopeCancelled($query)
