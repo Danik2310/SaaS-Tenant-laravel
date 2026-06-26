@@ -19,6 +19,7 @@ use App\Services\RoleService;
 use App\Services\TenantAwarePermissionRegistrar;
 use App\Services\TenantManager;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -42,6 +43,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Schema::defaultStringLength(191);
+
         Model::preventLazyLoading(! $this->app->isProduction());
 
         if ($this->app->isProduction()) {

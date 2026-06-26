@@ -7,7 +7,6 @@ namespace App\Providers;
 use App\Models\AdminUser;
 use App\Models\Category;
 use App\Models\Customer;
-use App\Models\Domain;
 use App\Models\GlobalSetting;
 use App\Models\Order;
 use App\Models\Payment;
@@ -28,6 +27,7 @@ use App\Observers\Tenant\UserObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Stancl\Tenancy\Database\Models\Domain;
 
 class EventServiceProvider extends ServiceProvider
 {
