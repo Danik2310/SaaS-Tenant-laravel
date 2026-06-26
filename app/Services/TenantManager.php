@@ -135,16 +135,17 @@ class TenantManager implements TenantManagerInterface
 
             $tenant->plan_id = $newPlan->id;
             $tenant->save();
-
-            event(new PlanChanged($tenant, $oldPlan, $newPlan));
         });
 
+        event(new PlanChanged($tenant, $oldPlan, $newPlan));
         TenantStateManager::flushTenantCache($tenant);
     }
 
     public function createSubscription(Tenant $tenant, Plan $plan, string $status, ?Carbon $endsAt = null, ?Carbon $startsAt = null): Subscription
     {
-        return DB::transaction(function () use ($tenant, $plan, $status, $endsAt, $startsAt) {
+        $oldPlan = null;
+
+        $subscription = DB::transaction(function () use ($tenant, $plan, $status, $endsAt, $startsAt, &$oldPlan) {
             $tenant = Tenant::lockForUpdate()->findOrFail($tenant->id);
             $oldPlan = $tenant->plan;
 
@@ -164,14 +165,16 @@ class TenantManager implements TenantManagerInterface
             $tenant->plan_id = $plan->id;
             $tenant->save();
 
-            if ($oldPlan && $oldPlan->id !== $plan->id) {
-                event(new PlanChanged($tenant, $oldPlan, $plan));
-            }
-
-            TenantStateManager::flushTenantCache($tenant);
-
             return $subscription;
         });
+
+        if ($oldPlan && $oldPlan->id !== $plan->id) {
+            event(new PlanChanged($tenant, $oldPlan, $plan));
+        }
+
+        TenantStateManager::flushTenantCache($tenant);
+
+        return $subscription;
     }
 
     public function setStatus(Tenant $tenant, string $status): void

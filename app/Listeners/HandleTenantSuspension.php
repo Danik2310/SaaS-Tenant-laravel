@@ -13,7 +13,7 @@ class HandleTenantSuspension
     public function handle(TenantSuspended $event): void
     {
         try {
-            Cache::tags([config('tenancy.cache.tag_base').$event->tenant->getTenantKey()])->flush();
+            Cache::tags(['tenant_'.$event->tenant->getTenantKey()])->flush();
         } catch (\BadMethodCallException) {
             // Cache driver does not support tags (array/file)
         } catch (\Throwable $e) {

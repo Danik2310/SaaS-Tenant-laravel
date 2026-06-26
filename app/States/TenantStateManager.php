@@ -64,7 +64,7 @@ class TenantStateManager
         // Instead, flush the tenant's cache tags directly without initializing tenancy.
 
         try {
-            Cache::tags([config('tenancy.cache.tag_base').$tenant->getTenantKey()])->flush();
+            Cache::tags(['tenant_'.$tenant->getTenantKey()])->flush();
         } catch (\BadMethodCallException $e) {
             try {
                 Cache::flush();
