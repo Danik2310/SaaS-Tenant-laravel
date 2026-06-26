@@ -50,11 +50,7 @@ class PlanController extends Controller
      * @bodyParam price number required Plan price.
      * @bodyParam features string optional Comma-separated feature keys.
      *
-     * @apiResource App\Http\Resources\PlanResource
-     *
-     * @apiResourceModel App\Models\Plan
-     *
-     * @response 201 {"message":"Plan created successfully","data":{...}}
+     * @response 201 {"message":"Plan created successfully","plan":{"id":1,"name":"Pro"}}
      */
     public function store(StorePlanRequest $request)
     {

@@ -96,8 +96,10 @@ class ExportController extends Controller
                 'message' => "Export generated successfully with {$recordCount} records.",
             ]);
         } catch (\Exception $e) {
+            \Log::error('Export failed: '.$e->getMessage());
+
             return response()->json([
-                'message' => 'Export failed: '.$e->getMessage(),
+                'message' => 'Export failed. Please check the logs for details.',
             ], 500);
         }
     }

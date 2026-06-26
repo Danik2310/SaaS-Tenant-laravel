@@ -56,11 +56,7 @@ class PaymentMethodController extends Controller
      * @bodyParam provider string required Provider identifier.
      * @bodyParam mode string required Mode (test, live).
      *
-     * @apiResource App\Http\Resources\PaymentMethodResource
-     *
-     * @apiResourceModel App\Models\PaymentMethod
-     *
-     * @response 201 {"message":"Payment method created","data":{...}}
+     * @response 201 {"message":"Payment method created","method":{"id":1,"name":"Credit Card"}}
      */
     public function store(StorePaymentMethodRequest $request)
     {
@@ -114,6 +110,15 @@ class PaymentMethodController extends Controller
         return response()->json(['method' => new PaymentMethodResource($method)]);
     }
 
+    /**
+     * Toggle a payment method's active status.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The payment method ID.
+     *
+     * @responseField method object The updated payment method resource.
+     */
     public function toggleActive(TogglePaymentMethodRequest $request, string $id)
     {
         $method = PaymentMethod::findOrFail($id);

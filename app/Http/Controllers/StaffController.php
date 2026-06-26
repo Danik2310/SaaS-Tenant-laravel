@@ -90,11 +90,7 @@ class StaffController extends Controller
      * @bodyParam password string required Initial password.
      * @bodyParam roles integer[] optional Array of role IDs.
      *
-     * @apiResource App\Http\Resources\StaffResource
-     *
-     * @apiResourceModel App\Models\AdminUser
-     *
-     * @response 201 {"message":"Staff member created successfully","data":{...}}
+     * @response 201 {"message":"Staff member created successfully","staff":{"id":1,"name":"John","email":"john@example.com"}}
      */
     public function store(StoreStaffRequest $request)
     {
@@ -112,6 +108,8 @@ class StaffController extends Controller
             ])->execute();
         }
 
+        $admin->load('roles.permissions', 'permissions');
+
         activity('staff')
             ->causedBy(auth('admin')->user())
             ->performedOn($admin)
@@ -124,9 +122,21 @@ class StaffController extends Controller
         ], 201);
     }
 
+    /**
+     * Update a staff member.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The staff member ID.
+     *
+     * @bodyParam name string optional Staff member name.
+     * @bodyParam email string optional Staff member email.
+     * @bodyParam password string optional New password.
+     * @bodyParam roles integer[] optional Array of role IDs.
+     */
     public function update(UpdateStaffRequest $request, string $id)
     {
-        $admin = AdminUser::findOrFail($id);
+        $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
 
         if ($name = $request->validated('name')) {
             $admin->name = $name;
@@ -149,6 +159,8 @@ class StaffController extends Controller
                 'roleIds' => $request->validated('roles'),
             ])->execute();
         }
+
+        $admin->load('roles.permissions', 'permissions');
 
         activity('staff')
             ->causedBy(auth('admin')->user())
@@ -190,9 +202,19 @@ class StaffController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Restore a soft-deleted staff member.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The staff member ID.
+     *
+     * @responseField message string Success message.
+     * @responseField staff object The restored staff resource.
+     */
     public function restore(string $id)
     {
-        $admin = AdminUser::withTrashed()->findOrFail($id);
+        $admin = AdminUser::withTrashed()->with('roles.permissions', 'permissions')->findOrFail($id);
         $admin->restore();
 
         activity('staff')
@@ -207,9 +229,18 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Get available roles.
+     *
+     * List all active admin roles with permission counts.
+     *
+     * @authenticated
+     *
+     * @responseField roles object[] List of role resources with permission counts.
+     */
     public function getRoles()
     {
-        $roles = Role::withCount('permissions')
+        $roles = Role::with('permissions')
             ->where('guard_name', 'admin')
             ->active()
             ->orderBy('name')
@@ -223,36 +254,63 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Get available permissions.
+     *
+     * List all active admin permissions grouped by module.
+     *
+     * @authenticated
+     *
+     * @responseField permissions object[] List of permissions with module grouping.
+     */
     public function getPermissions()
     {
         $permissions = Permission::where('guard_name', 'admin')
             ->active()
             ->orderBy('module')
-            ->get()
-            ->map(fn ($perm) => [
-                'id' => $perm->id,
-                'name' => $perm->name,
-                'description' => $perm->description,
-                'module' => $perm->module ?? 'General',
-            ]);
+            ->paginate(100);
+
+        $mapped = $permissions->map(fn ($perm) => [
+            'id' => $perm->id,
+            'name' => $perm->name,
+            'description' => $perm->description,
+            'module' => $perm->module ?? 'General',
+        ]);
 
         return response()->json([
-            'permissions' => $permissions,
+            'permissions' => $mapped,
             'meta' => [
-                'total' => $permissions->count(),
+                'current_page' => $permissions->currentPage(),
+                'last_page' => $permissions->lastPage(),
+                'per_page' => $permissions->perPage(),
+                'total' => $permissions->total(),
             ],
         ]);
     }
 
+    /**
+     * Assign roles to a staff member.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The staff member ID.
+     *
+     * @bodyParam role_ids integer[] required Array of role IDs.
+     *
+     * @responseField message string Success message.
+     * @responseField staff object The updated staff resource.
+     */
     public function assignRoles(AssignRolesRequest $request, string $id)
     {
-        $admin = AdminUser::findOrFail($id);
+        $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
 
         $command = app(SyncStaffRolesCommand::class, [
             'user' => $admin,
             'roleIds' => $request->validated('role_ids'),
         ]);
         $command->execute();
+
+        $admin->load('roles.permissions', 'permissions');
 
         $roles = Role::whereIn('id', $request->validated('role_ids'))
             ->where('guard_name', 'admin')
@@ -271,9 +329,19 @@ class StaffController extends Controller
         ]);
     }
 
+    /**
+     * Toggle staff member active status.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The staff member ID.
+     *
+     * @responseField message string Success message.
+     * @responseField staff object The updated staff resource.
+     */
     public function toggleStatus(string $id)
     {
-        $admin = AdminUser::findOrFail($id);
+        $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
 
         if (auth('admin')->id() === (int) $id) {
             return response()->json(['message' => 'Cannot deactivate your own account'], 422);

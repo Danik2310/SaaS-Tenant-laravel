@@ -98,11 +98,7 @@ class SubscriptionController extends Controller
      * @bodyParam ends_at string optional End date (Y-m-d).
      * @bodyParam starts_at string optional Start date (Y-m-d).
      *
-     * @apiResource App\Http\Resources\SubscriptionResource
-     *
-     * @apiResourceModel App\Models\Subscription
-     *
-     * @response 201 {"message":"Subscription created successfully","data":{...}}
+     * @response 201 {"message":"Subscription created successfully","subscription":{"id":"...","status":"active"}}
      */
     public function store(StoreSubscriptionRequest $request)
     {

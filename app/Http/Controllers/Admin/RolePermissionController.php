@@ -61,7 +61,7 @@ class RolePermissionController extends Controller
      *
      * @apiResourceModel App\Models\Role
      *
-     * @response 201 {"message":"Role created successfully","data":{...}}
+     * @response 201 {"message":"Role created successfully","role":{...}}
      */
     public function storeRole(StoreRoleRequest $request)
     {
@@ -103,7 +103,7 @@ class RolePermissionController extends Controller
      * @bodyParam permissions integer[] optional Array of permission IDs.
      *
      * @responseField message string Success message.
-     * @responseField data object The updated role resource.
+     * @responseField role object The updated role resource.
      */
     public function updateRole(UpdateRoleRequest $request, string $id)
     {
@@ -203,7 +203,7 @@ class RolePermissionController extends Controller
      * @bodyParam module string required Permission module.
      * @bodyParam description string optional Permission description.
      *
-     * @response 201 {"message":"Permission created successfully","data":{...}}
+     * @response 201 {"message":"Permission created successfully","permission":{...}}
      */
     public function storePermission(StorePermissionRequest $request)
     {
@@ -239,7 +239,7 @@ class RolePermissionController extends Controller
      * @bodyParam description string optional Permission description.
      *
      * @responseField message string Success message.
-     * @responseField data object The updated permission resource.
+     * @responseField permission object The updated permission resource.
      */
     public function updatePermission(UpdatePermissionRequest $request, string $id)
     {
