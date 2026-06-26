@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
-use App\Models\Customer;
 use App\Models\InventoryMovement;
 use App\Models\Order;
-use App\Models\Product;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -25,31 +24,37 @@ class DashboardController extends Controller
     {
         $tag = 'tenant_'.tenant('id');
 
-        $totalProducts = $this->cachedWithFallback($tag, 'dash_total_products', 300, fn () => Product::count());
-        $activeProducts = $this->cachedWithFallback($tag, 'dash_active_products', 300, fn () => Product::where('active', true)->count());
-        $totalOrders = $this->cachedWithFallback($tag, 'dash_total_orders', 300, fn () => Order::count());
-        $totalCustomers = $this->cachedWithFallback($tag, 'dash_total_customers', 300, fn () => Customer::count());
-        $lowStockCount = $this->cachedWithFallback($tag, 'dash_low_stock', 300, fn () => Product::where('active', true)
-            ->whereRaw('(
-                    SELECT COALESCE(SUM(CASE WHEN type = \'out\' THEN -quantity ELSE quantity END), 0)
-                    FROM inventory_movements WHERE product_id = products.id
-                ) < 10')
-            ->count()
-        );
-
-        $previousActiveProducts = $this->cachedWithFallback($tag, 'dashboard_prev_active_products', 3600, function () {
-            return Product::where('active', true)
-                ->where('created_at', '<', now()->subMonth())
-                ->count();
+        $current = $this->cachedWithFallback($tag, 'dash_current_counts', 300, function () {
+            return DB::selectOne("
+                SELECT
+                    (SELECT COUNT(*) FROM products) AS total_products,
+                    (SELECT COUNT(*) FROM products WHERE active = 1) AS active_products,
+                    (SELECT COUNT(*) FROM orders) AS total_orders,
+                    (SELECT COUNT(*) FROM customers) AS total_customers,
+                    (SELECT COUNT(*) FROM products p WHERE p.active = 1 AND (
+                        SELECT COALESCE(SUM(CASE WHEN im.type = 'out' THEN -im.quantity ELSE im.quantity END), 0)
+                        FROM inventory_movements im WHERE im.product_id = p.id
+                    ) < 10) AS low_stock_count
+            ");
         });
 
-        $previousOrders = $this->cachedWithFallback($tag, 'dashboard_prev_orders', 3600, function () {
-            return Order::where('created_at', '<', now()->subMonth())->count();
+        $previous = $this->cachedWithFallback($tag, 'dash_previous_counts', 3600, function () {
+            return DB::selectOne('
+                SELECT
+                    (SELECT COUNT(*) FROM products WHERE active = 1 AND created_at < ?) AS prev_active_products,
+                    (SELECT COUNT(*) FROM orders WHERE created_at < ?) AS prev_orders,
+                    (SELECT COUNT(*) FROM customers WHERE created_at < ?) AS prev_customers
+            ', [now()->subMonth(), now()->subMonth(), now()->subMonth()]);
         });
 
-        $previousCustomers = $this->cachedWithFallback($tag, 'dashboard_prev_customers', 3600, function () {
-            return Customer::where('created_at', '<', now()->subMonth())->count();
-        });
+        $totalProducts = (int) ($current->total_products ?? 0);
+        $activeProducts = (int) ($current->active_products ?? 0);
+        $totalOrders = (int) ($current->total_orders ?? 0);
+        $totalCustomers = (int) ($current->total_customers ?? 0);
+        $lowStockCount = (int) ($current->low_stock_count ?? 0);
+        $previousActiveProducts = (int) ($previous->prev_active_products ?? 0);
+        $previousOrders = (int) ($previous->prev_orders ?? 0);
+        $previousCustomers = (int) ($previous->prev_customers ?? 0);
 
         return Inertia::render('Tenant/Dashboard', [
             'stats' => [
