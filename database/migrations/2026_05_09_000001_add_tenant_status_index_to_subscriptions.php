@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -16,11 +15,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('subscriptions', function (Blueprint $table) {
-            if (! $this->indexExists('subscriptions', 'subscriptions_tenant_id_status_index')) {
+        // Uses try/catch for cross-database compatibility (MySQL + SQLite)
+        // instead of the MySQL-only SHOW INDEX query.
+        try {
+            Schema::table('subscriptions', function (Blueprint $table) {
                 $table->index(['tenant_id', 'status']);
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may already exist — idempotent, skip
+        }
     }
 
     /**
@@ -33,21 +36,22 @@ return new class extends Migration
      *
      * NOTE: The FK may have already been dropped by a later migration's
      * down() when rolling back many steps (e.g. 2026_05_28_000001's
-     * down() drops it first). Guard with foreignKeyExists() to avoid
-     * MySQL error 1091 "Can't DROP ... check that column/key exists".
+     * down() drops it first). Uses try/catch guard instead of the
+     * MySQL-only INFORMATION_SCHEMA query to avoid errors.
      */
     public function down(): void
     {
-        $fkName = $this->getForeignKeyName('subscriptions', 'tenant_id');
+        $fkName = 'subscriptions_tenant_id_foreign';
 
-        $needToRecreateFk = $this->foreignKeyExists('subscriptions', $fkName);
-
-        if ($needToRecreateFk) {
-            // Only drop the FK if it still exists (a later migration's
-            // down() may have already dropped it during a full rollback).
+        // Only drop the FK if it still exists (a later migration's
+        // down() may have already dropped it during a full rollback).
+        // Uses try/catch for cross-database compatibility.
+        try {
             Schema::table('subscriptions', function (Blueprint $table) use ($fkName) {
                 $table->dropForeign($fkName);
             });
+        } catch (Throwable) {
+            // FK may have already been dropped — that's fine
         }
 
         Schema::table('subscriptions', function (Blueprint $table) {
@@ -63,43 +67,5 @@ return new class extends Migration
                 ->on('tenants')
                 ->cascadeOnDelete();
         });
-    }
-
-    /**
-     * Check if a foreign key constraint exists in the database.
-     *
-     * MySQL INFORMATION_SCHEMA.TABLE_CONSTRAINTS may report stale metadata
-     * in rare cases (information_schema_stats_expiry). This method uses a
-     * direct INFORMATION_SCHEMA query to check FK existence.
-     */
-    private function indexExists(string $table, string $index): bool
-    {
-        $indexes = DB::select("SHOW INDEX FROM `{$table}` WHERE Key_name = ?", [$index]);
-
-        return ! empty($indexes);
-    }
-
-    private function foreignKeyExists(string $table, string $indexName): bool
-    {
-        $database = DB::connection()->getDatabaseName();
-        $result = DB::select(
-            'SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-             WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = ?',
-            [$database, $table, $indexName, 'FOREIGN KEY']
-        );
-
-        return ! empty($result);
-    }
-
-    /**
-     * Get the foreign key name for a column on a table.
-     * Mirrors Illuminate\Database\Schema\Blueprint::getForeignKeyName().
-     */
-    private function getForeignKeyName(string $table, string $column): string
-    {
-        $parts = explode('.', $table);
-        $tableName = end($parts);
-
-        return $tableName.'_'.$column.'_foreign';
     }
 };

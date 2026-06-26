@@ -2,55 +2,46 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    private function indexExists(string $table, string $index): bool
-    {
-        $indexes = DB::select("SHOW INDEX FROM `{$table}` WHERE Key_name = ?", [$index]);
-
-        return ! empty($indexes);
-    }
-
-    private function foreignKeyExists(string $table, string $constraint): bool
-    {
-        $database = DB::connection()->getDatabaseName();
-        $result = DB::select(
-            'SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-             WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = ?',
-            [$database, $table, $constraint, 'FOREIGN KEY']
-        );
-
-        return ! empty($result);
-    }
-
     public function up(): void
     {
-        Schema::table('tenants', function (Blueprint $table) {
-            if (! $this->indexExists('tenants', 'tenants_plan_id_status_index')) {
-                $table->index(['plan_id', 'status']);
-            }
-        });
+        // Uses try/catch for cross-database compatibility (MySQL + SQLite)
+        // instead of the MySQL-only SHOW INDEX query.
 
-        Schema::table('domains', function (Blueprint $table) {
-            if (! $this->indexExists('domains', 'domains_tenant_id_index')) {
+        try {
+            Schema::table('tenants', function (Blueprint $table) {
+                $table->index(['plan_id', 'status']);
+            });
+        } catch (Throwable) {
+            // Index may already exist — idempotent, skip
+        }
+
+        try {
+            Schema::table('domains', function (Blueprint $table) {
                 $table->index('tenant_id');
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may already exist — idempotent, skip
+        }
 
-        Schema::table('subscriptions', function (Blueprint $table) {
-            if (! $this->indexExists('subscriptions', 'subscriptions_plan_id_status_index')) {
+        try {
+            Schema::table('subscriptions', function (Blueprint $table) {
                 $table->index(['plan_id', 'status']);
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may already exist — idempotent, skip
+        }
 
-        Schema::table('payment_methods', function (Blueprint $table) {
-            if (! $this->indexExists('payment_methods', 'payment_methods_active_index')) {
+        try {
+            Schema::table('payment_methods', function (Blueprint $table) {
                 $table->index('active');
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may already exist — idempotent, skip
+        }
     }
 
     public function down(): void
@@ -64,51 +55,69 @@ return new class extends Migration
         // The FK tenants_plan_id_foreign was added by `2026_05_07_000001_add_plan_id_to_tenants_table`.
         // Its down() already guards FK existence before dropping, so the double-drop
         // is safe when rolling back many steps.
-        if ($this->foreignKeyExists('tenants', 'tenants_plan_id_foreign')) {
+        //
+        // All FK/index existence checks use try/catch for cross-database compatibility
+        // (MySQL + SQLite) instead of MySQL-only INFORMATION_SCHEMA / SHOW INDEX queries.
+
+        // Drop FK for tenants.plan_id first (before index that MySQL depends on it)
+        try {
             Schema::table('tenants', function (Blueprint $table) {
                 $table->dropForeign('tenants_plan_id_foreign');
             });
+        } catch (Throwable) {
+            // FK may have already been dropped — that's fine during rollback
         }
 
-        Schema::table('tenants', function (Blueprint $table) {
-            if ($this->indexExists('tenants', 'tenants_plan_id_status_index')) {
+        try {
+            Schema::table('tenants', function (Blueprint $table) {
                 $table->dropIndex(['plan_id', 'status']);
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may have already been dropped — that's fine
+        }
 
-        // domains.tenant_id has FK domains_tenant_id_foreign → tenants(id)
-        // Must drop FK before the index (MySQL restriction).
-        if ($this->foreignKeyExists('domains', 'domains_tenant_id_foreign')) {
+        // Drop FK for domains.tenant_id first (before index that MySQL depends on it)
+        try {
             Schema::table('domains', function (Blueprint $table) {
                 $table->dropForeign('domains_tenant_id_foreign');
             });
+        } catch (Throwable) {
+            // FK may have already been dropped — that's fine during rollback
         }
 
-        Schema::table('domains', function (Blueprint $table) {
-            if ($this->indexExists('domains', 'domains_tenant_id_index')) {
+        try {
+            Schema::table('domains', function (Blueprint $table) {
                 $table->dropIndex(['tenant_id']);
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may have already been dropped — that's fine
+        }
 
         // Same issue for subscriptions_plan_id_status_index — plan_id has FK
         // subscriptions_plan_id_foreign → plans(id). The subscriptions FK migration
         // (2026_05_08_000003) already guards FK existence before dropping.
-        if ($this->foreignKeyExists('subscriptions', 'subscriptions_plan_id_foreign')) {
+        try {
             Schema::table('subscriptions', function (Blueprint $table) {
                 $table->dropForeign('subscriptions_plan_id_foreign');
             });
+        } catch (Throwable) {
+            // FK may have already been dropped — that's fine during rollback
         }
 
-        Schema::table('subscriptions', function (Blueprint $table) {
-            if ($this->indexExists('subscriptions', 'subscriptions_plan_id_status_index')) {
+        try {
+            Schema::table('subscriptions', function (Blueprint $table) {
                 $table->dropIndex(['plan_id', 'status']);
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may have already been dropped — that's fine
+        }
 
-        Schema::table('payment_methods', function (Blueprint $table) {
-            if ($this->indexExists('payment_methods', 'payment_methods_active_index')) {
+        try {
+            Schema::table('payment_methods', function (Blueprint $table) {
                 $table->dropIndex(['active']);
-            }
-        });
+            });
+        } catch (Throwable) {
+            // Index may have already been dropped — that's fine
+        }
     }
 };

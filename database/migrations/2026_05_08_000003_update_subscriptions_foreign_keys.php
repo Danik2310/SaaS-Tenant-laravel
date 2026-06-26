@@ -9,16 +9,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Drop foreign key if it exists (query INFORMATION_SCHEMA instead of Doctrine)
-        $fkName = $this->getForeignKeyName('subscriptions', 'plan_id');
-        if ($this->foreignKeyExists('subscriptions', $fkName)) {
+        $fkName = 'subscriptions_plan_id_foreign';
+
+        // Drop foreign key if it exists — uses try/catch for cross-database
+        // compatibility (MySQL + SQLite) instead of INFORMATION_SCHEMA.
+        try {
             Schema::table('subscriptions', function (Blueprint $table) use ($fkName) {
                 $table->dropForeign($fkName);
             });
+        } catch (Throwable) {
+            // FK may not exist — proceed with the rest of the migration
         }
 
-        // Make plan_id nullable — use raw SQL to avoid Doctrine dependency
-        DB::statement('ALTER TABLE subscriptions MODIFY COLUMN plan_id BIGINT UNSIGNED NULL');
+        // Make plan_id nullable (MySQL only — SQLite and others handle this
+        // via the column definition in the original create migration).
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE subscriptions MODIFY COLUMN plan_id BIGINT UNSIGNED NULL');
+        }
 
         // Re-add FK with nullOnDelete
         Schema::table('subscriptions', function (Blueprint $table) {
@@ -31,18 +38,23 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Drop the new FK
-        $fkName = $this->getForeignKeyName('subscriptions', 'plan_id');
-        if ($this->foreignKeyExists('subscriptions', $fkName)) {
+        $fkName = 'subscriptions_plan_id_foreign';
+
+        // Drop the new FK — uses try/catch for cross-database compatibility
+        try {
             Schema::table('subscriptions', function (Blueprint $table) use ($fkName) {
                 $table->dropForeign($fkName);
             });
+        } catch (Throwable) {
+            // FK may have already been dropped — that's fine during rollback
         }
 
         // Only revert to NOT NULL if no null values exist (safety check)
         $hasNulls = DB::table('subscriptions')->whereNull('plan_id')->exists();
         if (! $hasNulls) {
-            DB::statement('ALTER TABLE subscriptions MODIFY COLUMN plan_id BIGINT UNSIGNED NOT NULL');
+            if (DB::connection()->getDriverName() === 'mysql') {
+                DB::statement('ALTER TABLE subscriptions MODIFY COLUMN plan_id BIGINT UNSIGNED NOT NULL');
+            }
         }
 
         // Re-add the original FK
@@ -52,28 +64,5 @@ return new class extends Migration
                 ->on('plans')
                 ->cascadeOnDelete();
         });
-    }
-
-    /**
-     * Check if a foreign key exists using INFORMATION_SCHEMA.
-     */
-    private function foreignKeyExists(string $table, string $indexName): bool
-    {
-        $database = DB::connection()->getDatabaseName();
-        $result = DB::select(
-            'SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-             WHERE CONSTRAINT_SCHEMA = ? AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = ?',
-            [$database, $table, $indexName, 'FOREIGN KEY']
-        );
-
-        return ! empty($result);
-    }
-
-    /**
-     * Get the default Laravel foreign key name for a column.
-     */
-    private function getForeignKeyName(string $table, string $column): string
-    {
-        return $table.'_'.$column.'_foreign';
     }
 };

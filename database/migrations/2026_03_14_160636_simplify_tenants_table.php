@@ -77,11 +77,5 @@ return new class extends Migration
             }
         });
 
-        // Remove the data column if it was recreated and now duplicates
-        if (Schema::hasColumn('tenants', 'data')) {
-            Schema::table('tenants', function (Blueprint $table) {
-                $table->dropColumn('data');
-            });
-        }
     }
 };
