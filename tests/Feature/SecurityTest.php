@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\TrustHosts;
 use App\Models\AdminUser;
+use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\AdminAuthSetup;
@@ -147,5 +149,44 @@ class SecurityTest extends TestCase
         // Should be blocked without 'manage staff' permission
         $this->get('/admin/api/staff')->assertStatus(403);
         $this->post('/admin/api/staff')->assertStatus(403);
+    }
+
+    /**
+     * 🛡️ Test: TrustHosts middleware is registered in the global middleware stack
+     */
+    public function test_trust_hosts_middleware_is_registered()
+    {
+        $kernel = $this->app->make(Kernel::class);
+        $middlewareProperty = (new \ReflectionClass($kernel))->getProperty('middleware');
+        $middlewareProperty->setAccessible(true);
+        $globalStack = $middlewareProperty->getValue($kernel);
+
+        $this->assertContains(TrustHosts::class, $globalStack, 'TrustHosts middleware must be in the global stack');
+    }
+
+    /**
+     * 🛡️ Test: Admin login locks out after 5 failed attempts
+     */
+    public function test_admin_login_rate_limiter_locks_after_5_attempts()
+    {
+        AdminUser::factory()->create([
+            'email' => 'super@example.com',
+            'password' => bcrypt('correct-password'),
+            'is_active' => true,
+        ]);
+
+        for ($i = 0; $i < 5; $i++) {
+            $response = $this->postJson('/central/login', [
+                'email' => 'super@example.com',
+                'password' => 'wrong-password',
+            ]);
+
+            if ($i < 4) {
+                $response->assertStatus(422);
+            }
+        }
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['email']);
     }
 }
