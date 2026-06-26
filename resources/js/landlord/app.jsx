@@ -7,6 +7,7 @@ import theme from '../theme';
 import Login from '../modules/landlord/Login';
 import Dashboard from '../modules/landlord/Dashboard';
 import { AuthProvider, useAuthContext } from '../context/AuthContext';
+import ErrorBoundary from '../Components/ErrorBoundary';
 
 function AppContent() {
     const { user, loading } = useAuthContext();
@@ -26,7 +27,9 @@ export default function LandlordApp() {
     return (
         <ThemeProvider theme={theme}>
             <AuthProvider>
-                <AppContent />
+                <ErrorBoundary fallbackMessage="Application failed to load">
+                    <AppContent />
+                </ErrorBoundary>
                 <Toaster richColors position="top-right" />
             </AuthProvider>
         </ThemeProvider>

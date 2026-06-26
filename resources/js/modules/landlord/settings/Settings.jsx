@@ -103,7 +103,7 @@ export default function Settings() {
 
                 <Grid container spacing={3}>
                     {settingFields.map((field) => (
-                        <Grid item xs={12} sm={field.type === 'boolean' ? 6 : 6} key={field.key}>
+                        <Grid item xs={12} sm={field.type === 'boolean' ? 6 : 6} md={6} lg={6} key={field.key}>
                             {field.type === 'boolean' ? (
                                 <FormControlLabel
                                     control={

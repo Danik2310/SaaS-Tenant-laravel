@@ -108,22 +108,22 @@ export default function Dashboard({ stats, trends, recentOrders, recentMovements
             </Typography>
 
             <Grid container spacing={2} sx={{ mb: 4 }}>
-                <Grid item xs={6} sm={6} md={3}>
+                <Grid item xs={6} sm={6} md={3} lg={3}>
                     <StatCard title="Active Products" value={stats.active_products} icon={<InventoryIcon />} color="#3b82f6" trend={trends?.active_products} />
                 </Grid>
-                <Grid item xs={6} sm={6} md={3}>
+                <Grid item xs={6} sm={6} md={3} lg={3}>
                     <StatCard title="Total Orders" value={stats.total_orders} icon={<ShoppingCartIcon />} color="#22c55e" trend={trends?.total_orders} />
                 </Grid>
-                <Grid item xs={6} sm={6} md={3}>
+                <Grid item xs={6} sm={6} md={3} lg={3}>
                     <StatCard title="Customers" value={stats.total_customers} icon={<PeopleIcon />} color="#f59e0b" trend={trends?.total_customers} />
                 </Grid>
-                <Grid item xs={6} sm={6} md={3}>
+                <Grid item xs={6} sm={6} md={3} lg={3}>
                     <StatCard title="Low Stock Items" value={stats.low_stock_count} icon={<WarningIcon />} color="#ef4444" />
                 </Grid>
             </Grid>
 
             <Grid container spacing={3}>
-                <Grid item xs={12} lg={6}>
+                <Grid item xs={12} sm={12} md={6} lg={6}>
                     <Paper sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderTop: '3px solid #22c55e', borderRadius: 2 }}>
                         <Box sx={{ p: 3, pb: 1 }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a' }}>
@@ -178,7 +178,7 @@ export default function Dashboard({ stats, trends, recentOrders, recentMovements
                     </Paper>
                 </Grid>
 
-                <Grid item xs={12} lg={6}>
+                <Grid item xs={12} sm={12} md={6} lg={6}>
                     <Paper sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderTop: '3px solid #3b82f6', borderRadius: 2 }}>
                         <Box sx={{ p: 3, pb: 1 }}>
                             <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a' }}>

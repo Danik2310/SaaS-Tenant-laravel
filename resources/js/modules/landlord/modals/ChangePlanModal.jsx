@@ -9,6 +9,7 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -121,9 +122,11 @@ export default function ChangePlanModal({ open, tenants, onClose, onChanged }) {
                         {step === 'confirm' ? 'Confirm Plan Change' : 'Change Plan'}
                     </Typography>
                 </Box>
-                <IconButton onClick={onClose} size="small" disabled={submitting}>
-                    <CloseIcon />
-                </IconButton>
+                <Tooltip title="Close">
+                    <IconButton onClick={onClose} size="small" disabled={submitting}>
+                        <CloseIcon />
+                    </IconButton>
+                </Tooltip>
             </DialogTitle>
 
             <DialogContent>

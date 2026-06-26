@@ -92,7 +92,7 @@ export default function DatabaseModal({ tenant, onClose }) {
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>Database Info</Typography>
                     {tenant && <Chip label={tenant.name} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontSize: 12 }} />}
                 </Box>
-                <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+                <Tooltip title="Close"><IconButton onClick={onClose} size="small"><CloseIcon /></IconButton></Tooltip>
             </DialogTitle>
 
             <DialogContent>

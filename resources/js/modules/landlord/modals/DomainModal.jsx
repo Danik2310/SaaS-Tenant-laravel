@@ -100,15 +100,17 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                             </Box>
                         </Box>
                     </Box>
-                    <IconButton onClick={onClose} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}>
-                        <CloseIcon />
-                    </IconButton>
+                    <Tooltip title="Close">
+                        <IconButton onClick={onClose} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}>
+                            <CloseIcon />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
             </DialogTitle>
 
             <DialogContent sx={{ p: 3 }}>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={12} md={6} lg={6}>
                         <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
                             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                                 <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
@@ -150,7 +152,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12} sm={12} md={6} lg={6}>
                         <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
                             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
                                 <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
@@ -231,13 +233,13 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid item xs={12} sm={12} md={12} lg={12}>
                         <Divider sx={{ my: 0.5 }} />
                         <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2, mt: 1 }}>
                             Quick Actions
                         </Typography>
                         <Grid container spacing={2}>
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={4} md={4} lg={4}>
                                 <Card
                                     sx={{
                                         borderRadius: 2,
@@ -261,7 +263,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                     </CardContent>
                                 </Card>
                             </Grid>
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={4} md={4} lg={4}>
                                 <Card
                                     sx={{
                                         borderRadius: 2,
@@ -285,7 +287,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                     </CardContent>
                                 </Card>
                             </Grid>
-                            <Grid item xs={12} sm={4}>
+                            <Grid item xs={12} sm={4} md={4} lg={4}>
                                 <Card
                                     sx={{
                                         borderRadius: 2,

@@ -117,10 +117,10 @@ export default function DashboardOverview() {
                     ))}
                 </Grid>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} lg={8}>
+                    <Grid item xs={12} sm={12} md={8} lg={8}>
                         <Skeleton variant="rounded" height={320} />
                     </Grid>
-                    <Grid item xs={12} lg={4}>
+                    <Grid item xs={12} sm={12} md={4} lg={4}>
                         <Skeleton variant="rounded" height={320} />
                     </Grid>
                 </Grid>
@@ -209,7 +209,7 @@ export default function DashboardOverview() {
             </Grid>
 
             <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} lg={8}>
+                <Grid item xs={12} sm={12} md={8} lg={8}>
                     <Paper sx={{
                         p: 3,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
@@ -259,7 +259,7 @@ export default function DashboardOverview() {
                         )}
                     </Paper>
                 </Grid>
-                <Grid item xs={12} lg={4}>
+                <Grid item xs={12} sm={12} md={4} lg={4}>
                     <Paper sx={{
                         p: 3,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',

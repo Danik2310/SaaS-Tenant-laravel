@@ -7,6 +7,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ThemeProvider } from '@mui/material/styles';
 import { Toaster } from 'sonner';
 import theme from '@/theme';
+import ErrorBoundary from '@/Components/ErrorBoundary';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -18,7 +19,9 @@ createInertiaApp({
 
         root.render(
             <ThemeProvider theme={theme}>
-                <App {...props} />
+                <ErrorBoundary fallbackMessage="Application failed to load">
+                    <App {...props} />
+                </ErrorBoundary>
                 <Toaster richColors position="top-right" />
             </ThemeProvider>
         );

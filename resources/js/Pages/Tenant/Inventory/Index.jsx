@@ -13,7 +13,6 @@ import TableRow from '@mui/material/TableRow';
 import TablePagination from '@mui/material/TablePagination';
 import Chip from '@mui/material/Chip';
 import AddIcon from '@mui/icons-material/Add';
-import { useState } from 'react';
 
 export default function InventoryIndex({ movements }) {
     const data = movements.data || movements;

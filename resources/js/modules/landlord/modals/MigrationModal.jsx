@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
 import CloseIcon from '@mui/icons-material/Close';
 import SyncIcon from '@mui/icons-material/Sync';
@@ -53,7 +54,7 @@ export default function MigrationModal({ tenant, onClose }) {
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>Run Migrations</Typography>
                     {tenant && <Chip label={tenant.name} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontSize: 12 }} />}
                 </Box>
-                <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+                <Tooltip title="Close"><IconButton onClick={onClose} size="small"><CloseIcon /></IconButton></Tooltip>
             </DialogTitle>
 
             <DialogContent>
