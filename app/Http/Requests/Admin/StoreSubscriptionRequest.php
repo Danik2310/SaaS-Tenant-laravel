@@ -15,7 +15,7 @@ class StoreSubscriptionRequest extends FormRequest
     {
         return [
             'tenant_id' => 'required|string|exists:tenants,id',
-            'plan_id' => 'required|integer|exists:plans,id',
+            'plan_id' => 'required|integer|exists:mysql_central.plans,id',
             'starts_at' => 'required|date',
             'ends_at' => 'nullable|date|after:starts_at',
             'status' => 'required|string|in:active,pending,cancelled,expired',

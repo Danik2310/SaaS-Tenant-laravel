@@ -38,7 +38,7 @@ class BulkTenantOperationRequest extends FormRequest
             ],
             'action' => ['required', 'string', 'in:suspend,activate,delete,restore,change_plan,extend_trial'],
             'payload' => ['nullable', 'array'],
-            'payload.plan_id' => ['required_if:action,change_plan', 'integer', 'exists:plans,id'],
+            'payload.plan_id' => ['required_if:action,change_plan', 'integer', 'exists:mysql_central.plans,id'],
             'payload.status' => ['prohibited'],
             'payload.days' => ['required_if:action,extend_trial', 'integer', 'min:1', 'max:365'],
         ];

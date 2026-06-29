@@ -14,7 +14,7 @@ class StorePaymentMethodRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255|unique:payment_methods,name',
+            'name' => 'required|string|max:255|unique:mysql_central.payment_methods,name',
             'provider' => 'required|in:stripe,paypal,other',
             'api_key' => 'nullable|string|min:10',
             'secret_key' => 'nullable|string|min:10',

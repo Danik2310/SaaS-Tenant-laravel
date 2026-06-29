@@ -15,7 +15,7 @@ class StorePlanRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:plans,slug',
+            'slug' => 'required|string|max:255|unique:mysql_central.plans,slug',
             'price' => 'required|numeric|min:0',
             'max_users' => 'nullable|integer|min:1',
             'features' => 'nullable|string',

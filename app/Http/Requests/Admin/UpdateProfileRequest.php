@@ -9,7 +9,7 @@ class UpdateProfileRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check();
+        return auth('admin')->check() && auth('admin')->user()->can('manage profile');
     }
 
     public function rules(): array

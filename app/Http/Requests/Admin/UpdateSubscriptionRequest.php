@@ -14,7 +14,7 @@ class UpdateSubscriptionRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'plan_id' => 'sometimes|integer|exists:plans,id',
+            'plan_id' => 'sometimes|integer|exists:mysql_central.plans,id',
             'starts_at' => 'sometimes|date',
             'ends_at' => 'nullable|date',
             'status' => 'sometimes|string|in:active,pending,cancelled,expired',

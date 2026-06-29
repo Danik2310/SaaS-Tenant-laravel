@@ -16,8 +16,8 @@ class StoreTenantRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:tenants,email',
-            'domain' => 'required|string|unique:domains,domain',
-            'plan' => 'nullable|string|exists:plans,slug',
+            'domain' => 'required|string|unique:mysql_central.domains,domain',
+            'plan' => 'nullable|string|exists:mysql_central.plans,slug',
         ];
     }
 }
