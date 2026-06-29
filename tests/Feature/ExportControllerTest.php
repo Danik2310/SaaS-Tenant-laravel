@@ -261,7 +261,7 @@ class ExportControllerTest extends TestCase
         $this->authenticateAsSuperAdmin();
 
         $jobId = (string) Str::uuid();
-        Cache::put("export:{$jobId}:status", 'completed', 60);
+        Cache::store('global')->put("export:{$jobId}:status", 'completed', 60);
 
         $this->getJson("/admin/api/export/status/{$jobId}")
             ->assertOk()

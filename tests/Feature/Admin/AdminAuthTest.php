@@ -24,7 +24,7 @@ class AdminAuthTest extends TestCase
             'password' => bcrypt('password'),
         ]);
 
-        $response = $this->post('/central/login', [
+        $response = $this->postJson('/central/login', [
             'email' => 'admin@example.com',
             'password' => 'password',
         ]);
@@ -42,13 +42,13 @@ class AdminAuthTest extends TestCase
             'password' => bcrypt('password'),
         ]);
 
-        $response = $this->post('/central/login', [
+        $response = $this->postJson('/central/login', [
             'email' => 'admin@example.com',
             'password' => 'wrong-password',
         ]);
 
         $response->assertStatus(422)
-            ->assertJson(['message' => 'Invalid credentials']);
+            ->assertJsonValidationErrors(['email']);
 
         $this->assertGuest('admin');
     }
@@ -65,7 +65,7 @@ class AdminAuthTest extends TestCase
         $admin = AdminUser::factory()->create();
         $this->actingAs($admin, 'admin');
 
-        $response = $this->post('/central/logout');
+        $response = $this->postJson('/central/logout');
 
         $response->assertStatus(200)
             ->assertJson(['success' => true, 'message' => 'Logged out']);

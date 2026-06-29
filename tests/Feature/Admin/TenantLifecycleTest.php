@@ -78,7 +78,7 @@ class TenantLifecycleTest extends TestCase
         $this->setUpAdminAuth();
 
         $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create(['status' => 'Deleted', 'plan_id' => $plan->id]);
+        $tenant = Tenant::withoutEvents(fn () => Tenant::factory()->create(['status' => 'Deleted', 'plan_id' => $plan->id]));
 
         $response = $this->put("/admin/api/tenants/{$tenant->id}", [
             'status' => 'Suspended',
@@ -233,7 +233,7 @@ class TenantLifecycleTest extends TestCase
         $this->setUpAdminAuth();
 
         $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        $tenant = Tenant::withoutEvents(fn () => Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]));
 
         $this->post('/admin/api/tenants/bulk', [
             'tenant_ids' => [$tenant->id],
@@ -284,7 +284,7 @@ class TenantLifecycleTest extends TestCase
         $response = $this->get('/admin/api/tenants');
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['tenants', 'total', 'meta']);
+            ->assertJsonStructure(['tenants', 'meta' => ['current_page', 'last_page', 'per_page', 'total']]);
     }
 
     public function test_can_show_tenant(): void
@@ -490,7 +490,7 @@ class TenantLifecycleTest extends TestCase
         $tenant->refresh();
         $this->assertSoftDeleted('tenants', ['id' => $tenant->id]);
 
-        $tenant->forceDelete();
+        Tenant::withoutEvents(fn () => $tenant->forceDelete());
         $this->assertModelMissing($tenant);
     }
 
@@ -518,7 +518,7 @@ class TenantLifecycleTest extends TestCase
 
         $this->delete("/admin/api/tenants/{$tenant->id}");
         $tenant->refresh();
-        $tenant->forceDelete();
+        Tenant::withoutEvents(fn () => $tenant->forceDelete());
 
         $this->assertDatabaseMissing('subscriptions', ['id' => $subscription->id]);
     }
