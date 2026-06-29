@@ -57,10 +57,6 @@ class RolePermissionController extends Controller
      * @bodyParam description string optional Role description.
      * @bodyParam permissions integer[] optional Array of permission IDs.
      *
-     * @apiResource App\Http\Resources\RoleResource
-     *
-     * @apiResourceModel App\Models\Role
-     *
      * @response 201 {"message":"Role created successfully","role":{...}}
      */
     public function storeRole(StoreRoleRequest $request)

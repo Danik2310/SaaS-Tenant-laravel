@@ -20,7 +20,7 @@ class AdminProfileController extends Controller
      *
      * @authenticated
      *
-     * @responseField data object The admin user resource.
+     * @responseField profile object The admin user resource.
      */
     public function show()
     {
@@ -38,7 +38,7 @@ class AdminProfileController extends Controller
      * @bodyParam email string required The admin email.
      *
      * @responseField message string Success message.
-     * @responseField data object The updated admin user resource.
+     * @responseField profile object The updated admin user resource.
      */
     public function updateProfile(UpdateProfileRequest $request)
     {

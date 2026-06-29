@@ -8,8 +8,8 @@ class StaffResource extends JsonResource
 {
     public function toArray($request): array
     {
-        $roleNames = $this->roles->pluck('name')->toArray();
-        $rolePerms = $this->roles->flatMap(fn ($role) => $role->permissions)->unique('id');
+        $roleNames = $this->whenLoaded('roles', fn () => $this->roles->pluck('name')->toArray(), []);
+        $rolePerms = $this->whenLoaded('roles', fn () => $this->roles->flatMap(fn ($role) => $role->permissions)->unique('id'), collect());
 
         return [
             'id' => $this->id,

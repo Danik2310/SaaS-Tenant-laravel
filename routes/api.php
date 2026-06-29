@@ -24,6 +24,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     }
 
     return response()->json([
-        'data' => new AdminUserResource($user),
+        'user' => new AdminUserResource($user),
     ]);
 });

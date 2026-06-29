@@ -46,7 +46,7 @@ class TenantMetricsController extends Controller
             });
         }
 
-        $perPage = (int) $request->input('per_page', 25);
+        $perPage = (int) ($validated['per_page'] ?? 25);
         $metrics = $query->orderBy('collected_at', 'desc')->paginate($perPage);
 
         return response()->json([
