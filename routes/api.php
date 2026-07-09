@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::middleware(['auth:sanctum', 'throttle:api'])->get('/user', function (Request $request) {
     $user = $request->user();
 
     if (! $user instanceof AdminUser) {

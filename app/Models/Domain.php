@@ -1,13 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use Stancl\Tenancy\Database\Models\Domain as BaseDomain;
 
-class Domain extends Model
+class Domain extends BaseDomain
 {
-    protected $connection = 'mysql_central';
-
     protected $fillable = [
         'tenant_id',
         'domain',
@@ -17,9 +17,4 @@ class Domain extends Model
     protected $casts = [
         'is_primary' => 'boolean',
     ];
-
-    public function tenant()
-    {
-        return $this->belongsTo(Tenant::class);
-    }
 }

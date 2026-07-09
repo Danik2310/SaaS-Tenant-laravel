@@ -8,18 +8,16 @@ class TenantResource extends JsonResource
 {
     public function toArray($request): array
     {
-        $domains = $this->domains ?? collect();
-
         return [
             'id' => $this->id,
             'reference_id' => $this->reference_id,
             'name' => $this->name ?? 'N/A',
             'email' => $this->email ?? 'N/A',
-            'domain' => $domains->first()?->domain ?? 'N/A',
-            'all_domains' => $domains->map(fn ($d) => [
+            'domain' => $this->whenLoaded('domains', fn () => $this->domains->first()?->domain ?? 'N/A'),
+            'all_domains' => $this->whenLoaded('domains', fn () => $this->domains->map(fn ($d) => [
                 'domain' => $d->domain,
-                'is_primary' => $d->domain === $domains->first()?->domain,
-            ])->values(),
+                'is_primary' => $d->domain === $this->domains->first()?->domain,
+            ])->values()),
             'status' => $this->status,
             'plan' => $this->whenLoaded('plan', fn () => new PlanResource($this->plan)),
             'plan_name' => $this->whenLoaded('plan', fn () => $this->plan?->name),

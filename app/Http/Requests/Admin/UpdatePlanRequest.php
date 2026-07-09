@@ -20,6 +20,10 @@ class UpdatePlanRequest extends FormRequest
             'slug' => 'required|string|max:255|unique:mysql_central.plans,slug,'.$planId,
             'price' => 'required|numeric|min:0',
             'max_users' => 'nullable|integer|min:1',
+            'max_storage' => 'nullable|integer|min:0',
+            'max_warehouses' => 'nullable|integer|min:1',
+            'max_categories' => 'nullable|integer|min:1',
+            'max_products' => 'nullable|integer|min:1',
             'features' => 'nullable|string',
         ];
     }

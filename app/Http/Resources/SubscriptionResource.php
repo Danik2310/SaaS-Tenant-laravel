@@ -10,8 +10,10 @@ class SubscriptionResource extends JsonResource
     public function toArray(Request $request): array
     {
         $canManageTenants = auth('admin')->user()?->can('manage tenants') ?? false;
+        $tenantStatus = 'restricted';
+        $tenantName = 'Restricted';
 
-        if ($canManageTenants) {
+        if ($canManageTenants && $this->relationLoaded('tenant')) {
             if ($this->tenant === null) {
                 $tenantStatus = 'missing';
                 $tenantName = 'Missing Tenant';
@@ -22,9 +24,6 @@ class SubscriptionResource extends JsonResource
                 $tenantStatus = 'active';
                 $tenantName = $this->tenant->name;
             }
-        } else {
-            $tenantStatus = 'restricted';
-            $tenantName = 'Restricted';
         }
 
         return [
@@ -33,8 +32,8 @@ class SubscriptionResource extends JsonResource
             'plan_id' => $this->plan_id,
             'tenant_name' => $tenantName,
             'tenant_status' => $tenantStatus,
-            'plan_name' => $this->plan?->name ?? 'Unknown',
-            'plan_slug' => $this->plan?->slug ?? '',
+            'plan_name' => $this->relationLoaded('plan') ? ($this->plan?->name ?? 'Unknown') : 'Unknown',
+            'plan_slug' => $this->relationLoaded('plan') ? ($this->plan?->slug ?? '') : '',
             'starts_at' => $this->starts_at?->format('Y-m-d'),
             'ends_at' => $this->ends_at?->format('Y-m-d'),
             'status' => $this->status,

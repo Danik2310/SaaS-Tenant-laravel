@@ -18,6 +18,7 @@ class UpdateSubscriptionRequest extends FormRequest
             'starts_at' => 'sometimes|date',
             'ends_at' => 'nullable|date',
             'status' => 'sometimes|string|in:active,pending,cancelled,expired',
+            'tenant_id' => 'prohibited',
         ];
 
         if ($this->has('starts_at') && $this->has('ends_at')) {

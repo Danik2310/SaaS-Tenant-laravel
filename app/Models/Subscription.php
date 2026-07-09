@@ -13,7 +13,6 @@ class Subscription extends Model
     use HasFactory;
 
     protected $fillable = [
-        'tenant_id',
         'plan_id',
         'starts_at',
         'ends_at',
@@ -21,8 +20,8 @@ class Subscription extends Model
     ];
 
     protected $casts = [
-        'starts_at' => 'date',
-        'ends_at' => 'date',
+        'starts_at' => 'datetime',
+        'ends_at' => 'datetime',
     ];
 
     public static function createForTenant(Tenant $tenant, ?Plan $plan, string $status = 'active', ?\DateTimeInterface $endsAt = null, ?\DateTimeInterface $startsAt = null): self
@@ -31,13 +30,15 @@ class Subscription extends Model
             throw new \InvalidArgumentException('Cannot create subscription without a plan. Tenant: '.$tenant->id);
         }
 
-        return static::create([
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-            'starts_at' => $startsAt ?? now(),
-            'ends_at' => $endsAt,
-            'status' => $status,
-        ]);
+        $subscription = new static;
+        $subscription->tenant_id = $tenant->id;
+        $subscription->plan_id = $plan->id;
+        $subscription->starts_at = $startsAt ?? now();
+        $subscription->ends_at = $endsAt;
+        $subscription->status = $status;
+        $subscription->save();
+
+        return $subscription;
     }
 
     public function tenant(): BelongsTo
@@ -61,7 +62,7 @@ class Subscription extends Model
 
     public function scopeExpired($query)
     {
-        return $query->where('status', 'active')
+        return $query->whereIn('status', ['active', 'expired'])
             ->where('ends_at', '<', now());
     }
 
@@ -73,5 +74,35 @@ class Subscription extends Model
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
+    }
+
+    public function scopeOnTrial($query)
+    {
+        return $query->where('status', 'trial')
+            ->where(function ($q) {
+                $q->whereNull('ends_at')
+                    ->orWhere('ends_at', '>', now());
+            });
+    }
+
+    public function isOnTrial(): bool
+    {
+        return $this->status === 'trial'
+            && ($this->ends_at === null || $this->ends_at->isFuture());
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active' && ($this->ends_at === null || $this->ends_at > now());
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->status === 'expired' || ($this->status === 'active' && $this->ends_at !== null && $this->ends_at < now());
     }
 }
