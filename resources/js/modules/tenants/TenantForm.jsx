@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
-import api from '../../../services/api';
+import api from '../../services/api';
 
 export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
     const [name, setName] = useState(tenant?.name || '');

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import api from '../../../services/api';
+import api from '../../services/api';
 import DataTable from '@/Components/DataTable';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';

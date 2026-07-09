@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import api from '../../../../services/api';
+import api from '../../../services/api';
 
 export const useBillingData = () => {
     const [plans, setPlans] = useState([]);

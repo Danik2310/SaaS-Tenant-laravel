@@ -39,40 +39,54 @@ import {
     Cell,
 } from 'recharts';
 
-const COLORS = ['#22c55e', '#ef4444', '#64748b'];
-
-const StatCard = ({ title, value, icon, color, subtitle }) => (
-    <Card sx={{
-        height: '100%',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-        borderLeft: `4px solid ${color}`,
-        borderRadius: '8px',
-        transition: 'box-shadow 0.2s ease, transform 0.2s ease',
-        '&:hover': {
-            boxShadow: `0 8px 25px -5px ${color}33, 0 4px 10px -4px ${color}22`,
-            transform: 'translateY(-2px)',
-        },
-    }}>
-        <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 3 }}>
-            <Avatar sx={{ bgcolor: `${color}15`, color, width: 48, height: 48 }}>
-                {icon}
-            </Avatar>
-            <Box>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-                    {value}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                    {title}
-                </Typography>
-                {subtitle && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                        {subtitle}
+const StatCard = ({ title, value, icon, color, subtitle, trend }) => {
+    const muiTheme = useTheme();
+    return (
+        <Card sx={{
+            height: '100%',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+            borderLeft: `4px solid ${color}`,
+            borderRadius: '8px',
+            transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+            '&:hover': {
+                boxShadow: `0 8px 25px -5px ${color}33, 0 4px 10px -4px ${color}22`,
+                transform: 'translateY(-2px)',
+            },
+        }}>
+            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 3 }}>
+                <Avatar sx={{ bgcolor: `${color}15`, color, width: 48, height: 48 }}>
+                    {icon}
+                </Avatar>
+                <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.2 }}>
+                            {value}
+                        </Typography>
+                        {trend && (
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: trend.direction === 'up' ? 'success.main' : 'error.main',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                            }}>
+                                {trend.direction === 'up' ? '\u2191' : '\u2193'} {trend.percentage}%
+                            </Box>
+                        )}
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">
+                        {title}
                     </Typography>
-                )}
-            </Box>
-        </CardContent>
-    </Card>
-);
+                    {subtitle && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                            {subtitle}
+                        </Typography>
+                    )}
+                </Box>
+            </CardContent>
+        </Card>
+    );
+};
 
 export default function DashboardOverview() {
     const theme = useTheme();
@@ -144,6 +158,8 @@ export default function DashboardOverview() {
     const chartHeight = isMobile ? 220 : isTablet ? 260 : 300;
     const pieRadius = isMobile ? 60 : 80;
 
+    const COLORS = [theme.palette.success.light, theme.palette.error.light, theme.palette.text.secondary];
+
     const paginatedTenants = recentTenants.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
     const handleChangePage = (event, newPage) => {
@@ -152,7 +168,7 @@ export default function DashboardOverview() {
 
     return (
         <Box>
-            <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a', mb: 3 }}>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', mb: 3 }}>
                 Dashboard Overview
             </Typography>
 
@@ -162,7 +178,7 @@ export default function DashboardOverview() {
                         title="Total Tenants"
                         value={stats?.total_tenants ?? 0}
                         icon={<PeopleIcon />}
-                        color="#3b82f6"
+                        color={theme.palette.primary.light}
                     />
                 </Grid>
                 <Grid item xs={6} sm={6} md={4} lg={2.4}>
@@ -170,7 +186,7 @@ export default function DashboardOverview() {
                         title="Active Tenants"
                         value={stats?.active_tenants ?? 0}
                         icon={<CheckCircleIcon />}
-                        color="#22c55e"
+                        color={theme.palette.success.light}
                     />
                 </Grid>
                 <Grid item xs={6} sm={6} md={4} lg={2.4}>
@@ -178,7 +194,7 @@ export default function DashboardOverview() {
                         title="Suspended"
                         value={stats?.suspended_tenants ?? 0}
                         icon={<BlockIcon />}
-                        color="#ef4444"
+                        color={theme.palette.error.light}
                     />
                 </Grid>
                 <Grid item xs={6} sm={6} md={4} lg={2.4}>
@@ -186,7 +202,7 @@ export default function DashboardOverview() {
                         title="Deleted"
                         value={stats?.deleted_tenants ?? 0}
                         icon={<DeleteIcon />}
-                        color="#64748b"
+                        color={theme.palette.text.secondary}
                     />
                 </Grid>
                 <Grid item xs={6} sm={6} md={4} lg={2.4}>
@@ -194,7 +210,7 @@ export default function DashboardOverview() {
                         title="Staff"
                         value={stats?.total_staff ?? 0}
                         icon={<GroupIcon />}
-                        color="#f59e0b"
+                        color={theme.palette.warning.light}
                         subtitle={`${stats?.active_staff ?? 0} active`}
                     />
                 </Grid>
@@ -203,7 +219,7 @@ export default function DashboardOverview() {
                         title="Plans"
                         value={stats?.total_plans ?? 0}
                         icon={<AssignmentIcon />}
-                        color="#8b5cf6"
+                        color={theme.palette.secondary.light}
                     />
                 </Grid>
             </Grid>
@@ -213,11 +229,11 @@ export default function DashboardOverview() {
                     <Paper sx={{
                         p: 3,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                        borderTop: '3px solid #3b82f6',
+                        borderTop: `3px solid ${theme.palette.primary.light}`,
                         borderRadius: '8px',
                     }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#3b82f6' }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.primary.light }} />
                             Tenant Growth
                         </Typography>
                         {tenantsByMonth.length === 0 ? (
@@ -231,17 +247,17 @@ export default function DashboardOverview() {
                                 <AreaChart data={formattedMonthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorTenants" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02} />
+                                            <stop offset="5%" stopColor={theme.palette.primary.light} stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor={theme.palette.primary.light} stopOpacity={0.02} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="#94a3b8" />
+                                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.background.default} />
+                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke={theme.palette.text.disabled} />
+                                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke={theme.palette.text.disabled} />
                                     <Tooltip
                                         contentStyle={{
                                             backgroundColor: '#fff',
-                                            border: '1px solid #e2e8f0',
+                                            border: `1px solid ${theme.palette.divider}`,
                                             borderRadius: '8px',
                                             boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                                             fontSize: '13px',
@@ -250,7 +266,7 @@ export default function DashboardOverview() {
                                     <Area
                                         type="monotone"
                                         dataKey="Tenants"
-                                        stroke="#3b82f6"
+                                        stroke={theme.palette.primary.light}
                                         strokeWidth={2}
                                         fill="url(#colorTenants)"
                                     />
@@ -263,12 +279,12 @@ export default function DashboardOverview() {
                     <Paper sx={{
                         p: 3,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                        borderTop: '3px solid #22c55e',
+                        borderTop: `3px solid ${theme.palette.success.light}`,
                         borderRadius: '8px',
                         height: '100%',
                     }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#22c55e' }} />
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.success.light }} />
                             Tenant Status
                         </Typography>
                         {statusDistribution.every((s) => s.value === 0) ? (
@@ -316,29 +332,29 @@ export default function DashboardOverview() {
 
             <Paper sx={{
                 boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                borderTop: '3px solid #8b5cf6',
+                borderTop: `3px solid ${theme.palette.secondary.light}`,
                 borderRadius: '8px',
                 overflow: 'hidden',
             }}>
                 <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#8b5cf6' }} />
+                    <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.secondary.light }} />
                         Recent Tenants
                     </Typography>
                     <FormControlLabel
                         control={<Switch size="small" checked={showDeleted} onChange={() => setShowDeleted(s => !s)} />}
-                        label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
+                        label={<Typography variant="caption" sx={{ color: 'text.secondary' }}>Show deleted</Typography>}
                         sx={{ mr: 0 }}
                     />
                 </Box>
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
-                            <TableRow sx={{ bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Name</TableCell>
-                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Domain</TableCell>
-                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</TableCell>
-                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Created</TableCell>
+                            <TableRow sx={{ bgcolor: 'background.default', borderBottom: `1px solid ${theme.palette.divider}` }}>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Name</TableCell>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Domain</TableCell>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</TableCell>
+                                <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Created</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
@@ -355,7 +371,7 @@ export default function DashboardOverview() {
                                         sx={{
                                             '&:last-child td, &:last-child th': { border: 0 },
                                             transition: 'background-color 0.15s ease',
-                                            '&:hover': { bgcolor: '#f8fafc' },
+                                            '&:hover': { bgcolor: 'background.default' },
                                         }}
                                     >
                                         <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{tenant.name}</TableCell>
@@ -378,7 +394,7 @@ export default function DashboardOverview() {
                                                 }}
                                             />
                                         </TableCell>
-                                        <TableCell sx={{ color: '#64748b', fontSize: 13 }}>
+                                        <TableCell sx={{ color: 'text.secondary', fontSize: 13 }}>
                                             {tenant.created_at}
                                         </TableCell>
                                     </TableRow>
@@ -394,7 +410,7 @@ export default function DashboardOverview() {
                     onPageChange={handleChangePage}
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5]}
-                    sx={{ borderTop: '1px solid #f1f5f9', bgcolor: '#fafafa' }}
+                    sx={{ borderTop: `1px solid ${theme.palette.background.default}`, bgcolor: 'background.default' }}
                 />
             </Paper>
         </Box>

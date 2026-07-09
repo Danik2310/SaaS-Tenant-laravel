@@ -11,13 +11,15 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import { toast } from 'sonner';
-import api from '../../../../services/api';
+import api from '../../../services/api';
 import DataTable from '@/Components/DataTable';
 import PlanModal from './PlanModal';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function PlansTab({ plans, fetchPlans, setError }) {
     const [planModalOpen, setPlanModalOpen] = useState(false);
     const [editingPlan, setEditingPlan] = useState(null);
+    const [deleteTargetPlan, setDeleteTargetPlan] = useState(null);
 
     const handleEditPlan = (row) => {
         setEditingPlan(row);
@@ -25,15 +27,21 @@ export default function PlansTab({ plans, fetchPlans, setError }) {
     };
 
     const handleDeletePlan = async (row) => {
-        if (!confirm('Are you sure you want to delete this plan?')) return;
+        setDeleteTargetPlan(row);
+    };
+
+    const confirmDeletePlan = async () => {
+        if (!deleteTargetPlan) return;
         try {
-            await api.delete(`/admin/api/plans/${row.id}`);
+            await api.delete(`/admin/api/plans/${deleteTargetPlan.id}`);
             fetchPlans();
             toast.success('Plan deleted successfully');
         } catch (err) {
             const message = 'Failed to delete plan';
             toast.error(message);
             setError(message);
+        } finally {
+            setDeleteTargetPlan(null);
         }
     };
 
@@ -114,6 +122,15 @@ export default function PlansTab({ plans, fetchPlans, setError }) {
                 editingPlan={editingPlan}
                 fetchPlans={fetchPlans}
                 setError={setError}
+            />
+
+            <ConfirmDialog
+                open={!!deleteTargetPlan}
+                title="Delete Plan"
+                message="Are you sure you want to delete this plan?"
+                confirmLabel="Delete"
+                onConfirm={confirmDeletePlan}
+                onCancel={() => setDeleteTargetPlan(null)}
             />
         </Box>
     );

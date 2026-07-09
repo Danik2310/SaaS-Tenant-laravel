@@ -4,8 +4,8 @@ import { ThemeProvider } from '@mui/material/styles';
 import { Toaster } from 'sonner';
 import CircularProgress from '@mui/material/CircularProgress';
 import theme from '../theme';
-import Login from '../modules/landlord/Login';
-import Dashboard from '../modules/landlord/Dashboard';
+import Login from '../modules/shared/Login';
+import Dashboard from '../modules/shared/Dashboard';
 import { AuthProvider, useAuthContext } from '../context/AuthContext';
 import ErrorBoundary from '../Components/ErrorBoundary';
 

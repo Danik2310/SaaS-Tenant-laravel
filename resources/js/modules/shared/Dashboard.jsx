@@ -1,6 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
-import api from '../../services/api';
-import Navbar from '../../components/Navbar';
+import api from '@/services/api';
+import Navbar from '@/Components/Navbar';
 import DataTable from '@/Components/DataTable';
 import BlockIcon from '@mui/icons-material/Block';
 import LanguageIcon from '@mui/icons-material/Language';
@@ -22,22 +22,23 @@ import Switch from '@mui/material/Switch';
 import CircularProgress from '@mui/material/CircularProgress';
 import ErrorBoundary from '@/Components/ErrorBoundary';
 import { useAuthContext } from '@/context/AuthContext';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 const DashboardOverview = lazy(() => import('./DashboardOverview'));
-const TenantList = lazy(() => import('./tenants/TenantList'));
-const TenantForm = lazy(() => import('./tenants/TenantForm'));
-const Staff = lazy(() => import('./staff/StaffList'));
-const Plans = lazy(() => import('./billing/Plans'));
-const RolePermissions = lazy(() => import('./staff/RolePermissions'));
-const Profile = lazy(() => import('./profile/Profile'));
-const Subscriptions = lazy(() => import('./subscriptions/Subscriptions'));
-const ActivityLog = lazy(() => import('./activity/ActivityLog'));
-const Settings = lazy(() => import('./settings/Settings'));
-const ResourceUsage = lazy(() => import('./resource-usage/ResourceUsage'));
-const DatabaseModal = lazy(() => import('./modals/DatabaseModal'));
-const MigrationModal = lazy(() => import('./modals/MigrationModal'));
-const DomainModal = lazy(() => import('./modals/DomainModal'));
-const ChangePlanModal = lazy(() => import('./modals/ChangePlanModal'));
+const TenantList = lazy(() => import('@/modules/tenants/TenantList'));
+const TenantForm = lazy(() => import('@/modules/tenants/TenantForm'));
+const Staff = lazy(() => import('@/modules/shared/staff/StaffList'));
+const Plans = lazy(() => import('@/modules/billing/Plans'));
+const RolePermissions = lazy(() => import('@/modules/shared/staff/RolePermissions'));
+const Profile = lazy(() => import('@/modules/shared/profile/Profile'));
+const Subscriptions = lazy(() => import('@/modules/billing/Subscriptions'));
+const ActivityLog = lazy(() => import('@/modules/shared/activity/ActivityLog'));
+const Settings = lazy(() => import('@/modules/shared/settings/Settings'));
+const ResourceUsage = lazy(() => import('@/modules/billing/ResourceUsage'));
+const DatabaseModal = lazy(() => import('@/modules/shared/modals/DatabaseModal'));
+const MigrationModal = lazy(() => import('@/modules/shared/modals/MigrationModal'));
+const DomainModal = lazy(() => import('@/modules/shared/modals/DomainModal'));
+const ChangePlanModal = lazy(() => import('@/modules/billing/modals/ChangePlanModal'));
 
 export default function Dashboard() {
     const { user, permissions = [] } = useAuthContext();
@@ -59,6 +60,9 @@ export default function Dashboard() {
     const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
     const [bulkLoading, setBulkLoading] = useState(false);
     const [bulkPlanChangeOpen, setBulkPlanChangeOpen] = useState(false);
+    const [deleteConfirmTenant, setDeleteConfirmTenant] = useState(null);
+    const [restoreConfirmId, setRestoreConfirmId] = useState(null);
+    const [impersonateConfirmTenant, setImpersonateConfirmTenant] = useState(null);
 
     useEffect(() => {
         if (permissions.includes('manage tenants')) {
@@ -120,30 +124,40 @@ export default function Dashboard() {
     };
 
     const handleDeleteTenant = async (tenant) => {
-        if (window.confirm('This will soft-delete the tenant. The data will be preserved and can be restored later. Continue?')) {
-            try {
-                await api.delete(`/admin/api/tenants/${tenant.id}`);
-                toast.success('Tenant soft-deleted successfully');
-                fetchTenants();
-            } catch (err) {
-                const message = 'Failed to delete tenant';
-                toast.error(message);
-                setError(message);
-            }
+        setDeleteConfirmTenant(tenant);
+    };
+
+    const confirmDeleteTenant = async () => {
+        if (!deleteConfirmTenant) return;
+        try {
+            await api.delete(`/admin/api/tenants/${deleteConfirmTenant.id}`);
+            toast.success('Tenant soft-deleted successfully');
+            fetchTenants();
+        } catch (err) {
+            const message = 'Failed to delete tenant';
+            toast.error(message);
+            setError(message);
+        } finally {
+            setDeleteConfirmTenant(null);
         }
     };
 
     const handleRestoreTenant = async (id) => {
-        if (window.confirm('Restore this tenant? It will be reactivated.')) {
-            try {
-                await api.patch(`/admin/api/tenants/${id}/restore`);
-                toast.success('Tenant restored successfully');
-                fetchTenants();
-            } catch (err) {
-                const message = 'Failed to restore tenant';
-                toast.error(message);
-                setError(message);
-            }
+        setRestoreConfirmId(id);
+    };
+
+    const confirmRestoreTenant = async () => {
+        if (restoreConfirmId === null) return;
+        try {
+            await api.patch(`/admin/api/tenants/${restoreConfirmId}/restore`);
+            toast.success('Tenant restored successfully');
+            fetchTenants();
+        } catch (err) {
+            const message = 'Failed to restore tenant';
+            toast.error(message);
+            setError(message);
+        } finally {
+            setRestoreConfirmId(null);
         }
     };
 
@@ -182,12 +196,15 @@ export default function Dashboard() {
     };
 
     const handleImpersonateTenant = async (tenant) => {
-        if (!confirm(`Impersonate tenant ${tenant.id} (${tenant.domain})?`)) return;
+        setImpersonateConfirmTenant(tenant);
+    };
+
+    const confirmImpersonateTenant = async () => {
+        if (!impersonateConfirmTenant) return;
         try {
-            const res = await api.post('/admin/api/impersonate', { tenant_id: tenant.id });
+            const res = await api.post('/admin/api/impersonate', { tenant_id: impersonateConfirmTenant.id });
             const domain = res.data.domain;
             if (domain) {
-                // Redirect to tenant domain root
                 window.location.href = `http://${domain}`;
             } else {
                 const message = 'No domain available for tenant';
@@ -198,6 +215,8 @@ export default function Dashboard() {
             const message = err.response?.data?.message || 'Failed to impersonate tenant';
             toast.error(message);
             setError(message);
+        } finally {
+            setImpersonateConfirmTenant(null);
         }
     };
 
@@ -542,6 +561,33 @@ export default function Dashboard() {
                                 setSelectedTenantIds(new Set());
                                 fetchTenants();
                             }}
+                        />
+
+                        <ConfirmDialog
+                            open={!!deleteConfirmTenant}
+                            title="Delete Tenant"
+                            message="This will soft-delete the tenant. The data will be preserved and can be restored later. Continue?"
+                            confirmLabel="Delete"
+                            onConfirm={confirmDeleteTenant}
+                            onCancel={() => setDeleteConfirmTenant(null)}
+                        />
+
+                        <ConfirmDialog
+                            open={restoreConfirmId !== null}
+                            title="Restore Tenant"
+                            message="Restore this tenant? It will be reactivated."
+                            confirmLabel="Restore"
+                            onConfirm={confirmRestoreTenant}
+                            onCancel={() => setRestoreConfirmId(null)}
+                        />
+
+                        <ConfirmDialog
+                            open={!!impersonateConfirmTenant}
+                            title="Impersonate Tenant"
+                            message={impersonateConfirmTenant ? `Impersonate tenant ${impersonateConfirmTenant.id} (${impersonateConfirmTenant.domain})?` : ''}
+                            confirmLabel="Impersonate"
+                            onConfirm={confirmImpersonateTenant}
+                            onCancel={() => setImpersonateConfirmTenant(null)}
                         />
                     </Suspense>
                 </Box>

@@ -22,10 +22,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { FormInput, ButtonPrimary, ButtonSecondary } from '@/Components/FormElements';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function WarehouseIndex({ warehouses }) {
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const data = warehouses.data || warehouses;
 
     const { data: formData, setData, errors, post, put, reset, processing } = useForm({
@@ -61,10 +63,14 @@ export default function WarehouseIndex({ warehouses }) {
     };
 
     const handleDelete = (wh) => {
-        if (!confirm(`Delete "${wh.name}"?`)) return;
-        router.delete(route('tenant.warehouses.destroy', wh.id), {
-            onSuccess: () => toast.success('Warehouse deleted'),
-            onError: () => toast.error('Failed to delete'),
+        setDeleteTarget(wh);
+    };
+
+    const confirmDelete = () => {
+        if (!deleteTarget) return;
+        router.delete(route('tenant.warehouses.destroy', deleteTarget.id), {
+            onSuccess: () => { toast.success('Warehouse deleted'); setDeleteTarget(null); },
+            onError: () => { toast.error('Failed to delete'); setDeleteTarget(null); },
         });
     };
 
@@ -73,12 +79,12 @@ export default function WarehouseIndex({ warehouses }) {
             <Head title="Warehouses" />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
                     Warehouses
                 </Typography>
                 <Button variant="contained" size="small" startIcon={<AddIcon />}
                     onClick={openCreate}
-                    sx={{ bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' }, fontWeight: 600 }}>
+                    sx={{ fontWeight: 600 }}>
                     Add Warehouse
                 </Button>
             </Box>
@@ -87,31 +93,31 @@ export default function WarehouseIndex({ warehouses }) {
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
-                            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                            <TableRow sx={{ bgcolor: 'action.hover' }}>
                                 {['Name', 'Location', 'Actions'].map(h => (
-                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</TableCell>
+                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: 'text.secondary', textTransform: 'uppercase' }}>{h}</TableCell>
                                 ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={3} sx={{ textAlign: 'center', py: 5, color: '#94a3b8' }}>
+                                    <TableCell colSpan={3} sx={{ textAlign: 'center', py: 5, color: 'text.disabled' }}>
                                         No warehouses found.
                                     </TableCell>
                                 </TableRow>
                             ) : data.map((wh) => (
-                                <TableRow key={wh.id} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
+                                <TableRow key={wh.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                                     <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{wh.name}</TableCell>
                                     <TableCell sx={{ fontSize: 13 }}>{wh.location || '—'}</TableCell>
                                     <TableCell>
                                         <Tooltip title="Edit">
-                                            <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => openEdit(wh)}>
+                                            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => openEdit(wh)}>
                                                 <EditIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Delete">
-                                            <IconButton size="small" sx={{ color: '#ef4444' }} onClick={() => handleDelete(wh)}>
+                                            <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => handleDelete(wh)}>
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
@@ -125,7 +131,7 @@ export default function WarehouseIndex({ warehouses }) {
 
             <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
                 <form onSubmit={handleSubmit}>
-                    <DialogTitle sx={{ fontWeight: 700, fontSize: 16, color: '#0f172a' }}>
+                    <DialogTitle sx={{ fontWeight: 700, fontSize: 16, color: 'text.primary' }}>
                         {editing ? 'Edit Warehouse' : 'Add Warehouse'}
                     </DialogTitle>
                     <DialogContent>
@@ -140,7 +146,7 @@ export default function WarehouseIndex({ warehouses }) {
                                 placeholder="e.g., Building A, Floor 2" />
                         </FormInput>
                     </DialogContent>
-                    <DialogActions sx={{ p: 2, borderTop: '1px solid #f1f5f9' }}>
+                    <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                         <ButtonSecondary onClick={() => setOpen(false)}>Cancel</ButtonSecondary>
                         <ButtonPrimary type="submit" disabled={processing}>
                             {processing ? 'Saving...' : (editing ? 'Update' : 'Create')}
@@ -148,6 +154,15 @@ export default function WarehouseIndex({ warehouses }) {
                     </DialogActions>
                 </form>
             </Dialog>
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Delete Warehouse"
+                message={deleteTarget ? `Delete "${deleteTarget.name}"?` : ''}
+                confirmLabel="Delete"
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </TenantLayout>
     );
 }

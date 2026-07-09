@@ -22,10 +22,12 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { FormInput, ButtonPrimary, ButtonSecondary } from '@/Components/FormElements';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function CategoryIndex({ categories }) {
     const [open, setOpen] = useState(false);
     const [editing, setEditing] = useState(null);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const data = categories.data || categories;
 
     const { data: formData, setData, errors, post, put, reset, processing } = useForm({
@@ -61,10 +63,14 @@ export default function CategoryIndex({ categories }) {
     };
 
     const handleDelete = (cat) => {
-        if (!confirm(`Delete "${cat.name}"?`)) return;
-        router.delete(route('tenant.categories.destroy', cat.id), {
-            onSuccess: () => toast.success('Category deleted'),
-            onError: (err) => toast.error(err?.message || 'Failed to delete'),
+        setDeleteTarget(cat);
+    };
+
+    const confirmDelete = () => {
+        if (!deleteTarget) return;
+        router.delete(route('tenant.categories.destroy', deleteTarget.id), {
+            onSuccess: () => { toast.success('Category deleted'); setDeleteTarget(null); },
+            onError: (err) => { toast.error(err?.message || 'Failed to delete'); setDeleteTarget(null); },
         });
     };
 
@@ -75,12 +81,12 @@ export default function CategoryIndex({ categories }) {
             <Head title="Categories" />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
                     Categories
                 </Typography>
                 <Button variant="contained" size="small" startIcon={<AddIcon />}
                     onClick={openCreate}
-                    sx={{ bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' }, fontWeight: 600 }}>
+                    sx={{ fontWeight: 600 }}>
                     Add Category
                 </Button>
             </Box>
@@ -89,32 +95,32 @@ export default function CategoryIndex({ categories }) {
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
-                            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                            <TableRow sx={{ bgcolor: 'action.hover' }}>
                                 {['Name', 'Parent', 'Products', 'Actions'].map(h => (
-                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</TableCell>
+                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: 'text.secondary', textTransform: 'uppercase' }}>{h}</TableCell>
                                 ))}
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} sx={{ textAlign: 'center', py: 5, color: '#94a3b8' }}>
+                                    <TableCell colSpan={4} sx={{ textAlign: 'center', py: 5, color: 'text.disabled' }}>
                                         No categories found.
                                     </TableCell>
                                 </TableRow>
                             ) : data.map((cat) => (
-                                <TableRow key={cat.id} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
+                                <TableRow key={cat.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                                     <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{cat.name}</TableCell>
                                     <TableCell sx={{ fontSize: 13 }}>{cat.parent?.name || '—'}</TableCell>
                                     <TableCell sx={{ fontSize: 13 }}>{cat.products_count ?? 0}</TableCell>
                                     <TableCell>
                                         <Tooltip title="Edit">
-                                            <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => openEdit(cat)}>
+                                            <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => openEdit(cat)}>
                                                 <EditIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Delete">
-                                            <IconButton size="small" sx={{ color: '#ef4444' }} onClick={() => handleDelete(cat)}>
+                                            <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => handleDelete(cat)}>
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
@@ -128,7 +134,7 @@ export default function CategoryIndex({ categories }) {
 
             <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
                 <form onSubmit={handleSubmit}>
-                    <DialogTitle sx={{ fontWeight: 700, fontSize: 16, color: '#0f172a' }}>
+                    <DialogTitle sx={{ fontWeight: 700, fontSize: 16, color: 'text.primary' }}>
                         {editing ? 'Edit Category' : 'Add Category'}
                     </DialogTitle>
                     <DialogContent>
@@ -140,7 +146,7 @@ export default function CategoryIndex({ categories }) {
                         <FormInput label="Parent Category" error={errors.parent_id}>
                             <select value={formData.parent_id}
                                 onChange={(e) => setData('parent_id', e.target.value)}
-                                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 14, fontFamily: 'inherit' }}>
+                                style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--mui-palette-divider, #e2e8f0)', borderRadius: 6, fontSize: 14, fontFamily: 'inherit' }}>
                                 <option value="">None (top level)</option>
                                 {allCategories.filter(c => !editing || c.id !== editing.id).map((cat) => (
                                     <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -148,7 +154,7 @@ export default function CategoryIndex({ categories }) {
                             </select>
                         </FormInput>
                     </DialogContent>
-                    <DialogActions sx={{ p: 2, borderTop: '1px solid #f1f5f9' }}>
+                    <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                         <ButtonSecondary onClick={() => setOpen(false)}>Cancel</ButtonSecondary>
                         <ButtonPrimary type="submit" disabled={processing}>
                             {processing ? 'Saving...' : (editing ? 'Update' : 'Create')}
@@ -156,6 +162,15 @@ export default function CategoryIndex({ categories }) {
                     </DialogActions>
                 </form>
             </Dialog>
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Delete Category"
+                message={deleteTarget ? `Delete "${deleteTarget.name}"?` : ''}
+                confirmLabel="Delete"
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </TenantLayout>
     );
 }

@@ -19,17 +19,23 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function ProductIndex({ products }) {
     const [page, setPage] = useState(0);
     const [rowsPerPage] = useState(15);
+    const [deleteTarget, setDeleteTarget] = useState(null);
     const data = products.data || products;
 
     const handleDelete = (product) => {
-        if (!confirm(`Delete "${product.name}"? This can be undone.`)) return;
-        router.delete(route('tenant.products.destroy', product.id), {
-            onSuccess: () => toast.success('Product deleted'),
-            onError: () => toast.error('Failed to delete product'),
+        setDeleteTarget(product);
+    };
+
+    const confirmDelete = () => {
+        if (!deleteTarget) return;
+        router.delete(route('tenant.products.destroy', deleteTarget.id), {
+            onSuccess: () => { toast.success('Product deleted'); setDeleteTarget(null); },
+            onError: () => { toast.error('Failed to delete product'); setDeleteTarget(null); },
         });
     };
 
@@ -42,12 +48,12 @@ export default function ProductIndex({ products }) {
             <Head title="Products" />
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
                     Products
                 </Typography>
                 <Link href={route('tenant.products.create')}>
                     <Button variant="contained" size="small" startIcon={<AddIcon />}
-                        sx={{ bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' }, fontWeight: 600 }}>
+                        sx={{ fontWeight: 600 }}>
                         Add Product
                     </Button>
                 </Link>
@@ -57,9 +63,9 @@ export default function ProductIndex({ products }) {
                 <TableContainer>
                     <Table size="small">
                         <TableHead>
-                            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                            <TableRow sx={{ bgcolor: 'action.hover' }}>
                                 {['Name', 'SKU', 'Category', 'Price', 'Cost', 'Status', 'Actions'].map(h => (
-                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
+                                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: 'text.secondary', textTransform: 'uppercase' }}>
                                         {h}
                                     </TableCell>
                                 ))}
@@ -68,34 +74,34 @@ export default function ProductIndex({ products }) {
                         <TableBody>
                             {data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 5, color: '#94a3b8' }}>
+                                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 5, color: 'text.disabled' }}>
                                         No products found.
                                     </TableCell>
                                 </TableRow>
                             ) : data.map((product) => (
-                                <TableRow key={product.id} sx={{ '&:hover': { bgcolor: '#f8fafc' } }}>
+                                <TableRow key={product.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                                     <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{product.name}</TableCell>
-                                    <TableCell><code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{product.sku}</code></TableCell>
+                                    <TableCell><code style={{ background: 'var(--mui-palette-action-hover, #f1f5f9)', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{product.sku}</code></TableCell>
                                     <TableCell sx={{ fontSize: 13 }}>{product.category?.name || '—'}</TableCell>
                                     <TableCell sx={{ fontSize: 13 }}>${Number(product.price).toFixed(2)}</TableCell>
                                     <TableCell sx={{ fontSize: 13 }}>{product.cost ? `$${Number(product.cost).toFixed(2)}` : '—'}</TableCell>
                                     <TableCell>
                                         <Chip label={product.active ? 'Active' : 'Inactive'} size="small"
                                             sx={{
-                                                bgcolor: product.active ? '#dcfce7' : '#fee2e2',
-                                                color: product.active ? '#166534' : '#991b1b',
+                                                bgcolor: product.active ? 'success.light' : 'error.light',
+                                                color: product.active ? 'success.dark' : 'error.dark',
                                                 fontWeight: 600, height: 24, fontSize: 12,
                                             }} />
                                     </TableCell>
                                     <TableCell>
                                         <Tooltip title="Edit">
-                                            <IconButton size="small" sx={{ color: '#3b82f6' }}
+                                            <IconButton size="small" sx={{ color: 'primary.main' }}
                                                 component={Link} href={route('tenant.products.edit', product.id)}>
                                                 <EditIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Delete">
-                                            <IconButton size="small" sx={{ color: '#ef4444' }} onClick={() => handleDelete(product)}>
+                                            <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => handleDelete(product)}>
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
@@ -111,6 +117,15 @@ export default function ProductIndex({ products }) {
                         rowsPerPageOptions={[products.per_page]} />
                 )}
             </Paper>
+
+            <ConfirmDialog
+                open={!!deleteTarget}
+                title="Delete Product"
+                message={deleteTarget ? `Delete "${deleteTarget.name}"? This can be undone.` : ''}
+                confirmLabel="Delete"
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteTarget(null)}
+            />
         </TenantLayout>
     );
 }

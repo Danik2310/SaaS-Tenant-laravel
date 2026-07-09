@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTheme } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Table from '@mui/material/Table';
@@ -76,6 +77,7 @@ const DataTable = React.memo(function DataTable({
     lastUpdated,
     onRefresh,
 }) {
+    const theme = useTheme();
     const [internalPage, setInternalPage] = useState(0);
     const [internalRowsPerPage, setInternalRowsPerPage] = useState(defaultRowsPerPage);
     const [menuAnchor, setMenuAnchor] = useState(null);
@@ -165,7 +167,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'edit') {
                         return (
                             <Tooltip key={idx} title="Edit">
-                                <IconButton size="small" sx={{ color: '#3b82f6' }} onClick={() => onEdit(row)}>
+                                <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => onEdit(row)}>
                                     <EditIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -174,7 +176,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'toggle') {
                         return (
                             <Tooltip key={idx} title={row.is_active ? 'Deactivate' : 'Activate'}>
-                                <IconButton size="small" sx={{ color: action.isActive ? '#ef4444' : '#22c55e' }} onClick={() => onToggleStatus(row)}>
+                                <IconButton size="small" sx={{ color: action.isActive ? 'error.main' : 'success.main' }} onClick={() => onToggleStatus(row)}>
                                     {action.isActive ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
                                 </IconButton>
                             </Tooltip>
@@ -183,7 +185,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'view') {
                         return (
                             <Tooltip key={idx} title="View">
-                                <IconButton size="small" sx={{ color: '#64748b' }} onClick={() => onView(row)}>
+                                <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => onView(row)}>
                                     <VisibilityIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -192,7 +194,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'impersonate') {
                         return (
                             <Tooltip key={idx} title="Impersonate">
-                                <IconButton size="small" sx={{ color: '#8b5cf6' }} onClick={() => onImpersonate(row)}>
+                                <IconButton size="small" sx={{ color: 'secondary.main' }} onClick={() => onImpersonate(row)}>
                                     <LoginIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -203,7 +205,7 @@ const DataTable = React.memo(function DataTable({
                         return (
                             <React.Fragment key={idx}>
                                 <Tooltip title="More actions">
-                                <IconButton size="small" sx={{ color: '#64748b' }} onClick={(e) => handleMenuOpen(e, row)}>
+                                <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={(e) => handleMenuOpen(e, row)}>
                                     <MoreVertIcon fontSize="small" />
                                 </IconButton>
                                 </Tooltip>
@@ -231,7 +233,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'delete') {
                         return (
                             <Tooltip key={idx} title="Delete">
-                                <IconButton size="small" sx={{ color: '#ef4444' }} onClick={() => onDelete(row)}>
+                                <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDelete(row)}>
                                     <DeleteIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -252,13 +254,13 @@ const DataTable = React.memo(function DataTable({
             {(onRefresh || lastUpdated) && (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', px: 2, pt: 1, gap: 1 }}>
                     {lastUpdated && (
-                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                             Data as of {lastUpdated}
                         </Typography>
                     )}
                     {onRefresh && (
                         <Tooltip title="Refresh">
-                            <IconButton size="small" sx={{ color: '#64748b' }} onClick={onRefresh}>
+                            <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={onRefresh}>
                                 <RefreshIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
@@ -268,7 +270,7 @@ const DataTable = React.memo(function DataTable({
             <TableContainer>
                 <Table size="small">
                     <TableHead>
-                        <TableRow sx={{ borderBottom: '1px solid #f1f5f9', bgcolor: '#f8fafc' }}>
+                        <TableRow sx={{ borderBottom: '1px solid', borderColor: 'grey.100', bgcolor: 'grey.50' }}>
                             {enableSelection && (
                                 <TableCell sx={{ width: 48, py: 1.5 }}>
                                     <Checkbox
@@ -285,7 +287,7 @@ const DataTable = React.memo(function DataTable({
                                     sx={{
                                         fontWeight: 600,
                                         fontSize: '12px',
-                                        color: '#64748b',
+                                        color: 'text.secondary',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
                                         py: 1.5,
@@ -299,7 +301,7 @@ const DataTable = React.memo(function DataTable({
                                     sx={{
                                         fontWeight: 600,
                                         fontSize: '12px',
-                                        color: '#64748b',
+                                        color: 'text.secondary',
                                         textTransform: 'uppercase',
                                         letterSpacing: '0.05em',
                                         py: 1.5,
@@ -318,8 +320,8 @@ const DataTable = React.memo(function DataTable({
                         ) : displayData.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={colCount} sx={{ textAlign: 'center', py: 6 }}>
-                                    <InboxIcon sx={{ fontSize: 48, color: '#cbd5e1', mb: 1 }} />
-                                    <Typography variant="body1" sx={{ fontWeight: 600, color: '#64748b' }}>
+                                    <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                                    <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                         {emptyMessage}
                                     </Typography>
                                 </TableCell>
@@ -329,9 +331,10 @@ const DataTable = React.memo(function DataTable({
                                 <TableRow
                                     key={row.id ?? idx}
                                     sx={{
-                                        borderBottom: '1px solid #f1f5f9',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'grey.100',
                                         '&:last-child td, &:last-child th': { border: 0 },
-                                        '&:hover': { bgcolor: '#f8fafc' },
+                                        '&:hover': { bgcolor: 'grey.50' },
                                     }}
                                 >
                                     {enableSelection && (
@@ -367,7 +370,7 @@ const DataTable = React.memo(function DataTable({
                 rowsPerPage={currentRowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 rowsPerPageOptions={rowsPerPageOptions}
-                sx={{ borderTop: '1px solid #f1f5f9' }}
+                sx={{ borderTop: '1px solid', borderColor: 'grey.100' }}
             />
         </Paper>
     );

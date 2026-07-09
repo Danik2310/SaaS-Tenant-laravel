@@ -22,7 +22,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { toast } from 'sonner';
-import api from '../../../../services/api';
+import api from '../../../services/api';
 import DataTable from '@/Components/DataTable';
 import PaymentMethodModal from './PaymentMethodModal';
 

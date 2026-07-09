@@ -19,11 +19,11 @@ export default class ErrorBoundary extends React.Component {
       const message = this.props.fallbackMessage || 'Something went wrong';
 
       return (
-        <Box sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h6" sx={{ color: '#dc2626', mb: 1 }}>
+        <Box sx={{ p: 4, textAlign: 'center' }} role="alert">
+          <Typography variant="h6" sx={{ color: 'error.main', mb: 1 }}>
             {message}
           </Typography>
-          <Typography variant="body2" sx={{ color: '#64748b', mb: 2 }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
             This section failed to load. Please try refreshing the page.
           </Typography>
           <Button variant="outlined" size="small" onClick={() => window.location.reload()}>

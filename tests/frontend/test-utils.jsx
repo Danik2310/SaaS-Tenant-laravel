@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, renderHook } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
+import { MemoryRouter } from 'react-router-dom';
 import theme from '../../resources/js/theme';
 
 export function createMockApi() {
@@ -57,12 +58,14 @@ export function createMockApi() {
   return mockApi;
 }
 
-export function renderWithProviders(ui, { ...options } = {}) {
+export function renderWithProviders(ui, { route = '/', ...options } = {}) {
   function Wrapper({ children }) {
     return (
-      <ThemeProvider theme={theme}>
-        {children}
-      </ThemeProvider>
+      <MemoryRouter initialEntries={[route]}>
+        <ThemeProvider theme={theme}>
+          {children}
+        </ThemeProvider>
+      </MemoryRouter>
     );
   }
 
@@ -72,9 +75,11 @@ export function renderWithProviders(ui, { ...options } = {}) {
 export function renderHookWithProviders(callback, options) {
   function Wrapper({ children }) {
     return (
-      <ThemeProvider theme={theme}>
-        {children}
-      </ThemeProvider>
+      <MemoryRouter>
+        <ThemeProvider theme={theme}>
+          {children}
+        </ThemeProvider>
+      </MemoryRouter>
     );
   }
 

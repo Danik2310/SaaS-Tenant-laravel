@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
 import StaffForm from './StaffForm';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import DataTable from '@/Components/DataTable';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -18,6 +19,7 @@ export default function StaffList() {
     const [showForm, setShowForm] = useState(false);
     const [editingStaff, setEditingStaff] = useState(null);
     const [error, setError] = useState(null);
+    const [confirmDelete, setConfirmDelete] = useState({ open: false, staff: null });
 
     useEffect(() => {
         fetchStaff();
@@ -60,10 +62,13 @@ export default function StaffList() {
         }
     };
 
-    const handleDeleteStaff = async (row) => {
-        if (!window.confirm(`Are you sure you want to delete ${row.name}? This action can be undone.`)) {
-            return;
-        }
+    const handleDeleteStaff = (row) => {
+        setConfirmDelete({ open: true, staff: row });
+    };
+
+    const handleConfirmDelete = async () => {
+        const row = confirmDelete.staff;
+        setConfirmDelete({ open: false, staff: null });
         try {
             await api.delete(`/admin/api/staff/${row.id}`);
             toast.success('Staff member deleted successfully');
@@ -71,6 +76,10 @@ export default function StaffList() {
         } catch (err) {
             toast.error('Failed to delete staff');
         }
+    };
+
+    const handleCancelDelete = () => {
+        setConfirmDelete({ open: false, staff: null });
     };
 
     const handleToggleStatus = async (row) => {
@@ -201,6 +210,15 @@ export default function StaffList() {
                 onDelete={handleDeleteStaff}
                 onToggleStatus={handleToggleStatus}
                 emptyMessage="No staff members found. Create one to get started."
+            />
+
+            <ConfirmDialog
+                open={confirmDelete.open}
+                title="Delete Staff Member"
+                message={`Are you sure you want to delete ${confirmDelete.staff?.name}? This action can be undone.`}
+                confirmLabel="Delete"
+                onConfirm={handleConfirmDelete}
+                onCancel={handleCancelDelete}
             />
         </>
     );

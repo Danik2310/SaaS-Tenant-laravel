@@ -5,7 +5,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import { toast } from 'sonner';
-import api from '../../../../services/api';
+import api from '../../../services/api';
 import { FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
 
 export default function PlanModal({ open, onClose, editingPlan, fetchPlans, setError }) {

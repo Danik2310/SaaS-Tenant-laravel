@@ -14,6 +14,7 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Tooltip from '@mui/material/Tooltip';
 import CircularProgress from '@mui/material/CircularProgress';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function RolePermissions() {
     const [tab, setTab] = useState('roles');
@@ -23,6 +24,7 @@ export default function RolePermissions() {
     const [showRoleForm, setShowRoleForm] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [error, setError] = useState(null);
+    const [deleteTargetRole, setDeleteTargetRole] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -68,16 +70,22 @@ export default function RolePermissions() {
         }
     }, [editingItem]);
 
-    const handleDeleteRole = useCallback(async (row) => {
-        if (!confirm(`Delete role "${row.name}"? This cannot be undone.`)) return;
+    const handleDeleteRole = useCallback((row) => {
+        setDeleteTargetRole(row);
+    }, []);
+
+    const confirmDeleteRole = useCallback(async () => {
+        if (!deleteTargetRole) return;
         try {
-            await api.delete(`/admin/api/roles/${row.id}`);
+            await api.delete(`/admin/api/roles/${deleteTargetRole.id}`);
             toast.success('Role deleted');
-            setRoles(prev => prev.filter(r => r.id !== row.id));
+            setRoles(prev => prev.filter(r => r.id !== deleteTargetRole.id));
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to delete role');
+        } finally {
+            setDeleteTargetRole(null);
         }
-    }, []);
+    }, [deleteTargetRole]);
 
     const roleColumns = [
         { accessorKey: 'name', header: 'Name' },
@@ -225,6 +233,15 @@ export default function RolePermissions() {
                     emptyMessage="No permissions found."
                 />
             )}
+
+            <ConfirmDialog
+                open={!!deleteTargetRole}
+                title="Delete Role"
+                message={deleteTargetRole ? `Delete role "${deleteTargetRole.name}"? This cannot be undone.` : ''}
+                confirmLabel="Delete"
+                onConfirm={confirmDeleteRole}
+                onCancel={() => setDeleteTargetRole(null)}
+            />
         </>
     );
 }
