@@ -4,17 +4,26 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
+        if (! Schema::hasTable('payment_methods')) {
+            return;
+        }
+
         DB::statement("ALTER TABLE payment_methods MODIFY COLUMN provider VARCHAR(255) NOT NULL DEFAULT 'other'");
         DB::statement("ALTER TABLE payment_methods MODIFY COLUMN mode VARCHAR(255) NOT NULL DEFAULT 'test'");
     }
 
     public function down(): void
     {
+        if (! Schema::hasTable('payment_methods')) {
+            return;
+        }
+
         $invalidProviders = DB::table('payment_methods')
             ->whereNotIn('provider', ['stripe', 'paypal', 'other'])
             ->exists();
