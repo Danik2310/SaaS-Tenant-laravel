@@ -22,7 +22,8 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            '@': '/resources/js',
+            '@': new URL('./resources/js', import.meta.url).pathname,
+            'ziggy-js': new URL('./vendor/tightenco/ziggy', import.meta.url).pathname,
         },
     },
 });
