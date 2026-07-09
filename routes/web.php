@@ -1,19 +1,19 @@
 <?php
 
-use App\Http\Controllers\Admin\ActivityLogController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\ExportController;
-use App\Http\Controllers\Admin\ImpersonationController;
-use App\Http\Controllers\Admin\PaymentMethodController;
-use App\Http\Controllers\Admin\PlanController;
-use App\Http\Controllers\Admin\RolePermissionController;
-use App\Http\Controllers\Admin\SettingController;
-use App\Http\Controllers\Admin\SubscriptionController;
-use App\Http\Controllers\Admin\TenantController;
-use App\Http\Controllers\Admin\TenantMetricsController;
-use App\Http\Controllers\AdminAuthController;
-use App\Http\Controllers\AdminProfileController;
-use App\Http\Controllers\StaffController;
+use App\Billing\Http\Controllers\Admin\PaymentMethodController;
+use App\Billing\Http\Controllers\Admin\SubscriptionController;
+use App\Plans\Http\Controllers\Admin\PlanController;
+use App\Shared\Http\Controllers\Admin\ActivityLogController;
+use App\Shared\Http\Controllers\Admin\AdminProfileController;
+use App\Shared\Http\Controllers\Admin\Auth\AdminAuthController;
+use App\Shared\Http\Controllers\Admin\DashboardController;
+use App\Shared\Http\Controllers\Admin\ExportController;
+use App\Shared\Http\Controllers\Admin\ImpersonationController;
+use App\Shared\Http\Controllers\Admin\RolePermissionController;
+use App\Shared\Http\Controllers\Admin\SettingController;
+use App\Shared\Http\Controllers\Admin\StaffController;
+use App\Tenants\Http\Controllers\Admin\TenantController;
+use App\Tenants\Http\Controllers\Admin\TenantMetricsController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -45,8 +45,8 @@ Route::middleware(['central.domain'])->group(function () {
     Route::post('/central/logout', [AdminAuthController::class, 'logout'])->middleware('auth:admin')->name('central.logout');
 });
 
-// Unauthorized page (accessible to authenticated admin users)
-Route::middleware(['auth:admin'])->get('/admin/unauthorized', function () {
+// Unauthorized page (accessible to authenticated admin users on central domain only)
+Route::middleware(['auth:admin', 'central.domain'])->get('/admin/unauthorized', function () {
     return Inertia::render('Unauthorized');
 })->name('admin.unauthorized');
 

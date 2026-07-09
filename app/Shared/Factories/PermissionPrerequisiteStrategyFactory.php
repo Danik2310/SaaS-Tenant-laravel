@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Shared\Factories;
+
+use App\Shared\Contracts\PermissionPrerequisiteStrategyInterface;
+use App\Shared\Strategies\NullPrerequisiteStrategy;
+use App\Shared\Strategies\TenantModulePrerequisiteStrategy;
+
+class PermissionPrerequisiteStrategyFactory
+{
+    private const STRATEGY_MAP = [
+        'impersonate tenants' => TenantModulePrerequisiteStrategy::class,
+        'manage subscriptions' => TenantModulePrerequisiteStrategy::class,
+        'restore tenants' => TenantModulePrerequisiteStrategy::class,
+    ];
+
+    public static function make(string $permissionName): PermissionPrerequisiteStrategyInterface
+    {
+        $strategyClass = self::STRATEGY_MAP[$permissionName] ?? NullPrerequisiteStrategy::class;
+
+        return app($strategyClass);
+    }
+
+    public static function getManagedPermissions(): array
+    {
+        return array_keys(self::STRATEGY_MAP);
+    }
+}

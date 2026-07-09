@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\Admin\AuthController;
+use App\Billing\Http\Controllers\Tenant\BillingController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -13,11 +13,12 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Tenant\CategoryController;
-use App\Http\Controllers\Tenant\DashboardController;
-use App\Http\Controllers\Tenant\InventoryMovementController;
-use App\Http\Controllers\Tenant\ProductController;
-use App\Http\Controllers\Tenant\WarehouseController;
+use App\Products\Http\Controllers\Tenant\CategoryController;
+use App\Products\Http\Controllers\Tenant\InventoryMovementController;
+use App\Products\Http\Controllers\Tenant\ProductController;
+use App\Products\Http\Controllers\Tenant\WarehouseController;
+use App\Shared\Http\Controllers\Admin\AuthController;
+use App\Shared\Http\Controllers\Tenant\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -112,6 +113,10 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             // Dashboard
             Route::get('/dashboard', [DashboardController::class, 'index'])
                 ->name('tenant.dashboard');
+
+            // Billing / Plan upgrade
+            Route::get('/billing/upgrade', [BillingController::class, 'upgrade'])
+                ->name('billing.upgrade');
 
             // Products
             Route::prefix('products')->name('tenant.products.')->middleware(['permission:manage products'])->group(function () {

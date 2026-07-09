@@ -3,22 +3,23 @@
 namespace App\Http;
 
 use App\Http\Middleware\Authenticate;
-use App\Http\Middleware\CheckImpersonationExpiry;
-use App\Http\Middleware\CheckStorageLimit;
-use App\Http\Middleware\CheckTenantState;
 use App\Http\Middleware\EncryptCookies;
-use App\Http\Middleware\EnsureCentralDomain;
-use App\Http\Middleware\HandleInertiaRequests;
-use App\Http\Middleware\PaymentMethodRateLimit;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
-use App\Http\Middleware\RequiresPlanFeature;
-use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustHosts;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\ValidateSignature;
 use App\Http\Middleware\VerifyCsrfToken;
+use App\Shared\Middleware\CheckImpersonationExpiry;
+use App\Shared\Middleware\CheckStorageLimit;
+use App\Shared\Middleware\CheckTenantState;
+use App\Shared\Middleware\CspNonce;
+use App\Shared\Middleware\EnsureCentralDomain;
+use App\Shared\Middleware\HandleInertiaRequests;
+use App\Shared\Middleware\PaymentMethodRateLimit;
+use App\Shared\Middleware\RequiresPlanFeature;
+use App\Shared\Middleware\SecurityHeaders;
 use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
@@ -70,6 +71,7 @@ class Kernel extends HttpKernel
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             SubstituteBindings::class,
+            CspNonce::class,
             SecurityHeaders::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

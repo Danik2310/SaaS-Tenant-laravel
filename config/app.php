@@ -1,10 +1,15 @@
 <?php
 
+use App\Billing\BillingServiceProvider;
+use App\Plans\PlansServiceProvider;
+use App\Products\ProductsServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthServiceProvider;
 use App\Providers\EventServiceProvider;
 use App\Providers\RouteServiceProvider;
 use App\Providers\TenancyServiceProvider;
+use App\Shared\SharedServiceProvider;
+use App\Tenants\TenantServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\PermissionFacade;
@@ -175,6 +180,11 @@ return [
         AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
         EventServiceProvider::class,
+        SharedServiceProvider::class,
+        TenantServiceProvider::class,
+        PlansServiceProvider::class,
+        BillingServiceProvider::class,
+        ProductsServiceProvider::class,
         RouteServiceProvider::class,
         TenancyServiceProvider::class,
     ])->toArray(),

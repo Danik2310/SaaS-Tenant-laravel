@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tenants\Contracts;
+
+use App\Models\Tenant;
+
+interface TenantBuilderInterface
+{
+    public function withData(array $data): static;
+
+    public function withDomain(string $domain): static;
+
+    public function withPlan(?string $planSlug = null): static;
+
+    public function build(): Tenant;
+}

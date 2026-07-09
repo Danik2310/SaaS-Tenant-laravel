@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Events\PlanChanged;
+use App\Billing\Events\PlanChanged;
 use App\Models\AdminUser;
 use App\Models\Permission;
 use App\Models\Plan;

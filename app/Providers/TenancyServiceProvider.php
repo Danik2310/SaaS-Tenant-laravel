@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Events\PlanChanged;
-use App\Events\TenantReactivated;
-use App\Events\TenantSuspended;
-use App\Listeners\HandlePlanChange;
-use App\Listeners\HandleTenantReactivation;
-use App\Listeners\HandleTenantSuspension;
+use App\Billing\Events\PlanChanged;
+use App\Billing\Listeners\HandlePlanChange;
+use App\Tenants\Events\TenantReactivated;
+use App\Tenants\Events\TenantSuspended;
+use App\Tenants\Listeners\HandleTenantReactivation;
+use App\Tenants\Listeners\HandleTenantSuspension;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
@@ -51,13 +51,19 @@ class TenancyServiceProvider extends ServiceProvider
             Events\DeletingTenant::class => [],
             Events\TenantDeleted::class => [
                 function (Events\TenantDeleted $event) {
-                    $pipeline = JobPipeline::make([
-                        Jobs\DeleteDatabase::class,
-                    ])->send(function () use ($event) {
-                        return $event->tenant;
-                    })->shouldBeQueued(false);
+                    $tenant = $event->tenant;
 
-                    $pipeline->toListener()($event);
+                    // Only drop the database on force-delete. Soft-delete keeps the
+                    // database so the tenant can be restored later without data loss.
+                    if ($tenant->isForceDeleting()) {
+                        $pipeline = JobPipeline::make([
+                            Jobs\DeleteDatabase::class,
+                        ])->send(function () use ($tenant) {
+                            return $tenant;
+                        })->shouldBeQueued(false);
+
+                        $pipeline->toListener()($event);
+                    }
                 },
             ],
 

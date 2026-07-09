@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Rules\PermissionPrerequisitesRule;
+use App\Shared\Rules\PermissionPrerequisitesRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateRoleRequest extends FormRequest

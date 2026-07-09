@@ -2,7 +2,7 @@
 
 namespace App\Console;
 
-use App\Services\ExportService;
+use App\Shared\Services\ExportService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 

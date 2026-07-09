@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\AdminUser;
 use App\Models\Tenant;
-use App\Services\TenantAwarePermissionRegistrar;
+use App\Shared\Services\TenantAwarePermissionRegistrar;
 use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;

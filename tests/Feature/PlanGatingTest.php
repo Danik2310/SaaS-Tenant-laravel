@@ -2,17 +2,17 @@
 
 namespace Tests\Feature;
 
-use App\Exceptions\PlanLimitExceededException;
-use App\Factories\ResourceEnforcementFactory;
+use App\Billing\Factories\ResourceEnforcementFactory;
+use App\Billing\Strategies\EnterpriseResourceStrategy;
+use App\Billing\Strategies\GrowthResourceStrategy;
+use App\Billing\Strategies\ProResourceStrategy;
+use App\Billing\Strategies\StarterResourceStrategy;
+use App\Shared\Exceptions\PlanLimitExceededException;
 use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Subscription;
 use App\Models\Tenant;
-use App\Services\Strategies\EnterpriseResourceStrategy;
-use App\Services\Strategies\GrowthResourceStrategy;
-use App\Services\Strategies\ProResourceStrategy;
-use App\Services\Strategies\StarterResourceStrategy;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;

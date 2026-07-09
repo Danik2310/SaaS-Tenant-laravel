@@ -6,7 +6,7 @@ use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
-use App\Services\ExportService;
+use App\Shared\Services\ExportService;
 use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
