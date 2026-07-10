@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Billing\Listeners;
 
 use App\Billing\Events\PlanChanged;
+use App\Billing\Notifications\PlanDowngradeWarning;
 use App\Models\TenantResourceUsage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 class HandlePlanChange
 {
@@ -57,24 +59,18 @@ class HandlePlanChange
             }
         }
 
-        if (! empty($exceeded)) {
+        if (! empty($exceeded) || ! empty($lostFeatures)) {
             Log::warning('Tenant downgrade resulted in exceeded limits', [
                 'tenant_id' => $tenant->id,
                 'tenant_name' => $tenant->name,
                 'old_plan' => $old->slug,
                 'new_plan' => $new->slug,
                 'exceeded_limits' => $exceeded,
-            ]);
-        }
-
-        if (! empty($lostFeatures)) {
-            Log::warning('Tenant lost features on downgrade', [
-                'tenant_id' => $tenant->id,
-                'tenant_name' => $tenant->name,
                 'lost_features' => $lostFeatures,
-                'old_plan' => $old->slug,
-                'new_plan' => $new->slug,
             ]);
+
+            Notification::route('mail', $tenant->email)
+                ->notify(new PlanDowngradeWarning($tenant, $exceeded, $lostFeatures));
         }
     }
 
@@ -107,10 +103,16 @@ class HandlePlanChange
 
     private function countInTenantDb($tenant, string $table): int
     {
+        $initialized = false;
+
         try {
             tenancy()->initialize($tenant);
+            $initialized = true;
+
             $count = DB::table($table)->count();
+
             tenancy()->end();
+            $initialized = false;
 
             return $count;
         } catch (\Throwable $e) {
@@ -118,7 +120,7 @@ class HandlePlanChange
                 'error' => $e->getMessage(),
             ]);
 
-            if (tenancy()->initialized) {
+            if ($initialized) {
                 tenancy()->end();
             }
 

@@ -108,6 +108,7 @@ class PaymentMethodController extends Controller
         $method->update($request->validated());
 
         Cache::forget('payment_methods_all');
+        Cache::forget("payment_method_{$id}");
         $this->logPaymentMethodUpdated($method, $oldData);
 
         return response()->json(['message' => 'Payment method updated', 'method' => new PaymentMethodResource($method)]);
@@ -130,6 +131,7 @@ class PaymentMethodController extends Controller
         $method->update(['active' => ! $method->active]);
 
         Cache::forget('payment_methods_all');
+        Cache::forget("payment_method_{$id}");
         $this->logPaymentMethodToggled($method, $oldActive);
 
         return response()->json(['method' => new PaymentMethodResource($method)]);
@@ -149,6 +151,7 @@ class PaymentMethodController extends Controller
         $method = PaymentMethod::findOrFail($id);
 
         Cache::forget('payment_methods_all');
+        Cache::forget("payment_method_{$id}");
         $this->logPaymentMethodDeleted($method);
         $method->delete();
 

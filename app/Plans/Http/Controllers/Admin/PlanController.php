@@ -8,7 +8,6 @@ use App\Http\Requests\Admin\UpdatePlanRequest;
 use App\Http\Resources\PlanResource;
 use App\Models\Plan;
 use App\Models\PlanFeature;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -72,7 +71,6 @@ class PlanController extends Controller
 
         $plan->load('featureGates');
 
-        Cache::forget('admin_plans_list');
         Log::info('Plan created', ['plan_id' => $plan->id, 'plan_name' => $plan->name]);
 
         return response()->json(['message' => 'Plan created successfully', 'plan' => new PlanResource($plan)], 201);
@@ -123,7 +121,6 @@ class PlanController extends Controller
 
         $plan->load('featureGates');
 
-        Cache::forget('admin_plans_list');
         Log::info('Plan updated', ['plan_id' => $plan->id, 'plan_name' => $plan->name]);
 
         return response()->json(['message' => 'Plan updated successfully', 'plan' => new PlanResource($plan)]);
@@ -143,7 +140,6 @@ class PlanController extends Controller
         $plan = Plan::findOrFail($id);
         $plan->delete();
 
-        Cache::forget('admin_plans_list');
         Log::info('Plan deleted', ['plan_id' => $plan->id, 'plan_name' => $plan->name]);
 
         return response()->noContent();
