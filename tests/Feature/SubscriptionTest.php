@@ -276,7 +276,11 @@ class SubscriptionTest extends TestCase
     {
         $plan = Plan::factory()->create();
         $newPlan = Plan::factory()->create();
-        $subscription = Subscription::factory()->create(['plan_id' => $plan->id]);
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+        $subscription = Subscription::factory()->create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+        ]);
 
         $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
             'plan_id' => $newPlan->id,
@@ -285,21 +289,32 @@ class SubscriptionTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('message', 'Subscription updated successfully');
 
+        // The old subscription is cancelled, a new one is created
+        $subscription->refresh();
+        $this->assertEquals('cancelled', $subscription->status);
+
         $this->assertDatabaseHas('subscriptions', [
-            'id' => $subscription->id,
+            'tenant_id' => $tenant->id,
             'plan_id' => $newPlan->id,
+            'status' => 'active',
         ]);
+
+        $this->assertEquals($newPlan->id, $tenant->fresh()->plan_id);
     }
 
-    public function test_subscription_destroy_deletes_subscription(): void
+    public function test_subscription_destroy_cancels_subscription(): void
     {
         $plan = Plan::factory()->create();
         $subscription = Subscription::factory()->create(['plan_id' => $plan->id]);
 
         $response = $this->deleteJson("/admin/api/subscriptions/{$subscription->id}");
 
-        $response->assertStatus(204);
-        $this->assertModelMissing($subscription);
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Subscription cancelled successfully');
+
+        $subscription->refresh();
+        $this->assertEquals('cancelled', $subscription->status);
+        $this->assertNotNull($subscription->ends_at);
     }
 
     public function test_subscription_destroy_returns_404_for_nonexistent(): void

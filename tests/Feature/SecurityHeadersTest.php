@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Shared\Middleware\SecurityHeaders;
 use App\Models\AdminUser;
+use App\Shared\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;

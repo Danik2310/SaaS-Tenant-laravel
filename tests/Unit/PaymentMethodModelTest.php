@@ -138,13 +138,17 @@ class PaymentMethodModelTest extends TestCase
         $method->api_key = '';
         $method->secret_key = '';
 
-        // Empty strings are converted to null by the mutator
-        $this->assertNull($method->getAttributes()['api_key']);
-        $this->assertNull($method->getAttributes()['secret_key']);
+        $attributes = $method->getAttributes();
 
-        // And should decrypt to null
-        $this->assertNull($method->api_key);
-        $this->assertNull($method->secret_key);
+        // Empty strings are encrypted by the cast, not stored as null
+        $this->assertNotNull($attributes['api_key']);
+        $this->assertNotNull($attributes['secret_key']);
+        $this->assertNotEquals('', $attributes['api_key']);
+        $this->assertNotEquals('', $attributes['secret_key']);
+
+        // And should decrypt back to empty string
+        $this->assertSame('', $method->api_key);
+        $this->assertSame('', $method->secret_key);
     }
 
     /**

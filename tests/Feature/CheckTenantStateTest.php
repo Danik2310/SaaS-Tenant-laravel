@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Shared\Middleware\CheckTenantState;
 use App\Models\Tenant;
+use App\Shared\Middleware\CheckTenantState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;
