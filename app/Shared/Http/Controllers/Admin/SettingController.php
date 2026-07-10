@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Http\Resources\SettingResource;
 use App\Models\GlobalSetting;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * @group Global Settings
@@ -21,7 +22,9 @@ class SettingController extends Controller
      */
     public function index()
     {
-        $settings = GlobalSetting::orderBy('key')->get();
+        $settings = Cache::rememberForever('global_settings', function () {
+            return GlobalSetting::orderBy('key')->get();
+        });
 
         return response()->json([
             'settings' => SettingResource::collection($settings),
@@ -45,6 +48,7 @@ class SettingController extends Controller
             GlobalSetting::set($setting['key'], $setting['value']);
         }
 
+        Cache::forget('global_settings');
         activity()->log('Updated global settings');
 
         return response()->json([

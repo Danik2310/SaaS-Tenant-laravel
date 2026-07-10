@@ -5,6 +5,7 @@ namespace App\Shared\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ListActivityLogsRequest;
 use App\Models\AdminUser;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -117,12 +118,14 @@ class ActivityLogController extends Controller
      */
     public function logNames()
     {
-        $names = Activity::select('log_name')
-            ->distinct()
-            ->orderBy('log_name')
-            ->pluck('log_name')
-            ->filter()
-            ->values();
+        $names = Cache::remember('activity_log_names', 3600, function () {
+            return Activity::select('log_name')
+                ->distinct()
+                ->orderBy('log_name')
+                ->pluck('log_name')
+                ->filter()
+                ->values();
+        });
 
         return response()->json(['log_names' => $names]);
     }

@@ -2,8 +2,8 @@
 
 namespace Database\Seeders\Demo;
 
-use App\Contracts\TenantManagerInterface;
 use App\States\TenantStateManager;
+use App\Tenants\Contracts\TenantManagerInterface;
 use Illuminate\Database\Seeder;
 
 class TenantStateSeeder extends Seeder

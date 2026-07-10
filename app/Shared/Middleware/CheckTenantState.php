@@ -19,13 +19,18 @@ class CheckTenantState
         $tenant = tenant();
 
         if ($tenant && $tenant instanceof Tenant) {
+            $isUpgradeRoute = $request->routeIs('billing.upgrade');
+
             if ($tenant->trashed() || $tenant->status === DeletedState::label()) {
+                if ($isUpgradeRoute) {
+                    return redirect()->route('login')
+                        ->with('error', 'This account has been deleted. Please contact support.');
+                }
+
                 $message = 'This account has been deleted. Please contact support.';
 
                 if ($request->expectsJson()) {
-                    return response()->json([
-                        'message' => $message,
-                    ], 403);
+                    return response()->json(['message' => $message], 403);
                 }
 
                 return response()->view('admin.tenant-state', [
@@ -36,20 +41,26 @@ class CheckTenantState
             }
 
             if ($tenant->status === TrialState::label() && $tenant->trialHasExpired()) {
+                if ($isUpgradeRoute) {
+                    return $next($request);
+                }
+
                 if ($request->expectsJson()) {
                     return response()->json([
                         'message' => 'Your trial has expired. Please upgrade to continue.',
+                        'upgrade_url' => route('billing.upgrade'),
                     ], 403);
                 }
 
-                return response()->view('admin.tenant-state', [
-                    'status' => TrialState::label(),
-                    'isDeleted' => false,
-                    'tenantName' => $tenant->name,
-                ]);
+                return redirect()->route('billing.upgrade')
+                    ->with('error', 'Your trial has expired. Please upgrade to continue.');
             }
 
             if (! in_array($tenant->status, [ActiveState::label(), TrialState::label()])) {
+                if ($isUpgradeRoute) {
+                    return $next($request);
+                }
+
                 if ($request->expectsJson()) {
                     return response()->json([
                         'message' => 'Your account has been suspended. Please contact support.',

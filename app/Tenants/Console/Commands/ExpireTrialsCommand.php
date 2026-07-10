@@ -18,44 +18,48 @@ class ExpireTrialsCommand extends Command
 
     public function handle(): int
     {
-        $expired = Tenant::query()
+        $count = 0;
+
+        Tenant::query()
             ->where('status', 'Trial')
-            ->whereNotNull('trial_ends_at')
-            ->where('trial_ends_at', '<', now())
-            ->get();
+            ->where(function ($q) {
+                $q->where('trial_ends_at', '<', now())
+                    ->orWhereNull('trial_ends_at');
+            })
+            ->lazy()
+            ->each(function (Tenant $tenant) use (&$count) {
+                $this->line("Processing tenant {$tenant->id} ({$tenant->name}) - trial ended");
 
-        if ($expired->isEmpty()) {
+                if ($this->option('dry-run')) {
+                    $this->line("[DRY-RUN] Would suspend tenant {$tenant->id} ({$tenant->name})");
+
+                    return;
+                }
+
+                try {
+                    TenantStateManager::transitionTo($tenant, 'Suspended');
+
+                    Log::info('Tenant suspended due to trial expiration', [
+                        'tenant_id' => $tenant->id,
+                        'tenant_name' => $tenant->name,
+                        'trial_ended_at' => $tenant->trial_ends_at,
+                    ]);
+
+                    $this->line("Suspended tenant {$tenant->id} ({$tenant->name})");
+                    $count++;
+                } catch (\Exception $e) {
+                    $this->error("Failed to suspend tenant {$tenant->id}: {$e->getMessage()}");
+                    Log::error('Trial expiration suspension failed', [
+                        'tenant_id' => $tenant->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            });
+
+        if ($count === 0) {
             $this->info('No expired trials found.');
-
-            return self::SUCCESS;
-        }
-
-        $this->info("Found {$expired->count()} tenant(s) with expired trials.");
-
-        foreach ($expired as $tenant) {
-            if ($this->option('dry-run')) {
-                $this->line("[DRY-RUN] Would suspend tenant {$tenant->id} ({$tenant->name}) - trial expired {$tenant->trial_ends_at}");
-
-                continue;
-            }
-
-            try {
-                TenantStateManager::transitionTo($tenant, 'Suspended');
-
-                Log::info('Tenant suspended due to trial expiration', [
-                    'tenant_id' => $tenant->id,
-                    'tenant_name' => $tenant->name,
-                    'trial_ended_at' => $tenant->trial_ends_at,
-                ]);
-
-                $this->line("Suspended tenant {$tenant->id} ({$tenant->name})");
-            } catch (\Exception $e) {
-                $this->error("Failed to suspend tenant {$tenant->id}: {$e->getMessage()}");
-                Log::error('Trial expiration suspension failed', [
-                    'tenant_id' => $tenant->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+        } else {
+            $this->info("Suspended {$count} tenant(s) with expired trials.");
         }
 
         return self::SUCCESS;

@@ -2,17 +2,20 @@
 
 namespace Database\Seeders;
 
-use App\Contracts\TenantManagerInterface;
 use App\Models\Plan;
 use App\Models\Tenant;
+use App\Tenants\Contracts\TenantManagerInterface;
 use Database\Seeders\Tenant\TenantDataSeeder;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class TenantSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->seedReferenceIdCounter();
+
         if (config('queue.default') !== 'sync') {
             throw new \RuntimeException(
                 'TenantSeeder requires QUEUE_CONNECTION=sync. '
@@ -140,6 +143,7 @@ class TenantSeeder extends Seeder
         $tenant->load('plan');
         $plan = $tenant->plan;
 
+        $tenantManager->migrateTenant($tenant);
         $this->seedTenantData($tenant, $config['email'], $plan);
 
         if ($config['status'] === 'Suspended') {
@@ -166,6 +170,7 @@ class TenantSeeder extends Seeder
         ];
 
         $tenant = $tenantManager->provision($data);
+        $tenantManager->migrateTenant($tenant);
         $tenant->load('plan');
         $plan = $tenant->plan;
 
@@ -182,7 +187,24 @@ class TenantSeeder extends Seeder
     private function seedTenantData(Tenant $tenant, string $email, ?Plan $plan): void
     {
         $tenant->run(function () use ($email, $plan) {
+            app(TenantUserRolePermissionSeeder::class)->run();
             app(TenantDataSeeder::class)->run($email, $plan);
         });
+    }
+
+    private function seedReferenceIdCounter(): void
+    {
+        $date = now()->format('Ymd');
+        $prefix = 'TEN-'.$date.'-';
+
+        $max = Tenant::withTrashed()
+            ->where('reference_id', 'like', $prefix.'%')
+            ->pluck('reference_id')
+            ->map(fn (string $id) => (int) substr($id, strlen($prefix)))
+            ->max() ?? 0;
+
+        if ($max > 0) {
+            Cache::put("ref_id_counter:{$date}", $max, now()->addDays(2));
+        }
     }
 }

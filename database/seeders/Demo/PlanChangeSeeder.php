@@ -2,8 +2,8 @@
 
 namespace Database\Seeders\Demo;
 
-use App\Contracts\TenantManagerInterface;
 use App\Models\Plan;
+use App\Tenants\Contracts\TenantManagerInterface;
 use Illuminate\Database\Seeder;
 
 class PlanChangeSeeder extends Seeder

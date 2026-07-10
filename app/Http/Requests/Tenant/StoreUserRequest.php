@@ -3,8 +3,8 @@
 namespace App\Http\Requests\Tenant;
 
 use App\Billing\Factories\ResourceEnforcementFactory;
-use App\Shared\Exceptions\PlanLimitExceededException;
 use App\Models\User;
+use App\Shared\Exceptions\PlanLimitExceededException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules;
 

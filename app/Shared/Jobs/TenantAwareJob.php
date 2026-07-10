@@ -24,12 +24,17 @@ abstract class TenantAwareJob implements ShouldQueue
 
     public function handle(): void
     {
-        tenancy()->initialize($this->tenant);
+        $initialized = false;
 
         try {
+            tenancy()->initialize($this->tenant);
+            $initialized = true;
+
             $this->execute();
         } finally {
-            tenancy()->end();
+            if ($initialized) {
+                tenancy()->end();
+            }
         }
     }
 

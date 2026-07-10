@@ -33,6 +33,10 @@ class DashboardController extends Controller
     {
         $cacheKey = 'admin_dashboard_stats_'.(request()->boolean('trashed') ? 'trashed' : 'active');
 
+        if (request()->boolean('refresh')) {
+            Cache::forget($cacheKey);
+        }
+
         [$totalTenants, $activeTenants, $suspendedTenants, $deletedTenants, $staffCount, $activeStaff, $plansCount, $recentTenants, $tenantsByMonth] = Cache::remember($cacheKey, 300, function () {
             $totalTenants = Tenant::withTrashed()->count();
             $activeTenants = Tenant::where('status', 'Active')->count();
