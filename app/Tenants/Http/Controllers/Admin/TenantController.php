@@ -30,11 +30,18 @@ class TenantController extends Controller
     /**
      * List all tenants.
      *
-     * Paginated list of tenants with optional trashed filtering.
+     * Paginated list of tenants with optional search, filtering, and sorting.
      *
      * @authenticated
      *
      * @queryParam trashed boolean Include soft-deleted tenants. Default false. Example: true
+     * @queryParam search string Search across name, email, domain, and reference ID. Example: acme
+     * @queryParam status string Filter by tenant status (Active, Trial, Suspended). Example: Active
+     * @queryParam plan_id integer Filter by plan ID. Example: 2
+     * @queryParam date_from string Filter by created_at from date (Y-m-d). Example: 2026-01-01
+     * @queryParam date_to string Filter by created_at to date (Y-m-d). Example: 2026-07-09
+     * @queryParam sort string Column to sort by (name, email, status, plan_id, created_at). Default: created_at
+     * @queryParam order string Sort direction (asc, desc). Default: desc
      * @queryParam per_page integer Number of results per page (max 100). Default 25. Example: 10
      *
      * @responseField tenants array[] List of tenant resources.
@@ -48,6 +55,41 @@ class TenantController extends Controller
         if (request()->boolean('trashed')) {
             $query->withTrashed();
         }
+
+        if ($search = request('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('reference_id', 'like', "%{$search}%")
+                    ->orWhereHas('domains', fn ($q) => $q->where('domain', 'like', "%{$search}%"))
+                    ->orWhereHas('plan', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        if ($status = request('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($planId = request('plan_id')) {
+            $query->where('plan_id', $planId);
+        }
+
+        if ($planName = request('plan_name')) {
+            $query->whereHas('plan', fn ($q) => $q->where('name', $planName));
+        }
+
+        if ($dateFrom = request('date_from')) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo = request('date_to')) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $sortableColumns = ['name', 'email', 'status', 'plan_id', 'created_at', 'id', 'reference_id'];
+        $sort = in_array(request('sort', 'created_at'), $sortableColumns) ? request('sort', 'created_at') : 'created_at';
+        $order = request('order', 'desc') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sort, $order);
 
         $perPage = min((int) request('per_page', 25), 100);
         $tenants = $query->paginate($perPage);

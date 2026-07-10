@@ -1,9 +1,9 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import api from '@/services/api';
 import Navbar from '@/Components/Navbar';
 import DataTable from '@/Components/DataTable';
 import BlockIcon from '@mui/icons-material/Block';
-import LanguageIcon from '@mui/icons-material/Language';
+
 import StorageIcon from '@mui/icons-material/Storage';
 import SyncIcon from '@mui/icons-material/Sync';
 import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
@@ -59,6 +59,8 @@ export default function Dashboard() {
     const [total, setTotal] = useState(0);
     const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
     const [bulkLoading, setBulkLoading] = useState(false);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const incrementRefreshTrigger = useCallback(() => setRefreshTrigger(r => r + 1), []);
     const [bulkPlanChangeOpen, setBulkPlanChangeOpen] = useState(false);
     const [deleteConfirmTenant, setDeleteConfirmTenant] = useState(null);
     const [restoreConfirmId, setRestoreConfirmId] = useState(null);
@@ -116,6 +118,7 @@ export default function Dashboard() {
             toast.success('Tenant created successfully');
             setShowForm(false);
             fetchTenants();
+            incrementRefreshTrigger();
         } catch (err) {
             const message = err.response?.data?.message || 'Failed to create tenant';
             toast.error(message);
@@ -133,6 +136,7 @@ export default function Dashboard() {
             await api.delete(`/admin/api/tenants/${deleteConfirmTenant.id}`);
             toast.success('Tenant soft-deleted successfully');
             fetchTenants();
+            incrementRefreshTrigger();
         } catch (err) {
             const message = 'Failed to delete tenant';
             toast.error(message);
@@ -152,6 +156,7 @@ export default function Dashboard() {
             await api.patch(`/admin/api/tenants/${restoreConfirmId}/restore`);
             toast.success('Tenant restored successfully');
             fetchTenants();
+            incrementRefreshTrigger();
         } catch (err) {
             const message = 'Failed to restore tenant';
             toast.error(message);
@@ -188,6 +193,7 @@ export default function Dashboard() {
             await api.put(`/admin/api/tenants/${id}`, data);
             setEditingTenant(null);
             fetchTenants();
+            incrementRefreshTrigger();
         } catch (err) {
             const message = err.response?.data?.message || 'Failed to update tenant';
             toast.error(message);
@@ -220,28 +226,14 @@ export default function Dashboard() {
         }
     };
 
-    // --- new handlers for extended actions ---
     const handleToggleActive = async (tenant) => {
-        // Optimistic update
         const newStatus = tenant.status === 'Active' ? 'Suspended' : 'Active';
-        setTenants(prevTenants =>
-            prevTenants.map(t =>
-                t.id === tenant.id ? { ...t, status: newStatus } : t
-            )
-        );
-
         try {
             await api.put(`/admin/api/tenants/${tenant.id}`, { status: newStatus });
-            // Fetch fresh data to ensure consistency
             fetchTenants();
+            incrementRefreshTrigger();
             toast.success('Tenant status updated successfully');
         } catch (err) {
-            // Revert on error
-            setTenants(prevTenants =>
-                prevTenants.map(t =>
-                    t.id === tenant.id ? { ...t, status: tenant.status } : t
-                )
-            );
             const message = err.response?.data?.message || 'Failed to update tenant status';
             toast.error(message);
             setError(message);
@@ -253,9 +245,8 @@ export default function Dashboard() {
         setView('subscriptions');
     };
 
-    const handleBulkAction = async (action) => {
-        const ids = Array.from(selectedTenantIds);
-        if (ids.length === 0) return;
+    const handleBulkAction = async (action, ids) => {
+        if (!ids || ids.length === 0) return;
 
         if (action === 'change_plan') {
             setBulkPlanChangeOpen(true);
@@ -271,6 +262,7 @@ export default function Dashboard() {
             toast.success(`Bulk ${action} completed for ${ids.length} tenant(s)`);
             setSelectedTenantIds(new Set());
             fetchTenants();
+            incrementRefreshTrigger();
         } catch (err) {
             toast.error(err.response?.data?.message || `Bulk ${action} failed`);
         } finally {
@@ -385,22 +377,14 @@ export default function Dashboard() {
                         )}
                         {view === 'tenants' && !showForm && !editingTenant && (
                             <TenantList
-                                tenants={tenants.filter(t => showDeleted ? true : !t.is_deleted)}
+                                refreshTrigger={refreshTrigger}
                                 onAdd={() => setShowForm(true)}
                                 onDelete={handleDeleteTenant}
                                 onEdit={handleEditTenant}
                                 onImpersonate={handleImpersonateTenant}
                                 onRestore={handleRestoreTenant}
-                                showDeleted={showDeleted}
-                                onToggleDeleted={() => { setShowDeleted(s => !s); setPage(0); }}
-                                onRowSave={async (original, values) => {
-                                    try {
-                                        await api.put(`/admin/api/tenants/${original.id}`, values);
-                                        fetchTenants();
-                                    } catch (err) {
-                                        setError(err.response?.data?.message || 'Failed to update tenant');
-                                    }
-                                }}
+                                onSelectionChange={setSelectedTenantIds}
+                                onToggleStatus={handleToggleActive}
                                 rowMenuActions={(tenant) => {
                                     if (tenant.is_deleted) {
                                         return [
@@ -409,7 +393,7 @@ export default function Dashboard() {
                                     }
                                     return [
                                         { divider: true },
-                                        { label: tenant.status === 'Active' ? 'Suspend' : 'Activate', icon: <BlockIcon fontSize="small" />, onClick: handleToggleActive },
+                                        { label: tenant.status === 'Active' ? 'Suspend' : 'Activate', icon: <BlockIcon fontSize="small" />, onClick: () => handleToggleActive(tenant) },
                                         { label: 'Change Plan', icon: <ChangeCircleIcon fontSize="small" />, onClick: () => setPlanChangeTenant(tenant) },
                                         { divider: true },
                                         { label: 'View Details', icon: <VisibilityIcon fontSize="small" />, onClick: () => openModal('domain', tenant) },
@@ -419,14 +403,6 @@ export default function Dashboard() {
                                         { label: 'Run Migrations', icon: <SyncIcon fontSize="small" />, onClick: () => openModal('migration', tenant) },
                                     ];
                                 }}
-                                loading={loading}
-                                total={total}
-                                page={page}
-                                rowsPerPage={rowsPerPage}
-                                onPageChange={(newPage) => { setSelectedTenantIds(new Set()); handlePageChange(newPage); }}
-                                onRowsPerPageChange={(newRowsPerPage) => { setSelectedTenantIds(new Set()); handleRowsPerPageChange(newRowsPerPage); }}
-                                selectedIds={selectedTenantIds}
-                                onSelectionChange={setSelectedTenantIds}
                                 onBulkAction={handleBulkAction}
                             />
                         )}
