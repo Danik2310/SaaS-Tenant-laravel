@@ -54,7 +54,22 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         $lock->block(5);
 
         try {
-            $counter = Cache::get("ref_id_counter:{$date}", 0) + 1;
+            $counter = Cache::get("ref_id_counter:{$date}");
+
+            if ($counter === null) {
+                $prefix = 'TEN-'.$date.'-';
+
+                $max = static::withTrashed()
+                    ->where('reference_id', 'like', $prefix.'%')
+                    ->pluck('reference_id')
+                    ->map(fn (string $id) => (int) substr($id, strlen($prefix)))
+                    ->max() ?? 0;
+
+                $counter = $max + 1;
+            } else {
+                $counter = $counter + 1;
+            }
+
             Cache::put("ref_id_counter:{$date}", $counter, now()->addDays(2));
 
             return 'TEN-'.$date.'-'.str_pad((string) $counter, 4, '0', STR_PAD_LEFT);
