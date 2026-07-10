@@ -141,6 +141,8 @@ class TenantController extends Controller
     {
         $tenant = $this->tenantManager->provision($request->validated());
 
+        $tenant->load(['domains', 'plan']);
+
         return response()->json([
             'message' => 'Tenant created successfully',
             'tenant' => new TenantResource($tenant),
@@ -175,12 +177,7 @@ class TenantController extends Controller
         $planId = $data['plan_id'] ?? null;
         unset($data['status'], $data['plan_id']);
 
-        $fillable = ['name', 'email', 'domain'];
-        foreach ($fillable as $key) {
-            if (array_key_exists($key, $data) && $data[$key] !== null) {
-                $tenant->$key = $data[$key];
-            }
-        }
+        $tenant->fill($data);
 
         if ($planId !== null && $planId != $tenant->plan_id) {
             $newPlan = Plan::findOrFail($planId);

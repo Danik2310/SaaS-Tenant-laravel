@@ -10,8 +10,11 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Tenants\Contracts\TenantBuilderInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
+use App\Tenants\Events\TenantReactivated;
+use App\Tenants\Events\TenantSuspended;
 use App\Tenants\States\TenantStateManager;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
@@ -24,11 +27,13 @@ class TenantManager implements TenantManagerInterface
 
     public function provision(array $data): Tenant
     {
-        return $this->tenantBuilder
-            ->withData($data)
-            ->withDomain($data['domain'])
-            ->withPlan($data['plan'] ?? null)
-            ->build();
+        return DB::transaction(function () use ($data) {
+            return $this->tenantBuilder
+                ->withData($data)
+                ->withDomain($data['domain'])
+                ->withPlan($data['plan'] ?? null)
+                ->build();
+        });
     }
 
     public function suspend(Tenant $tenant): void
@@ -42,7 +47,10 @@ class TenantManager implements TenantManagerInterface
             TenantStateManager::transitionTo($tenant, 'Suspended');
         });
 
+        TenantSuspended::dispatch($tenant);
         TenantStateManager::flushTenantCache($tenant);
+        Cache::forget('admin_dashboard_stats_active');
+        Cache::forget('admin_dashboard_stats_trashed');
     }
 
     public function activate(Tenant $tenant): void
@@ -60,7 +68,10 @@ class TenantManager implements TenantManagerInterface
             TenantStateManager::transitionTo($tenant, 'Active');
         });
 
+        TenantReactivated::dispatch($tenant);
         TenantStateManager::flushTenantCache($tenant);
+        Cache::forget('admin_dashboard_stats_active');
+        Cache::forget('admin_dashboard_stats_trashed');
     }
 
     public function delete(Tenant $tenant): void
@@ -81,6 +92,8 @@ class TenantManager implements TenantManagerInterface
         $tenant->delete();
 
         TenantStateManager::flushTenantCache($tenant);
+        Cache::forget('admin_dashboard_stats_active');
+        Cache::forget('admin_dashboard_stats_trashed');
     }
 
     public function restore(Tenant $tenant): void
@@ -112,13 +125,23 @@ class TenantManager implements TenantManagerInterface
         });
 
         TenantStateManager::flushTenantCache($tenant);
+        Cache::forget('admin_dashboard_stats_active');
+        Cache::forget('admin_dashboard_stats_trashed');
     }
 
     public function changePlan(Tenant $tenant, Plan $newPlan): void
     {
+        if (! in_array($tenant->status, ['Active', 'Trial'], true)) {
+            throw new InvalidArgumentException(
+                'Cannot change plan for a tenant with status: '.$tenant->status
+            );
+        }
+
         $oldPlan = null;
 
         DB::transaction(function () use ($tenant, $newPlan, &$oldPlan) {
+            $tenant = Tenant::lockForUpdate()->findOrFail($tenant->id);
+
             if (! $tenant->plan) {
                 $defaultSlug = config('tenancy.default_plan_slug', 'free');
                 $oldPlan = Plan::where('slug', $defaultSlug)->firstOrFail();
