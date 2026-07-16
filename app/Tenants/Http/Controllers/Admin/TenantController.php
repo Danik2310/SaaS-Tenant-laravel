@@ -136,17 +136,30 @@ class TenantController extends Controller
      * @bodyParam plan string optional Plan slug to assign. Example: pro
      *
      * @response 201 {"message":"Tenant created successfully","tenant":{"id":"...","name":"Acme Corp","email":"admin@acme.com","status":"Trial"}}
+     *
+     * @responseField errors object Field-level error messages when validation or provisioning fails.
+     *
+     * @response 422 {"message":"Cannot create tenant. The following conflicts were found:","errors":{"email":["A tenant with the email 'admin@example.com' already exists (ID: TEN-000003)."],"domain":["The domain 'example.localhost' is already in use by 'Acme Corp'."]}}
      */
     public function store(StoreTenantRequest $request)
     {
-        $tenant = $this->tenantManager->provision($request->validated());
+        try {
+            $tenant = $this->tenantManager->provision($request->validated());
 
-        $tenant->load(['domains', 'plan']);
+            $tenant->load(['domains', 'plan']);
 
-        return response()->json([
-            'message' => 'Tenant created successfully',
-            'tenant' => new TenantResource($tenant),
-        ], 201);
+            return response()->json([
+                'message' => 'Tenant created successfully',
+                'tenant' => new TenantResource($tenant),
+            ], 201);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'message' => 'Cannot create tenant. The following conflicts were found:',
+                'errors' => [
+                    'provisioning' => [$e->getMessage()],
+                ],
+            ], 422);
+        }
     }
 
     /**

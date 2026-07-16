@@ -46,6 +46,64 @@ class TenantLifecycleTest extends TestCase
         $this->assertDatabaseHas('tenants', ['email' => 'new@example.com']);
     }
 
+    public function test_duplicate_email_returns_422(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create(['slug' => 'pro']);
+
+        $this->post('/admin/api/tenants', [
+            'name' => 'First Tenant',
+            'email' => 'dupe@example.com',
+            'domain' => 'first.example.com',
+            'plan' => 'pro',
+        ])->assertStatus(201);
+
+        $response = $this->post('/admin/api/tenants', [
+            'name' => 'Second Tenant',
+            'email' => 'dupe@example.com',
+            'domain' => 'second.example.com',
+            'plan' => 'pro',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['errors' => ['email']]);
+
+        $this->assertStringContainsString(
+            'already exists',
+            $response->json('errors.email')[0] ?? '',
+        );
+    }
+
+    public function test_duplicate_domain_returns_422(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create(['slug' => 'pro']);
+
+        $this->post('/admin/api/tenants', [
+            'name' => 'First Tenant',
+            'email' => 'first@example.com',
+            'domain' => 'shared.example.com',
+            'plan' => 'pro',
+        ])->assertStatus(201);
+
+        $response = $this->post('/admin/api/tenants', [
+            'name' => 'Second Tenant',
+            'email' => 'second@example.com',
+            'domain' => 'shared.example.com',
+            'plan' => 'pro',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['errors' => ['domain']]);
+
+        $this->assertStringContainsString(
+            'already in use',
+            $response->json('errors.domain')[0] ?? '',
+        );
+    }
+
     public function test_can_suspend_and_reactivate_tenant(): void
     {
         $this->setUpAdminAuth();
