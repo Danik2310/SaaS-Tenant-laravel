@@ -12,6 +12,7 @@ use App\Tenants\Contracts\TenantBuilderInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Events\TenantReactivated;
 use App\Tenants\Events\TenantSuspended;
+use App\Tenants\Generators\SequentialIdGenerator;
 use App\Tenants\States\TenantStateManager;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -27,13 +28,23 @@ class TenantManager implements TenantManagerInterface
 
     public function provision(array $data): Tenant
     {
-        return DB::transaction(function () use ($data) {
-            return $this->tenantBuilder
-                ->withData($data)
-                ->withDomain($data['domain'])
-                ->withPlan($data['plan'] ?? null)
-                ->build();
-        });
+        // Pre-generate the expected tenant ID and check for orphan databases.
+        // When a tenant is force-deleted, the tenant record is removed but the
+        // database may survive if DeleteDatabase failed or was skipped. Without
+        // this guard, CreateDatabase throws TenantDatabaseAlreadyExistsException
+        // because SequentialIdGenerator will reuse the orphaned ID.
+        // This mirrors the approach TenantSeeder::createFresh() uses.
+        if (! isset($data['id'])) {
+            $expectedId = SequentialIdGenerator::generate(null);
+            $expectedDbName = config('tenancy.database.prefix').$expectedId.config('tenancy.database.suffix');
+            DB::statement("DROP DATABASE IF EXISTS `{$expectedDbName}`");
+        }
+
+        return $this->tenantBuilder
+            ->withData($data)
+            ->withDomain($data['domain'])
+            ->withPlan($data['plan'] ?? null)
+            ->build();
     }
 
     public function suspend(Tenant $tenant): void
