@@ -191,6 +191,7 @@ export default function Dashboard() {
 
         try {
             await api.put(`/admin/api/tenants/${id}`, data);
+            toast.success('Tenant updated successfully');
             setEditingTenant(null);
             fetchTenants();
             incrementRefreshTrigger();

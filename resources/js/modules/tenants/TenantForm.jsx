@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { toast } from 'sonner';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
 import api from '../../services/api';
 
@@ -59,7 +58,6 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                 }
             }
             await onSubmit(payload);
-            toast.success(tenant ? 'Tenant updated successfully' : 'Tenant created successfully');
             if (!tenant) {
                 setName('');
                 setEmail('');
