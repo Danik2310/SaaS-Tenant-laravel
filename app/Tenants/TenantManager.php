@@ -8,10 +8,9 @@ use App\Billing\Events\PlanChanged;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Tenants\Contracts\DatabaseServiceInterface;
 use App\Tenants\Contracts\TenantBuilderInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
-use App\Tenants\Events\TenantReactivated;
-use App\Tenants\Events\TenantSuspended;
 use App\Tenants\Generators\SequentialIdGenerator;
 use App\Tenants\States\TenantStateManager;
 use Carbon\Carbon;
@@ -24,27 +23,51 @@ class TenantManager implements TenantManagerInterface
 {
     public function __construct(
         private TenantBuilderInterface $tenantBuilder,
+        private DatabaseServiceInterface $databaseService,
     ) {}
 
     public function provision(array $data): Tenant
     {
-        // Pre-generate the expected tenant ID and check for orphan databases.
-        // When a tenant is force-deleted, the tenant record is removed but the
-        // database may survive if DeleteDatabase failed or was skipped. Without
-        // this guard, CreateDatabase throws TenantDatabaseAlreadyExistsException
-        // because SequentialIdGenerator will reuse the orphaned ID.
-        // This mirrors the approach TenantSeeder::createFresh() uses.
-        if (! isset($data['id'])) {
-            $expectedId = SequentialIdGenerator::generate(null);
-            $expectedDbName = config('tenancy.database.prefix').$expectedId.config('tenancy.database.suffix');
-            DB::statement("DROP DATABASE IF EXISTS `{$expectedDbName}`");
+        $nextId = SequentialIdGenerator::predictNext();
+        $this->ensureDatabaseAvailable($nextId);
+
+        $tenant = $this->tenantBuilder->withData($data)->build();
+
+        try {
+            $this->tenantBuilder
+                ->for($tenant)
+                ->withDomain($data['domain'])
+                ->withPlan($data['plan'] ?? null);
+        } catch (\Throwable $e) {
+            $tenant->forceDelete();
+            throw $e;
         }
 
-        return $this->tenantBuilder
-            ->withData($data)
-            ->withDomain($data['domain'])
-            ->withPlan($data['plan'] ?? null)
-            ->build();
+        return $tenant->fresh();
+    }
+
+    protected function ensureDatabaseAvailable(string $tenantId): void
+    {
+        $prefix = config('tenancy.database.prefix', 'tenant');
+        $suffix = config('tenancy.database.suffix', '');
+        $databaseName = $prefix.$tenantId.$suffix;
+
+        if (! $this->databaseService->databaseExists($databaseName)) {
+            return;
+        }
+
+        $tenantExists = Tenant::withTrashed()->where('id', $tenantId)->exists();
+
+        if (! $tenantExists) {
+            Log::info('Cleaning up orphan tenant database', ['database' => $databaseName]);
+            $this->databaseService->dropDatabase($databaseName);
+
+            return;
+        }
+
+        throw new InvalidArgumentException(
+            "Tenant '{$tenantId}' already exists with database '{$databaseName}'."
+        );
     }
 
     public function suspend(Tenant $tenant): void
@@ -58,7 +81,6 @@ class TenantManager implements TenantManagerInterface
             TenantStateManager::transitionTo($tenant, 'Suspended');
         });
 
-        TenantSuspended::dispatch($tenant);
         TenantStateManager::flushTenantCache($tenant);
         Cache::forget('admin_dashboard_stats_active');
         Cache::forget('admin_dashboard_stats_trashed');
@@ -79,7 +101,6 @@ class TenantManager implements TenantManagerInterface
             TenantStateManager::transitionTo($tenant, 'Active');
         });
 
-        TenantReactivated::dispatch($tenant);
         TenantStateManager::flushTenantCache($tenant);
         Cache::forget('admin_dashboard_stats_active');
         Cache::forget('admin_dashboard_stats_trashed');

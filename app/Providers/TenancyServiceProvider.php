@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
-use App\Billing\Events\PlanChanged;
-use App\Billing\Listeners\HandlePlanChange;
 use App\Tenants\Events\TenantReactivated;
 use App\Tenants\Events\TenantSuspended;
 use App\Tenants\Listeners\HandleTenantReactivation;
@@ -71,9 +69,6 @@ class TenancyServiceProvider extends ServiceProvider
             TenantSuspended::class => [HandleTenantSuspension::class],
             TenantReactivated::class => [
                 HandleTenantReactivation::class,
-            ],
-            PlanChanged::class => [
-                HandlePlanChange::class,
             ],
 
             // Domain events

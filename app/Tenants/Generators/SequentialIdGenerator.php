@@ -11,6 +11,11 @@ class SequentialIdGenerator implements UniqueIdentifierGenerator
 {
     public static function generate($resource): string
     {
+        return static::predictNext();
+    }
+
+    public static function predictNext(): string
+    {
         $prefix = 'TEN-';
 
         $max = Tenant::withTrashed()

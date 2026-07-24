@@ -20,6 +20,13 @@ class TenantBuilder implements TenantBuilderInterface
         $this->tenant = new Tenant;
     }
 
+    public function for(Tenant $tenant): static
+    {
+        $this->tenant = $tenant;
+
+        return $this;
+    }
+
     public function withData(array $data): static
     {
         $status = $data['status'] ?? (isset($data['trial_ends_at']) ? 'Trial' : 'Active');
