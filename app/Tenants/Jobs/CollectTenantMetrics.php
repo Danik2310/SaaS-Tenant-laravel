@@ -6,27 +6,23 @@ namespace App\Tenants\Jobs;
 
 use App\Models\TenantResourceUsage;
 use App\Shared\Jobs\TenantAwareJob;
-use Illuminate\Support\Facades\DB;
+use App\Tenants\Contracts\DatabaseServiceInterface;
 
 class CollectTenantMetrics extends TenantAwareJob
 {
     protected function execute(): void
     {
         $tenant = $this->tenant;
+        $databaseService = app(DatabaseServiceInterface::class);
 
-        $usersCount = DB::table('users')->count();
-        $productsCount = DB::table('products')->count();
-        $ordersCount = DB::table('orders')->count();
+        $usersCount = \DB::table('users')->count();
+        $productsCount = \DB::table('products')->count();
+        $ordersCount = \DB::table('orders')->count();
 
         $dbSize = 0;
         try {
             $dbName = $tenant->database()->getName();
-            $result = DB::connection('mysql')->select('
-                SELECT ROUND(SUM(data_length + index_length) / 1024, 0) AS size_kb
-                FROM information_schema.tables
-                WHERE table_schema = ?
-            ', [$dbName]);
-            $dbSize = (int) ($result[0]->size_kb ?? 0);
+            $dbSize = $databaseService->getDatabaseSizeKb($dbName);
         } catch (\Exception $e) {
             \Log::warning("Failed to collect DB size for tenant {$tenant->id}: {$e->getMessage()}");
         }
