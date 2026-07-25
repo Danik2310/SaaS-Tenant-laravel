@@ -1,36 +1,74 @@
-import React, { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { MaterialReactTable } from 'material-react-table';
 import api from '../../../services/api';
 import StaffForm from './StaffForm';
+import StaffPermissions from './StaffPermissions';
 import ConfirmDialog from '@/Components/ConfirmDialog';
-import DataTable from '@/Components/DataTable';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import Alert from '@mui/material/Alert';
-import CircularProgress from '@mui/material/CircularProgress';
+import Tooltip from '@mui/material/Tooltip';
+import InboxIcon from '@mui/icons-material/Inbox';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import CloseIcon from '@mui/icons-material/Close';
+import { toast } from 'sonner';
 
 export default function StaffList() {
-    const [staff, setStaff] = useState([]);
+    const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [editingStaff, setEditingStaff] = useState(null);
+    const [total, setTotal] = useState(0);
     const [error, setError] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState({ open: false, staff: null });
 
-    useEffect(() => {
-        fetchStaff();
-    }, []);
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
+    const [globalFilter, setGlobalFilter] = useState('');
+    const [columnFilters, setColumnFilters] = useState([]);
+    const [sorting, setSorting] = useState([]);
 
-    const fetchStaff = async () => {
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [editingStaff, setEditingStaff] = useState(null);
+    const [permissionsTarget, setPermissionsTarget] = useState(null);
+
+    const fetchStaff = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
-            const response = await api.get('/admin/api/staff');
-            setStaff(response.data.staff);
-            setError(null);
+            const params = new URLSearchParams();
+            params.set('page', pagination.pageIndex + 1);
+            params.set('per_page', pagination.pageSize);
+
+            if (globalFilter) params.set('search', globalFilter);
+
+            columnFilters.forEach(f => {
+                if (f.id === 'is_active' && f.value !== undefined && f.value !== null) {
+                    params.set('is_active', f.value);
+                }
+            });
+
+            const sortMapping = {
+                'name': 'name',
+                'email': 'email',
+                'is_active': 'is_active',
+                'created_at': 'created_at',
+            };
+            if (sorting.length > 0) {
+                const sortField = sortMapping[sorting[0].id] || 'created_at';
+                params.set('sort', sortField);
+                params.set('order', sorting[0].desc ? 'desc' : 'asc');
+            }
+
+            const response = await api.get(`/admin/api/staff?${params}`);
+            setData(response.data.staff);
+            setTotal(response.data.total);
         } catch (err) {
             const message = 'Failed to fetch staff';
             toast.error(message);
@@ -38,32 +76,32 @@ export default function StaffList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [pagination, globalFilter, columnFilters, sorting]);
 
-    const handleCreateStaff = async (data) => {
+    useEffect(() => {
+        fetchStaff();
+    }, [fetchStaff]);
+
+    const handleCreateStaff = async (formData) => {
         try {
-            const res = await api.post('/admin/api/staff', data);
+            await api.post('/admin/api/staff', formData);
             toast.success('Staff member created successfully');
-            setShowForm(false);
-            setStaff(prev => [...prev, res.data.staff]);
+            setShowCreateDialog(false);
+            fetchStaff();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to create staff');
         }
     };
 
-    const handleUpdateStaff = async (data) => {
+    const handleUpdateStaff = async (formData) => {
         try {
-            const res = await api.put(`/admin/api/staff/${editingStaff.id}`, data);
+            await api.put(`/admin/api/staff/${editingStaff.id}`, formData);
             toast.success('Staff member updated successfully');
             setEditingStaff(null);
-            setStaff(prev => prev.map(s => s.id === editingStaff.id ? res.data.staff : s));
+            fetchStaff();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to update staff');
         }
-    };
-
-    const handleDeleteStaff = (row) => {
-        setConfirmDelete({ open: true, staff: row });
     };
 
     const handleConfirmDelete = async () => {
@@ -72,21 +110,17 @@ export default function StaffList() {
         try {
             await api.delete(`/admin/api/staff/${row.id}`);
             toast.success('Staff member deleted successfully');
-            setStaff(prev => prev.filter(s => s.id !== row.id));
+            fetchStaff();
         } catch (err) {
             toast.error('Failed to delete staff');
         }
-    };
-
-    const handleCancelDelete = () => {
-        setConfirmDelete({ open: false, staff: null });
     };
 
     const handleToggleStatus = async (row) => {
         try {
             await api.patch(`/admin/api/staff/${row.id}/toggle-status`);
             toast.success(`Staff member ${row.is_active ? 'deactivated' : 'activated'} successfully`);
-            setStaff(prev => prev.map(s => s.id === row.id ? { ...s, is_active: !s.is_active } : s));
+            fetchStaff();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to toggle status');
         }
@@ -101,40 +135,31 @@ export default function StaffList() {
         }
     };
 
-    // Show the form when creating or editing
-    if (showForm || editingStaff) {
-        return (
-            <StaffForm
-                staff={editingStaff}
-                onSubmit={editingStaff ? handleUpdateStaff : handleCreateStaff}
-                onCancel={() => { setEditingStaff(null); setShowForm(false); }}
-            />
-        );
-    }
+    const handlePermissionsClick = (row) => {
+        setPermissionsTarget(row);
+    };
 
-    // Loading state
-    if (loading) {
-        return (
-            <Box sx={{ textAlign: 'center', py: 5 }}>
-                <CircularProgress size={32} />
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    Loading staff members...
-                </Typography>
-            </Box>
-        );
-    }
-
-    const columns = [
-        { accessorKey: 'name', header: 'Name' },
-        { accessorKey: 'email', header: 'Email' },
+    const columns = useMemo(() => [
+        {
+            accessorKey: 'name',
+            header: 'Name',
+            enableColumnFilter: false,
+        },
+        {
+            accessorKey: 'email',
+            header: 'Email',
+            enableColumnFilter: false,
+        },
         {
             accessorKey: 'roles',
             header: 'Roles',
+            enableColumnFilter: false,
+            enableSorting: false,
             Cell: ({ cell }) => {
                 const roles = cell.getValue();
                 if (!roles || roles.length === 0) {
                     return (
-                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                        <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
                             No roles
                         </Typography>
                     );
@@ -147,70 +172,244 @@ export default function StaffList() {
             },
         },
         {
-            accessorKey: 'permissions',
+            accessorKey: 'permissions_count',
             header: 'Permissions',
-            Cell: ({ cell }) => {
-                const perms = cell.getValue();
-                if (!perms || perms.length === 0) {
-                    return (
-                        <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
-                            None
-                        </Typography>
-                    );
-                }
-                return (
-                    <Typography variant="body2" sx={{ fontSize: 13 }}>
-                        {perms.join(', ')}
-                    </Typography>
-                );
-            },
+            enableColumnFilter: false,
+            enableSorting: false,
+            Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ fontSize: 13, color: '#64748b' }}>
+                    {cell.getValue()} permissions
+                </Typography>
+            ),
         },
         {
             accessorKey: 'is_active',
             header: 'Status',
+            filterVariant: 'select',
+            filterSelectOptions: [
+                { text: 'Active', value: 'true' },
+                { text: 'Inactive', value: 'false' },
+            ],
+            Cell: ({ cell }) => {
+                const isActive = cell.getValue();
+                return (
+                    <Tooltip title={isActive ? 'Staff member is active' : 'Staff member is inactive'}>
+                        <Chip
+                            label={isActive ? 'Active' : 'Inactive'}
+                            size="small"
+                            sx={{
+                                bgcolor: isActive ? '#dcfce7' : '#fee2e2',
+                                color: isActive ? '#166534' : '#991b1b',
+                                fontWeight: 600,
+                            }}
+                        />
+                    </Tooltip>
+                );
+            },
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Created',
+            filterVariant: 'date-range',
             Cell: ({ cell }) => (
-                <Chip
-                    label={cell.getValue() ? 'Active' : 'Inactive'}
-                    size="small"
-                    color={cell.getValue() ? 'success' : 'error'}
-                />
+                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                    {new Date(cell.getValue()).toLocaleDateString()}
+                </Typography>
             ),
         },
-    ];
+        {
+            id: 'actions',
+            header: 'Actions',
+            enableColumnFilter: false,
+            enableSorting: false,
+            enableGlobalFilter: false,
+            size: 120,
+            Cell: ({ row }) => (
+                <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                    <Tooltip title="Edit">
+                        <Box
+                            component="button"
+                            onClick={(e) => { e.stopPropagation(); handleEditClick(row.original); }}
+                            sx={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                '&:hover': { bgcolor: 'action.hover' },
+                            }}
+                        >
+                            <EditIcon fontSize="small" />
+                        </Box>
+                    </Tooltip>
+                    <Tooltip title="Manage Permissions">
+                        <Box
+                            component="button"
+                            onClick={(e) => { e.stopPropagation(); handlePermissionsClick(row.original); }}
+                            sx={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                '&:hover': { bgcolor: 'action.hover' },
+                            }}
+                        >
+                            <AdminPanelSettingsIcon fontSize="small" />
+                        </Box>
+                    </Tooltip>
+                    <Tooltip title={row.original.is_active ? 'Deactivate' : 'Activate'}>
+                        <Box
+                            component="button"
+                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(row.original); }}
+                            sx={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                p: 0.5, borderRadius: 1, color: row.original.is_active ? 'error.main' : 'success.main',
+                                '&:hover': { bgcolor: 'action.hover' },
+                            }}
+                        >
+                            {row.original.is_active ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
+                        </Box>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                        <Box
+                            component="button"
+                            onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, staff: row.original }); }}
+                            sx={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                p: 0.5, borderRadius: 1, color: 'error.main',
+                                '&:hover': { bgcolor: 'action.hover' },
+                            }}
+                        >
+                            <DeleteIcon fontSize="small" />
+                        </Box>
+                    </Tooltip>
+                </Box>
+            ),
+        },
+    ], []);
 
     return (
-        <>
-            {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    {error}
-                </Alert>
+        <Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                    Staff Management
+                </Typography>
+                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setShowCreateDialog(true)}
+                    sx={{
+                        bgcolor: '#22c55e',
+                        '&:hover': { bgcolor: '#16a34a' },
+                        fontWeight: 600,
+                        fontSize: '13px',
+                    }}
+                >
+                    + Create
+                </Button>
+            </Box>
+
+            {error ? (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography color="error">{error}</Typography>
+                    <Button variant="outlined" size="small" sx={{ mt: 1 }} onClick={fetchStaff}>
+                        Retry
+                    </Button>
+                </Box>
+            ) : (
+                <MaterialReactTable
+                    columns={columns}
+                    data={data}
+                    rowCount={total}
+                    state={{
+                        isLoading: loading,
+                        pagination,
+                        globalFilter,
+                        columnFilters,
+                        sorting,
+                    }}
+                    onPaginationChange={setPagination}
+                    onGlobalFilterChange={setGlobalFilter}
+                    onColumnFiltersChange={setColumnFilters}
+                    onSortingChange={setSorting}
+                    enableGlobalFilter
+                    enableColumnFilters
+                    enableSorting
+                    manualFiltering
+                    manualPagination
+                    manualSorting
+                    positionGlobalFilter="left"
+                    renderEmptyRowsFallback={() => (
+                        <Box sx={{ textAlign: 'center', py: 6 }}>
+                            <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                            <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                No staff members found. Create one to get started.
+                            </Typography>
+                        </Box>
+                    )}
+                    muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
+                    muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                    initialState={{ density: 'compact' }}
+                    localization={{ toolbarSearchPlaceholder: 'Search by name or email...' }}
+                />
             )}
 
-            <Paper sx={{ p: 2, mb: 2 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={1.5}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
-                        Staff Management
-                    </Typography>
-                    <Button
-                        variant="contained"
-                        color="success"
-                        size="small"
-                        onClick={() => setShowForm(true)}
-                        sx={{ textTransform: 'none', fontWeight: 600 }}
-                    >
-                        + Create
-                    </Button>
-                </Stack>
-            </Paper>
+            {/* Create Dialog */}
+            <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Create Staff Member
+                    <IconButton onClick={() => setShowCreateDialog(false)} size="small">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 2 }}>
+                    <StaffForm
+                        onSubmit={handleCreateStaff}
+                        onCancel={() => setShowCreateDialog(false)}
+                        embedded
+                    />
+                </DialogContent>
+            </Dialog>
 
-            <DataTable
-                columns={columns}
-                data={staff}
-                onEdit={handleEditClick}
-                onDelete={handleDeleteStaff}
-                onToggleStatus={handleToggleStatus}
-                emptyMessage="No staff members found. Create one to get started."
-            />
+            {/* Edit Dialog */}
+            <Dialog open={!!editingStaff} onClose={() => setEditingStaff(null)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Edit Staff Member
+                    <IconButton onClick={() => setEditingStaff(null)} size="small">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 2 }}>
+                    {editingStaff && (
+                        <StaffForm
+                            staff={editingStaff}
+                            onSubmit={handleUpdateStaff}
+                            onCancel={() => setEditingStaff(null)}
+                            embedded
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Manage Permissions Dialog */}
+            <Dialog open={!!permissionsTarget} onClose={() => setPermissionsTarget(null)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Manage Permissions — {permissionsTarget?.name}
+                    <IconButton onClick={() => setPermissionsTarget(null)} size="small">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 2 }}>
+                    {permissionsTarget && (
+                        <StaffPermissions
+                            staffId={permissionsTarget.id}
+                            staffName={permissionsTarget.name}
+                            onClose={() => setPermissionsTarget(null)}
+                            onUpdate={() => { fetchStaff(); }}
+                            embedded
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
 
             <ConfirmDialog
                 open={confirmDelete.open}
@@ -218,8 +417,8 @@ export default function StaffList() {
                 message={`Are you sure you want to delete ${confirmDelete.staff?.name}? This action can be undone.`}
                 confirmLabel="Delete"
                 onConfirm={handleConfirmDelete}
-                onCancel={handleCancelDelete}
+                onCancel={() => setConfirmDelete({ open: false, staff: null })}
             />
-        </>
+        </Box>
     );
 }

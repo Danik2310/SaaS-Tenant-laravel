@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
 
-export default function StaffPermissions({ staffId, staffName, onClose, onUpdate }) {
+export default function StaffPermissions({ staffId, staffName, onClose, onUpdate, embedded = false }) {
     const [staff, setStaff] = useState(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -22,8 +22,14 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
             const response = await api.get(`/admin/api/staff/${staffId}`);
             setStaff(response.data.staff);
             setAvailableRoles(response.data.available_roles);
-            setSelectedRoles(response.data.staff.roles.map(r => r.id));
-            setSelectedPermissions(response.data.staff.direct_permissions);
+            const availableRoleList = response.data.available_roles || [];
+            const currentRoleNames = response.data.staff.roles || [];
+            setSelectedRoles(
+                availableRoleList
+                    .filter(r => currentRoleNames.includes(r.name))
+                    .map(r => r.id)
+            );
+            setSelectedPermissions(response.data.staff.direct_permissions || []);
             setError(null);
         } catch (err) {
             const message = 'Failed to load staff details';
@@ -121,34 +127,36 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
 
     return (
         <div style={{
-            background: '#f8f9fa',
-            padding: '30px',
+            background: embedded ? 'transparent' : '#f8f9fa',
+            padding: embedded ? '0' : '30px',
             borderRadius: '8px',
         }}>
             {/* Header */}
-            <div style={{ marginBottom: '20px' }}>
-                <button
-                    onClick={onClose}
-                    style={{
-                        background: '#6c757d',
-                        color: 'white',
-                        border: 'none',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        marginBottom: '15px',
-                    }}
-                >
-                    ← Back
-                </button>
-                <h3 style={{ margin: '0 0 10px 0' }}>
-                    Manage Permissions for {staffName}
-                </h3>
-                <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
-                    Email: {staff.email}
-                </p>
-            </div>
+            {!embedded && (
+                <div style={{ marginBottom: '20px' }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: '#6c757d',
+                            color: 'white',
+                            border: 'none',
+                            padding: '8px 16px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            marginBottom: '15px',
+                        }}
+                    >
+                        ← Back
+                    </button>
+                    <h3 style={{ margin: '0 0 10px 0' }}>
+                        Manage Permissions for {staffName}
+                    </h3>
+                    <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
+                        Email: {staff.email}
+                    </p>
+                </div>
+            )}
 
             {/* Messages */}
             {error && (

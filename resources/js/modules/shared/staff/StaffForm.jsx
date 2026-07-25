@@ -3,7 +3,7 @@ import api from '../../../services/api';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput } from '@/Components/FormElements';
 import { toast } from 'sonner';
 
-export default function StaffForm({ staff = null, onSubmit, onCancel }) {
+export default function StaffForm({ staff = null, onSubmit, onCancel, embedded = false }) {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -100,85 +100,93 @@ export default function StaffForm({ staff = null, onSubmit, onCancel }) {
         }
     };
 
+    const formContent = (
+        <form onSubmit={handleSubmit}>
+            <FormInput label="Full Name" required error={errors?.name?.[0]}>
+                <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="John Doe"
+                    required
+                />
+            </FormInput>
+
+            <FormInput label="Email" required error={errors?.email?.[0]}>
+                <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="john@example.com"
+                    required
+                />
+            </FormInput>
+
+            <FormInput
+                label="Password"
+                required={!staff}
+                hint={staff ? 'Leave empty to keep current password' : 'Min. 8 characters, mix of upper/lower, numbers, symbols'}
+                error={errors?.password?.[0]}
+            >
+                <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder={staff ? 'Leave empty to keep current password' : 'Enter password'}
+                    required={!staff}
+                />
+            </FormInput>
+
+            <FormInput label="Roles">
+                <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc', maxHeight: '200px', overflowY: 'auto' }}>
+                    {rolesLoading ? (
+                        <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Loading roles...</p>
+                    ) : roles.length === 0 ? (
+                        <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>No roles available</p>
+                    ) : (
+                        roles.map((role) => (
+                            <CheckboxInput
+                                key={role.id}
+                                label={`${role.name} — ${role.description || 'No description'}`}
+                                checked={formData.roles.includes(role.id)}
+                                onChange={() => handleRoleChange(role.id)}
+                            />
+                        ))
+                    )}
+                </div>
+            </FormInput>
+
+            <div style={{ marginBottom: '16px' }}>
+                <CheckboxInput
+                    label="Active"
+                    checked={formData.is_active}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.target.checked }))}
+                />
+            </div>
+
+            <FormActions>
+                <ButtonSecondary onClick={onCancel}>Cancel</ButtonSecondary>
+                <ButtonPrimary type="submit" disabled={loading}>
+                    {loading ? 'Saving...' : staff ? 'Update' : 'Create'}
+                </ButtonPrimary>
+            </FormActions>
+        </form>
+    );
+
+    if (embedded) {
+        return formContent;
+    }
+
     return (
         <FormCard
             title={staff ? 'Edit Staff Member' : 'Create Staff Member'}
             subtitle={staff ? 'Update staff member details and permissions' : 'Add a new administrator to the platform'}
             onClose={onCancel}
         >
-            <form onSubmit={handleSubmit}>
-                <FormInput label="Full Name" required error={errors?.name?.[0]}>
-                    <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        placeholder="John Doe"
-                        required
-                    />
-                </FormInput>
-
-                <FormInput label="Email" required error={errors?.email?.[0]}>
-                    <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="john@example.com"
-                        required
-                    />
-                </FormInput>
-
-                <FormInput
-                    label="Password"
-                    required={!staff}
-                    hint={staff ? 'Leave empty to keep current password' : 'Min. 8 characters, mix of upper/lower, numbers, symbols'}
-                    error={errors?.password?.[0]}
-                >
-                    <input
-                        type="password"
-                        name="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        placeholder={staff ? 'Leave empty to keep current password' : 'Enter password'}
-                        required={!staff}
-                    />
-                </FormInput>
-
-                <FormInput label="Roles">
-                    <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc', maxHeight: '200px', overflowY: 'auto' }}>
-                        {rolesLoading ? (
-                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Loading roles...</p>
-                        ) : roles.length === 0 ? (
-                            <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>No roles available</p>
-                        ) : (
-                            roles.map((role) => (
-                                <CheckboxInput
-                                    key={role.id}
-                                    label={`${role.name} — ${role.description || 'No description'}`}
-                                    checked={formData.roles.includes(role.id)}
-                                    onChange={() => handleRoleChange(role.id)}
-                                />
-                            ))
-                        )}
-                    </div>
-                </FormInput>
-
-                <div style={{ marginBottom: '16px' }}>
-                    <CheckboxInput
-                        label="Active"
-                        checked={formData.is_active}
-                        onChange={(e) => setFormData((prev) => ({ ...prev, is_active: e.target.checked }))}
-                    />
-                </div>
-
-                <FormActions>
-                    <ButtonSecondary onClick={onCancel}>Cancel</ButtonSecondary>
-                    <ButtonPrimary type="submit" disabled={loading}>
-                        {loading ? 'Saving...' : staff ? 'Update' : 'Create'}
-                    </ButtonPrimary>
-                </FormActions>
-            </form>
+            {formContent}
         </FormCard>
     );
 }

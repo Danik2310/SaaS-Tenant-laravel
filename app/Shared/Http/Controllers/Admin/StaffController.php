@@ -30,20 +30,35 @@ class StaffController extends Controller
      */
     public function index()
     {
-        $staff = AdminUser::with([
+        $query = AdminUser::with([
             'roles' => fn ($q) => $q->where('guard_name', 'admin'),
             'roles.permissions' => fn ($q) => $q->where('guard_name', 'admin'),
             'permissions' => fn ($q) => $q->where('guard_name', 'admin'),
-        ])->paginate(5);
+        ]);
+
+        if ($search = request('search')) {
+            $search = str_replace(['%', '_'], ['\%', '\_'], $search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if (request()->has('is_active')) {
+            $query->where('is_active', request()->boolean('is_active'));
+        }
+
+        $sortableColumns = ['name', 'email', 'is_active', 'created_at'];
+        $sort = in_array(request('sort', 'created_at'), $sortableColumns) ? request('sort', 'created_at') : 'created_at';
+        $order = request('order', 'desc') === 'asc' ? 'asc' : 'desc';
+        $query->orderBy($sort, $order);
+
+        $perPage = min((int) request('per_page', 5), 100);
+        $staff = $query->paginate($perPage);
 
         return response()->json([
             'staff' => StaffResource::collection($staff->items()),
-            'meta' => [
-                'current_page' => $staff->currentPage(),
-                'last_page' => $staff->lastPage(),
-                'per_page' => $staff->perPage(),
-                'total' => $staff->total(),
-            ],
+            'total' => $staff->total(),
         ]);
     }
 
