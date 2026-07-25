@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import api from '@/services/api';
 import ExportButton from '@/Components/ExportButton';
 import Box from '@mui/material/Box';
@@ -10,13 +10,11 @@ import Tooltip from '@mui/material/Tooltip';
 import Grid from '@mui/material/Grid';
 import Avatar from '@mui/material/Avatar';
 import Skeleton from '@mui/material/Skeleton';
-import CircularProgress from '@mui/material/CircularProgress';
+import TablePagination from '@mui/material/TablePagination';
 import StorageIcon from '@mui/icons-material/Storage';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DnsIcon from '@mui/icons-material/Dns';
 import { alpha } from '@mui/material/styles';
-
-const PAGE_SIZE = 5;
 
 function UsageBar({ current, limit, label, color = 'primary.main' }) {
     const hasLimit = limit !== null && limit !== undefined;
@@ -154,89 +152,32 @@ function TenantUsageCard({ metric, limits }) {
 }
 
 export default function ResourceUsage() {
-    const [allMetrics, setAllMetrics] = useState([]);
+    const [metrics, setMetrics] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [loadingMore, setLoadingMore] = useState(false);
+    const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
-    const [hasMore, setHasMore] = useState(true);
-    const sentinelRef = useRef(null);
-    const hasScrolledRef = useRef(false);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
 
-    const fetchPage = useCallback(async (pageNum) => {
-        const res = await api.get(
-            `/admin/api/resource-usage?page=${pageNum + 1}&per_page=${PAGE_SIZE}`
-        );
-        return {
-            metrics: res.data.metrics,
-            lastPage: res.data.last_page,
-        };
-    }, []);
-
-    const loadInitial = useCallback(async () => {
+    const fetchMetrics = useCallback(async () => {
         setLoading(true);
         try {
-            const { metrics, lastPage } = await fetchPage(0);
-            setAllMetrics(metrics);
-            setPage(0);
-            setHasMore(0 < lastPage);
+            const res = await api.get(
+                `/admin/api/resource-usage?page=${page + 1}&per_page=${rowsPerPage}`
+            );
+            setMetrics(res.data.metrics);
+            setTotal(res.data.total);
         } catch (err) {
             console.error('Failed to fetch resource usage:', err);
         } finally {
             setLoading(false);
         }
-    }, [fetchPage]);
+    }, [page, rowsPerPage]);
 
-    const loadMore = useCallback(async () => {
-        if (loadingMore || !hasMore) return;
-        setLoadingMore(true);
-        try {
-            const nextPage = page + 1;
-            const { metrics, lastPage } = await fetchPage(nextPage);
-            setAllMetrics((prev) => [...prev, ...metrics]);
-            setPage(nextPage);
-            setHasMore(nextPage < lastPage);
-        } catch (err) {
-            console.error('Failed to load more resource usage:', err);
-        } finally {
-            setLoadingMore(false);
-        }
-    }, [page, loadingMore, hasMore, fetchPage]);
-
-    // Initial fetch
     useEffect(() => {
-        loadInitial();
-    }, [loadInitial]);
-
-    // Auto-refresh every 30 seconds (resets to page 0)
-    useEffect(() => {
-        const interval = setInterval(loadInitial, 30000);
+        fetchMetrics();
+        const interval = setInterval(fetchMetrics, 30000);
         return () => clearInterval(interval);
-    }, [loadInitial]);
-
-    // Track if user has scrolled (prevents observer from firing on initial render)
-    useEffect(() => {
-        const onScroll = () => { hasScrolledRef.current = true; };
-        window.addEventListener('scroll', onScroll, { passive: true });
-        return () => window.removeEventListener('scroll', onScroll);
-    }, []);
-
-    // IntersectionObserver for infinite scroll
-    useEffect(() => {
-        const sentinel = sentinelRef.current;
-        if (!sentinel || !hasMore) return;
-
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting && hasScrolledRef.current) {
-                    loadMore();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        observer.observe(sentinel);
-        return () => observer.disconnect();
-    }, [hasMore, loadMore]);
+    }, [fetchMetrics]);
 
     return (
         <Box>
@@ -289,7 +230,7 @@ export default function ResourceUsage() {
                         </Grid>
                     ))}
                 </Grid>
-            ) : allMetrics.length === 0 ? (
+            ) : metrics.length === 0 ? (
                 <Paper sx={{ p: 6, textAlign: 'center', boxShadow: 1 }}>
                     <StorageIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
                     <Typography
@@ -310,17 +251,27 @@ export default function ResourceUsage() {
             ) : (
                 <>
                     <Grid container spacing={3}>
-                        {allMetrics.map((m) => (
+                        {metrics.map((m) => (
                             <Grid item xs={12} sm={6} md={6} lg={4} key={m.id}>
                                 <TenantUsageCard metric={m} />
                             </Grid>
                         ))}
                     </Grid>
-                    {hasMore && <Box ref={sentinelRef} sx={{ height: 1 }} />}
-                    {loadingMore && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                            <CircularProgress size={28} />
-                        </Box>
+                    {total > 0 && (
+                        <Paper sx={{ mt: 3, boxShadow: 1 }}>
+                            <TablePagination
+                                component="div"
+                                count={total}
+                                page={page}
+                                onPageChange={(_, newPage) => setPage(newPage)}
+                                rowsPerPage={rowsPerPage}
+                                onRowsPerPageChange={(e) => {
+                                    setRowsPerPage(parseInt(e.target.value, 10));
+                                    setPage(0);
+                                }}
+                                rowsPerPageOptions={[5, 10, 25]}
+                            />
+                        </Paper>
                     )}
                 </>
             )}
