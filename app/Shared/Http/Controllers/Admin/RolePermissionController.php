@@ -31,20 +31,33 @@ class RolePermissionController extends Controller
      */
     public function indexRoles()
     {
-        $roles = Role::select(['id', 'name', 'description', 'is_active'])
+        $query = Role::select(['id', 'name', 'description', 'is_active', 'created_at'])
             ->with('permissions')
-            ->where('guard_name', 'admin')
-            ->orderBy('name')
-            ->paginate(5);
+            ->where('guard_name', 'admin');
+
+        if ($search = request('search')) {
+            $search = str_replace(['%', '_'], ['\%', '\_'], $search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        if (request()->has('is_active')) {
+            $query->where('is_active', request()->boolean('is_active'));
+        }
+
+        $sortableColumns = ['name', 'description', 'is_active', 'created_at'];
+        $sort = in_array(request('sort', 'name'), $sortableColumns) ? request('sort', 'name') : 'name';
+        $order = request('order', 'asc') === 'desc' ? 'desc' : 'asc';
+        $query->orderBy($sort, $order);
+
+        $perPage = min((int) request('per_page', 5), 100);
+        $roles = $query->paginate($perPage);
 
         return response()->json([
             'roles' => RoleResource::collection($roles->items()),
-            'meta' => [
-                'current_page' => $roles->currentPage(),
-                'last_page' => $roles->lastPage(),
-                'per_page' => $roles->perPage(),
-                'total' => $roles->total(),
-            ],
+            'total' => $roles->total(),
         ]);
     }
 
@@ -169,24 +182,37 @@ class RolePermissionController extends Controller
      */
     public function indexPermissions()
     {
-        $permissions = Permission::select(['id', 'name', 'description', 'module', 'is_active'])
-            ->where('guard_name', 'admin')
-            ->orderBy('module')
-            ->orderBy('name')
-            ->paginate(5);
+        $query = Permission::select(['id', 'name', 'description', 'module', 'is_active', 'created_at'])
+            ->where('guard_name', 'admin');
 
-        $grouped = collect($permissions->items())
-            ->groupBy('module')
-            ->map(fn ($perms) => PermissionResource::collection($perms));
+        if ($search = request('search')) {
+            $search = str_replace(['%', '_'], ['\%', '\_'], $search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('module', 'like', "%{$search}%");
+            });
+        }
+
+        if ($module = request('module')) {
+            $query->where('module', $module);
+        }
+
+        if (request()->has('is_active')) {
+            $query->where('is_active', request()->boolean('is_active'));
+        }
+
+        $sortableColumns = ['name', 'module', 'is_active', 'created_at'];
+        $sort = in_array(request('sort', 'module'), $sortableColumns) ? request('sort', 'module') : 'module';
+        $order = request('order', 'asc') === 'desc' ? 'desc' : 'asc';
+        $query->orderBy($sort, $order);
+
+        $perPage = min((int) request('per_page', 5), 100);
+        $permissions = $query->paginate($perPage);
 
         return response()->json([
-            'permissions' => $grouped,
-            'meta' => [
-                'current_page' => $permissions->currentPage(),
-                'last_page' => $permissions->lastPage(),
-                'per_page' => $permissions->perPage(),
-                'total' => $permissions->total(),
-            ],
+            'permissions' => PermissionResource::collection($permissions->items()),
+            'total' => $permissions->total(),
         ]);
     }
 
