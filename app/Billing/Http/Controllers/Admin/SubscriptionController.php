@@ -43,34 +43,45 @@ class SubscriptionController extends Controller
         $query = Subscription::with(['tenant', 'plan']);
 
         if ($status = $request->query('status')) {
-            $query->where('status', $status);
+            $query->where('subscriptions.status', $status);
         }
 
         if ($planId = $request->query('plan_id')) {
             $query->where('plan_id', $planId);
         }
 
+        if ($planName = $request->query('plan_name')) {
+            $query->whereHas('plan', fn ($q) => $q->where('name', $planName));
+        }
+
         if ($search = $request->query('search')) {
             $search = str_replace(['%', '_'], ['\%', '\_'], $search);
-            $query->whereHas('tenant', function ($q) use ($search) {
-                $q->where(function ($sub) use ($search) {
-                    $sub->where('name', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            });
+            $query->whereHas('plan', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+        }
+
+        $sortableColumns = ['id', 'plan_id', 'status', 'starts_at', 'ends_at', 'created_at'];
+        $sortParam = $request->query('sort', 'created_at');
+        $sort = in_array($sortParam, $sortableColumns) ? $sortParam : 'created_at';
+        $order = $request->query('order', 'desc') === 'asc' ? 'asc' : 'desc';
+
+        if ($sortParam === 'plan_name') {
+            $query->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
+                ->select('subscriptions.*')
+                ->orderBy('plans.name', $order);
+        } elseif ($sortParam === 'plan_price') {
+            $query->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
+                ->select('subscriptions.*')
+                ->orderBy('plans.price', $order);
+        } else {
+            $query->orderBy($sort, $order);
         }
 
         $perPage = min((int) $request->integer('per_page', 5), 100);
-        $subscriptions = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $subscriptions = $query->paginate($perPage);
 
         return response()->json([
             'subscriptions' => SubscriptionResource::collection($subscriptions->items()),
-            'meta' => [
-                'current_page' => $subscriptions->currentPage(),
-                'last_page' => $subscriptions->lastPage(),
-                'per_page' => $subscriptions->perPage(),
-                'total' => $subscriptions->total(),
-            ],
+            'total' => $subscriptions->total(),
         ]);
     }
 

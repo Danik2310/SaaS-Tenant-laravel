@@ -1,60 +1,259 @@
-import React, { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import api from '../../services/api';
-import DataTable from '@/Components/DataTable';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { MaterialReactTable } from 'material-react-table';
+import api from '@/services/api';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import Box from '@mui/material/Box';
-import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Tooltip from '@mui/material/Tooltip';
 import TextField from '@mui/material/TextField';
-import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import Menu from '@mui/material/Menu';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
-import Paper from '@mui/material/Paper';
-import Alert from '@mui/material/Alert';
-import Link from '@mui/material/Link';
-import Tooltip from '@mui/material/Tooltip';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import ClearIcon from '@mui/icons-material/Clear';
-import LaunchIcon from '@mui/icons-material/Launch';
-import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import Select from '@mui/material/Select';
+import FormHelperText from '@mui/material/FormHelperText';
+import InboxIcon from '@mui/icons-material/Inbox';
+import EditIcon from '@mui/icons-material/Edit';
+import BlockIcon from '@mui/icons-material/Block';
+import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
+import CloseIcon from '@mui/icons-material/Close';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { toast } from 'sonner';
 
-const statusColors = {
-    active: '#22c55e',
-    pending: '#f59e0b',
-    cancelled: '#ef4444',
-    expired: '#64748b',
-};
+const STATUS_OPTIONS = [
+    { text: 'Active', value: 'active' },
+    { text: 'Pending', value: 'pending' },
+    { text: 'Cancelled', value: 'cancelled' },
+    { text: 'Expired', value: 'expired' },
+];
 
-export default function Subscriptions({ onViewTenant, initialSearch = '' }) {
-    const [subscriptions, setSubscriptions] = useState([]);
+function EditPriceForm({ planId, planName, currentPrice, onSave, onCancel }) {
+    const [price, setPrice] = useState(currentPrice);
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        try {
+            await onSave(planId, price);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to update price');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="body2" sx={{ color: '#64748b' }}>
+                Updating price for <strong>{planName}</strong>
+            </Typography>
+            <TextField
+                size="small"
+                label="Price"
+                type="number"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                inputProps={{ min: 0, step: 0.01 }}
+                InputProps={{ startAdornment: <Typography variant="body2" sx={{ mr: 0.5 }}>$</Typography> }}
+                required
+                autoFocus
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                <Button variant="outlined" size="small" onClick={onCancel} disabled={submitting}>
+                    Cancel
+                </Button>
+                <Button type="submit" variant="contained" size="small" disabled={submitting}>
+                    Update Price
+                </Button>
+            </Box>
+        </Box>
+    );
+}
+
+function SubscriptionForm({ subscription, plans, tenants, onSubmit, onCancel, embedded }) {
+    const [form, setForm] = useState({
+        tenant_id: subscription?.tenant_id || '',
+        plan_id: subscription?.plan_id || '',
+        status: subscription?.status || 'active',
+        starts_at: subscription?.starts_at || new Date().toISOString().split('T')[0],
+        ends_at: subscription?.ends_at || '',
+    });
+    const [errors, setErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleChange = (field) => (e) => {
+        setForm(prev => ({ ...prev, [field]: e.target.value }));
+        setErrors(prev => ({ ...prev, [field]: undefined }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setErrors({});
+        try {
+            await onSubmit(form);
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setErrors(err.response.data.errors || {});
+            } else {
+                toast.error(err.response?.data?.message || 'An error occurred');
+            }
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <FormControl size="small" fullWidth error={!!errors.tenant_id}>
+                <InputLabel>Tenant</InputLabel>
+                <Select
+                    value={form.tenant_id}
+                    label="Tenant"
+                    onChange={handleChange('tenant_id')}
+                    disabled={!!subscription}
+                >
+                    {tenants.map(t => (
+                        <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
+                    ))}
+                </Select>
+                {errors.tenant_id && <FormHelperText>{errors.tenant_id[0]}</FormHelperText>}
+            </FormControl>
+
+            <FormControl size="small" fullWidth error={!!errors.plan_id}>
+                <InputLabel>Plan</InputLabel>
+                <Select
+                    value={form.plan_id}
+                    label="Plan"
+                    onChange={handleChange('plan_id')}
+                >
+                    {plans.map(p => (
+                        <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                    ))}
+                </Select>
+                {errors.plan_id && <FormHelperText>{errors.plan_id[0]}</FormHelperText>}
+            </FormControl>
+
+            <FormControl size="small" fullWidth error={!!errors.status}>
+                <InputLabel>Status</InputLabel>
+                <Select
+                    value={form.status}
+                    label="Status"
+                    onChange={handleChange('status')}
+                >
+                    {STATUS_OPTIONS.map(opt => (
+                        <MenuItem key={opt.value} value={opt.value}>{opt.text}</MenuItem>
+                    ))}
+                </Select>
+                {errors.status && <FormHelperText>{errors.status[0]}</FormHelperText>}
+            </FormControl>
+
+            <TextField
+                size="small"
+                label="Start Date"
+                type="date"
+                value={form.starts_at}
+                onChange={handleChange('starts_at')}
+                InputLabelProps={{ shrink: true }}
+                error={!!errors.starts_at}
+                helperText={errors.starts_at?.[0]}
+                required
+            />
+
+            <TextField
+                size="small"
+                label="End Date (optional)"
+                type="date"
+                value={form.ends_at}
+                onChange={handleChange('ends_at')}
+                InputLabelProps={{ shrink: true }}
+                error={!!errors.ends_at}
+                helperText={errors.ends_at?.[0]}
+            />
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                <Button variant="outlined" size="small" onClick={onCancel} disabled={submitting}>
+                    Cancel
+                </Button>
+                <Button type="submit" variant="contained" size="small" disabled={submitting}>
+                    {subscription ? 'Update' : 'Create'}
+                </Button>
+            </Box>
+        </Box>
+    );
+}
+
+export default function Subscriptions({ initialSearch = '' }) {
+    const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [total, setTotal] = useState(0);
     const [error, setError] = useState(null);
 
-    const [statusFilter, setStatusFilter] = useState('');
-    const [search, setSearch] = useState(initialSearch);
+    const [plans, setPlans] = useState([]);
+    const [tenants, setTenants] = useState([]);
 
-    const [total, setTotal] = useState(0);
-    const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
+    const [globalFilter, setGlobalFilter] = useState(initialSearch);
+    const [columnFilters, setColumnFilters] = useState([]);
+    const [sorting, setSorting] = useState([]);
 
-    const fetchSubscriptions = async (customPage, customPerPage) => {
+    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [editingSubscription, setEditingSubscription] = useState(null);
+    const [confirmCancel, setConfirmCancel] = useState({ open: false, subscription: null });
+    const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
+    const [actionMenuRow, setActionMenuRow] = useState(null);
+    const [editingPriceTarget, setEditingPriceTarget] = useState(null);
+
+    useEffect(() => {
+        api.get('/admin/api/plans-list').then(r => setPlans(r.data.plans ?? [])).catch(() => {});
+        api.get('/admin/api/tenants?per_page=100').then(r => setTenants(r.data.tenants ?? [])).catch(() => {});
+    }, []);
+
+    const fetchSubscriptions = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
-            const p = customPage ?? page;
-            const rpp = customPerPage ?? rowsPerPage;
             const params = new URLSearchParams();
-            if (statusFilter) params.append('status', statusFilter);
-            if (search) params.append('search', search);
-            if (p > 0) params.append('page', p + 1);
-            params.append('per_page', rpp);
-            const res = await api.get(`/admin/api/subscriptions?${params.toString()}`);
-            setSubscriptions(res.data.subscriptions);
-            setTotal(res.data.meta.total);
-            setError(null);
+            params.set('page', pagination.pageIndex + 1);
+            params.set('per_page', pagination.pageSize);
+
+            if (globalFilter) params.set('search', globalFilter);
+
+            columnFilters.forEach(f => {
+                if (f.id === 'status' && f.value) {
+                    params.set('status', f.value);
+                }
+                if (f.id === 'plan_name' && f.value) {
+                    params.set('plan_name', f.value);
+                }
+            });
+
+            const sortMapping = {
+                'plan_name': 'plan_name',
+                'plan_price': 'plan_price',
+                'status': 'status',
+                'starts_at': 'starts_at',
+                'ends_at': 'ends_at',
+                'created_at': 'created_at',
+            };
+            if (sorting.length > 0) {
+                const sortField = sortMapping[sorting[0].id] || 'created_at';
+                params.set('sort', sortField);
+                params.set('order', sorting[0].desc ? 'desc' : 'asc');
+            }
+
+            const response = await api.get(`/admin/api/subscriptions?${params}`);
+            setData(response.data.subscriptions);
+            setTotal(response.data.total);
         } catch (err) {
             const message = 'Failed to fetch subscriptions';
             toast.error(message);
@@ -62,217 +261,354 @@ export default function Subscriptions({ onViewTenant, initialSearch = '' }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [pagination, globalFilter, columnFilters, sorting]);
 
     useEffect(() => {
-        fetchSubscriptions(page, rowsPerPage);
-    }, [page, rowsPerPage]);
+        fetchSubscriptions();
+    }, [fetchSubscriptions]);
 
-    const handleFilter = () => {
-        if (page !== 0) {
-            setPage(0);
-        } else {
-            fetchSubscriptions(0, rowsPerPage);
+    const handleCreateSubscription = async (formData) => {
+        await api.post('/admin/api/subscriptions', formData);
+        toast.success('Subscription created successfully');
+        setShowCreateDialog(false);
+        fetchSubscriptions();
+    };
+
+    const handleUpdateSubscription = async (formData) => {
+        await api.put(`/admin/api/subscriptions/${editingSubscription.id}`, formData);
+        toast.success('Subscription updated successfully');
+        setEditingSubscription(null);
+        fetchSubscriptions();
+    };
+
+    const handleEditClick = async (row) => {
+        try {
+            const response = await api.get(`/admin/api/subscriptions/${row.id}`);
+            setEditingSubscription(response.data.subscription);
+        } catch (err) {
+            toast.error('Failed to load subscription details');
         }
     };
 
-    const handleClear = () => {
-        setStatusFilter('');
-        setSearch('');
-        if (page !== 0) {
-            setPage(0);
-        } else {
-            fetchSubscriptions(0, rowsPerPage);
+    const handleConfirmCancel = async () => {
+        const sub = confirmCancel.subscription;
+        setConfirmCancel({ open: false, subscription: null });
+        try {
+            await api.delete(`/admin/api/subscriptions/${sub.id}`);
+            toast.success('Subscription cancelled successfully');
+            fetchSubscriptions();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to cancel subscription');
         }
     };
 
-    const columns = [
-        { accessorKey: 'id', header: 'ID' },
-        {
-            id: 'tenant',
-            header: 'Tenant',
-            Cell: ({ cell }) => {
-                const tenantName = cell.row.tenant_name;
-                const tenantStatus = cell.row.tenant_status;
-                const tenantId = cell.row.tenant_id;
+    const handleOpenEditPrice = (subscription) => {
+        setEditingPriceTarget(subscription);
+    };
 
-                if (tenantStatus === 'missing') {
-                    return (
-                        <Box>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography variant="body2" sx={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic', fontWeight: 400 }}>
-                                    {tenantName}
-                                </Typography>
-                                <Tooltip title="The tenant record no longer exists in the database">
-                                    <Chip
-                                        icon={<ErrorOutlineIcon sx={{ fontSize: 14 }} />}
-                                        label="Missing"
-                                        size="small"
-                                        variant="outlined"
-                                        color="error"
-                                        sx={{ height: 20, '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 0.5 } }}
-                                    />
-                                </Tooltip>
-                            </Stack>
-                            <Typography variant="caption" color="#94a3b8" sx={{ display: 'block', mt: 0.25 }}>
-                                {tenantId}
-                            </Typography>
-                        </Box>
-                    );
-                }
+    const handleSavePrice = async (planId, newPrice) => {
+        await api.put(`/admin/api/plans/${planId}`, { price: parseFloat(newPrice) });
+        toast.success('Plan price updated successfully');
+        setEditingPriceTarget(null);
+        fetchSubscriptions();
+    };
 
-                if (tenantStatus === 'deleted') {
-                    return (
-                        <Box>
-                            <Stack direction="row" spacing={1} alignItems="center">
-                                <Typography variant="body2" sx={{ fontSize: 13, color: '#d97706', fontWeight: 500, textDecoration: 'line-through' }}>
-                                    {tenantName}
-                                </Typography>
-                                <Tooltip title="This tenant has been soft-deleted">
-                                    <Chip
-                                        icon={<WarningAmberIcon sx={{ fontSize: 14 }} />}
-                                        label="Deleted"
-                                        size="small"
-                                        variant="outlined"
-                                        color="warning"
-                                        sx={{ height: 20, '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 0.5 } }}
-                                    />
-                                </Tooltip>
-                            </Stack>
-                            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
-                                <Typography variant="caption" color="text.secondary">
-                                    {tenantId}
-                                </Typography>
-                                <Link
-                                    component="button"
-                                    variant="caption"
-                                    underline="hover"
-                                    onClick={() => onViewTenant?.(tenantId)}
-                                    sx={{ color: '#d97706', fontWeight: 500, fontSize: 11 }}
-                                >
-                                    View details
-                                </Link>
-                            </Stack>
-                        </Box>
-                    );
-                }
-
-                return (
-                    <Box>
-                        <Link
-                            component="button"
-                            variant="body2"
-                            underline="hover"
-                            onClick={() => onViewTenant?.(tenantId)}
-                            sx={{ fontWeight: 600, fontSize: 13, color: '#3b82f6', textAlign: 'left' }}
-                        >
-                            {tenantName}
-                            <LaunchIcon sx={{ fontSize: 13, ml: 0.5, verticalAlign: 'middle' }} />
-                        </Link>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                            {tenantId}
-                        </Typography>
-                    </Box>
-                );
-            },
-        },
+    const columns = useMemo(() => [
         {
             accessorKey: 'plan_name',
             header: 'Plan',
-            Cell: ({ cell }) => (
-                <Chip
-                    label={cell.getValue()}
-                    size="small"
-                    sx={{ fontWeight: 600, bgcolor: '#eef2ff', color: '#4f46e5' }}
-                />
-            ),
-        },
-        { accessorKey: 'starts_at', header: 'Start Date' },
-        { accessorKey: 'ends_at', header: 'End Date' },
-        {
-            accessorKey: 'status',
-            header: 'Status',
+            filterVariant: 'select',
+            filterSelectOptions: plans.map(p => ({ text: p.name, value: p.name })),
             Cell: ({ cell }) => {
-                const color = statusColors[cell.getValue()] || '#64748b';
-                return (
+                const val = cell.getValue();
+                return val ? (
                     <Chip
-                        label={cell.getValue()}
+                        icon={<WorkspacePremiumIcon sx={{ fontSize: 14 }} />}
+                        label={val}
                         size="small"
-                        sx={{
-                            fontWeight: 600,
-                            bgcolor: `${color}18`,
-                            color,
-                            textTransform: 'capitalize',
-                        }}
+                        sx={{ bgcolor: '#f0f9ff', color: '#0369a1', fontWeight: 600, border: '1px solid #bae6fd' }}
                     />
+                ) : (
+                    <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>No Plan</Typography>
                 );
             },
         },
-        { accessorKey: 'created_at', header: 'Created' },
-    ];
+        {
+            accessorKey: 'plan_price',
+            header: 'Price',
+            enableColumnFilter: false,
+            Cell: ({ cell }) => {
+                const price = cell.getValue();
+                return (
+                    <Button
+                        size="small"
+                        onClick={() => handleOpenEditPrice(cell.row.original)}
+                        sx={{ fontWeight: 600, fontSize: 13, color: '#166534', textTransform: 'none', minWidth: 0, p: 0, justifyContent: 'flex-start' }}
+                    >
+                        ${parseFloat(price).toFixed(2)}
+                        <EditIcon sx={{ fontSize: 12, ml: 0.5, color: '#94a3b8' }} />
+                    </Button>
+                );
+            },
+        },
+        {
+            accessorKey: 'status',
+            header: 'Status',
+            filterVariant: 'select',
+            filterSelectOptions: STATUS_OPTIONS,
+            Cell: ({ cell }) => {
+                const status = cell.getValue();
+                const styles = {
+                    active:    { bgcolor: '#dcfce7', color: '#166534' },
+                    pending:   { bgcolor: '#fef9c3', color: '#854d0e' },
+                    cancelled: { bgcolor: '#fee2e2', color: '#991b1b' },
+                    expired:   { bgcolor: '#f1f5f9', color: '#64748b' },
+                };
+                const s = styles[status] || styles.expired;
+                return (
+                    <Tooltip title={`Status: ${status}`}>
+                        <Chip
+                            label={status}
+                            size="small"
+                            sx={{ fontWeight: 600, textTransform: 'capitalize', ...s }}
+                        />
+                    </Tooltip>
+                );
+            },
+        },
+        {
+            accessorKey: 'starts_at',
+            header: 'Starts',
+            enableColumnFilter: false,
+            Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                    {cell.getValue() || '—'}
+                </Typography>
+            ),
+        },
+        {
+            accessorKey: 'ends_at',
+            header: 'Ends',
+            enableColumnFilter: false,
+            Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                    {cell.getValue() || '—'}
+                </Typography>
+            ),
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Created',
+            enableColumnFilter: false,
+            Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                    {cell.getValue() ? new Date(cell.getValue()).toLocaleDateString() : '—'}
+                </Typography>
+            ),
+        },
+    ], [plans]);
 
     return (
         <Box>
-            <Paper sx={{ p: 2, mb: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-                    <FormControl size="small" sx={{ minWidth: 160 }}>
-                        <InputLabel>Status</InputLabel>
-                        <Select
-                            value={statusFilter}
-                            label="Status"
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <MenuItem value="">All</MenuItem>
-                            <MenuItem value="active">Active</MenuItem>
-                            <MenuItem value="pending">Pending</MenuItem>
-                            <MenuItem value="cancelled">Cancelled</MenuItem>
-                            <MenuItem value="expired">Expired</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <TextField
-                        size="small"
-                        label="Search tenant"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        sx={{ minWidth: 200 }}
-                    />
-                    <Button variant="contained" size="small" onClick={handleFilter} startIcon={<FilterListIcon />}>
-                        Apply
-                    </Button>
-                    <Button variant="outlined" size="small" onClick={handleClear} startIcon={<ClearIcon />}>
-                        Clear
-                    </Button>
-                </Stack>
-            </Paper>
-
-            {error && (
-                <Alert
-                    severity="error"
-                    sx={{ mb: 2 }}
-                    action={
-                        <Button size="small" color="inherit" onClick={() => fetchSubscriptions(page, rowsPerPage)}>
-                            Retry
-                        </Button>
-                    }
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                    Subscriptions
+                </Typography>
+                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setShowCreateDialog(true)}
+                    sx={{
+                        bgcolor: '#22c55e',
+                        '&:hover': { bgcolor: '#16a34a' },
+                        fontWeight: 600,
+                        fontSize: '13px',
+                    }}
                 >
-                    {error}
-                </Alert>
+                    + New Subscription
+                </Button>
+            </Box>
+
+            {error ? (
+                <Box sx={{ p: 2, textAlign: 'center' }}>
+                    <Typography color="error">{error}</Typography>
+                    <Button variant="outlined" size="small" sx={{ mt: 1 }} onClick={fetchSubscriptions}>
+                        Retry
+                    </Button>
+                </Box>
+            ) : (
+                <MaterialReactTable
+                    columns={columns}
+                    data={data}
+                    rowCount={total}
+                    state={{
+                        isLoading: loading,
+                        pagination,
+                        globalFilter,
+                        columnFilters,
+                        sorting,
+                    }}
+                    onPaginationChange={setPagination}
+                    onGlobalFilterChange={setGlobalFilter}
+                    onColumnFiltersChange={setColumnFilters}
+                    onSortingChange={setSorting}
+                    enableGlobalFilter
+                    enableColumnFilters
+                    enableSorting
+                    manualFiltering
+                    manualPagination
+                    manualSorting
+                    positionGlobalFilter="left"
+                    renderEmptyRowsFallback={() => (
+                        <Box sx={{ textAlign: 'center', py: 6 }}>
+                            <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                            <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                No subscriptions found. Create one to get started.
+                            </Typography>
+                        </Box>
+                    )}
+                    muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
+                    muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                    initialState={{ density: 'compact' }}
+                    localization={{ toolbarSearchPlaceholder: 'Search by plan name...' }}
+                    renderRowActions={({ row }) => {
+                        const sub = row.original;
+                        return (
+                            <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                <Tooltip title="Edit">
+                                    <Box
+                                        component="button"
+                                        onClick={(e) => { e.stopPropagation(); handleEditClick(sub); }}
+                                        sx={{
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                            p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                            '&:hover': { bgcolor: 'action.hover' },
+                                        }}
+                                    >
+                                        <EditIcon fontSize="small" />
+                                    </Box>
+                                </Tooltip>
+                                {sub.status !== 'cancelled' && (
+                                    <Tooltip title="Cancel Subscription">
+                                        <Box
+                                            component="button"
+                                            onClick={(e) => { e.stopPropagation(); setConfirmCancel({ open: true, subscription: sub }); }}
+                                            sx={{
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                                p: 0.5, borderRadius: 1, color: 'error.main',
+                                                '&:hover': { bgcolor: 'action.hover' },
+                                            }}
+                                        >
+                                            <BlockIcon fontSize="small" />
+                                        </Box>
+                                    </Tooltip>
+                                )}
+                                <IconButton
+                                    size="small"
+                                    onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(sub); }}
+                                >
+                                    <MoreVertIcon fontSize="small" />
+                                </IconButton>
+                            </Box>
+                        );
+                    }}
+                />
             )}
 
-            <DataTable
-                columns={columns}
-                data={subscriptions}
-                loading={loading}
-                emptyMessage="No subscriptions found."
-                total={total}
-                page={page}
-                rowsPerPage={rowsPerPage}
-                onPageChange={(newPage) => setPage(newPage)}
-                onRowsPerPageChange={(newRowsPerPage) => {
-                    setRowsPerPage(newRowsPerPage);
-                    setPage(0);
-                }}
+            {/* Create Dialog */}
+            <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Create Subscription
+                    <IconButton onClick={() => setShowCreateDialog(false)} size="small">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 2 }}>
+                    <SubscriptionForm
+                        plans={plans}
+                        tenants={tenants}
+                        onSubmit={handleCreateSubscription}
+                        onCancel={() => setShowCreateDialog(false)}
+                        embedded
+                    />
+                </DialogContent>
+            </Dialog>
+
+            {/* Edit Dialog */}
+            <Dialog open={!!editingSubscription} onClose={() => setEditingSubscription(null)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Edit Subscription
+                    <IconButton onClick={() => setEditingSubscription(null)} size="small">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 2 }}>
+                    {editingSubscription && (
+                        <SubscriptionForm
+                            subscription={editingSubscription}
+                            plans={plans}
+                            tenants={tenants}
+                            onSubmit={handleUpdateSubscription}
+                            onCancel={() => setEditingSubscription(null)}
+                            embedded
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <ConfirmDialog
+                open={confirmCancel.open}
+                title="Cancel Subscription"
+                message={`Are you sure you want to cancel this subscription for ${confirmCancel.subscription?.tenant_name}? This action cannot be undone.`}
+                confirmLabel="Cancel Subscription"
+                onConfirm={handleConfirmCancel}
+                onCancel={() => setConfirmCancel({ open: false, subscription: null })}
             />
+
+            {/* Edit Price Dialog */}
+            <Dialog open={!!editingPriceTarget} onClose={() => setEditingPriceTarget(null)} maxWidth="xs" fullWidth>
+                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    Edit Plan Price
+                    <IconButton onClick={() => setEditingPriceTarget(null)} size="small">
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent sx={{ p: 2 }}>
+                    {editingPriceTarget && (
+                        <EditPriceForm
+                            planId={editingPriceTarget.plan_id}
+                            planName={editingPriceTarget.plan_name}
+                            currentPrice={editingPriceTarget.plan_price}
+                            onSave={handleSavePrice}
+                            onCancel={() => setEditingPriceTarget(null)}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            <Menu
+                anchorEl={actionMenuAnchor}
+                open={!!actionMenuAnchor}
+                onClose={() => { setActionMenuAnchor(null); setActionMenuRow(null); }}
+                onClick={() => { setActionMenuAnchor(null); setActionMenuRow(null); }}
+                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+                {actionMenuRow && [
+                    <MenuItem key="edit" onClick={() => handleEditClick(actionMenuRow)}>
+                        <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+                        <ListItemText>Edit</ListItemText>
+                    </MenuItem>,
+                    ...(actionMenuRow.status !== 'cancelled' ? [
+                        <MenuItem key="cancel" onClick={() => setConfirmCancel({ open: true, subscription: actionMenuRow })}>
+                            <ListItemIcon><BlockIcon fontSize="small" /></ListItemIcon>
+                            <ListItemText>Cancel Subscription</ListItemText>
+                        </MenuItem>,
+                    ] : []),
+                ]}
+            </Menu>
         </Box>
     );
 }

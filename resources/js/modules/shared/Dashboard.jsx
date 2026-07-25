@@ -52,7 +52,6 @@ export default function Dashboard() {
     const [activeModal, setActiveModal] = useState(null);
     const [planChangeTenant, setPlanChangeTenant] = useState(null);
     const [showDeleted, setShowDeleted] = useState(false);
-    const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
 
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -241,8 +240,7 @@ export default function Dashboard() {
         }
     };
 
-    const handleViewSubscriptions = (tenant) => {
-        setSubscriptionSearchTerm(tenant.name);
+    const handleViewSubscriptions = () => {
         setView('subscriptions');
     };
 
@@ -398,7 +396,7 @@ export default function Dashboard() {
                                         { label: 'Change Plan', icon: <ChangeCircleIcon fontSize="small" />, onClick: () => setPlanChangeTenant(tenant) },
                                         { divider: true },
                                         { label: 'View Details', icon: <VisibilityIcon fontSize="small" />, onClick: () => openModal('domain', tenant) },
-                                        { label: 'View Subscriptions', icon: <ReceiptIcon fontSize="small" />, onClick: () => handleViewSubscriptions(tenant) },
+                                        { label: 'View Subscriptions', icon: <ReceiptIcon fontSize="small" />, onClick: () => handleViewSubscriptions() },
                                         { divider: true },
                                         { label: 'DB Info', icon: <StorageIcon fontSize="small" />, onClick: () => openModal('database', tenant) },
                                         { label: 'Run Migrations', icon: <SyncIcon fontSize="small" />, onClick: () => openModal('migration', tenant) },
@@ -408,7 +406,7 @@ export default function Dashboard() {
                             />
                         )}
                         <ErrorBoundary fallbackMessage="Subscriptions failed to load">
-                            {view === 'subscriptions' && <Subscriptions key={subscriptionSearchTerm} onViewTenant={handleViewTenant} initialSearch={subscriptionSearchTerm} />}
+                            {view === 'subscriptions' && <Subscriptions />}
                         </ErrorBoundary>
                         <ErrorBoundary fallbackMessage="Activity log failed to load">
                             {view === 'activity' && <ActivityLog />}

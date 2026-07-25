@@ -133,7 +133,7 @@ class SubscriptionTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'subscriptions' => [],
-                'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+                'total',
             ]);
     }
 
@@ -165,17 +165,17 @@ class SubscriptionTest extends TestCase
         $this->assertCount(2, $response->json('subscriptions'));
     }
 
-    public function test_subscription_index_searches_by_tenant_name(): void
+    public function test_subscription_index_searches_by_plan_name(): void
     {
-        $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create(['name' => 'Unique Corp']);
-        Subscription::factory()->create(['tenant_id' => $tenant->id, 'plan_id' => $plan->id]);
-        Subscription::factory()->count(2)->create(['plan_id' => $plan->id]);
+        $plan1 = Plan::factory()->create(['name' => 'Unique Plan']);
+        $plan2 = Plan::factory()->create(['name' => 'Standard Plan']);
+        Subscription::factory()->count(2)->create(['plan_id' => $plan1->id]);
+        Subscription::factory()->create(['plan_id' => $plan2->id]);
 
         $response = $this->getJson('/admin/api/subscriptions?search=Unique');
 
         $response->assertStatus(200);
-        $this->assertCount(1, $response->json('subscriptions'));
+        $this->assertCount(2, $response->json('subscriptions'));
     }
 
     public function test_subscription_show_returns_subscription(): void
