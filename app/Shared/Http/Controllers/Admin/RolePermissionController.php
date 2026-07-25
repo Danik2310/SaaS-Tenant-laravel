@@ -35,7 +35,7 @@ class RolePermissionController extends Controller
             ->with('permissions')
             ->where('guard_name', 'admin')
             ->orderBy('name')
-            ->paginate(50);
+            ->paginate(5);
 
         return response()->json([
             'roles' => RoleResource::collection($roles->items()),
@@ -173,7 +173,7 @@ class RolePermissionController extends Controller
             ->where('guard_name', 'admin')
             ->orderBy('module')
             ->orderBy('name')
-            ->paginate(100);
+            ->paginate(5);
 
         $grouped = collect($permissions->items())
             ->groupBy('module')

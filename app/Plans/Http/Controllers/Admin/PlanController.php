@@ -26,7 +26,7 @@ class PlanController extends Controller
      */
     public function index()
     {
-        $plans = Plan::with('featureGates')->paginate(25);
+        $plans = Plan::with('featureGates')->paginate(5);
 
         return response()->json([
             'plans' => PlanResource::collection($plans->items()),

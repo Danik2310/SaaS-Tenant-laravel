@@ -16,7 +16,7 @@ class ProductController extends Controller
     {
         $products = Product::with('category')
             ->latest()
-            ->paginate(15);
+            ->paginate(5);
 
         return Inertia::render('Tenant/Products/Index', [
             'products' => $products,

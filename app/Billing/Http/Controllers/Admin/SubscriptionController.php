@@ -60,7 +60,7 @@ class SubscriptionController extends Controller
             });
         }
 
-        $subscriptions = $query->orderBy('created_at', 'desc')->paginate(25);
+        $subscriptions = $query->orderBy('created_at', 'desc')->paginate(5);
 
         return response()->json([
             'subscriptions' => SubscriptionResource::collection($subscriptions->items()),

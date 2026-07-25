@@ -34,7 +34,7 @@ class StaffController extends Controller
             'roles' => fn ($q) => $q->where('guard_name', 'admin'),
             'roles.permissions' => fn ($q) => $q->where('guard_name', 'admin'),
             'permissions' => fn ($q) => $q->where('guard_name', 'admin'),
-        ])->paginate(25);
+        ])->paginate(5);
 
         return response()->json([
             'staff' => StaffResource::collection($staff->items()),

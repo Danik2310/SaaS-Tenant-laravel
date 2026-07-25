@@ -42,7 +42,7 @@ export default function TenantList({
     const [showDeleted, setShowDeleted] = useState(false);
     const [plans, setPlans] = useState([]);
 
-    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 });
+    const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);

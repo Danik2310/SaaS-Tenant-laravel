@@ -56,7 +56,7 @@ class DashboardController extends Controller
                 ->select(['id', 'name', 'status', 'created_at'])
                 ->with('domains:tenant_id,domain')
                 ->latest()
-                ->take(7)
+                ->take(5)
                 ->get()
                 ->map(function ($tenant) {
                     return [

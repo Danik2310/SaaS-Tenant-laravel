@@ -13,7 +13,7 @@ class WarehouseController extends Controller
 {
     public function index()
     {
-        $warehouses = Warehouse::orderBy('name')->paginate(15);
+        $warehouses = Warehouse::orderBy('name')->paginate(5);
 
         return Inertia::render('Tenant/Warehouses/Index', [
             'warehouses' => $warehouses,

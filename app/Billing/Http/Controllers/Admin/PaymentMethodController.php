@@ -27,7 +27,7 @@ class PaymentMethodController extends Controller
      */
     public function index()
     {
-        $perPage = min((int) request('per_page', 50), 100);
+        $perPage = min((int) request('per_page', 5), 100);
 
         $paymentMethods = PaymentMethod::paginate($perPage);
 

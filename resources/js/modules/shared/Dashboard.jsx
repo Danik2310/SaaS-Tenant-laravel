@@ -55,7 +55,7 @@ export default function Dashboard() {
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
 
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
     const [total, setTotal] = useState(0);
     const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
     const [bulkLoading, setBulkLoading] = useState(false);

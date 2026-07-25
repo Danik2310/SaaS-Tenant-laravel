@@ -57,7 +57,7 @@ class ActivityLogController extends Controller
             $query->whereDate('created_at', '<=', $dateTo);
         }
 
-        $activities = $query->orderBy('created_at', 'desc')->paginate(50);
+        $activities = $query->orderBy('created_at', 'desc')->paginate(5);
 
         $items = $activities->getCollection()->map(function ($activity) {
             return [

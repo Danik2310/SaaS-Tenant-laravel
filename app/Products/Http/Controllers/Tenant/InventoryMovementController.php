@@ -16,7 +16,7 @@ class InventoryMovementController extends Controller
     {
         $movements = InventoryMovement::with('product', 'warehouse')
             ->latest()
-            ->paginate(20);
+            ->paginate(5);
 
         return Inertia::render('Tenant/Inventory/Index', [
             'movements' => $movements,

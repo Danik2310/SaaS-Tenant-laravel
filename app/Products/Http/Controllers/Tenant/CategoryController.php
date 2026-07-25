@@ -17,7 +17,7 @@ class CategoryController extends Controller
         $categories = Category::withCount('products')
             ->with('parent:id,name')
             ->orderBy('name')
-            ->paginate(15);
+            ->paginate(5);
 
         return Inertia::render('Tenant/Categories/Index', [
             'categories' => $categories,

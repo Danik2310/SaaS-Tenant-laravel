@@ -23,7 +23,7 @@ import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function ProductIndex({ products }) {
     const [page, setPage] = useState(0);
-    const [rowsPerPage] = useState(15);
+    const [rowsPerPage] = useState(5);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const data = products.data || products;
 

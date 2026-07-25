@@ -58,7 +58,7 @@ const DataTable = React.memo(function DataTable({
     rowMenuActions = [],
     emptyMessage = 'No records found',
     rowsPerPageOptions = [5, 10, 25],
-    defaultRowsPerPage = 10,
+    defaultRowsPerPage = 5,
 
     // Server-side pagination
     total,

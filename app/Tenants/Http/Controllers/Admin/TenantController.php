@@ -91,7 +91,7 @@ class TenantController extends Controller
         $order = request('order', 'desc') === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sort, $order);
 
-        $perPage = min((int) request('per_page', 25), 100);
+        $perPage = min((int) request('per_page', 5), 100);
         $tenants = $query->paginate($perPage);
 
         return response()->json([
