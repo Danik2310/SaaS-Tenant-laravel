@@ -160,6 +160,7 @@ export default function ResourceUsage() {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const sentinelRef = useRef(null);
+    const hasScrolledRef = useRef(false);
 
     const fetchPage = useCallback(async (pageNum) => {
         const res = await api.get(
@@ -212,6 +213,13 @@ export default function ResourceUsage() {
         return () => clearInterval(interval);
     }, [loadInitial]);
 
+    // Track if user has scrolled (prevents observer from firing on initial render)
+    useEffect(() => {
+        const onScroll = () => { hasScrolledRef.current = true; };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
+
     // IntersectionObserver for infinite scroll
     useEffect(() => {
         const sentinel = sentinelRef.current;
@@ -219,7 +227,7 @@ export default function ResourceUsage() {
 
         const observer = new IntersectionObserver(
             ([entry]) => {
-                if (entry.isIntersecting) {
+                if (entry.isIntersecting && hasScrolledRef.current) {
                     loadMore();
                 }
             },
