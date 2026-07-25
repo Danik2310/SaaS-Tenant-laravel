@@ -245,7 +245,7 @@ class StaffController extends Controller
             ->where('guard_name', 'admin')
             ->active()
             ->orderBy('name')
-            ->paginate(50);
+            ->paginate(5);
 
         return response()->json([
             'roles' => RoleResource::collection($roles),
@@ -269,7 +269,7 @@ class StaffController extends Controller
         $permissions = Permission::where('guard_name', 'admin')
             ->active()
             ->orderBy('module')
-            ->paginate(100);
+            ->paginate(5);
 
         $mapped = $permissions->map(fn ($perm) => [
             'id' => $perm->id,

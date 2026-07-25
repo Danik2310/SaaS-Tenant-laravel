@@ -517,7 +517,7 @@ class TenantController extends Controller
      */
     public function plans()
     {
-        $plans = Plan::with('featureGates')->paginate(100);
+        $plans = Plan::with('featureGates')->paginate(5);
 
         return response()->json([
             'plans' => PlanResource::collection($plans->items()),

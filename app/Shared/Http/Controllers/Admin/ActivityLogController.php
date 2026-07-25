@@ -141,7 +141,7 @@ class ActivityLogController extends Controller
     {
         $users = AdminUser::select(['id', 'name', 'email'])
             ->orderBy('name')
-            ->paginate(50);
+            ->paginate(5);
 
         return response()->json([
             'causers' => $users->map(fn ($u) => ['id' => $u->id, 'name' => $u->name, 'email' => $u->email]),

@@ -33,7 +33,7 @@ class BillingController extends Controller
         $plans = Plan::with('featureGates')
             ->orderBy('price')
             ->orderBy('name')
-            ->paginate(25);
+            ->paginate(5);
 
         return inertia('Tenant/Billing/Upgrade', [
             'currentPlan' => $tenant instanceof Tenant ? $tenant->plan : null,
