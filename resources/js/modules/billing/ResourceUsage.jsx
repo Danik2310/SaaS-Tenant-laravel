@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import api from '@/services/api';
 import ExportButton from '@/Components/ExportButton';
 import Box from '@mui/material/Box';
@@ -10,11 +10,13 @@ import Tooltip from '@mui/material/Tooltip';
 import Grid from '@mui/material/Grid';
 import Avatar from '@mui/material/Avatar';
 import Skeleton from '@mui/material/Skeleton';
-import TablePagination from '@mui/material/TablePagination';
+import CircularProgress from '@mui/material/CircularProgress';
 import StorageIcon from '@mui/icons-material/Storage';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DnsIcon from '@mui/icons-material/Dns';
 import { alpha } from '@mui/material/styles';
+
+const PAGE_SIZE = 5;
 
 function UsageBar({ current, limit, label, color = 'primary.main' }) {
     const hasLimit = limit !== null && limit !== undefined;
@@ -152,33 +154,81 @@ function TenantUsageCard({ metric, limits }) {
 }
 
 export default function ResourceUsage() {
-    const [metrics, setMetrics] = useState([]);
+    const [allMetrics, setAllMetrics] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [total, setTotal] = useState(0);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(25);
+    const [hasMore, setHasMore] = useState(true);
+    const sentinelRef = useRef(null);
 
-    const fetchMetrics = useCallback(async () => {
+    const fetchPage = useCallback(async (pageNum) => {
+        const res = await api.get(
+            `/admin/api/resource-usage?page=${pageNum + 1}&per_page=${PAGE_SIZE}`
+        );
+        return {
+            metrics: res.data.metrics,
+            lastPage: res.data.last_page,
+        };
+    }, []);
+
+    const loadInitial = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await api.get(
-                `/admin/api/resource-usage?page=${page + 1}&per_page=${rowsPerPage}`
-            );
-            setMetrics(res.data.metrics);
-            setTotal(res.data.total);
+            const { metrics, lastPage } = await fetchPage(0);
+            setAllMetrics(metrics);
+            setPage(0);
+            setHasMore(0 < lastPage);
         } catch (err) {
             console.error('Failed to fetch resource usage:', err);
         } finally {
             setLoading(false);
         }
-    }, [page, rowsPerPage]);
+    }, [fetchPage]);
 
-    // Initial fetch + auto-polling every 30 seconds
+    const loadMore = useCallback(async () => {
+        if (loadingMore || !hasMore) return;
+        setLoadingMore(true);
+        try {
+            const nextPage = page + 1;
+            const { metrics, lastPage } = await fetchPage(nextPage);
+            setAllMetrics((prev) => [...prev, ...metrics]);
+            setPage(nextPage);
+            setHasMore(nextPage < lastPage);
+        } catch (err) {
+            console.error('Failed to load more resource usage:', err);
+        } finally {
+            setLoadingMore(false);
+        }
+    }, [page, loadingMore, hasMore, fetchPage]);
+
+    // Initial fetch
     useEffect(() => {
-        fetchMetrics();
-        const interval = setInterval(fetchMetrics, 30000);
+        loadInitial();
+    }, [loadInitial]);
+
+    // Auto-refresh every 30 seconds (resets to page 0)
+    useEffect(() => {
+        const interval = setInterval(loadInitial, 30000);
         return () => clearInterval(interval);
-    }, [fetchMetrics]);
+    }, [loadInitial]);
+
+    // IntersectionObserver for infinite scroll
+    useEffect(() => {
+        const sentinel = sentinelRef.current;
+        if (!sentinel || !hasMore) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [hasMore, loadMore]);
 
     return (
         <Box>
@@ -231,7 +281,7 @@ export default function ResourceUsage() {
                         </Grid>
                     ))}
                 </Grid>
-            ) : metrics.length === 0 ? (
+            ) : allMetrics.length === 0 ? (
                 <Paper sx={{ p: 6, textAlign: 'center', boxShadow: 1 }}>
                     <StorageIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
                     <Typography
@@ -252,27 +302,17 @@ export default function ResourceUsage() {
             ) : (
                 <>
                     <Grid container spacing={3}>
-                        {metrics.map((m) => (
+                        {allMetrics.map((m) => (
                             <Grid item xs={12} sm={6} md={6} lg={4} key={m.id}>
                                 <TenantUsageCard metric={m} />
                             </Grid>
                         ))}
                     </Grid>
-                    {total > 0 && (
-                        <Paper sx={{ mt: 3, boxShadow: 1 }}>
-                            <TablePagination
-                                component="div"
-                                count={total}
-                                page={page}
-                                onPageChange={(_, newPage) => setPage(newPage)}
-                                rowsPerPage={rowsPerPage}
-                                onRowsPerPageChange={(e) => {
-                                    setRowsPerPage(parseInt(e.target.value, 10));
-                                    setPage(0);
-                                }}
-                                rowsPerPageOptions={[10, 25, 50]}
-                            />
-                        </Paper>
+                    {hasMore && <Box ref={sentinelRef} sx={{ height: 1 }} />}
+                    {loadingMore && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                            <CircularProgress size={28} />
+                        </Box>
                     )}
                 </>
             )}

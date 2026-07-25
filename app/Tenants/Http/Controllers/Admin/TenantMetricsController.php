@@ -47,17 +47,13 @@ class TenantMetricsController extends Controller
             });
         }
 
-        $perPage = (int) ($validated['per_page'] ?? 25);
+        $perPage = (int) ($validated['per_page'] ?? 5);
         $metrics = $query->orderBy('collected_at', 'desc')->paginate($perPage);
 
         return response()->json([
             'metrics' => TenantResourceUsageResource::collection($metrics->items()),
-            'meta' => [
-                'current_page' => $metrics->currentPage(),
-                'last_page' => $metrics->lastPage(),
-                'per_page' => $metrics->perPage(),
-                'total' => $metrics->total(),
-            ],
+            'total' => $metrics->total(),
+            'last_page' => $metrics->lastPage(),
         ]);
     }
 
