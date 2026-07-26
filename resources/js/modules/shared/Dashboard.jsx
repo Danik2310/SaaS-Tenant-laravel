@@ -67,6 +67,15 @@ export default function Dashboard() {
     const [impersonateConfirmTenant, setImpersonateConfirmTenant] = useState(null);
     const [paymentMethods, setPaymentMethods] = useState([]);
 
+    const fetchPaymentMethods = useCallback(async () => {
+        try {
+            const response = await api.get('/admin/api/payment-methods');
+            setPaymentMethods(response.data.methods || []);
+        } catch (err) {
+            toast.error('Failed to fetch payment methods');
+        }
+    }, []);
+
     useEffect(() => {
         if (permissions.includes('manage tenants')) {
             fetchTenants();
@@ -251,15 +260,6 @@ export default function Dashboard() {
     const handleViewSubscriptions = () => {
         setView('subscriptions');
     };
-
-    const fetchPaymentMethods = useCallback(async () => {
-        try {
-            const response = await api.get('/admin/api/payment-methods');
-            setPaymentMethods(response.data.methods || []);
-        } catch (err) {
-            toast.error('Failed to fetch payment methods');
-        }
-    }, []);
 
     const handleBulkAction = async (action, ids) => {
         if (!ids || ids.length === 0) return;
