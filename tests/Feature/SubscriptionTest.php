@@ -302,7 +302,7 @@ class SubscriptionTest extends TestCase
         $this->assertEquals($newPlan->id, $tenant->fresh()->plan_id);
     }
 
-    public function test_subscription_destroy_cancels_subscription(): void
+    public function test_subscription_destroy_deletes_subscription(): void
     {
         $plan = Plan::factory()->create();
         $subscription = Subscription::factory()->create(['plan_id' => $plan->id]);
@@ -310,11 +310,9 @@ class SubscriptionTest extends TestCase
         $response = $this->deleteJson("/admin/api/subscriptions/{$subscription->id}");
 
         $response->assertStatus(200)
-            ->assertJsonPath('message', 'Subscription cancelled successfully');
+            ->assertJsonPath('message', 'Subscription deleted successfully');
 
-        $subscription->refresh();
-        $this->assertEquals('cancelled', $subscription->status);
-        $this->assertNotNull($subscription->ends_at);
+        $this->assertDatabaseMissing('subscriptions', ['id' => $subscription->id]);
     }
 
     public function test_subscription_destroy_returns_404_for_nonexistent(): void
@@ -602,5 +600,79 @@ class SubscriptionTest extends TestCase
         ]);
 
         Event::assertNotDispatched(PlanChanged::class);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Plan creation from Subscriptions page
+    // ────────────────────────────────────────────────────────────────────────────
+
+    public function test_plan_store_creates_plan_with_new_fields(): void
+    {
+        $response = $this->postJson('/admin/api/plans', [
+            'name' => 'Enterprise',
+            'slug' => 'enterprise',
+            'status' => 'active',
+            'price' => 299.99,
+            'duration_months' => 12,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('message', 'Plan created successfully')
+            ->assertJsonPath('plan.name', 'Enterprise')
+            ->assertJsonPath('plan.status', 'active')
+            ->assertJsonPath('plan.duration_months', 12);
+
+        $this->assertDatabaseHas('plans', [
+            'slug' => 'enterprise',
+            'status' => 'active',
+            'duration_months' => 12,
+        ], 'mysql_central');
+    }
+
+    public function test_plan_store_validates_required_fields(): void
+    {
+        $response = $this->postJson('/admin/api/plans', []);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['name', 'slug', 'status', 'price', 'duration_months']);
+    }
+
+    public function test_plan_store_validates_status_enum(): void
+    {
+        $response = $this->postJson('/admin/api/plans', [
+            'name' => 'Bad Plan',
+            'slug' => 'bad-plan',
+            'status' => 'invalid',
+            'price' => 10,
+            'duration_months' => 1,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['status']);
+    }
+
+    public function test_plan_store_validates_duration_months_min(): void
+    {
+        $response = $this->postJson('/admin/api/plans', [
+            'name' => 'Short Plan',
+            'slug' => 'short-plan',
+            'status' => 'active',
+            'price' => 10,
+            'duration_months' => 0,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['duration_months']);
+    }
+
+    public function test_tenants_list_returns_tenants(): void
+    {
+        Tenant::factory()->count(3)->create();
+
+        $response = $this->getJson('/admin/api/tenants-list');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(3, 'tenants')
+            ->assertJsonStructure(['tenants' => [['id', 'name', 'plan_id']]]);
     }
 }

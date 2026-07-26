@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdatePlanRequest;
 use App\Http\Resources\PlanResource;
 use App\Models\Plan;
 use App\Models\PlanFeature;
+use App\Models\Tenant;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -138,6 +139,15 @@ class PlanController extends Controller
     public function destroy(string $id)
     {
         $plan = Plan::findOrFail($id);
+
+        $tenantCount = Tenant::where('plan_id', $plan->id)->count();
+        if ($tenantCount > 0) {
+            return response()->json([
+                'message' => 'Cannot delete a plan assigned to '.$tenantCount.' tenant(s). Reassign tenants first.',
+            ], 422);
+        }
+
+        $plan->featureGates()->delete();
         $plan->delete();
 
         Log::info('Plan deleted', ['plan_id' => $plan->id, 'plan_name' => $plan->name]);

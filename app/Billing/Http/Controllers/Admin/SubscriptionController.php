@@ -2,7 +2,6 @@
 
 namespace App\Billing\Http\Controllers\Admin;
 
-use App\Billing\Events\PlanChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSubscriptionRequest;
 use App\Http\Requests\Admin\UpdateSubscriptionRequest;
@@ -11,9 +10,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Tenants\Contracts\TenantManagerInterface;
-use App\Tenants\States\TenantStateManager;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -149,62 +146,52 @@ class SubscriptionController extends Controller
      */
     public function update(UpdateSubscriptionRequest $request, string $id)
     {
-        return DB::transaction(function () use ($request, $id) {
-            $subscription = Subscription::with('tenant.plan')->findOrFail($id);
-            $validated = $request->validated();
+        $subscription = Subscription::with('tenant.plan')->findOrFail($id);
+        $validated = $request->validated();
 
-            if (isset($validated['status'])) {
-                $allowedTransitions = [
-                    'active' => ['pending', 'cancelled', 'expired'],
-                    'pending' => ['active'],
-                    'cancelled' => ['active'],
-                    'expired' => ['active'],
-                ];
+        if (isset($validated['status'])) {
+            $allowedTransitions = [
+                'active' => ['pending', 'cancelled', 'expired'],
+                'pending' => ['active'],
+                'cancelled' => ['active'],
+                'expired' => ['active'],
+            ];
 
-                $currentStatus = $subscription->status;
-                $newStatus = $validated['status'];
-                $allowed = $allowedTransitions[$currentStatus] ?? [];
+            $currentStatus = $subscription->status;
+            $newStatus = $validated['status'];
+            $allowed = $allowedTransitions[$currentStatus] ?? [];
 
-                if (! in_array($newStatus, $allowed, true)) {
-                    return response()->json([
-                        'message' => "Cannot transition subscription from '{$currentStatus}' to '{$newStatus}'",
-                    ], 422);
-                }
-
-                $subscription->status = $newStatus;
-                $subscription->save();
-                unset($validated['status']);
+            if (! in_array($newStatus, $allowed, true)) {
+                return response()->json([
+                    'message' => "Cannot transition subscription from '{$currentStatus}' to '{$newStatus}'",
+                ], 422);
             }
 
-            if (isset($validated['plan_id'])) {
-                $newPlan = Plan::findOrFail($validated['plan_id']);
+            $subscription->status = $newStatus;
+            $subscription->save();
+        }
 
-                $tenant = Tenant::lockForUpdate()->findOrFail($subscription->tenant_id);
-                $oldPlan = $tenant->plan;
+        if (isset($validated['plan_id'])) {
+            $newPlan = Plan::findOrFail($validated['plan_id']);
+            $tenant = Tenant::findOrFail($subscription->tenant_id);
 
-                $subscription->update([
-                    'status' => 'cancelled',
-                    'ends_at' => now()->subDay(),
-                ]);
-
-                Subscription::createForTenant($tenant, $newPlan, 'active');
-
-                $tenant->plan_id = $newPlan->id;
-                $tenant->save();
-
-                event(new PlanChanged($tenant, $oldPlan, $newPlan));
-                TenantStateManager::flushTenantCache($tenant);
-
-                $tenant = $tenant->fresh();
+            try {
+                $this->tenantManager->changePlan($tenant, $newPlan);
+            } catch (\InvalidArgumentException $e) {
+                return response()->json([
+                    'message' => 'Cannot change plan: '.$e->getMessage(),
+                ], 422);
             }
 
-            $subscription->fresh()->load(['tenant', 'plan']);
+            $subscription = $subscription->fresh();
+        }
 
-            return response()->json([
-                'message' => 'Subscription updated successfully',
-                'subscription' => new SubscriptionResource($subscription),
-            ]);
-        });
+        $subscription->load(['tenant', 'plan']);
+
+        return response()->json([
+            'message' => 'Subscription updated successfully',
+            'subscription' => new SubscriptionResource($subscription),
+        ]);
     }
 
     /**
@@ -222,20 +209,13 @@ class SubscriptionController extends Controller
     {
         $subscription = Subscription::findOrFail($id);
 
-        if ($subscription->status === 'cancelled') {
-            return response()->json(['message' => 'Subscription is already cancelled.'], 200);
-        }
+        $subscription->delete();
 
-        $subscription->update([
-            'status' => 'cancelled',
-            'ends_at' => now(),
-        ]);
-
-        Log::info('Subscription cancelled', [
-            'subscription_id' => $subscription->id,
+        Log::info('Subscription deleted', [
+            'subscription_id' => $id,
             'tenant_id' => $subscription->tenant_id,
         ]);
 
-        return response()->json(['message' => 'Subscription cancelled successfully']);
+        return response()->json(['message' => 'Subscription deleted successfully']);
     }
 }
