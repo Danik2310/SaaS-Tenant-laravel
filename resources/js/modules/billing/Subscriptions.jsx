@@ -22,7 +22,7 @@ import Select from '@mui/material/Select';
 import FormHelperText from '@mui/material/FormHelperText';
 import InboxIcon from '@mui/icons-material/Inbox';
 import EditIcon from '@mui/icons-material/Edit';
-import BlockIcon from '@mui/icons-material/Block';
+import DeleteIcon from '@mui/icons-material/Delete';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import CloseIcon from '@mui/icons-material/Close';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -35,63 +35,36 @@ const STATUS_OPTIONS = [
     { text: 'Expired', value: 'expired' },
 ];
 
-function EditPriceForm({ planId, planName, currentPrice, onSave, onCancel }) {
-    const [price, setPrice] = useState(currentPrice);
-    const [submitting, setSubmitting] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            await onSave(planId, price);
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to update price');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    return (
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Typography variant="body2" sx={{ color: '#64748b' }}>
-                Updating price for <strong>{planName}</strong>
-            </Typography>
-            <TextField
-                size="small"
-                label="Price"
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                inputProps={{ min: 0, step: 0.01 }}
-                InputProps={{ startAdornment: <Typography variant="body2" sx={{ mr: 0.5 }}>$</Typography> }}
-                required
-                autoFocus
-            />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
-                <Button variant="outlined" size="small" onClick={onCancel} disabled={submitting}>
-                    Cancel
-                </Button>
-                <Button type="submit" variant="contained" size="small" disabled={submitting}>
-                    Update Price
-                </Button>
-            </Box>
-        </Box>
-    );
-}
-
-function SubscriptionForm({ subscription, plans, tenants, onSubmit, onCancel, embedded }) {
+function SubscriptionCreateForm({ tenants, plans, onSubmit, onCancel }) {
+    const today = new Date().toISOString().split('T')[0];
     const [form, setForm] = useState({
-        tenant_id: subscription?.tenant_id || '',
-        plan_id: subscription?.plan_id || '',
-        status: subscription?.status || 'active',
-        starts_at: subscription?.starts_at || new Date().toISOString().split('T')[0],
-        ends_at: subscription?.ends_at || '',
+        tenant_id: '',
+        plan_id: '',
+        status: 'active',
+        starts_at: today,
+        ends_at: '',
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
 
+    const selectedPlan = plans.find(p => String(p.id) === String(form.plan_id));
+
     const handleChange = (field) => (e) => {
-        setForm(prev => ({ ...prev, [field]: e.target.value }));
+        const value = e.target.value;
+        setForm(prev => {
+            const next = { ...prev, [field]: value };
+            if (field === 'plan_id' && next.starts_at) {
+                const plan = plans.find(p => String(p.id) === String(value));
+                if (plan?.duration_months) {
+                    const start = new Date(next.starts_at);
+                    start.setMonth(start.getMonth() + plan.duration_months);
+                    next.ends_at = start.toISOString().split('T')[0];
+                } else {
+                    next.ends_at = '';
+                }
+            }
+            return next;
+        });
         setErrors(prev => ({ ...prev, [field]: undefined }));
     };
 
@@ -100,7 +73,14 @@ function SubscriptionForm({ subscription, plans, tenants, onSubmit, onCancel, em
         setSubmitting(true);
         setErrors({});
         try {
-            await onSubmit(form);
+            const payload = {
+                tenant_id: form.tenant_id,
+                plan_id: parseInt(form.plan_id, 10),
+                status: form.status,
+            };
+            if (form.starts_at) payload.starts_at = form.starts_at;
+            if (form.ends_at) payload.ends_at = form.ends_at;
+            await onSubmit(payload);
         } catch (err) {
             if (err.response?.status === 422) {
                 setErrors(err.response.data.errors || {});
@@ -120,7 +100,6 @@ function SubscriptionForm({ subscription, plans, tenants, onSubmit, onCancel, em
                     value={form.tenant_id}
                     label="Tenant"
                     onChange={handleChange('tenant_id')}
-                    disabled={!!subscription}
                 >
                     {tenants.map(t => (
                         <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>
@@ -166,18 +145,17 @@ function SubscriptionForm({ subscription, plans, tenants, onSubmit, onCancel, em
                 InputLabelProps={{ shrink: true }}
                 error={!!errors.starts_at}
                 helperText={errors.starts_at?.[0]}
-                required
             />
 
             <TextField
                 size="small"
-                label="End Date (optional)"
+                label="End Date"
                 type="date"
                 value={form.ends_at}
                 onChange={handleChange('ends_at')}
                 InputLabelProps={{ shrink: true }}
                 error={!!errors.ends_at}
-                helperText={errors.ends_at?.[0]}
+                helperText={errors.ends_at?.[0] || (selectedPlan?.duration_months ? `Auto-calculated: ${selectedPlan.duration_months} months` : '')}
             />
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
@@ -185,7 +163,86 @@ function SubscriptionForm({ subscription, plans, tenants, onSubmit, onCancel, em
                     Cancel
                 </Button>
                 <Button type="submit" variant="contained" size="small" disabled={submitting}>
-                    {subscription ? 'Update' : 'Create'}
+                    Create Subscription
+                </Button>
+            </Box>
+        </Box>
+    );
+}
+
+function SubscriptionEditForm({ subscription, plans, onSubmit, onCancel }) {
+    const [form, setForm] = useState({
+        plan_id: subscription?.plan_id || '',
+        status: subscription?.status || 'active',
+    });
+    const [errors, setErrors] = useState({});
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleChange = (field) => (e) => {
+        setForm(prev => ({ ...prev, [field]: e.target.value }));
+        setErrors(prev => ({ ...prev, [field]: undefined }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setErrors({});
+        try {
+            await onSubmit({
+                plan_id: parseInt(form.plan_id, 10),
+                status: form.status,
+            });
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setErrors(err.response.data.errors || {});
+            } else {
+                toast.error(err.response?.data?.message || 'An error occurred');
+            }
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Typography variant="body2" sx={{ color: '#64748b' }}>
+                Editing subscription for <strong>{subscription?.tenant_name}</strong>
+            </Typography>
+
+            <FormControl size="small" fullWidth error={!!errors.plan_id}>
+                <InputLabel>Plan</InputLabel>
+                <Select
+                    value={form.plan_id}
+                    label="Plan"
+                    onChange={handleChange('plan_id')}
+                >
+                    {plans.map(p => (
+                        <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>
+                    ))}
+                </Select>
+                {errors.plan_id && <FormHelperText>{errors.plan_id[0]}</FormHelperText>}
+            </FormControl>
+
+            <FormControl size="small" fullWidth error={!!errors.status}>
+                <InputLabel>Status</InputLabel>
+                <Select
+                    value={form.status}
+                    label="Status"
+                    onChange={handleChange('status')}
+                >
+                    {STATUS_OPTIONS.map(opt => (
+                        <MenuItem key={opt.value} value={opt.value}>{opt.text}</MenuItem>
+                    ))}
+                </Select>
+                {errors.status && <FormHelperText>{errors.status[0]}</FormHelperText>}
+            </FormControl>
+
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+                <Button variant="outlined" size="small" onClick={onCancel} disabled={submitting}>
+                    Cancel
+                </Button>
+                <Button type="submit" variant="contained" size="small" disabled={submitting}>
+                    Save Changes
                 </Button>
             </Box>
         </Box>
@@ -206,16 +263,15 @@ export default function Subscriptions({ initialSearch = '' }) {
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
 
-    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [showCreateSubscriptionDialog, setShowCreateSubscriptionDialog] = useState(false);
     const [editingSubscription, setEditingSubscription] = useState(null);
-    const [confirmCancel, setConfirmCancel] = useState({ open: false, subscription: null });
+    const [confirmDelete, setConfirmDelete] = useState({ open: false, subscription: null });
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
     const [actionMenuRow, setActionMenuRow] = useState(null);
-    const [editingPriceTarget, setEditingPriceTarget] = useState(null);
 
     useEffect(() => {
         api.get('/admin/api/plans-list').then(r => setPlans(r.data.plans ?? [])).catch(() => {});
-        api.get('/admin/api/tenants?per_page=100').then(r => setTenants(r.data.tenants ?? [])).catch(() => {});
+        api.get('/admin/api/tenants-list').then(r => setTenants(r.data.tenants ?? [])).catch(() => {});
     }, []);
 
     const fetchSubscriptions = useCallback(async () => {
@@ -239,10 +295,7 @@ export default function Subscriptions({ initialSearch = '' }) {
 
             const sortMapping = {
                 'plan_name': 'plan_name',
-                'plan_price': 'plan_price',
                 'status': 'status',
-                'starts_at': 'starts_at',
-                'ends_at': 'ends_at',
                 'created_at': 'created_at',
             };
             if (sorting.length > 0) {
@@ -270,47 +323,27 @@ export default function Subscriptions({ initialSearch = '' }) {
     const handleCreateSubscription = async (formData) => {
         await api.post('/admin/api/subscriptions', formData);
         toast.success('Subscription created successfully');
-        setShowCreateDialog(false);
+        setShowCreateSubscriptionDialog(false);
         fetchSubscriptions();
     };
 
-    const handleUpdateSubscription = async (formData) => {
+    const handleEditSubscription = async (formData) => {
         await api.put(`/admin/api/subscriptions/${editingSubscription.id}`, formData);
         toast.success('Subscription updated successfully');
         setEditingSubscription(null);
         fetchSubscriptions();
     };
 
-    const handleEditClick = async (row) => {
-        try {
-            const response = await api.get(`/admin/api/subscriptions/${row.id}`);
-            setEditingSubscription(response.data.subscription);
-        } catch (err) {
-            toast.error('Failed to load subscription details');
-        }
-    };
-
-    const handleConfirmCancel = async () => {
-        const sub = confirmCancel.subscription;
-        setConfirmCancel({ open: false, subscription: null });
+    const handleConfirmDelete = async () => {
+        const sub = confirmDelete.subscription;
+        setConfirmDelete({ open: false, subscription: null });
         try {
             await api.delete(`/admin/api/subscriptions/${sub.id}`);
-            toast.success('Subscription cancelled successfully');
+            toast.success('Subscription deleted successfully');
             fetchSubscriptions();
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to cancel subscription');
+            toast.error(err.response?.data?.message || 'Failed to delete subscription');
         }
-    };
-
-    const handleOpenEditPrice = (subscription) => {
-        setEditingPriceTarget(subscription);
-    };
-
-    const handleSavePrice = async (planId, newPrice) => {
-        await api.put(`/admin/api/plans/${planId}`, { price: parseFloat(newPrice) });
-        toast.success('Plan price updated successfully');
-        setEditingPriceTarget(null);
-        fetchSubscriptions();
     };
 
     const columns = useMemo(() => [
@@ -337,17 +370,13 @@ export default function Subscriptions({ initialSearch = '' }) {
             accessorKey: 'plan_price',
             header: 'Price',
             enableColumnFilter: false,
+            enableSorting: false,
             Cell: ({ cell }) => {
                 const price = cell.getValue();
                 return (
-                    <Button
-                        size="small"
-                        onClick={() => handleOpenEditPrice(cell.row.original)}
-                        sx={{ fontWeight: 600, fontSize: 13, color: '#166534', textTransform: 'none', minWidth: 0, p: 0, justifyContent: 'flex-start' }}
-                    >
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#166534' }}>
                         ${parseFloat(price).toFixed(2)}
-                        <EditIcon sx={{ fontSize: 12, ml: 0.5, color: '#94a3b8' }} />
-                    </Button>
+                    </Typography>
                 );
             },
         },
@@ -377,26 +406,6 @@ export default function Subscriptions({ initialSearch = '' }) {
             },
         },
         {
-            accessorKey: 'starts_at',
-            header: 'Starts',
-            enableColumnFilter: false,
-            Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
-                    {cell.getValue() || '—'}
-                </Typography>
-            ),
-        },
-        {
-            accessorKey: 'ends_at',
-            header: 'Ends',
-            enableColumnFilter: false,
-            Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
-                    {cell.getValue() || '—'}
-                </Typography>
-            ),
-        },
-        {
             accessorKey: 'created_at',
             header: 'Created',
             enableColumnFilter: false,
@@ -417,7 +426,7 @@ export default function Subscriptions({ initialSearch = '' }) {
                 <Button
                     variant="contained"
                     size="small"
-                    onClick={() => setShowCreateDialog(true)}
+                    onClick={() => setShowCreateSubscriptionDialog(true)}
                     sx={{
                         bgcolor: '#22c55e',
                         '&:hover': { bgcolor: '#16a34a' },
@@ -478,7 +487,7 @@ export default function Subscriptions({ initialSearch = '' }) {
                                 <Tooltip title="Edit">
                                     <Box
                                         component="button"
-                                        onClick={(e) => { e.stopPropagation(); handleEditClick(sub); }}
+                                        onClick={(e) => { e.stopPropagation(); setEditingSubscription(sub); }}
                                         sx={{
                                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                             border: 'none', bgcolor: 'transparent', cursor: 'pointer',
@@ -489,22 +498,20 @@ export default function Subscriptions({ initialSearch = '' }) {
                                         <EditIcon fontSize="small" />
                                     </Box>
                                 </Tooltip>
-                                {sub.status !== 'cancelled' && (
-                                    <Tooltip title="Cancel Subscription">
-                                        <Box
-                                            component="button"
-                                            onClick={(e) => { e.stopPropagation(); setConfirmCancel({ open: true, subscription: sub }); }}
-                                            sx={{
-                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                                p: 0.5, borderRadius: 1, color: 'error.main',
-                                                '&:hover': { bgcolor: 'action.hover' },
-                                            }}
-                                        >
-                                            <BlockIcon fontSize="small" />
-                                        </Box>
-                                    </Tooltip>
-                                )}
+                                <Tooltip title="Delete">
+                                    <Box
+                                        component="button"
+                                        onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, subscription: sub }); }}
+                                        sx={{
+                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                            p: 0.5, borderRadius: 1, color: 'error.main',
+                                            '&:hover': { bgcolor: 'action.hover' },
+                                        }}
+                                    >
+                                        <DeleteIcon fontSize="small" />
+                                    </Box>
+                                </Tooltip>
                                 <IconButton
                                     size="small"
                                     onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(sub); }}
@@ -517,26 +524,25 @@ export default function Subscriptions({ initialSearch = '' }) {
                 />
             )}
 
-            {/* Create Dialog */}
-            <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
+            {/* Create Subscription Dialog */}
+            <Dialog open={showCreateSubscriptionDialog} onClose={() => setShowCreateSubscriptionDialog(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Create Subscription
-                    <IconButton onClick={() => setShowCreateDialog(false)} size="small">
+                    Create New Subscription
+                    <IconButton onClick={() => setShowCreateSubscriptionDialog(false)} size="small">
                         <CloseIcon fontSize="small" />
                     </IconButton>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
-                    <SubscriptionForm
-                        plans={plans}
+                    <SubscriptionCreateForm
                         tenants={tenants}
+                        plans={plans}
                         onSubmit={handleCreateSubscription}
-                        onCancel={() => setShowCreateDialog(false)}
-                        embedded
+                        onCancel={() => setShowCreateSubscriptionDialog(false)}
                     />
                 </DialogContent>
             </Dialog>
 
-            {/* Edit Dialog */}
+            {/* Edit Subscription Dialog */}
             <Dialog open={!!editingSubscription} onClose={() => setEditingSubscription(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Edit Subscription
@@ -546,47 +552,24 @@ export default function Subscriptions({ initialSearch = '' }) {
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     {editingSubscription && (
-                        <SubscriptionForm
+                        <SubscriptionEditForm
                             subscription={editingSubscription}
                             plans={plans}
-                            tenants={tenants}
-                            onSubmit={handleUpdateSubscription}
+                            onSubmit={handleEditSubscription}
                             onCancel={() => setEditingSubscription(null)}
-                            embedded
                         />
                     )}
                 </DialogContent>
             </Dialog>
 
             <ConfirmDialog
-                open={confirmCancel.open}
-                title="Cancel Subscription"
-                message={`Are you sure you want to cancel this subscription for ${confirmCancel.subscription?.tenant_name}? This action cannot be undone.`}
-                confirmLabel="Cancel Subscription"
-                onConfirm={handleConfirmCancel}
-                onCancel={() => setConfirmCancel({ open: false, subscription: null })}
+                open={confirmDelete.open}
+                title="Delete Subscription"
+                message={`Are you sure you want to delete this subscription for ${confirmDelete.subscription?.tenant_name}? This action cannot be undone.`}
+                confirmLabel="Delete"
+                onConfirm={handleConfirmDelete}
+                onCancel={() => setConfirmDelete({ open: false, subscription: null })}
             />
-
-            {/* Edit Price Dialog */}
-            <Dialog open={!!editingPriceTarget} onClose={() => setEditingPriceTarget(null)} maxWidth="xs" fullWidth>
-                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Edit Plan Price
-                    <IconButton onClick={() => setEditingPriceTarget(null)} size="small">
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ p: 2 }}>
-                    {editingPriceTarget && (
-                        <EditPriceForm
-                            planId={editingPriceTarget.plan_id}
-                            planName={editingPriceTarget.plan_name}
-                            currentPrice={editingPriceTarget.plan_price}
-                            onSave={handleSavePrice}
-                            onCancel={() => setEditingPriceTarget(null)}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
 
             <Menu
                 anchorEl={actionMenuAnchor}
@@ -597,16 +580,14 @@ export default function Subscriptions({ initialSearch = '' }) {
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
                 {actionMenuRow && [
-                    <MenuItem key="edit" onClick={() => handleEditClick(actionMenuRow)}>
+                    <MenuItem key="edit" onClick={() => setEditingSubscription(actionMenuRow)}>
                         <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
                         <ListItemText>Edit</ListItemText>
                     </MenuItem>,
-                    ...(actionMenuRow.status !== 'cancelled' ? [
-                        <MenuItem key="cancel" onClick={() => setConfirmCancel({ open: true, subscription: actionMenuRow })}>
-                            <ListItemIcon><BlockIcon fontSize="small" /></ListItemIcon>
-                            <ListItemText>Cancel Subscription</ListItemText>
-                        </MenuItem>,
-                    ] : []),
+                    <MenuItem key="delete" onClick={() => setConfirmDelete({ open: true, subscription: actionMenuRow })}>
+                        <ListItemIcon><DeleteIcon fontSize="small" /></ListItemIcon>
+                        <ListItemText>Delete</ListItemText>
+                    </MenuItem>,
                 ]}
             </Menu>
         </Box>
