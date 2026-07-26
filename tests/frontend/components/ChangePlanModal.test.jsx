@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import ChangePlanModal from '@/modules/landlord/modals/ChangePlanModal';
+import ChangePlanModal from '@/modules/billing/modals/ChangePlanModal';
 import api from '@/services/api';
 
 vi.mock('@/services/api', () => ({

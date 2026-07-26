@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
-import DatabaseModal from '@/modules/landlord/modals/DatabaseModal';
+import DatabaseModal from '@/modules/shared/modals/DatabaseModal';
 
 const mockApi = vi.hoisted(() => ({
   get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn(),

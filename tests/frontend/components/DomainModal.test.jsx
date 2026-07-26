@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
-import DomainModal from '@/modules/landlord/modals/DomainModal';
+import DomainModal from '@/modules/shared/modals/DomainModal';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 

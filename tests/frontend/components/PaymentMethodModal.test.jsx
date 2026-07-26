@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
-import PaymentMethodModal from '@/modules/landlord/billing/components/PaymentMethodModal';
+import PaymentMethodModal from '@/modules/billing/components/PaymentMethodModal';
 import { mockPaymentMethod } from '../fixtures';
 
 const mockApi = vi.hoisted(() => ({

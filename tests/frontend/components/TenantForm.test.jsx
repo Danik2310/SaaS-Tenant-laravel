@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
-import TenantForm from '@/modules/landlord/tenants/TenantForm';
+import TenantForm from '@/modules/tenants/TenantForm';
 import { mockPlans } from '../fixtures';
 
 const mockApi = vi.hoisted(() => ({
