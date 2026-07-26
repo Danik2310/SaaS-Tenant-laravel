@@ -15,7 +15,9 @@ class Plan extends Model
     protected $fillable = [
         'name',
         'slug',
+        'status',
         'price',
+        'duration_months',
         'max_users',
         'max_storage',
         'max_warehouses',
@@ -25,6 +27,7 @@ class Plan extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'duration_months' => 'integer',
         'max_users' => 'integer',
         'max_storage' => 'integer',
         'max_warehouses' => 'integer',
