@@ -8,6 +8,7 @@ import StorageIcon from '@mui/icons-material/Storage';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PersonIcon from '@mui/icons-material/Person';
 import CreditCardIcon from '@mui/icons-material/CreditCard';
+import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
@@ -19,6 +20,7 @@ const permissionMap = {
     staff: 'manage staff',
     roles: 'manage staff',
     subscriptions: 'manage subscriptions',
+    'payment-methods': 'manage payment methods',
     plans: 'manage plans',
     settings: 'manage settings',
     activity: 'view activity logs',
@@ -33,6 +35,7 @@ const views = [
     { id: 'staff', label: 'Staff Management', icon: <GroupIcon />, section: 'Administration' },
     { id: 'roles', label: 'Roles & Permissions', icon: <SecurityIcon />, section: 'Administration' },
     { id: 'subscriptions', label: 'Subscriptions', icon: <CreditCardIcon />, section: 'Billing' },
+    { id: 'payment-methods', label: 'Payment Methods', icon: <AccountBalanceIcon />, section: 'Billing' },
     { id: 'plans', label: 'Infrastructure & Plans', icon: <StorageIcon />, section: 'Configuration' },
     { id: 'settings', label: 'System Settings', icon: <SettingsIcon />, section: 'Configuration' },
     { id: 'activity', label: 'Activity Logs', icon: <HistoryIcon />, section: 'Tools' },

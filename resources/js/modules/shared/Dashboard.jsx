@@ -32,6 +32,7 @@ const Plans = lazy(() => import('@/modules/billing/Plans'));
 const RolePermissions = lazy(() => import('@/modules/shared/staff/RolePermissions'));
 const Profile = lazy(() => import('@/modules/shared/profile/Profile'));
 const Subscriptions = lazy(() => import('@/modules/billing/Subscriptions'));
+const PaymentMethods = lazy(() => import('@/modules/billing/components/PaymentMethodsTab'));
 const ActivityLog = lazy(() => import('@/modules/shared/activity/ActivityLog'));
 const Settings = lazy(() => import('@/modules/shared/settings/Settings'));
 const ResourceUsage = lazy(() => import('@/modules/billing/ResourceUsage'));
@@ -64,6 +65,7 @@ export default function Dashboard() {
     const [deleteConfirmTenant, setDeleteConfirmTenant] = useState(null);
     const [restoreConfirmId, setRestoreConfirmId] = useState(null);
     const [impersonateConfirmTenant, setImpersonateConfirmTenant] = useState(null);
+    const [paymentMethods, setPaymentMethods] = useState([]);
 
     useEffect(() => {
         if (permissions.includes('manage tenants')) {
@@ -72,6 +74,12 @@ export default function Dashboard() {
             setLoading(false);
         }
     }, [showDeleted, page, rowsPerPage, permissions]);
+
+    useEffect(() => {
+        if (view === 'payment-methods') {
+            fetchPaymentMethods();
+        }
+    }, [view, fetchPaymentMethods]);
 
     const fetchTenants = async () => {
         setLoading(true);
@@ -244,6 +252,15 @@ export default function Dashboard() {
         setView('subscriptions');
     };
 
+    const fetchPaymentMethods = useCallback(async () => {
+        try {
+            const response = await api.get('/admin/api/payment-methods');
+            setPaymentMethods(response.data.methods || []);
+        } catch (err) {
+            toast.error('Failed to fetch payment methods');
+        }
+    }, []);
+
     const handleBulkAction = async (action, ids) => {
         if (!ids || ids.length === 0) return;
 
@@ -311,6 +328,7 @@ export default function Dashboard() {
                             {view === 'staff' && 'Staff Management'}
                             {view === 'roles' && 'Roles & Permissions'}
                             {view === 'subscriptions' && 'Subscriptions'}
+                            {view === 'payment-methods' && 'Payment Methods'}
                             {view === 'plans' && 'Infrastructure & Plans'}
                             {view === 'activity' && 'Activity Logs'}
                             {view === 'settings' && 'System Settings'}
@@ -407,6 +425,15 @@ export default function Dashboard() {
                         )}
                         <ErrorBoundary fallbackMessage="Subscriptions failed to load">
                             {view === 'subscriptions' && <Subscriptions />}
+                        </ErrorBoundary>
+                        <ErrorBoundary fallbackMessage="Payment methods failed to load">
+                            {view === 'payment-methods' && (
+                                <PaymentMethods
+                                    paymentMethods={paymentMethods}
+                                    fetchPaymentMethods={fetchPaymentMethods}
+                                    setError={setError}
+                                />
+                            )}
                         </ErrorBoundary>
                         <ErrorBoundary fallbackMessage="Activity log failed to load">
                             {view === 'activity' && <ActivityLog />}
