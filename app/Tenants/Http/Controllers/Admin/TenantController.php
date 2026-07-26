@@ -7,7 +7,6 @@ use App\Http\Requests\Admin\BulkTenantOperationRequest;
 use App\Http\Requests\Admin\ChangeTenantPlanRequest;
 use App\Http\Requests\Admin\StoreTenantRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
-use App\Http\Resources\PlanResource;
 use App\Http\Resources\TenantResource;
 use App\Models\Plan;
 use App\Models\Tenant;
@@ -507,6 +506,22 @@ class TenantController extends Controller
     }
 
     /**
+     * List all tenants for dropdowns.
+     *
+     * @authenticated
+     *
+     * @responseField tenants object[] List of tenant id, name, plan_id.
+     */
+    public function tenants()
+    {
+        $tenants = Tenant::select('id', 'name', 'plan_id')->get();
+
+        return response()->json([
+            'tenants' => $tenants,
+        ]);
+    }
+
+    /**
      * List all available plans.
      *
      * Cached for 1 hour.
@@ -517,16 +532,13 @@ class TenantController extends Controller
      */
     public function plans()
     {
-        $plans = Plan::with('featureGates')->paginate(5);
+        $plans = Plan::select('id', 'name', 'slug', 'price', 'duration_months')
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get();
 
         return response()->json([
-            'plans' => PlanResource::collection($plans->items()),
-            'meta' => [
-                'current_page' => $plans->currentPage(),
-                'last_page' => $plans->lastPage(),
-                'per_page' => $plans->perPage(),
-                'total' => $plans->total(),
-            ],
+            'plans' => $plans,
         ]);
     }
 

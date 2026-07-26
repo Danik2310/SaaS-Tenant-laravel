@@ -79,8 +79,11 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
         Route::get('/api/tenants/{id}/database', [TenantController::class, 'database']);
         Route::post('/api/tenants/{id}/migrate', [TenantController::class, 'migrate']);
         Route::put('/api/tenants/{id}/plan', [TenantController::class, 'changePlan']);
-        Route::get('/api/plans-list', [TenantController::class, 'plans']);
     });
+
+    // Lightweight dropdown endpoints — accessible to all authenticated admins
+    Route::get('/api/plans-list', [TenantController::class, 'plans']);
+    Route::get('/api/tenants-list', [TenantController::class, 'tenants']);
 
     // Staff management - requires 'manage staff' permission
     Route::middleware(['permission:manage staff,admin'])->group(function () {
@@ -97,6 +100,7 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
         Route::patch('/api/staff/{id}/restore', [StaffController::class, 'restore']);
         Route::patch('/api/staff/{id}/toggle-status', [StaffController::class, 'toggleStatus']);
         Route::post('/api/staff/{id}/roles', [StaffController::class, 'assignRoles']);
+        Route::post('/api/staff/{id}/permissions', [StaffController::class, 'assignPermissions']);
     });
 
     // Plans management - requires 'manage plans' permission

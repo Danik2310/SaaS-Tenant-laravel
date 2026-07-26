@@ -3,6 +3,7 @@
 namespace App\Shared\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\AssignPermissionsRequest;
 use App\Http\Requests\Admin\AssignRolesRequest;
 use App\Http\Requests\Admin\StoreStaffRequest;
 use App\Http\Requests\Admin\UpdateStaffRequest;
@@ -341,6 +342,42 @@ class StaffController extends Controller
 
         return response()->json([
             'message' => 'Roles assigned successfully',
+            'staff' => new StaffResource($admin),
+        ]);
+    }
+
+    /**
+     * Assign direct permissions to a staff member.
+     *
+     * @authenticated
+     *
+     * @urlParam id integer required The staff member ID.
+     *
+     * @bodyParam permission_ids integer[] required Array of permission IDs.
+     *
+     * @responseField message string Success message.
+     * @responseField staff object The updated staff resource.
+     */
+    public function assignPermissions(AssignPermissionsRequest $request, string $id)
+    {
+        $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        $admin->syncPermissions($request->validated('permission_ids'));
+
+        $admin->load('roles.permissions', 'permissions');
+
+        $permissionNames = Permission::whereIn('id', $request->validated('permission_ids'))
+            ->pluck('name')
+            ->implode(', ');
+
+        activity('staff')
+            ->performedOn($admin)
+            ->causedBy(auth('admin')->user())
+            ->withProperties(['staff_name' => $admin->name, 'permissions' => $permissionNames])
+            ->log("Assigned direct permissions to {$admin->name}: {$permissionNames}");
+
+        return response()->json([
+            'message' => 'Permissions assigned successfully',
             'staff' => new StaffResource($admin),
         ]);
     }
