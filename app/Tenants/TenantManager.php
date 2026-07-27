@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use App\Tenants\Contracts\DatabaseServiceInterface;
 use App\Tenants\Contracts\TenantBuilderInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
+use App\Tenants\Events\TenantReactivated;
 use App\Tenants\Generators\SequentialIdGenerator;
 use App\Tenants\States\TenantStateManager;
 use Carbon\Carbon;
@@ -130,12 +131,27 @@ class TenantManager implements TenantManagerInterface
 
     public function restore(Tenant $tenant): void
     {
-        DB::transaction(function () use ($tenant) {
-            // Restore tenant first so Domain tenant() relation works (Tenant model uses SoftDeletes)
-            $tenant->deleted_at = null;
-            $tenant->save();
+        // Validate state BEFORE transaction to avoid savepoint corruption.
+        // If transitionTo() throws inside DB::transaction() under a nested
+        // transaction (e.g. RefreshDatabase), the savepoint rollback fails
+        // with a PDOException that masks the original InvalidArgumentException.
+        $allowed = TenantStateManager::allowedTransitions($tenant->status);
+        if (! in_array('Active', $allowed, true)) {
+            throw new InvalidArgumentException(
+                sprintf('Cannot restore tenant in status: %s', $tenant->status)
+            );
+        }
 
-            // Try to reactivate the most recent cancelled subscription matching the tenant's plan
+        DB::transaction(function () use ($tenant) {
+            // Set deleted_at in memory only — do NOT save yet.
+            // Each save() fires 'saved' → InvalidatesResolverCache, which can
+            // query the subscriptions table and create a self-deadlock when the
+            // subscription UPDATE below tries to acquire the same row lock.
+            $tenant->deleted_at = null;
+
+            // Try to reactivate the most recent cancelled subscription matching the tenant's plan.
+            // This query uses the CURRENT plan_id (before any change), so it must run
+            // before we potentially change plan_id in the else branch.
             $reactivated = $tenant->subscriptions()
                 ->where('status', 'cancelled')
                 ->where('plan_id', $tenant->plan_id)
@@ -154,7 +170,6 @@ class TenantManager implements TenantManagerInterface
                 if ($plan) {
                     Subscription::createForTenant($tenant, $plan, 'active');
                     $tenant->plan_id = $plan->id;
-                    $tenant->save();
                 } else {
                     Log::warning('Tenant restored without subscription — no plan found', [
                         'tenant_id' => $tenant->id,
@@ -171,8 +186,19 @@ class TenantManager implements TenantManagerInterface
                 ]);
             }
 
-            TenantStateManager::transitionTo($tenant, 'Active');
+            // Set status in memory and save ONCE with all changes.
+            // This minimizes lock duration and avoids the self-deadlock
+            // caused by multiple saves firing model events mid-transaction.
+            $oldStatus = $tenant->status;
+            $tenant->status = 'Active';
+            $tenant->save();
         });
+
+        // Fire reactivation event AFTER the transaction commits.
+        // HandleTenantReactivation flushes the tenant-scoped cache.
+        if ($tenant->wasChanged('status')) {
+            event(new TenantReactivated($tenant));
+        }
 
         TenantStateManager::flushTenantCache($tenant);
         Cache::forget('admin_dashboard_stats_active');
