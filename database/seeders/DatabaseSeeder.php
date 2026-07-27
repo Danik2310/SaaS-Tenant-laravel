@@ -26,8 +26,9 @@ class DatabaseSeeder extends Seeder
      * │      a. CreateDatabase / MigrateDatabase / SeedDatabase │
      * │         (TenantUserRolePermissionSeeder — tenant roles)  │
      * │      b. TenantDataSeeder → User, Customer, Product, etc. │
-     * │ 7. TenantResourceUsageSeeder — usage metrics             │
-     * │ 8. ActivityLogSeeder — sample activity log entries       │
+     * │ 7. SubscriptionPaymentSeeder — payment history for plans  │
+     * │ 8. TenantResourceUsageSeeder — usage metrics             │
+     * │ 9. ActivityLogSeeder — sample activity log entries       │
      * └─────────────────────────────────────────────────────────┘
      */
     public function run(): void
@@ -46,6 +47,9 @@ class DatabaseSeeder extends Seeder
 
             // Tenants: provisions each tenant with DB, migrations, permissions, and sample data
             TenantSeeder::class,
+
+            // Subscription payment history (needs tenants + subscriptions)
+            SubscriptionPaymentSeeder::class,
 
             // Post-tenant central data: usage metrics, activity log
             TenantResourceUsageSeeder::class,
