@@ -135,15 +135,33 @@ class TenantManager implements TenantManagerInterface
             $tenant->deleted_at = null;
             $tenant->save();
 
-            $tenant->subscriptions()
+            // Try to reactivate the most recent cancelled subscription matching the tenant's plan
+            $reactivated = $tenant->subscriptions()
                 ->where('status', 'cancelled')
                 ->where('plan_id', $tenant->plan_id)
                 ->latest()
-                ->first()
-                ?->update([
+                ->first();
+
+            if ($reactivated) {
+                $reactivated->update([
                     'status' => 'active',
                     'ends_at' => null,
                 ]);
+            } else {
+                // No matching cancelled subscription — create a fresh one so the tenant
+                // is never restored as Active with zero active subscriptions.
+                $plan = $tenant->plan ?? Plan::where('slug', config('tenancy.default_plan_slug', 'free'))->first();
+                if ($plan) {
+                    Subscription::createForTenant($tenant, $plan, 'active');
+                    $tenant->plan_id = $plan->id;
+                    $tenant->save();
+                } else {
+                    Log::warning('Tenant restored without subscription — no plan found', [
+                        'tenant_id' => $tenant->id,
+                        'plan_id' => $tenant->plan_id,
+                    ]);
+                }
+            }
 
             // If no domains exist, create a primary one
             if ($tenant->domains()->count() === 0) {

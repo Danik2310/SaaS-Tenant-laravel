@@ -281,7 +281,15 @@ class TenantController extends Controller
             return response()->json(['message' => 'Cannot restore tenant in its current state'], 422);
         }
 
-        return response()->json(['message' => 'Tenant restored successfully', 'tenant' => new TenantResource($tenant)]);
+        $adminUser = auth('admin')->user();
+
+        activity('tenant')
+            ->performedOn($tenant->fresh())
+            ->causedBy($adminUser)
+            ->withProperties(['tenant_name' => $tenant->name, 'action' => 'restore'])
+            ->log("Restored tenant {$tenant->name}");
+
+        return response()->json(['message' => 'Tenant restored successfully', 'tenant' => new TenantResource($tenant->fresh())]);
     }
 
     /**
