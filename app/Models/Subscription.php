@@ -51,6 +51,11 @@ class Subscription extends Model
         return $this->belongsTo(Plan::class);
     }
 
+    public function payments()
+    {
+        return $this->hasMany(SubscriptionPayment::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active')

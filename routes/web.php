@@ -2,6 +2,7 @@
 
 use App\Billing\Http\Controllers\Admin\PaymentMethodController;
 use App\Billing\Http\Controllers\Admin\SubscriptionController;
+use App\Billing\Http\Controllers\Admin\SubscriptionPaymentController;
 use App\Plans\Http\Controllers\Admin\PlanController;
 use App\Shared\Http\Controllers\Admin\ActivityLogController;
 use App\Shared\Http\Controllers\Admin\AdminProfileController;
@@ -147,6 +148,8 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
     Route::middleware(['permission:manage subscriptions,admin'])->group(function () {
         Route::get('/api/subscriptions', [SubscriptionController::class, 'index']);
         Route::get('/api/subscriptions/{id}', [SubscriptionController::class, 'show']);
+        Route::get('/api/subscriptions/{id}/payments', [SubscriptionPaymentController::class, 'index']);
+        Route::post('/api/subscriptions/{id}/payments', [SubscriptionPaymentController::class, 'store']);
     });
 
     // Activity Logs - requires 'view activity logs' permission
