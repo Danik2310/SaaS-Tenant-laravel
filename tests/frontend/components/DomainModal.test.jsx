@@ -42,6 +42,12 @@ const expiredTrialTenant = {
   trial_ends_at: '2024-12-01T00:00:00Z',
 };
 
+const deletedTenant = {
+  ...activeTenant,
+  status: 'Deleted',
+  is_deleted: true,
+};
+
 describe('DomainModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -158,6 +164,7 @@ describe('DomainModal', () => {
         onImpersonate={onImpersonate}
         onViewDatabase={onViewDatabase}
         onRunMigrations={onRunMigrations}
+        onRestore={vi.fn()}
       />
     );
 
@@ -179,10 +186,43 @@ describe('DomainModal', () => {
     const onClose = vi.fn();
 
     renderWithProviders(
-      <DomainModal tenant={activeTenant} onClose={onClose} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+      <DomainModal tenant={activeTenant} onClose={onClose} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={vi.fn()} />
     );
 
     fireEvent.click(screen.getByText('Close'));
     expect(onClose).toHaveBeenCalled();
+  });
+
+  test('shows Deleted chip for deleted tenant', () => {
+    renderWithProviders(
+      <DomainModal tenant={deletedTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={vi.fn()} />
+    );
+
+    expect(screen.getByText('Deleted')).toBeInTheDocument();
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
+    expect(screen.queryByText('Suspended')).not.toBeInTheDocument();
+  });
+
+  test('shows Restore Tenant action for deleted tenant', () => {
+    renderWithProviders(
+      <DomainModal tenant={deletedTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={vi.fn()} />
+    );
+
+    expect(screen.getByText('Restore Tenant')).toBeInTheDocument();
+    expect(screen.getByText('Reactivate this tenant')).toBeInTheDocument();
+    expect(screen.queryByText('Impersonate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Database Info')).not.toBeInTheDocument();
+    expect(screen.queryByText('Run Migrations')).not.toBeInTheDocument();
+  });
+
+  test('clicking Restore fires onRestore with tenant id', () => {
+    const onRestore = vi.fn();
+
+    renderWithProviders(
+      <DomainModal tenant={deletedTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={onRestore} />
+    );
+
+    fireEvent.click(screen.getByText('Restore Tenant'));
+    expect(onRestore).toHaveBeenCalledWith(deletedTenant.id);
   });
 });

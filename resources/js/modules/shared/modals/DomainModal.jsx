@@ -21,13 +21,14 @@ import PersonIcon from '@mui/icons-material/Person';
 import StorageIcon from '@mui/icons-material/Storage';
 import SyncIcon from '@mui/icons-material/Sync';
 import StarIcon from '@mui/icons-material/Star';
+import RestoreIcon from '@mui/icons-material/Restore';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import EmailIcon from '@mui/icons-material/Email';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { toast } from 'sonner';
 
-export default function DomainModal({ tenant, onClose, onImpersonate, onViewDatabase, onRunMigrations }) {
+export default function DomainModal({ tenant, onClose, onImpersonate, onViewDatabase, onRunMigrations, onRestore }) {
     if (!tenant) return null;
 
     const [copiedIndex, setCopiedIndex] = useState(null);
@@ -44,6 +45,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
     };
 
     const isActive = tenant.status === 'Active';
+    const isDeleted = tenant.is_deleted || tenant.status === 'Deleted';
     const planName = tenant.plan_name || 'No plan';
     const planSlug = tenant.plan_slug || '';
 
@@ -72,7 +74,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                             sx={{
                                 width: 56,
                                 height: 56,
-                                bgcolor: isActive ? '#22c55e' : '#ef4444',
+                                bgcolor: isDeleted ? '#64748b' : isActive ? '#22c55e' : '#ef4444',
                                 fontSize: 24,
                                 fontWeight: 700,
                             }}
@@ -85,13 +87,14 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                                 <Chip
-                                    label={isActive ? 'Active' : 'Suspended'}
+                                    label={isDeleted ? 'Deleted' : isActive ? 'Active' : 'Suspended'}
                                     size="small"
                                     sx={{
-                                        bgcolor: isActive ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
-                                        color: isActive ? '#86efac' : '#fca5a5',
+                                        bgcolor: isDeleted ? 'rgba(100,116,139,0.2)' : isActive ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
+                                        color: isDeleted ? '#cbd5e1' : isActive ? '#86efac' : '#fca5a5',
                                         fontWeight: 600,
                                         fontSize: 12,
+                                        fontStyle: isDeleted ? 'italic' : 'normal',
                                     }}
                                 />
                                 <Typography variant="caption" sx={{ opacity: 0.7 }}>
@@ -236,81 +239,110 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                     <Grid item xs={12} sm={12} md={12} lg={12}>
                         <Divider sx={{ my: 0.5 }} />
                         <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2, mt: 1 }}>
-                            Quick Actions
+                            {isDeleted ? 'Actions' : 'Quick Actions'}
                         </Typography>
                         <Grid container spacing={2}>
-                            <Grid item xs={12} sm={4} md={4} lg={4}>
-                                <Card
-                                    sx={{
-                                        borderRadius: 2,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        border: '1px solid #e2e8f0',
-                                        '&:hover': { borderColor: '#a78bfa', bgcolor: '#f5f3ff', transform: 'translateY(-2px)' },
-                                    }}
-                                    onClick={() => onImpersonate(tenant)}
-                                >
-                                    <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                        <Avatar sx={{ bgcolor: '#8b5cf6', width: 40, height: 40, mx: 'auto', mb: 1 }}>
-                                            <PersonIcon />
-                                        </Avatar>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                                            Impersonate
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                            Log in as tenant admin
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                            <Grid item xs={12} sm={4} md={4} lg={4}>
-                                <Card
-                                    sx={{
-                                        borderRadius: 2,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        border: '1px solid #e2e8f0',
-                                        '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
-                                    }}
-                                    onClick={() => onViewDatabase(tenant)}
-                                >
-                                    <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                        <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
-                                            <StorageIcon />
-                                        </Avatar>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                                            Database Info
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                            View connection details
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
-                            <Grid item xs={12} sm={4} md={4} lg={4}>
-                                <Card
-                                    sx={{
-                                        borderRadius: 2,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        border: '1px solid #e2e8f0',
-                                        '&:hover': { borderColor: '#f59e0b', bgcolor: '#fffbeb', transform: 'translateY(-2px)' },
-                                    }}
-                                    onClick={() => onRunMigrations(tenant)}
-                                >
-                                    <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                        <Avatar sx={{ bgcolor: '#f59e0b', width: 40, height: 40, mx: 'auto', mb: 1 }}>
-                                            <SyncIcon />
-                                        </Avatar>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                                            Run Migrations
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                            Execute pending migrations
-                                        </Typography>
-                                    </CardContent>
-                                </Card>
-                            </Grid>
+                            {isDeleted ? (
+                                <Grid item xs={12} sm={4} md={4} lg={4}>
+                                    <Card
+                                        sx={{
+                                            borderRadius: 2,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            border: '1px solid #e2e8f0',
+                                            '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
+                                        }}
+                                        onClick={() => onRestore && onRestore(tenant.id)}
+                                    >
+                                        <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                            <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                <RestoreIcon />
+                                            </Avatar>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                Restore Tenant
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                Reactivate this tenant
+                                            </Typography>
+                                        </CardContent>
+                                    </Card>
+                                </Grid>
+                            ) : (
+                                <>
+                                    <Grid item xs={12} sm={4} md={4} lg={4}>
+                                        <Card
+                                            sx={{
+                                                borderRadius: 2,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                border: '1px solid #e2e8f0',
+                                                '&:hover': { borderColor: '#a78bfa', bgcolor: '#f5f3ff', transform: 'translateY(-2px)' },
+                                            }}
+                                            onClick={() => onImpersonate(tenant)}
+                                        >
+                                            <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                <Avatar sx={{ bgcolor: '#8b5cf6', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                    <PersonIcon />
+                                                </Avatar>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                    Impersonate
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                    Log in as tenant admin
+                                                </Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                    <Grid item xs={12} sm={4} md={4} lg={4}>
+                                        <Card
+                                            sx={{
+                                                borderRadius: 2,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                border: '1px solid #e2e8f0',
+                                                '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
+                                            }}
+                                            onClick={() => onViewDatabase(tenant)}
+                                        >
+                                            <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                    <StorageIcon />
+                                                </Avatar>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                    Database Info
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                    View connection details
+                                                </Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                    <Grid item xs={12} sm={4} md={4} lg={4}>
+                                        <Card
+                                            sx={{
+                                                borderRadius: 2,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                                border: '1px solid #e2e8f0',
+                                                '&:hover': { borderColor: '#f59e0b', bgcolor: '#fffbeb', transform: 'translateY(-2px)' },
+                                            }}
+                                            onClick={() => onRunMigrations(tenant)}
+                                        >
+                                            <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                <Avatar sx={{ bgcolor: '#f59e0b', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                    <SyncIcon />
+                                                </Avatar>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                    Run Migrations
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                    Execute pending migrations
+                                                </Typography>
+                                            </CardContent>
+                                        </Card>
+                                    </Grid>
+                                </>
+                            )}
                         </Grid>
                     </Grid>
                 </Grid>

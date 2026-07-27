@@ -545,6 +545,7 @@ export default function Dashboard() {
                             onImpersonate={handleImpersonateTenant}
                             onViewDatabase={(tenant) => openModal('database', tenant)}
                             onRunMigrations={(tenant) => openModal('migration', tenant)}
+                            onRestore={handleRestoreTenant}
                             />
 
                         <ChangePlanModal
