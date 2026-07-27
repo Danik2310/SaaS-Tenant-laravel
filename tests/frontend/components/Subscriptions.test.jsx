@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import React from 'react';
-import { renderWithProviders, screen, waitFor } from '../test-utils';
+import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
 import Subscriptions from '@/modules/billing/Subscriptions';
 
 const mockApi = vi.hoisted(() => ({
@@ -141,6 +141,35 @@ describe('Subscriptions', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Retry')).toBeInTheDocument();
+    });
+  });
+
+  it('renders row action buttons', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Pro')).toBeInTheDocument();
+    });
+
+    const viewButtons = screen.getAllByTestId('view-tenant-btn');
+    expect(viewButtons.length).toBeGreaterThan(0);
+
+    const paymentButtons = screen.getAllByTestId('payment-history-btn');
+    expect(paymentButtons.length).toBeGreaterThan(0);
+  });
+
+  it('opens payment history dialog when payment button is clicked', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Pro')).toBeInTheDocument();
+    });
+
+    const paymentButtons = screen.getAllByTestId('payment-history-btn');
+    fireEvent.click(paymentButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Payment History')).toBeInTheDocument();
     });
   });
 });

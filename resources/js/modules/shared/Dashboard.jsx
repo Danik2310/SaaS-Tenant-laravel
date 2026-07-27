@@ -424,7 +424,7 @@ export default function Dashboard() {
                             />
                         )}
                         <ErrorBoundary fallbackMessage="Subscriptions failed to load">
-                            {view === 'subscriptions' && <Subscriptions />}
+                            {view === 'subscriptions' && <Subscriptions onViewTenant={handleViewTenant} />}
                         </ErrorBoundary>
                         <ErrorBoundary fallbackMessage="Payment methods failed to load">
                             {view === 'payment-methods' && (

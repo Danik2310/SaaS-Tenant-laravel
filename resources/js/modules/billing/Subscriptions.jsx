@@ -7,7 +7,10 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Tooltip from '@mui/material/Tooltip';
 import InboxIcon from '@mui/icons-material/Inbox';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { toast } from 'sonner';
+import PaymentHistoryDialog from './components/PaymentHistoryDialog';
 
 const STATUS_OPTIONS = [
     { text: 'Active', value: 'active' },
@@ -43,7 +46,7 @@ function TenantCell({ cell, row }) {
     );
 }
 
-export default function Subscriptions({ initialSearch = '' }) {
+export default function Subscriptions({ initialSearch = '', onViewTenant }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
@@ -55,6 +58,8 @@ export default function Subscriptions({ initialSearch = '' }) {
     const [globalFilter, setGlobalFilter] = useState(initialSearch);
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
+
+    const [paymentDialog, setPaymentDialog] = useState({ open: false, subscription: null });
 
     useEffect(() => {
         api.get('/admin/api/plans-list').then(r => setPlans(r.data.plans ?? [])).catch(() => {});
@@ -218,6 +223,7 @@ export default function Subscriptions({ initialSearch = '' }) {
                     enableGlobalFilter
                     enableColumnFilters
                     enableSorting
+                    enableRowActions
                     manualFiltering
                     manualPagination
                     manualSorting
@@ -230,12 +236,64 @@ export default function Subscriptions({ initialSearch = '' }) {
                             </Typography>
                         </Box>
                     )}
+                    renderRowActions={({ row }) => {
+                        const sub = row.original;
+                        const canView = sub.tenant_status === 'active';
+                        return (
+                            <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                <Tooltip title={canView ? 'View Tenant' : 'Tenant unavailable'}>
+                                    <Box
+                                        component="button"
+                                        data-testid="view-tenant-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (canView && onViewTenant) onViewTenant(sub.tenant_id);
+                                        }}
+                                        disabled={!canView}
+                                        sx={{
+                                            ...iconButtonSx,
+                                            color: canView ? '#0369a1' : '#cbd5e1',
+                                            cursor: canView ? 'pointer' : 'default',
+                                        }}
+                                    >
+                                        <VisibilityIcon fontSize="small" />
+                                    </Box>
+                                </Tooltip>
+                                <Tooltip title="Payment History">
+                                    <Box
+                                        component="button"
+                                        data-testid="payment-history-btn"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPaymentDialog({ open: true, subscription: sub });
+                                        }}
+                                        sx={iconButtonSx}
+                                    >
+                                        <ReceiptLongIcon fontSize="small" />
+                                    </Box>
+                                </Tooltip>
+                            </Box>
+                        );
+                    }}
                     muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
                     muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
                     initialState={{ density: 'compact' }}
                     localization={{ toolbarSearchPlaceholder: 'Search by plan or tenant...' }}
                 />
             )}
+
+            <PaymentHistoryDialog
+                open={paymentDialog.open}
+                subscription={paymentDialog.subscription}
+                onClose={() => setPaymentDialog({ open: false, subscription: null })}
+            />
         </Box>
     );
 }
+
+const iconButtonSx = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+    p: 0.5, borderRadius: 1, color: 'text.secondary',
+    '&:hover': { bgcolor: 'action.hover' },
+};
