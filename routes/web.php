@@ -150,6 +150,7 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
         Route::get('/api/subscriptions/{id}', [SubscriptionController::class, 'show']);
         Route::get('/api/subscriptions/{id}/payments', [SubscriptionPaymentController::class, 'index']);
         Route::post('/api/subscriptions/{id}/payments', [SubscriptionPaymentController::class, 'store']);
+        Route::put('/api/subscriptions/{id}/payments/{paymentId}', [SubscriptionPaymentController::class, 'update']);
     });
 
     // Activity Logs - requires 'view activity logs' permission

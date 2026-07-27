@@ -207,6 +207,125 @@ class SubscriptionPaymentTest extends TestCase
     }
 
     // ────────────────────────────────────────────────────────────────────────────
+    // API: update
+    // ────────────────────────────────────────────────────────────────────────────
+
+    public function test_update_modifies_payment_fields(): void
+    {
+        $subscription = Subscription::factory()->create();
+        $payment = SubscriptionPayment::factory()->create([
+            'subscription_id' => $subscription->id,
+            'tenant_id' => $subscription->tenant_id,
+            'amount' => 29.99,
+            'method' => 'stripe',
+            'status' => 'pending',
+        ]);
+
+        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}/payments/{$payment->id}", [
+            'amount' => 49.99,
+            'method' => 'bank_transfer',
+            'status' => 'completed',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Payment updated successfully');
+
+        $this->assertDatabaseHas('subscription_payments', [
+            'id' => $payment->id,
+            'amount' => 49.99,
+            'method' => 'bank_transfer',
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_update_with_partial_payload(): void
+    {
+        $subscription = Subscription::factory()->create();
+        $payment = SubscriptionPayment::factory()->create([
+            'subscription_id' => $subscription->id,
+            'tenant_id' => $subscription->tenant_id,
+            'amount' => 29.99,
+            'method' => 'stripe',
+            'status' => 'pending',
+        ]);
+
+        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}/payments/{$payment->id}", [
+            'status' => 'completed',
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('subscription_payments', [
+            'id' => $payment->id,
+            'amount' => 29.99,
+            'method' => 'stripe',
+            'status' => 'completed',
+        ]);
+    }
+
+    public function test_update_validates_method_enum(): void
+    {
+        $subscription = Subscription::factory()->create();
+        $payment = SubscriptionPayment::factory()->create([
+            'subscription_id' => $subscription->id,
+            'tenant_id' => $subscription->tenant_id,
+        ]);
+
+        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}/payments/{$payment->id}", [
+            'method' => 'bitcoin',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['method']);
+    }
+
+    public function test_update_validates_status_enum(): void
+    {
+        $subscription = Subscription::factory()->create();
+        $payment = SubscriptionPayment::factory()->create([
+            'subscription_id' => $subscription->id,
+            'tenant_id' => $subscription->tenant_id,
+        ]);
+
+        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}/payments/{$payment->id}", [
+            'status' => 'invalid',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['status']);
+    }
+
+    public function test_update_returns_404_for_nonexistent_payment(): void
+    {
+        $subscription = Subscription::factory()->create();
+
+        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}/payments/99999", [
+            'status' => 'completed',
+        ]);
+
+        $response->assertStatus(404);
+    }
+
+    public function test_update_without_permission_returns_403(): void
+    {
+        $subscription = Subscription::factory()->create();
+        $payment = SubscriptionPayment::factory()->create([
+            'subscription_id' => $subscription->id,
+            'tenant_id' => $subscription->tenant_id,
+        ]);
+        $regularAdmin = AdminUser::factory()->create();
+        $regularRole = Role::firstOrCreate(['name' => 'regular', 'guard_name' => 'admin']);
+        $regularAdmin->assignRole('regular');
+        $this->actingAs($regularAdmin, 'admin');
+
+        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}/payments/{$payment->id}", [
+            'status' => 'completed',
+        ]);
+
+        $response->assertStatus(403);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
     // Auth
     // ────────────────────────────────────────────────────────────────────────────
 

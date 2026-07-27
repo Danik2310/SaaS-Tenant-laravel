@@ -21,8 +21,10 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import Tooltip from '@mui/material/Tooltip';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -52,38 +54,39 @@ const STATUS_STYLES = {
 
 const EMPTY_FILTERS = { status: '', method: '', dateFrom: '', dateTo: '' };
 
+const EMPTY_FORM = {
+    amount: '',
+    method: 'stripe',
+    reference: '',
+    status: 'completed',
+    paid_at: new Date().toISOString().split('T')[0],
+    notes: '',
+};
+
 export default function PaymentHistoryDialog({ open, subscription, onClose }) {
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [editingPayment, setEditingPayment] = useState(null);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const [filters, setFilters] = useState(EMPTY_FILTERS);
-    const [form, setForm] = useState({
-        amount: '',
-        method: 'stripe',
-        reference: '',
-        status: 'completed',
-        paid_at: new Date().toISOString().split('T')[0],
-        notes: '',
-    });
+    const [form, setForm] = useState(EMPTY_FORM);
 
     useEffect(() => {
         if (open && subscription) {
             fetchPayments();
-            setShowForm(false);
-            setFilters(EMPTY_FILTERS);
-            setForm({
-                amount: '',
-                method: 'stripe',
-                reference: '',
-                status: 'completed',
-                paid_at: new Date().toISOString().split('T')[0],
-                notes: '',
-            });
-            setErrors({});
+            resetFormState();
         }
     }, [open, subscription]);
+
+    const resetFormState = () => {
+        setShowForm(false);
+        setEditingPayment(null);
+        setFilters(EMPTY_FILTERS);
+        setForm(EMPTY_FORM);
+        setErrors({});
+    };
 
     const fetchPayments = async () => {
         setLoading(true);
@@ -135,23 +138,50 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
         setErrors(prev => ({ ...prev, [field]: undefined }));
     };
 
+    const handleEdit = (payment) => {
+        setEditingPayment(payment);
+        setForm({
+            amount: payment.amount,
+            method: payment.method,
+            reference: payment.reference || '',
+            status: payment.status,
+            paid_at: payment.paid_at ? payment.paid_at.split('T')[0] : '',
+            notes: payment.notes || '',
+        });
+        setShowForm(true);
+        setErrors({});
+    };
+
+    const handleCancelEdit = () => {
+        setEditingPayment(null);
+        setForm(EMPTY_FORM);
+        setShowForm(false);
+        setErrors({});
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setSubmitting(true);
         setErrors({});
         try {
-            await api.post(`/admin/api/subscriptions/${subscription.id}/payments`, {
-                ...form,
-                amount: parseFloat(form.amount),
-            });
-            toast.success('Payment recorded successfully');
-            setShowForm(false);
+            const payload = { ...form, amount: parseFloat(form.amount) };
+            if (editingPayment) {
+                await api.put(
+                    `/admin/api/subscriptions/${subscription.id}/payments/${editingPayment.id}`,
+                    payload,
+                );
+                toast.success('Payment updated successfully');
+            } else {
+                await api.post(`/admin/api/subscriptions/${subscription.id}/payments`, payload);
+                toast.success('Payment recorded successfully');
+            }
+            handleCancelEdit();
             fetchPayments();
         } catch (err) {
             if (err.response?.status === 422) {
                 setErrors(err.response.data.errors || {});
             } else {
-                toast.error(err.response?.data?.message || 'Failed to record payment');
+                toast.error(err.response?.data?.message || 'Failed to save payment');
             }
         } finally {
             setSubmitting(false);
@@ -194,19 +224,21 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                             {filteredPayments.length} of {payments.length} payment{payments.length !== 1 ? 's' : ''}
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<AddIcon />}
-                        onClick={() => setShowForm(!showForm)}
-                        sx={{ bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' }, fontWeight: 600, fontSize: '13px' }}
-                    >
-                        Record Payment
-                    </Button>
+                    {!showForm && (
+                        <Button
+                            variant="contained"
+                            size="small"
+                            startIcon={<AddIcon />}
+                            onClick={() => { setShowForm(true); setEditingPayment(null); setForm(EMPTY_FORM); }}
+                            sx={{ bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' }, fontWeight: 600, fontSize: '13px' }}
+                        >
+                            Record Payment
+                        </Button>
+                    )}
                 </Box>
 
                 {/* Filter controls */}
-                {payments.length > 0 && (
+                {payments.length > 0 && !showForm && (
                     <Box sx={{ px: 2, pb: 1.5, display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0' }}>
                         <FilterListIcon sx={{ fontSize: 18, color: '#94a3b8' }} />
                         <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -258,9 +290,17 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                     </Box>
                 )}
 
-                {/* Record payment form */}
+                {/* Record / Edit payment form */}
                 {showForm && (
                     <Box component="form" onSubmit={handleSubmit} sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 1.5, borderBottom: '1px solid #e2e8f0' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                {editingPayment ? 'Edit Payment' : 'Record Payment'}
+                            </Typography>
+                            <Button size="small" onClick={handleCancelEdit} sx={{ textTransform: 'none', color: '#64748b' }}>
+                                Cancel
+                            </Button>
+                        </Box>
                         <Box sx={{ display: 'flex', gap: 1.5 }}>
                             <TextField
                                 size="small"
@@ -326,11 +366,11 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                             />
                         </Box>
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-                            <Button variant="outlined" size="small" onClick={() => setShowForm(false)} disabled={submitting}>
+                            <Button variant="outlined" size="small" onClick={handleCancelEdit} disabled={submitting}>
                                 Cancel
                             </Button>
                             <Button type="submit" variant="contained" size="small" disabled={submitting}>
-                                {submitting ? <CircularProgress size={16} /> : 'Save Payment'}
+                                {submitting ? <CircularProgress size={16} /> : editingPayment ? 'Update Payment' : 'Save Payment'}
                             </Button>
                         </Box>
                     </Box>
@@ -372,11 +412,15 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                                     <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Reference</TableCell>
                                     <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Status</TableCell>
                                     <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Notes</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', width: 48 }} />
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {filteredPayments.map(payment => (
-                                    <TableRow key={payment.id}>
+                                    <TableRow
+                                        key={payment.id}
+                                        sx={editingPayment?.id === payment.id ? { bgcolor: '#f0f9ff' } : {}}
+                                    >
                                         <TableCell sx={{ fontSize: 13 }}>
                                             {payment.paid_at ? new Date(payment.paid_at).toLocaleDateString() : '\u2014'}
                                         </TableCell>
@@ -398,6 +442,18 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                                         </TableCell>
                                         <TableCell sx={{ fontSize: 13, color: '#64748b', maxWidth: 150 }}>
                                             {payment.notes || '\u2014'}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Tooltip title="Edit payment">
+                                                <IconButton
+                                                    size="small"
+                                                    data-testid="edit-payment-btn"
+                                                    onClick={() => handleEdit(payment)}
+                                                    sx={{ color: '#0369a1', '&:hover': { bgcolor: '#e0f2fe' } }}
+                                                >
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
                                         </TableCell>
                                     </TableRow>
                                 ))}

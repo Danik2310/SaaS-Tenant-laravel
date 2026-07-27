@@ -52,11 +52,14 @@ describe('Subscriptions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockApi.get.mockImplementation((url) => {
-      if (url.includes('/subscriptions')) {
+      if (url.includes('/subscriptions') && !url.includes('/payments')) {
         return Promise.resolve({ data: { subscriptions: mockSubscriptions, total: 2 } });
       }
       if (url.includes('/plans-list')) {
         return Promise.resolve({ data: { plans: mockPlans } });
+      }
+      if (url.includes('/payments')) {
+        return Promise.resolve({ data: { payments: [], subscription: { id: 1, tenant_name: 'Acme Corp', plan_name: 'Pro' } } });
       }
       return Promise.resolve({ data: {} });
     });
@@ -170,6 +173,36 @@ describe('Subscriptions', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Payment History')).toBeInTheDocument();
+    });
+  });
+
+  it('shows Record Payment button in dialog', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Pro')).toBeInTheDocument();
+    });
+
+    const paymentButtons = screen.getAllByTestId('payment-history-btn');
+    fireEvent.click(paymentButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('Record Payment')).toBeInTheDocument();
+    });
+  });
+
+  it('shows empty state when no payments exist', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Pro')).toBeInTheDocument();
+    });
+
+    const paymentButtons = screen.getAllByTestId('payment-history-btn');
+    fireEvent.click(paymentButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('No payments recorded yet.')).toBeInTheDocument();
     });
   });
 });

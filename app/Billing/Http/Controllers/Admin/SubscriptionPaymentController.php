@@ -4,6 +4,7 @@ namespace App\Billing\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSubscriptionPaymentRequest;
+use App\Http\Requests\Admin\UpdateSubscriptionPaymentRequest;
 use App\Http\Resources\SubscriptionPaymentResource;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
@@ -51,5 +52,18 @@ class SubscriptionPaymentController extends Controller
             'message' => 'Payment recorded successfully',
             'payment' => new SubscriptionPaymentResource($payment),
         ], 201);
+    }
+
+    public function update(UpdateSubscriptionPaymentRequest $request, string $subscriptionId, string $paymentId)
+    {
+        $payment = SubscriptionPayment::where('subscription_id', $subscriptionId)
+            ->findOrFail($paymentId);
+
+        $payment->update($request->validated());
+
+        return response()->json([
+            'message' => 'Payment updated successfully',
+            'payment' => new SubscriptionPaymentResource($payment),
+        ]);
     }
 }
