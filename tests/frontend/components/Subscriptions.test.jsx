@@ -41,6 +41,20 @@ const mockSubscriptions = [
     ends_at: '2026-03-15',
     created_at: '2025-03-15 00:00:00',
   },
+  {
+    id: 3,
+    tenant_id: 3,
+    plan_id: 1,
+    tenant_name: 'Tienda XYZ',
+    tenant_status: 'deleted',
+    plan_name: 'Pro',
+    plan_price: '29.00',
+    plan_slug: 'pro',
+    status: 'active',
+    starts_at: '2024-06-01',
+    ends_at: '2025-06-01',
+    created_at: '2024-06-01 00:00:00',
+  },
 ];
 
 const mockPlans = [
@@ -53,7 +67,7 @@ describe('Subscriptions', () => {
     vi.clearAllMocks();
     mockApi.get.mockImplementation((url) => {
       if (url.includes('/subscriptions') && !url.includes('/payments')) {
-        return Promise.resolve({ data: { subscriptions: mockSubscriptions, total: 2 } });
+        return Promise.resolve({ data: { subscriptions: mockSubscriptions, total: 3 } });
       }
       if (url.includes('/plans-list')) {
         return Promise.resolve({ data: { plans: mockPlans } });
@@ -76,7 +90,7 @@ describe('Subscriptions', () => {
     renderWithProviders(<Subscriptions />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pro')).toBeInTheDocument();
+      expect(screen.getAllByText('Pro').length).toBeGreaterThan(0);
     });
     expect(screen.getByText('Enterprise')).toBeInTheDocument();
   });
@@ -94,7 +108,7 @@ describe('Subscriptions', () => {
     renderWithProviders(<Subscriptions />);
 
     await waitFor(() => {
-      expect(screen.getByText('$29.00')).toBeInTheDocument();
+      expect(screen.getAllByText('$29.00').length).toBeGreaterThan(0);
     });
     expect(screen.getByText('$99.00')).toBeInTheDocument();
   });
@@ -151,7 +165,7 @@ describe('Subscriptions', () => {
     renderWithProviders(<Subscriptions />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pro')).toBeInTheDocument();
+      expect(screen.getAllByText('Pro').length).toBeGreaterThan(0);
     });
 
     const viewButtons = screen.getAllByTestId('view-tenant-btn');
@@ -165,7 +179,7 @@ describe('Subscriptions', () => {
     renderWithProviders(<Subscriptions />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pro')).toBeInTheDocument();
+      expect(screen.getAllByText('Pro').length).toBeGreaterThan(0);
     });
 
     const paymentButtons = screen.getAllByTestId('payment-history-btn');
@@ -180,7 +194,7 @@ describe('Subscriptions', () => {
     renderWithProviders(<Subscriptions />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pro')).toBeInTheDocument();
+      expect(screen.getAllByText('Pro').length).toBeGreaterThan(0);
     });
 
     const paymentButtons = screen.getAllByTestId('payment-history-btn');
@@ -195,7 +209,7 @@ describe('Subscriptions', () => {
     renderWithProviders(<Subscriptions />);
 
     await waitFor(() => {
-      expect(screen.getByText('Pro')).toBeInTheDocument();
+      expect(screen.getAllByText('Pro').length).toBeGreaterThan(0);
     });
 
     const paymentButtons = screen.getAllByTestId('payment-history-btn');
@@ -204,5 +218,27 @@ describe('Subscriptions', () => {
     await waitFor(() => {
       expect(screen.getByText('No payments recorded yet.')).toBeInTheDocument();
     });
+  });
+
+  it('displays deleted tenant name with Deleted badge', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tienda XYZ/)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Deleted/)).toBeInTheDocument();
+  });
+
+  it('enables View Tenant button for deleted tenants', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tienda XYZ/)).toBeInTheDocument();
+    });
+
+    const viewButtons = screen.getAllByTestId('view-tenant-btn');
+    const deletedRowButton = viewButtons[2];
+    expect(deletedRowButton).not.toBeDisabled();
   });
 });

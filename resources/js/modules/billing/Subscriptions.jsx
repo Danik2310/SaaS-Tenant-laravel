@@ -23,7 +23,19 @@ function TenantCell({ cell, row }) {
     const name = cell.getValue();
     const status = row.original.tenant_status;
 
-    if (!name || name === 'Restricted' || name === 'Missing Tenant' || name === 'Deleted Tenant') {
+    if (status === 'deleted') {
+        return (
+            <Tooltip title="Tenant deleted — click View to restore">
+                <Chip
+                    label={`${name || 'Unknown'} \u2014 Deleted`}
+                    size="small"
+                    sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontWeight: 600, fontStyle: 'italic' }}
+                />
+            </Tooltip>
+        );
+    }
+
+    if (!name || name === 'Restricted' || name === 'Missing Tenant') {
         return (
             <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
                 {name || '\u2014'}
@@ -31,17 +43,9 @@ function TenantCell({ cell, row }) {
         );
     }
 
-    const chipStyle = {
-        active:  { bgcolor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' },
-        deleted: { bgcolor: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' },
-        missing: { bgcolor: '#fef9c3', color: '#854d0e', border: '1px solid #fde68a' },
-    };
-
-    const s = chipStyle[status] || chipStyle.active;
-
     return (
         <Tooltip title={`Tenant status: ${status}`}>
-            <Chip label={name} size="small" sx={{ fontWeight: 600, ...s }} />
+            <Chip label={name} size="small" sx={{ fontWeight: 600, bgcolor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }} />
         </Tooltip>
     );
 }
@@ -238,10 +242,10 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
                     )}
                     renderRowActions={({ row }) => {
                         const sub = row.original;
-                        const canView = sub.tenant_status === 'active';
+                        const canView = sub.tenant_status === 'active' || sub.tenant_status === 'deleted';
                         return (
                             <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                                <Tooltip title={canView ? 'View Tenant' : 'Tenant unavailable'}>
+                                <Tooltip title={canView ? (sub.tenant_status === 'deleted' ? 'View & Restore Tenant' : 'View Tenant') : 'Tenant unavailable'}>
                                     <Box
                                         component="button"
                                         data-testid="view-tenant-btn"

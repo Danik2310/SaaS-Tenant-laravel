@@ -19,7 +19,7 @@ class SubscriptionResource extends JsonResource
                 $tenantName = 'Missing Tenant';
             } elseif ($this->tenant->trashed()) {
                 $tenantStatus = 'deleted';
-                $tenantName = 'Deleted Tenant';
+                $tenantName = $this->tenant->name;
             } else {
                 $tenantStatus = 'active';
                 $tenantName = $this->tenant->name;
