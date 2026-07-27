@@ -213,6 +213,12 @@ class TenantManager implements TenantManagerInterface
             );
         }
 
+        if ($tenant->plan_id === $newPlan->id) {
+            throw new InvalidArgumentException(
+                'Tenant is already on plan: '.$newPlan->name
+            );
+        }
+
         $oldPlan = null;
 
         DB::transaction(function () use ($tenant, $newPlan, &$oldPlan) {
@@ -236,7 +242,15 @@ class TenantManager implements TenantManagerInterface
             $tenant->save();
         });
 
-        event(new PlanChanged($tenant, $oldPlan, $newPlan));
+        try {
+            event(new PlanChanged($tenant, $oldPlan, $newPlan));
+        } catch (\Throwable $e) {
+            Log::warning('PlanChanged event handler failed', [
+                'tenant_id' => $tenant->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         TenantStateManager::flushTenantCache($tenant);
     }
 

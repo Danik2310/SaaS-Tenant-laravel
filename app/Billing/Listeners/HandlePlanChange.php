@@ -109,22 +109,19 @@ class HandlePlanChange
             tenancy()->initialize($tenant);
             $initialized = true;
 
-            $count = DB::table($table)->count();
-
-            tenancy()->end();
-            $initialized = false;
-
-            return $count;
+            return DB::table($table)->count();
         } catch (\Throwable $e) {
             Log::warning("Failed to count {$table} for tenant {$tenant->id}", [
+                'tenant_id' => $tenant->id,
+                'table' => $table,
                 'error' => $e->getMessage(),
             ]);
 
+            return 0;
+        } finally {
             if ($initialized) {
                 tenancy()->end();
             }
-
-            return 0;
         }
     }
 }

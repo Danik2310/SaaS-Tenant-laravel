@@ -540,7 +540,10 @@ class TenantController extends Controller
      */
     public function plans()
     {
-        $plans = Plan::select('id', 'name', 'slug', 'price', 'duration_months')
+        $plans = Plan::select(
+            'id', 'name', 'slug', 'price', 'duration_months',
+            'max_users', 'max_storage', 'max_warehouses', 'max_categories', 'max_products'
+        )
             ->where('status', 'active')
             ->orderBy('name')
             ->get();
