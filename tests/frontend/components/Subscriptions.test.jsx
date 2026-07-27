@@ -1,10 +1,10 @@
 import { vi } from 'vitest';
 import React from 'react';
-import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
+import { renderWithProviders, screen, waitFor } from '../test-utils';
 import Subscriptions from '@/modules/billing/Subscriptions';
 
 const mockApi = vi.hoisted(() => ({
-  get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn(),
+  get: vi.fn(),
 }));
 vi.mock('@/services/api', () => ({ default: mockApi }));
 
@@ -17,6 +17,8 @@ const mockSubscriptions = [
     id: 1,
     tenant_id: 1,
     plan_id: 1,
+    tenant_name: 'Acme Corp',
+    tenant_status: 'active',
     plan_name: 'Pro',
     plan_price: '29.00',
     plan_slug: 'pro',
@@ -29,6 +31,8 @@ const mockSubscriptions = [
     id: 2,
     tenant_id: 2,
     plan_id: 2,
+    tenant_name: 'Globex Inc',
+    tenant_status: 'active',
     plan_name: 'Enterprise',
     plan_price: '99.00',
     plan_slug: 'enterprise',
@@ -44,11 +48,6 @@ const mockPlans = [
   { id: 2, name: 'Enterprise', slug: 'enterprise' },
 ];
 
-const mockTenants = [
-  { id: 1, name: 'Acme Corp' },
-  { id: 2, name: 'Globex Inc' },
-];
-
 describe('Subscriptions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,9 +57,6 @@ describe('Subscriptions', () => {
       }
       if (url.includes('/plans-list')) {
         return Promise.resolve({ data: { plans: mockPlans } });
-      }
-      if (url.includes('/tenants-list')) {
-        return Promise.resolve({ data: { tenants: mockTenants } });
       }
       return Promise.resolve({ data: {} });
     });
@@ -82,6 +78,15 @@ describe('Subscriptions', () => {
     expect(screen.getByText('Enterprise')).toBeInTheDocument();
   });
 
+  it('displays tenant names', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Globex Inc')).toBeInTheDocument();
+  });
+
   it('displays plan prices', async () => {
     renderWithProviders(<Subscriptions />);
 
@@ -100,26 +105,13 @@ describe('Subscriptions', () => {
     });
   });
 
-  it('shows New Subscription button', async () => {
+  it('does not show New Subscription button', async () => {
     renderWithProviders(<Subscriptions />);
 
     await waitFor(() => {
-      expect(screen.getByText('+ New Subscription')).toBeInTheDocument();
+      expect(screen.getByText('Subscriptions')).toBeInTheDocument();
     });
-  });
-
-  it('opens create dialog when New Subscription is clicked', async () => {
-    renderWithProviders(<Subscriptions />);
-
-    await waitFor(() => {
-      expect(screen.getByText('+ New Subscription')).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByText('+ New Subscription'));
-
-    await waitFor(() => {
-      expect(screen.getByText('Create New Subscription')).toBeInTheDocument();
-    });
+    expect(screen.queryByText('+ New Subscription')).not.toBeInTheDocument();
   });
 
   it('renders error alert when API call fails', async () => {

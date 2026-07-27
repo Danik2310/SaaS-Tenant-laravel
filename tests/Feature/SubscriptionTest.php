@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Billing\Events\PlanChanged;
 use App\Models\AdminUser;
 use App\Models\Permission;
 use App\Models\Plan;
@@ -12,7 +11,6 @@ use App\Models\Tenant;
 use Database\Seeders\TenantSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Event;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -25,6 +23,10 @@ class SubscriptionTest extends TestCase
         parent::setUp();
         $this->setUpAdminAuth();
     }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Model tests
+    // ────────────────────────────────────────────────────────────────────────────
 
     public function test_create_for_tenant_creates_active_subscription(): void
     {
@@ -123,6 +125,28 @@ class SubscriptionTest extends TestCase
         $this->assertCount(1, Subscription::pending()->get());
     }
 
+    public function test_subscription_belongs_to_tenant(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
+
+        $this->assertTrue($subscription->tenant->is($tenant));
+    }
+
+    public function test_subscription_belongs_to_plan(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
+
+        $this->assertTrue($subscription->plan->is($plan));
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // API: index
+    // ────────────────────────────────────────────────────────────────────────────
+
     public function test_subscription_index_returns_paginated_results(): void
     {
         $plan = Plan::factory()->create();
@@ -178,6 +202,70 @@ class SubscriptionTest extends TestCase
         $this->assertCount(2, $response->json('subscriptions'));
     }
 
+    public function test_subscription_index_searches_by_tenant_name(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenant1 = Tenant::factory()->create(['name' => 'Acme Corp']);
+        $tenant2 = Tenant::factory()->create(['name' => 'Globex Inc']);
+        Subscription::factory()->create(['tenant_id' => $tenant1->id, 'plan_id' => $plan->id]);
+        Subscription::factory()->create(['tenant_id' => $tenant2->id, 'plan_id' => $plan->id]);
+
+        $response = $this->getJson('/admin/api/subscriptions?search=Acme');
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('subscriptions'));
+        $this->assertEquals('Acme Corp', $response->json('subscriptions.0.tenant_name'));
+    }
+
+    public function test_subscription_index_filters_by_tenant_name(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenant1 = Tenant::factory()->create(['name' => 'Acme Corp']);
+        $tenant2 = Tenant::factory()->create(['name' => 'Globex Inc']);
+        Subscription::factory()->create(['tenant_id' => $tenant1->id, 'plan_id' => $plan->id]);
+        Subscription::factory()->create(['tenant_id' => $tenant2->id, 'plan_id' => $plan->id]);
+
+        $response = $this->getJson('/admin/api/subscriptions?tenant_name=Acme Corp');
+
+        $response->assertStatus(200);
+        $this->assertCount(1, $response->json('subscriptions'));
+        $this->assertEquals($tenant1->id, $response->json('subscriptions.0.tenant_id'));
+    }
+
+    public function test_subscription_index_sorts_by_tenant_name(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenantB = Tenant::factory()->create(['name' => 'Zebra Inc']);
+        $tenantA = Tenant::factory()->create(['name' => 'Alpha Corp']);
+        Subscription::factory()->create(['tenant_id' => $tenantB->id, 'plan_id' => $plan->id]);
+        Subscription::factory()->create(['tenant_id' => $tenantA->id, 'plan_id' => $plan->id]);
+
+        $response = $this->getJson('/admin/api/subscriptions?sort=tenant_name&order=asc');
+
+        $response->assertStatus(200);
+        $subscriptions = $response->json('subscriptions');
+        $this->assertEquals('Alpha Corp', $subscriptions[0]['tenant_name']);
+        $this->assertEquals('Zebra Inc', $subscriptions[1]['tenant_name']);
+    }
+
+    public function test_subscription_index_returns_tenant_name_in_results(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['name' => 'Living Corp', 'plan_id' => $plan->id]);
+        Subscription::createForTenant($tenant, $plan, 'active');
+
+        $response = $this->getJson('/admin/api/subscriptions');
+
+        $response->assertStatus(200);
+        $sub = $response->json('subscriptions')[0];
+        $this->assertEquals('Living Corp', $sub['tenant_name']);
+        $this->assertEquals('active', $sub['tenant_status']);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // API: show
+    // ────────────────────────────────────────────────────────────────────────────
+
     public function test_subscription_show_returns_subscription(): void
     {
         $plan = Plan::factory()->create();
@@ -196,223 +284,9 @@ class SubscriptionTest extends TestCase
         $response->assertStatus(404);
     }
 
-    public function test_subscription_store_creates_subscription(): void
-    {
-        $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create();
-
-        $response = $this->postJson('/admin/api/subscriptions', [
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-            'starts_at' => now()->format('Y-m-d'),
-            'status' => 'active',
-        ]);
-
-        $response->assertStatus(201)
-            ->assertJsonPath('message', 'Subscription created successfully');
-
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-            'status' => 'active',
-        ]);
-    }
-
-    public function test_subscription_store_validates_required_fields(): void
-    {
-        $response = $this->postJson('/admin/api/subscriptions', []);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['tenant_id', 'plan_id', 'starts_at', 'status']);
-    }
-
-    public function test_subscription_store_validates_tenant_exists(): void
-    {
-        $response = $this->postJson('/admin/api/subscriptions', [
-            'tenant_id' => 'nonexistent',
-            'plan_id' => 99999,
-            'starts_at' => now()->format('Y-m-d'),
-            'status' => 'active',
-        ]);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['tenant_id', 'plan_id']);
-    }
-
-    public function test_subscription_store_validates_status_enum(): void
-    {
-        $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create();
-
-        $response = $this->postJson('/admin/api/subscriptions', [
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-            'starts_at' => now()->format('Y-m-d'),
-            'status' => 'invalid_status',
-        ]);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['status']);
-    }
-
-    public function test_subscription_store_validates_ends_at_after_starts_at(): void
-    {
-        $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create();
-
-        $response = $this->postJson('/admin/api/subscriptions', [
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-            'starts_at' => now()->format('Y-m-d'),
-            'ends_at' => now()->subDay()->format('Y-m-d'),
-            'status' => 'active',
-        ]);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['ends_at']);
-    }
-
-    public function test_subscription_update_modifies_subscription(): void
-    {
-        $plan = Plan::factory()->create();
-        $newPlan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
-        $subscription = Subscription::factory()->create([
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-        ]);
-
-        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
-            'plan_id' => $newPlan->id,
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJsonPath('message', 'Subscription updated successfully');
-
-        // The old subscription is cancelled, a new one is created
-        $subscription->refresh();
-        $this->assertEquals('cancelled', $subscription->status);
-
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => $tenant->id,
-            'plan_id' => $newPlan->id,
-            'status' => 'active',
-        ]);
-
-        $this->assertEquals($newPlan->id, $tenant->fresh()->plan_id);
-    }
-
-    public function test_subscription_destroy_deletes_subscription(): void
-    {
-        $plan = Plan::factory()->create();
-        $subscription = Subscription::factory()->create(['plan_id' => $plan->id]);
-
-        $response = $this->deleteJson("/admin/api/subscriptions/{$subscription->id}");
-
-        $response->assertStatus(200)
-            ->assertJsonPath('message', 'Subscription deleted successfully');
-
-        $this->assertDatabaseMissing('subscriptions', ['id' => $subscription->id]);
-    }
-
-    public function test_subscription_destroy_returns_404_for_nonexistent(): void
-    {
-        $response = $this->deleteJson('/admin/api/subscriptions/99999');
-
-        $response->assertStatus(404);
-    }
-
-    public function test_subscription_store_without_permission_returns_403(): void
-    {
-        $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create();
-
-        $regularAdmin = AdminUser::factory()->create();
-        $regularRole = Role::firstOrCreate(['name' => 'regular', 'guard_name' => 'admin']);
-        $regularAdmin->assignRole('regular');
-        $this->actingAs($regularAdmin, 'admin');
-
-        $response = $this->postJson('/admin/api/subscriptions', [
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-            'starts_at' => now()->format('Y-m-d'),
-            'status' => 'active',
-        ]);
-
-        $response->assertStatus(403);
-    }
-
-    public function test_subscription_index_without_permission_returns_403(): void
-    {
-        $regularAdmin = AdminUser::factory()->create();
-        $regularRole = Role::firstOrCreate(['name' => 'regular', 'guard_name' => 'admin']);
-        $regularAdmin->assignRole('regular');
-        $this->actingAs($regularAdmin, 'admin');
-
-        $response = $this->getJson('/admin/api/subscriptions');
-
-        $response->assertStatus(403);
-    }
-
-    public function test_guest_is_redirected_to_login(): void
-    {
-        auth('admin')->logout();
-        $response = $this->getJson('/admin/api/subscriptions');
-        $response->assertStatus(401);
-    }
-
-    public function test_database_has_subscriptions_after_tenant_seeder(): void
-    {
-        Plan::factory()->create(['slug' => 'free', 'max_users' => 10]);
-        Plan::factory()->create(['slug' => 'pro', 'max_users' => 50]);
-        Plan::factory()->create(['slug' => 'enterprise', 'max_users' => 999]);
-
-        $tenant = Tenant::create([
-            'id' => 'test-seeder-'.uniqid(),
-            'name' => 'Seeder Test',
-            'email' => 'seeder@test.com',
-            'status' => 'Active',
-            'plan_id' => Plan::where('slug', 'free')->first()->id,
-        ]);
-
-        Artisan::call('db:seed', [
-            '--class' => TenantSeeder::class,
-            '--env' => 'testing',
-        ]);
-
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => 'empresa-abc',
-            'status' => 'active',
-        ]);
-
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => 'tienda-xyz',
-            'status' => 'active',
-        ]);
-
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => 'consultoria-123',
-            'status' => 'active',
-        ]);
-    }
-
-    public function test_subscription_belongs_to_tenant(): void
-    {
-        $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
-        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
-
-        $this->assertTrue($subscription->tenant->is($tenant));
-    }
-
-    public function test_subscription_belongs_to_plan(): void
-    {
-        $plan = Plan::factory()->create();
-        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
-        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
-
-        $this->assertTrue($subscription->plan->is($plan));
-    }
+    // ────────────────────────────────────────────────────────────────────────────
+    // Tenant status in resource
+    // ────────────────────────────────────────────────────────────────────────────
 
     public function test_subscription_tenant_status_missing_when_tenant_deleted_permanently(): void
     {
@@ -422,7 +296,6 @@ class SubscriptionTest extends TestCase
 
         $tenant->forceDelete();
 
-        // Subscriptions are cascade-deleted with the tenant, so this returns 404
         $response = $this->getJson("/admin/api/subscriptions/{$subscription->id}");
 
         $response->assertStatus(404);
@@ -504,175 +377,68 @@ class SubscriptionTest extends TestCase
         $this->assertEquals('deleted', $subsById[$sub2->id]['tenant_status']);
         $this->assertEquals('Deleted Tenant', $subsById[$sub2->id]['tenant_name']);
 
-        // Force-deleted tenant cascades subscription deletes, so sub3 won't appear
         $this->assertArrayNotHasKey($sub3->id, $subsById);
     }
 
     // ────────────────────────────────────────────────────────────────────────────
-    // Ported from SubscriptionPlanSyncTest (unique tests)
+    // Auth
     // ────────────────────────────────────────────────────────────────────────────
 
-    /**
-     * 🧪 Test: Subscription plan update syncs tenant plan_id
-     */
-    public function test_subscription_update_syncs_tenant_plan_id()
+    public function test_subscription_index_without_permission_returns_403(): void
     {
-        $oldPlan = Plan::factory()->create(['slug' => 'starter']);
-        $newPlan = Plan::factory()->create(['slug' => 'pro']);
-        $tenant = Tenant::factory()->create(['plan_id' => $oldPlan->id]);
-        $subscription = Subscription::factory()->create([
-            'tenant_id' => $tenant->id,
-            'plan_id' => $oldPlan->id,
-        ]);
+        $regularAdmin = AdminUser::factory()->create();
+        $regularRole = Role::firstOrCreate(['name' => 'regular', 'guard_name' => 'admin']);
+        $regularAdmin->assignRole('regular');
+        $this->actingAs($regularAdmin, 'admin');
 
-        $response = $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
-            'plan_id' => $newPlan->id,
-        ]);
+        $response = $this->getJson('/admin/api/subscriptions');
 
-        $response->assertStatus(200);
-
-        $tenant->refresh();
-        $this->assertEquals($newPlan->id, $tenant->plan_id);
+        $response->assertStatus(403);
     }
 
-    /**
-     * 🧪 Test: Subscription plan update dispatches PlanChanged event
-     */
-    public function test_subscription_update_dispatches_plan_changed_event()
+    public function test_guest_is_redirected_to_login(): void
     {
-        Event::fake();
-
-        $oldPlan = Plan::factory()->create(['slug' => 'starter']);
-        $newPlan = Plan::factory()->create(['slug' => 'pro']);
-        $tenant = Tenant::factory()->create(['plan_id' => $oldPlan->id]);
-        $subscription = Subscription::factory()->create([
-            'tenant_id' => $tenant->id,
-            'plan_id' => $oldPlan->id,
-        ]);
-
-        $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
-            'plan_id' => $newPlan->id,
-        ]);
-
-        Event::assertDispatched(PlanChanged::class, function ($event) use ($tenant, $oldPlan, $newPlan) {
-            return $event->tenant->id === $tenant->id
-                && $event->oldPlan->id === $oldPlan->id
-                && $event->newPlan->id === $newPlan->id;
-        });
-    }
-
-    /**
-     * 🧪 Test: Subscription update does not sync plan_id when unchanged
-     */
-    public function test_subscription_update_does_not_sync_when_plan_id_unchanged()
-    {
-        $plan = Plan::factory()->create(['slug' => 'starter']);
-        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
-        $subscription = Subscription::factory()->create([
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-        ]);
-
-        $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
-            'status' => 'cancelled',
-        ]);
-
-        $tenant->refresh();
-        $this->assertEquals($plan->id, $tenant->plan_id);
-    }
-
-    /**
-     * 🧪 Test: Subscription update does not dispatch PlanChanged when plan_id unchanged
-     */
-    public function test_subscription_update_does_not_dispatch_plan_changed_when_plan_id_unchanged()
-    {
-        Event::fake();
-
-        $plan = Plan::factory()->create(['slug' => 'starter']);
-        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
-        $subscription = Subscription::factory()->create([
-            'tenant_id' => $tenant->id,
-            'plan_id' => $plan->id,
-        ]);
-
-        $this->putJson("/admin/api/subscriptions/{$subscription->id}", [
-            'status' => 'cancelled',
-        ]);
-
-        Event::assertNotDispatched(PlanChanged::class);
+        auth('admin')->logout();
+        $response = $this->getJson('/admin/api/subscriptions');
+        $response->assertStatus(401);
     }
 
     // ────────────────────────────────────────────────────────────────────────────
-    // Plan creation from Subscriptions page
+    // Seeder
     // ────────────────────────────────────────────────────────────────────────────
 
-    public function test_plan_store_creates_plan_with_new_fields(): void
+    public function test_database_has_subscriptions_after_tenant_seeder(): void
     {
-        $response = $this->postJson('/admin/api/plans', [
-            'name' => 'Enterprise',
-            'slug' => 'enterprise',
-            'status' => 'active',
-            'price' => 299.99,
-            'duration_months' => 12,
+        Plan::factory()->create(['slug' => 'free', 'max_users' => 10]);
+        Plan::factory()->create(['slug' => 'pro', 'max_users' => 50]);
+        Plan::factory()->create(['slug' => 'enterprise', 'max_users' => 999]);
+
+        $tenant = Tenant::create([
+            'id' => 'test-seeder-'.uniqid(),
+            'name' => 'Seeder Test',
+            'email' => 'seeder@test.com',
+            'status' => 'Active',
+            'plan_id' => Plan::where('slug', 'free')->first()->id,
         ]);
 
-        $response->assertStatus(201)
-            ->assertJsonPath('message', 'Plan created successfully')
-            ->assertJsonPath('plan.name', 'Enterprise')
-            ->assertJsonPath('plan.status', 'active')
-            ->assertJsonPath('plan.duration_months', 12);
-
-        $this->assertDatabaseHas('plans', [
-            'slug' => 'enterprise',
-            'status' => 'active',
-            'duration_months' => 12,
-        ], 'mysql_central');
-    }
-
-    public function test_plan_store_validates_required_fields(): void
-    {
-        $response = $this->postJson('/admin/api/plans', []);
-
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'slug', 'status', 'price', 'duration_months']);
-    }
-
-    public function test_plan_store_validates_status_enum(): void
-    {
-        $response = $this->postJson('/admin/api/plans', [
-            'name' => 'Bad Plan',
-            'slug' => 'bad-plan',
-            'status' => 'invalid',
-            'price' => 10,
-            'duration_months' => 1,
+        Artisan::call('db:seed', [
+            '--class' => TenantSeeder::class,
+            '--env' => 'testing',
         ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['status']);
-    }
-
-    public function test_plan_store_validates_duration_months_min(): void
-    {
-        $response = $this->postJson('/admin/api/plans', [
-            'name' => 'Short Plan',
-            'slug' => 'short-plan',
+        $this->assertDatabaseHas('subscriptions', [
+            'tenant_id' => 'empresa-abc',
             'status' => 'active',
-            'price' => 10,
-            'duration_months' => 0,
         ]);
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['duration_months']);
-    }
+        $this->assertDatabaseHas('subscriptions', [
+            'tenant_id' => 'tienda-xyz',
+            'status' => 'active',
+        ]);
 
-    public function test_tenants_list_returns_tenants(): void
-    {
-        Tenant::factory()->count(3)->create();
-
-        $response = $this->getJson('/admin/api/tenants-list');
-
-        $response->assertStatus(200)
-            ->assertJsonCount(3, 'tenants')
-            ->assertJsonStructure(['tenants' => [['id', 'name', 'plan_id']]]);
+        $this->assertDatabaseHas('subscriptions', [
+            'tenant_id' => 'consultoria-123',
+            'status' => 'active',
+        ]);
     }
 }

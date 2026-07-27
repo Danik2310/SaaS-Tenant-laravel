@@ -143,13 +143,10 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
         Route::delete('/api/permissions/{id}', [RolePermissionController::class, 'destroyPermission']);
     });
 
-    // Subscription management - requires 'manage subscriptions' permission
+    // Subscription management - read-only, requires 'manage subscriptions' permission
     Route::middleware(['permission:manage subscriptions,admin'])->group(function () {
         Route::get('/api/subscriptions', [SubscriptionController::class, 'index']);
         Route::get('/api/subscriptions/{id}', [SubscriptionController::class, 'show']);
-        Route::post('/api/subscriptions', [SubscriptionController::class, 'store']);
-        Route::put('/api/subscriptions/{id}', [SubscriptionController::class, 'update']);
-        Route::delete('/api/subscriptions/{id}', [SubscriptionController::class, 'destroy']);
     });
 
     // Activity Logs - requires 'view activity logs' permission
