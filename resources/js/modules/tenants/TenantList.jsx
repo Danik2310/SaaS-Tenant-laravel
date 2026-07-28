@@ -321,7 +321,7 @@ export default function TenantList({
                 onSortingChange={setSorting}
                 onRowSelectionChange={setRowSelection}
                 enableRowSelection
-                getRowId={(row) => row.original.id}
+                getRowId={(originalRow) => originalRow.id}
                 enableGlobalFilter
                 enableColumnFilters
                 enableSorting
