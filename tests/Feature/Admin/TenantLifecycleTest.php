@@ -191,6 +191,30 @@ class TenantLifecycleTest extends TestCase
         $this->assertEquals($newPlan->id, $tenant->plan_id);
     }
 
+    public function test_update_name_email_and_plan_simultaneously(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+        $newPlan = Plan::factory()->create();
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
+            'name' => 'Updated Name',
+            'email' => 'updated@example.com',
+            'plan_id' => $newPlan->id,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Tenant updated successfully');
+
+        $tenant->refresh();
+        $this->assertEquals('Updated Name', $tenant->name);
+        $this->assertEquals('updated@example.com', $tenant->email);
+        $this->assertEquals($newPlan->id, $tenant->plan_id);
+    }
+
     public function test_bulk_suspend_tenants(): void
     {
         $this->setUpAdminAuth();
