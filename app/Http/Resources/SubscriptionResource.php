@@ -32,6 +32,7 @@ class SubscriptionResource extends JsonResource
             'plan_id' => $this->plan_id,
             'tenant_name' => $tenantName,
             'tenant_status' => $tenantStatus,
+            'tenant_actual_status' => $this->relationLoaded('tenant') ? ($this->tenant?->status ?? null) : null,
             'plan_name' => $this->relationLoaded('plan') ? ($this->plan?->name ?? 'Unknown') : 'Unknown',
             'plan_slug' => $this->relationLoaded('plan') ? ($this->plan?->slug ?? '') : '',
             'plan_price' => $this->relationLoaded('plan') ? ($this->plan?->price ?? '0.00') : '0.00',

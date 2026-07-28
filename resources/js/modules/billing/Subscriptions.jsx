@@ -19,23 +19,19 @@ const STATUS_OPTIONS = [
     { text: 'Expired', value: 'expired' },
 ];
 
+const TENANT_STATUS_STYLES = {
+    Active:    { bgcolor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' },
+    Suspended: { bgcolor: '#fee2e2', color: '#991b1b' },
+    Trial:     { bgcolor: '#fef9c3', color: '#854d0e' },
+    Cancelled: { bgcolor: '#f1f5f9', color: '#64748b' },
+    Deleted:   { bgcolor: '#f1f5f9', color: '#64748b', fontStyle: 'italic' },
+};
+
 function TenantCell({ cell, row }) {
     const name = cell.getValue();
-    const status = row.original.tenant_status;
+    const status = row.original.tenant_actual_status;
 
-    if (status === 'deleted') {
-        return (
-            <Tooltip title="Tenant deleted — click View to restore">
-                <Chip
-                    label={`${name || 'Unknown'} \u2014 Deleted`}
-                    size="small"
-                    sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontWeight: 600, fontStyle: 'italic' }}
-                />
-            </Tooltip>
-        );
-    }
-
-    if (!name || name === 'Restricted' || name === 'Missing Tenant') {
+    if (!status) {
         return (
             <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
                 {name || '\u2014'}
@@ -43,9 +39,21 @@ function TenantCell({ cell, row }) {
         );
     }
 
+    if (status === 'Deleted') {
+        return (
+            <Tooltip title="Tenant deleted — click View to restore">
+                <Chip
+                    label={`${name || 'Unknown'} \u2014 Deleted`}
+                    size="small"
+                    sx={{ fontWeight: 600, ...TENANT_STATUS_STYLES.Deleted }}
+                />
+            </Tooltip>
+        );
+    }
+
     return (
-        <Tooltip title={`Tenant status: ${status}`}>
-            <Chip label={name} size="small" sx={{ fontWeight: 600, bgcolor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' }} />
+        <Tooltip title={`Tenant is ${status}`}>
+            <Chip label={name} size="small" sx={{ fontWeight: 600, ...TENANT_STATUS_STYLES[status] }} />
         </Tooltip>
     );
 }
@@ -242,10 +250,10 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
                     )}
                     renderRowActions={({ row }) => {
                         const sub = row.original;
-                        const canView = sub.tenant_status === 'active' || sub.tenant_status === 'deleted';
+                        const canView = sub.tenant_actual_status !== null;
                         return (
                             <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                                <Tooltip title={canView ? (sub.tenant_status === 'deleted' ? 'View & Restore Tenant' : 'View Tenant') : 'Tenant unavailable'}>
+                                <Tooltip title={canView ? (sub.tenant_actual_status === 'Deleted' ? 'View & Restore Tenant' : 'View Tenant') : 'Tenant unavailable'}>
                                     <Box
                                         component="button"
                                         data-testid="view-tenant-btn"
