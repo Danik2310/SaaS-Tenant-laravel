@@ -177,9 +177,16 @@ class ExportService implements ExportServiceInterface
                 break;
             }
 
+            $tenantName = match (true) {
+                !$canViewTenantName => 'Restricted',
+                $sub->tenant === null => 'Missing Tenant',
+                $sub->tenant->trashed() => $sub->tenant->name . ' (Deleted)',
+                default => $sub->tenant->name ?? '',
+            };
+
             $selected = $this->pickColumns($columns, $allColumns, [
                 'id' => $sub->id,
-                'tenant_name' => $canViewTenantName ? ($sub->tenant?->name ?? '') : 'Restricted',
+                'tenant_name' => $tenantName,
                 'plan_name' => $sub->plan?->name ?? '',
                 'status' => $sub->status,
                 'starts_at' => $sub->starts_at?->format('Y-m-d') ?? '',
