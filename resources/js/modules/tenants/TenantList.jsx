@@ -119,6 +119,12 @@ export default function TenantList({
         [rowSelection]
     );
 
+    const handleBulkActionWithRefresh = useCallback(async (action, payload) => {
+        if (onBulkAction) {
+            await onBulkAction(action, Array.from(selectedIds), payload);
+        }
+    }, [onBulkAction, selectedIds]);
+
     const confirmBulkAction = useCallback((action) => {
         const destructive = action === 'delete' || action === 'suspend';
         if (destructive) {
