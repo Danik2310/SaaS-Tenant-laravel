@@ -552,7 +552,7 @@ export default function Dashboard() {
                             open={!!planChangeTenant}
                             tenants={planChangeTenant ? [planChangeTenant] : []}
                             onClose={() => setPlanChangeTenant(null)}
-                            onChanged={fetchTenants}
+                            onChanged={() => { fetchTenants(); incrementRefreshTrigger(); }}
                         />
 
                         <ChangePlanModal
@@ -563,6 +563,7 @@ export default function Dashboard() {
                                 setBulkPlanChangeOpen(false);
                                 setSelectedTenantIds(new Set());
                                 fetchTenants();
+                                incrementRefreshTrigger();
                             }}
                         />
 
