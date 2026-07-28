@@ -58,13 +58,13 @@ class SubscriptionController extends Controller
         $order = $request->query('order', 'desc') === 'asc' ? 'asc' : 'desc';
 
         match ($sortParam) {
-            'tenant_name' => $query->join('tenants', 'tenants.id', '=', 'subscriptions.tenant_id')
+            'tenant_name' => $query->leftJoin('tenants', 'tenants.id', '=', 'subscriptions.tenant_id')
                 ->select('subscriptions.*')
                 ->orderBy('tenants.name', $order),
-            'plan_name' => $query->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
+            'plan_name' => $query->leftJoin('plans', 'plans.id', '=', 'subscriptions.plan_id')
                 ->select('subscriptions.*')
                 ->orderBy('plans.name', $order),
-            'plan_price' => $query->join('plans', 'plans.id', '=', 'subscriptions.plan_id')
+            'plan_price' => $query->leftJoin('plans', 'plans.id', '=', 'subscriptions.plan_id')
                 ->select('subscriptions.*')
                 ->orderBy('plans.price', $order),
             default => $query->orderBy(in_array($sortParam, ['status', 'starts_at', 'ends_at', 'created_at']) ? "subscriptions.{$sortParam}" : 'subscriptions.created_at', $order),
