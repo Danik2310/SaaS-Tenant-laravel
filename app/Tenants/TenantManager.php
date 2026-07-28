@@ -222,14 +222,9 @@ class TenantManager implements TenantManagerInterface
         $oldPlan = null;
 
         DB::transaction(function () use ($tenant, $newPlan, &$oldPlan) {
-            $tenant = Tenant::lockForUpdate()->findOrFail($tenant->id);
+            $tenant = Tenant::findOrFail($tenant->id);
 
-            if (! $tenant->plan) {
-                $defaultSlug = config('tenancy.default_plan_slug', 'free');
-                $oldPlan = Plan::where('slug', $defaultSlug)->firstOrFail();
-            } else {
-                $oldPlan = $tenant->plan;
-            }
+            $oldPlan = $tenant->plan ?? Plan::where('slug', config('tenancy.default_plan_slug', 'free'))->firstOrFail();
 
             $tenant->activeSubscription?->update([
                 'status' => 'cancelled',

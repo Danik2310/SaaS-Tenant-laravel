@@ -486,7 +486,7 @@ class TenantController extends Controller
 
         try {
             $this->tenantManager->changePlan($tenant, $newPlan);
-        } catch (InvalidArgumentException $e) {
+        } catch (\Throwable $e) {
             \Log::warning('Failed to change tenant plan', [
                 'tenant_id' => $id,
                 'error' => $e->getMessage(),
