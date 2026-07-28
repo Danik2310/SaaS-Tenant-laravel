@@ -189,13 +189,13 @@ class TenantController extends Controller
         $planId = $data['plan_id'] ?? null;
         unset($data['status'], $data['plan_id']);
 
-        $tenant->fill($data);
-
         if ($planId !== null && $planId != $tenant->plan_id) {
             $newPlan = Plan::findOrFail($planId);
+            $tenant->fill($data)->save();
             $this->tenantManager->changePlan($tenant, $newPlan);
             $needsSave = false;
         } else {
+            $tenant->fill($data);
             $needsSave = true;
         }
 

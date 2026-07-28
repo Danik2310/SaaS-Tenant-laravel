@@ -82,7 +82,6 @@ class TenantManager implements TenantManagerInterface
             TenantStateManager::transitionTo($tenant, 'Suspended');
         });
 
-        TenantStateManager::flushTenantCache($tenant);
         Cache::forget('admin_dashboard_stats_active');
         Cache::forget('admin_dashboard_stats_trashed');
     }
@@ -102,7 +101,6 @@ class TenantManager implements TenantManagerInterface
             TenantStateManager::transitionTo($tenant, 'Active');
         });
 
-        TenantStateManager::flushTenantCache($tenant);
         Cache::forget('admin_dashboard_stats_active');
         Cache::forget('admin_dashboard_stats_trashed');
     }
@@ -196,11 +194,8 @@ class TenantManager implements TenantManagerInterface
 
         // Fire reactivation event AFTER the transaction commits.
         // HandleTenantReactivation flushes the tenant-scoped cache.
-        if ($tenant->wasChanged('status')) {
-            event(new TenantReactivated($tenant));
-        }
+        event(new TenantReactivated($tenant));
 
-        TenantStateManager::flushTenantCache($tenant);
         Cache::forget('admin_dashboard_stats_active');
         Cache::forget('admin_dashboard_stats_trashed');
     }
