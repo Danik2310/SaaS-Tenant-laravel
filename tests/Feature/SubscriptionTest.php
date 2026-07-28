@@ -312,8 +312,9 @@ class SubscriptionTest extends TestCase
         $response = $this->getJson("/admin/api/subscriptions/{$subscription->id}");
 
         $response->assertStatus(200);
+        $tenant->refresh();
         $response->assertJsonPath('subscription.tenant_status', 'deleted');
-        $response->assertJsonPath('subscription.tenant_name', 'Deleted Tenant');
+        $response->assertJsonPath('subscription.tenant_name', $tenant->name);
     }
 
     public function test_subscription_tenant_status_active_when_tenant_exists(): void
@@ -349,6 +350,22 @@ class SubscriptionTest extends TestCase
         $response->assertJsonPath('subscription.tenant_name', 'Restricted');
     }
 
+    public function test_subscription_retains_active_status_when_tenant_suspended(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id, 'status' => 'Active']);
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
+
+        $tenant->update(['status' => 'Suspended']);
+
+        $response = $this->getJson("/admin/api/subscriptions/{$subscription->id}");
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('subscription.status', 'active');
+        $response->assertJsonPath('subscription.tenant_actual_status', 'Suspended');
+        $response->assertJsonPath('subscription.tenant_status', 'active');
+    }
+
     public function test_subscription_index_returns_tenant_status_for_each_type(): void
     {
         $plan = Plan::factory()->create();
@@ -375,7 +392,7 @@ class SubscriptionTest extends TestCase
         $this->assertEquals('Live Co', $subsById[$sub1->id]['tenant_name']);
 
         $this->assertEquals('deleted', $subsById[$sub2->id]['tenant_status']);
-        $this->assertEquals('Deleted Tenant', $subsById[$sub2->id]['tenant_name']);
+        $this->assertEquals('Gone Co', $subsById[$sub2->id]['tenant_name']);
 
         $this->assertArrayNotHasKey($sub3->id, $subsById);
     }
