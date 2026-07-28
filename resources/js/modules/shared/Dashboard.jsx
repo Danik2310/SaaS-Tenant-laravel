@@ -395,6 +395,7 @@ export default function Dashboard() {
                         {view === 'tenants' && !showForm && !editingTenant && (
                             <TenantList
                                 refreshTrigger={refreshTrigger}
+                                bulkLoading={bulkLoading}
                                 onAdd={() => setShowForm(true)}
                                 onDelete={handleDeleteTenant}
                                 onEdit={handleEditTenant}

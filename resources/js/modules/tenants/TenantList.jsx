@@ -21,7 +21,9 @@ import BlockIcon from '@mui/icons-material/Block';
 import RestoreIcon from '@mui/icons-material/Restore';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import InboxIcon from '@mui/icons-material/Inbox';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { toast } from 'sonner';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function TenantList({
     refreshTrigger,
@@ -34,6 +36,7 @@ export default function TenantList({
     onSelectionChange,
     rowMenuActions = [],
     onBulkAction,
+    bulkLoading = false,
 }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -49,6 +52,7 @@ export default function TenantList({
     const [rowSelection, setRowSelection] = useState({});
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
     const [actionMenuRow, setActionMenuRow] = useState(null);
+    const [pendingBulkAction, setPendingBulkAction] = useState(null);
 
     useEffect(() => {
         api.get('/admin/api/plans-list').then(r => {
@@ -115,11 +119,21 @@ export default function TenantList({
         [rowSelection]
     );
 
-    const handleBulkActionWithRefresh = useCallback(async (action, payload) => {
-        if (onBulkAction) {
-            await onBulkAction(action, Array.from(selectedIds), payload);
+    const confirmBulkAction = useCallback((action) => {
+        const destructive = action === 'delete' || action === 'suspend';
+        if (destructive) {
+            setPendingBulkAction(action);
+        } else {
+            handleBulkActionWithRefresh(action);
         }
-    }, [onBulkAction, selectedIds]);
+    }, [handleBulkActionWithRefresh]);
+
+    const handleConfirmBulkAction = useCallback(async () => {
+        if (pendingBulkAction) {
+            await handleBulkActionWithRefresh(pendingBulkAction);
+            setPendingBulkAction(null);
+        }
+    }, [pendingBulkAction, handleBulkActionWithRefresh]);
 
     const handleToggleDeleted = useCallback(() => {
         setShowDeleted(prev => !prev);
@@ -301,6 +315,7 @@ export default function TenantList({
                 onSortingChange={setSorting}
                 onRowSelectionChange={setRowSelection}
                 enableRowSelection
+                getRowId={(row) => row.original.id}
                 enableGlobalFilter
                 enableColumnFilters
                 enableSorting
@@ -319,30 +334,48 @@ export default function TenantList({
                             <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
                                 {selected.length} selected
                             </Typography>
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                color="error"
-                                onClick={() => handleBulkActionWithRefresh('suspend')}
-                            >
-                                Suspend
-                            </Button>
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                color="success"
-                                onClick={() => handleBulkActionWithRefresh('activate')}
-                            >
-                                Activate
-                            </Button>
-                            <Button
-                                size="small"
-                                variant="outlined"
-                                color="error"
-                                onClick={() => handleBulkActionWithRefresh('delete')}
-                            >
-                                Delete
-                            </Button>
+                            {showDeleted ? (
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    color="success"
+                                    startIcon={<CheckCircleIcon />}
+                                    onClick={() => handleBulkActionWithRefresh('restore')}
+                                    disabled={bulkLoading}
+                                >
+                                    Restore
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={() => confirmBulkAction('suspend')}
+                                        disabled={bulkLoading}
+                                    >
+                                        Suspend
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="success"
+                                        onClick={() => handleBulkActionWithRefresh('activate')}
+                                        disabled={bulkLoading}
+                                    >
+                                        Activate
+                                    </Button>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="error"
+                                        onClick={() => confirmBulkAction('delete')}
+                                        disabled={bulkLoading}
+                                    >
+                                        Delete
+                                    </Button>
+                                </>
+                            )}
                         </Box>
                     );
                 }}
@@ -425,6 +458,15 @@ export default function TenantList({
                     ];
                 })()}
             </Menu>
+
+            <ConfirmDialog
+                open={!!pendingBulkAction}
+                title={pendingBulkAction === 'delete' ? 'Delete Tenants' : 'Suspend Tenants'}
+                message={`This will ${pendingBulkAction} the selected tenant(s). This action can be undone later. Continue?`}
+                confirmLabel={pendingBulkAction === 'delete' ? 'Delete' : 'Suspend'}
+                onConfirm={handleConfirmBulkAction}
+                onCancel={() => setPendingBulkAction(null)}
+            />
         </Box>
     );
 }
