@@ -59,6 +59,7 @@ export default function Dashboard() {
     const [total, setTotal] = useState(0);
     const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
     const [subscriptionSearch, setSubscriptionSearch] = useState('');
+    const [tenantSearch, setTenantSearch] = useState('');
     const [bulkLoading, setBulkLoading] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const incrementRefreshTrigger = useCallback(() => setRefreshTrigger(r => r + 1), []);
@@ -260,6 +261,7 @@ export default function Dashboard() {
 
     const handleSetView = (newView) => {
         setSubscriptionSearch('');
+        setTenantSearch('');
         setView(newView);
     };
 
@@ -293,19 +295,20 @@ export default function Dashboard() {
         }
     };
 
-    const handleViewTenant = async (tenantId) => {
+    const handleViewTenant = (tenantId, tenantName = '') => {
+        setTenantSearch(tenantName);
         setView('tenants');
-        try {
-            const res = await api.get(`/admin/api/tenants/${tenantId}`);
+        if (!tenantId) return;
+        api.get(`/admin/api/tenants/${tenantId}`).then(res => {
             openModal('domain', res.data.tenant);
-        } catch (err) {
+        }).catch(err => {
             const status = err.response?.status;
             const message = status === 404
                 ? `Tenant #${tenantId} no longer exists. It may have been permanently deleted.`
                 : err.response?.data?.message || 'Failed to load tenant details';
             toast.error(message);
             setError(message);
-        }
+        });
     };
 
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
@@ -403,6 +406,7 @@ export default function Dashboard() {
                             <TenantList
                                 refreshTrigger={refreshTrigger}
                                 bulkLoading={bulkLoading}
+                                initialSearch={tenantSearch}
                                 onAdd={() => setShowForm(true)}
                                 onDelete={handleDeleteTenant}
                                 onEdit={handleEditTenant}

@@ -259,7 +259,7 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
                                         data-testid="view-tenant-btn"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            if (canView && onViewTenant) onViewTenant(sub.tenant_id);
+                                            if (canView && onViewTenant) onViewTenant(sub.tenant_id, sub.tenant_name);
                                         }}
                                         disabled={!canView}
                                         sx={{

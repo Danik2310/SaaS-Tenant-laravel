@@ -37,6 +37,7 @@ export default function TenantList({
     rowMenuActions = [],
     onBulkAction,
     bulkLoading = false,
+    initialSearch = '',
 }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -46,7 +47,7 @@ export default function TenantList({
     const [plans, setPlans] = useState([]);
 
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
-    const [globalFilter, setGlobalFilter] = useState('');
+    const [globalFilter, setGlobalFilter] = useState(initialSearch);
     const [columnFilters, setColumnFilters] = useState([]);
     const [sorting, setSorting] = useState([]);
     const [rowSelection, setRowSelection] = useState({});
