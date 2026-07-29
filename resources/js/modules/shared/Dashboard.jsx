@@ -58,6 +58,7 @@ export default function Dashboard() {
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [total, setTotal] = useState(0);
     const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
+    const [subscriptionSearch, setSubscriptionSearch] = useState('');
     const [bulkLoading, setBulkLoading] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const incrementRefreshTrigger = useCallback(() => setRefreshTrigger(r => r + 1), []);
@@ -257,7 +258,13 @@ export default function Dashboard() {
         }
     };
 
-    const handleViewSubscriptions = () => {
+    const handleSetView = (newView) => {
+        setSubscriptionSearch('');
+        setView(newView);
+    };
+
+    const handleViewSubscriptions = (tenant) => {
+        setSubscriptionSearch(tenant?.name ?? '');
         setView('subscriptions');
     };
 
@@ -305,7 +312,7 @@ export default function Dashboard() {
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex' }}>
-            <Navbar view={view} setView={setView} />
+            <Navbar view={view} setView={handleSetView} />
             <Box sx={{ flex: 1 }}>
                 <Box
                     component="header"
@@ -415,7 +422,7 @@ export default function Dashboard() {
                                         { label: 'Change Plan', icon: <ChangeCircleIcon fontSize="small" />, onClick: () => setPlanChangeTenant(tenant) },
                                         { divider: true },
                                         { label: 'View Details', icon: <VisibilityIcon fontSize="small" />, onClick: () => openModal('domain', tenant) },
-                                        { label: 'View Subscriptions', icon: <ReceiptIcon fontSize="small" />, onClick: () => handleViewSubscriptions() },
+                                        { label: 'View Subscriptions', icon: <ReceiptIcon fontSize="small" />, onClick: () => handleViewSubscriptions(tenant) },
                                         { divider: true },
                                         { label: 'DB Info', icon: <StorageIcon fontSize="small" />, onClick: () => openModal('database', tenant) },
                                         { label: 'Run Migrations', icon: <SyncIcon fontSize="small" />, onClick: () => openModal('migration', tenant) },
@@ -425,7 +432,7 @@ export default function Dashboard() {
                             />
                         )}
                         <ErrorBoundary fallbackMessage="Subscriptions failed to load">
-                            {view === 'subscriptions' && <Subscriptions onViewTenant={handleViewTenant} />}
+                            {view === 'subscriptions' && <Subscriptions initialSearch={subscriptionSearch} onViewTenant={handleViewTenant} />}
                         </ErrorBoundary>
                         <ErrorBoundary fallbackMessage="Payment methods failed to load">
                             {view === 'payment-methods' && (
