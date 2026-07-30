@@ -64,7 +64,7 @@ export default function ProductIndex({ products }) {
                     <Table size="small">
                         <TableHead>
                             <TableRow sx={{ bgcolor: 'action.hover' }}>
-                                {['Name', 'SKU', 'Category', 'Price', 'Cost', 'Status', 'Actions'].map(h => (
+                                {['Image', 'Name', 'SKU', 'Category', 'Price', 'Cost', 'Status', 'Actions'].map(h => (
                                     <TableCell key={h} sx={{ fontWeight: 700, fontSize: 11, color: 'text.secondary', textTransform: 'uppercase' }}>
                                         {h}
                                     </TableCell>
@@ -74,12 +74,22 @@ export default function ProductIndex({ products }) {
                         <TableBody>
                             {data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} sx={{ textAlign: 'center', py: 5, color: 'text.disabled' }}>
+                                    <TableCell colSpan={8} sx={{ textAlign: 'center', py: 5, color: 'text.disabled' }}>
                                         No products found.
                                     </TableCell>
                                 </TableRow>
                             ) : data.map((product) => (
                                 <TableRow key={product.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+                                    <TableCell>
+                                        {product.images?.[0] ? (
+                                            <img src={product.images[0].url()} alt={product.name}
+                                                style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
+                                        ) : (
+                                            <Box sx={{ width: 40, height: 40, borderRadius: 4, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>—</Typography>
+                                            </Box>
+                                        )}
+                                    </TableCell>
                                     <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{product.name}</TableCell>
                                     <TableCell><code style={{ background: 'var(--mui-palette-action-hover, #f1f5f9)', padding: '2px 6px', borderRadius: 3, fontSize: 12 }}>{product.sku}</code></TableCell>
                                     <TableCell sx={{ fontSize: 13 }}>{product.category?.name || '—'}</TableCell>

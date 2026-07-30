@@ -178,9 +178,9 @@ class ExportService implements ExportServiceInterface
             }
 
             $tenantName = match (true) {
-                !$canViewTenantName => 'Restricted',
+                ! $canViewTenantName => 'Restricted',
                 $sub->tenant === null => 'Missing Tenant',
-                $sub->tenant->trashed() => $sub->tenant->name . ' (Deleted)',
+                $sub->tenant->trashed() => $sub->tenant->name.' (Deleted)',
                 default => $sub->tenant->name ?? '',
             };
 

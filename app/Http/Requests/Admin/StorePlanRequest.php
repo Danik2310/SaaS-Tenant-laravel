@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Shared\Contracts\ServerDiskInfo;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePlanRequest extends FormRequest
@@ -25,6 +26,35 @@ class StorePlanRequest extends FormRequest
             'max_categories' => 'nullable|integer|min:1',
             'max_products' => 'nullable|integer|min:1',
             'features' => 'nullable|string',
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function ($validator) {
+                $maxStorage = $this->input('max_storage');
+
+                if ($maxStorage === null) {
+                    return;
+                }
+
+                $serverDisk = app(ServerDiskInfo::class);
+                $totalGb = $serverDisk->totalGb();
+
+                if ($totalGb === null) {
+                    return;
+                }
+
+                $requestedGb = (int) $maxStorage / 1024;
+
+                if ($requestedGb > $totalGb) {
+                    $validator->errors()->add(
+                        'max_storage',
+                        "Max storage ({$requestedGb} GB) exceeds server capacity ({$totalGb} GB)."
+                    );
+                }
+            },
         ];
     }
 }

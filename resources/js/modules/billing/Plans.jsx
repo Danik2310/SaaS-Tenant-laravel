@@ -253,7 +253,7 @@ function PlanForm({ plan, onSubmit, onCancel }) {
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 3 }}>
                     <TextField size="small" label="Max Users" type="number" value={form.max_users} onChange={handleChange('max_users')} inputProps={{ min: 1 }} error={!!errors.max_users} helperText={errors.max_users?.[0]} fullWidth />
-                    <TextField size="small" label="Max Storage (MB)" type="number" value={form.max_storage} onChange={handleChange('max_storage')} inputProps={{ min: 0 }} error={!!errors.max_storage} helperText={errors.max_storage?.[0]} fullWidth />
+                    <TextField size="small" label="Max Storage (MB)" type="number" value={form.max_storage} onChange={handleChange('max_storage')} inputProps={{ min: 0 }} error={!!errors.max_storage} helperText={errors.max_storage?.[0] || (summary?.server_disk_total_gb != null ? `Server capacity: ${summary.server_disk_total_gb} GB (${summary.server_disk_label})` : undefined)} fullWidth />
                     <TextField size="small" label="Max Warehouses" type="number" value={form.max_warehouses} onChange={handleChange('max_warehouses')} inputProps={{ min: 1 }} error={!!errors.max_warehouses} helperText={errors.max_warehouses?.[0]} fullWidth />
                 </Box>
                 <Box sx={{ display: 'flex', gap: 3, mt: 2 }}>

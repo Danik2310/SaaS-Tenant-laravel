@@ -14,7 +14,7 @@ class LocalServerDiskInfo implements ServerDiskInfo
     {
         $path = config('filesystems.disks.tenant.root');
 
-        if ($path === null || !is_dir($path)) {
+        if ($path === null || ! is_dir($path)) {
             $path = storage_path();
         }
 
@@ -68,6 +68,6 @@ class LocalServerDiskInfo implements ServerDiskInfo
     {
         $relative = str_replace(base_path(), '', $this->path);
 
-        return 'Local (' . ltrim($relative, '/\\') . ')';
+        return 'Local ('.ltrim($relative, '/\\').')';
     }
 }

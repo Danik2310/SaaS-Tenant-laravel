@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 class CloudServerDiskInfo implements ServerDiskInfo
 {
     private const CACHE_KEY = 'server_disk_cloud_usage';
+
     private const CACHE_TTL = 900;
 
     private ?float $limitGb;
@@ -103,6 +104,6 @@ class CloudServerDiskInfo implements ServerDiskInfo
     {
         $bucket = config('filesystems.disks.s3.bucket', 'unknown');
 
-        return 'AWS S3 (' . $bucket . ')';
+        return 'AWS S3 ('.$bucket.')';
     }
 }

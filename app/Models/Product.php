@@ -56,6 +56,11 @@ class Product extends Model
     /**
      * Calculate margin from price and cost.
      */
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
+    }
+
     public function getMarginAttribute()
     {
         if ($this->cost == 0) {

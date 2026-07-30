@@ -25,6 +25,7 @@ class TenantMetricsController extends Controller
     {
         $this->diskInfo = $diskInfo;
     }
+
     /**
      * List tenant metrics.
      *

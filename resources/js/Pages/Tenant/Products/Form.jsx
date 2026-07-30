@@ -15,7 +15,10 @@ export default function ProductForm({ product, categories }) {
         cost: product?.cost || '',
         category_id: product?.category_id || '',
         active: product?.active ?? true,
+        image: null,
     });
+
+    const existingImage = product?.images?.[0];
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -78,6 +81,17 @@ export default function ProductForm({ product, categories }) {
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
                         </SelectInput>
+                    </FormInput>
+
+                    <FormInput label="Image" error={errors.image}>
+                        {existingImage && (
+                            <Box sx={{ mb: 1 }}>
+                                <img src={existingImage.url()} alt="Preview"
+                                    style={{ maxWidth: 200, maxHeight: 150, borderRadius: 4, objectFit: 'cover' }} />
+                            </Box>
+                        )}
+                        <input type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                            onChange={(e) => setData('image', e.target.files[0])} />
                     </FormInput>
 
                     <FormInput label="Status">

@@ -14,6 +14,7 @@ use App\Models\PaymentMethod;
 use App\Models\Permission;
 use App\Models\Plan;
 use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Role;
 use App\Models\Setting;
 use App\Models\Subscription;
@@ -21,6 +22,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Observers\Tenant\OrderObserver;
+use App\Observers\Tenant\ProductImageObserver;
 use App\Observers\Tenant\ProductObserver;
 use App\Observers\Tenant\UserObserver;
 use App\Shared\Observers\ActivityLogObserver;
@@ -63,6 +65,7 @@ class EventServiceProvider extends ServiceProvider
         User::observe(UserObserver::class);
         Product::observe(ProductObserver::class);
         Order::observe(OrderObserver::class);
+        ProductImage::observe(ProductImageObserver::class);
     }
 
     public function shouldDiscoverEvents(): bool
