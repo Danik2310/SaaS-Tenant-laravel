@@ -53,11 +53,13 @@ export default function Navbar({ view, setView }) {
     }, {});
 
     return (
+        <>
+        <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
         <aside style={{
             width: '260px',
             background: '#0f172a',
             color: 'white',
-            minHeight: '100vh',
+            height: '100vh',
             display: 'flex',
             flexDirection: 'column',
             padding: '0',
@@ -91,7 +93,7 @@ export default function Navbar({ view, setView }) {
                 </div>
             </div>
 
-            <nav style={{ flex: 1, padding: '8px 12px', overflowY: 'auto' }}>
+            <nav style={{ flex: 1, padding: '8px 12px', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {Object.entries(grouped).map(([section, items]) => (
                     <div key={section} style={{ marginBottom: '20px' }}>
                         <div style={{
@@ -151,5 +153,6 @@ export default function Navbar({ view, setView }) {
                 v0.2
             </div>
         </aside>
+        </>
     );
 }

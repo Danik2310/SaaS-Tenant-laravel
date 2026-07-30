@@ -60,6 +60,7 @@ export default function Dashboard() {
     const [selectedTenantIds, setSelectedTenantIds] = useState(new Set());
     const [subscriptionSearch, setSubscriptionSearch] = useState('');
     const [tenantSearch, setTenantSearch] = useState('');
+    const [showDeletedTenantList, setShowDeletedTenantList] = useState(false);
     const [bulkLoading, setBulkLoading] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const incrementRefreshTrigger = useCallback(() => setRefreshTrigger(r => r + 1), []);
@@ -262,6 +263,7 @@ export default function Dashboard() {
     const handleSetView = (newView) => {
         setSubscriptionSearch('');
         setTenantSearch('');
+        setShowDeletedTenantList(false);
         setView(newView);
     };
 
@@ -297,11 +299,17 @@ export default function Dashboard() {
 
     const handleViewTenant = (tenantId, tenantName = '') => {
         setTenantSearch(tenantName);
-        setView('tenants');
-        if (!tenantId) return;
+        setShowDeletedTenantList(false);
+        if (!tenantId) { setView('tenants'); return; }
         api.get(`/admin/api/tenants/${tenantId}`).then(res => {
-            openModal('domain', res.data.tenant);
+            const tenant = res.data.tenant;
+            if (tenant?.is_deleted) {
+                setShowDeletedTenantList(true);
+            }
+            setView('tenants');
+            openModal('domain', tenant);
         }).catch(err => {
+            setView('tenants');
             const status = err.response?.status;
             const message = status === 404
                 ? `Tenant #${tenantId} no longer exists. It may have been permanently deleted.`
@@ -314,9 +322,9 @@ export default function Dashboard() {
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex' }}>
+        <Box sx={{ height: '100vh', overflow: 'hidden', bgcolor: 'background.default', display: 'flex' }}>
             <Navbar view={view} setView={handleSetView} />
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, overflowY: 'auto', height: '100vh', '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 <Box
                     component="header"
                     sx={{
@@ -407,6 +415,7 @@ export default function Dashboard() {
                                 refreshTrigger={refreshTrigger}
                                 bulkLoading={bulkLoading}
                                 initialSearch={tenantSearch}
+                                initialShowDeleted={showDeletedTenantList}
                                 onAdd={() => setShowForm(true)}
                                 onDelete={handleDeleteTenant}
                                 onEdit={handleEditTenant}
