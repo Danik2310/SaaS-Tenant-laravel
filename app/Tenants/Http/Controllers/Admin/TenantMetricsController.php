@@ -9,6 +9,7 @@ use App\Http\Resources\TenantResource;
 use App\Http\Resources\TenantResourceUsageResource;
 use App\Models\Tenant;
 use App\Models\TenantResourceUsage;
+use App\Shared\Contracts\ServerDiskInfo;
 use Illuminate\Http\Request;
 
 /**
@@ -18,6 +19,12 @@ use Illuminate\Http\Request;
  */
 class TenantMetricsController extends Controller
 {
+    private ServerDiskInfo $diskInfo;
+
+    public function __construct(ServerDiskInfo $diskInfo)
+    {
+        $this->diskInfo = $diskInfo;
+    }
     /**
      * List tenant metrics.
      *
@@ -55,6 +62,49 @@ class TenantMetricsController extends Controller
             'total' => $metrics->total(),
             'last_page' => $metrics->lastPage(),
         ]);
+    }
+
+    /**
+     * Aggregate usage summary across all tenants.
+     *
+     * @authenticated
+     *
+     * @responseField summary.total_tenants int Number of tenants with usage records.
+     * @responseField summary.total_users int Total users across all tenants.
+     * @responseField summary.avg_users float Average users per tenant.
+     * @responseField summary.max_users int Highest user count in any tenant.
+     * @responseField summary.total_storage_mb float Total storage in MB across all tenants.
+     * @responseField summary.avg_storage_mb float Average storage per tenant in MB.
+     * @responseField summary.max_storage_mb float Highest storage usage in any tenant in MB.
+     * @responseField summary.total_products int Total products across all tenants.
+     * @responseField summary.avg_products float Average products per tenant.
+     * @responseField summary.max_products int Highest product count in any tenant.
+     */
+    public function summary()
+    {
+        $stats = TenantResourceUsage::selectRaw('
+            COUNT(*) as total_tenants,
+            COALESCE(SUM(users_count), 0) as total_users,
+            COALESCE(ROUND(AVG(users_count), 1), 0) as avg_users,
+            COALESCE(MAX(users_count), 0) as max_users,
+            COALESCE(ROUND(SUM(storage_kb) / 1024, 1), 0) as total_storage_mb,
+            COALESCE(ROUND(AVG(storage_kb) / 1024, 1), 0) as avg_storage_mb,
+            COALESCE(ROUND(MAX(storage_kb) / 1024, 1), 0) as max_storage_mb,
+            COALESCE(SUM(products_count), 0) as total_products,
+            COALESCE(ROUND(AVG(products_count), 1), 0) as avg_products,
+            COALESCE(MAX(products_count), 0) as max_products
+        ')->first();
+
+        $stats = (array) $stats;
+
+        $stats['server_disk_total_gb'] = $this->diskInfo->totalGb();
+        $stats['server_disk_free_gb'] = $this->diskInfo->freeGb();
+        $stats['server_disk_used_gb'] = $this->diskInfo->usedGb();
+        $stats['server_disk_pct'] = $this->diskInfo->usedPct();
+        $stats['server_disk_driver'] = $this->diskInfo->driver();
+        $stats['server_disk_label'] = $this->diskInfo->label();
+
+        return response()->json(['summary' => $stats]);
     }
 
     /**

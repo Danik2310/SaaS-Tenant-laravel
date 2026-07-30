@@ -12,7 +12,10 @@ use App\Shared\Console\Commands\GenerateTenantReferenceIds;
 use App\Shared\Contracts\ExportServiceInterface;
 use App\Shared\Contracts\PermissionServiceInterface;
 use App\Shared\Contracts\RoleServiceInterface;
+use App\Shared\Contracts\ServerDiskInfo;
+use App\Shared\Services\CloudServerDiskInfo;
 use App\Shared\Services\ExportService;
+use App\Shared\Services\LocalServerDiskInfo;
 use App\Shared\Services\PermissionService;
 use App\Shared\Services\RoleService;
 use App\Shared\Services\TenantAwarePermissionRegistrar;
@@ -26,6 +29,12 @@ class SharedServiceProvider extends ServiceProvider
         $this->app->singleton(RoleServiceInterface::class, RoleService::class);
         $this->app->singleton(PermissionServiceInterface::class, PermissionService::class);
         $this->app->singleton(ExportServiceInterface::class, ExportService::class);
+
+        $this->app->singleton(ServerDiskInfo::class, function () {
+            return env('SERVER_DISK_DRIVER', 'local') === 's3'
+                ? new CloudServerDiskInfo
+                : new LocalServerDiskInfo;
+        });
     }
 
     public function boot(): void

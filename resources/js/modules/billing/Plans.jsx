@@ -53,6 +53,13 @@ function PlanForm({ plan, onSubmit, onCancel }) {
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
+    const [summary, setSummary] = useState(null);
+
+    useEffect(() => {
+        api.get('/admin/api/resource-usage/summary')
+            .then(res => setSummary(res.data.summary))
+            .catch(() => {});
+    }, []);
 
     const handleChange = (field) => (e) => {
         const value = e.target.value;
@@ -95,8 +102,8 @@ function PlanForm({ plan, onSubmit, onCancel }) {
     };
 
     return (
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ display: 'flex', gap: 3 }}>
                 <TextField
                     size="small"
                     label="Plan Name"
@@ -120,7 +127,7 @@ function PlanForm({ plan, onSubmit, onCancel }) {
                 />
             </Box>
 
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: 'flex', gap: 3 }}>
                 <TextField
                     size="small"
                     label="Price"
@@ -156,30 +163,126 @@ function PlanForm({ plan, onSubmit, onCancel }) {
                 />
             </Box>
 
-            <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 600, mt: 1 }}>Resource Limits</Typography>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField size="small" label="Max Users" type="number" value={form.max_users} onChange={handleChange('max_users')} inputProps={{ min: 1 }} error={!!errors.max_users} helperText={errors.max_users?.[0]} fullWidth />
-                <TextField size="small" label="Max Storage (MB)" type="number" value={form.max_storage} onChange={handleChange('max_storage')} inputProps={{ min: 0 }} error={!!errors.max_storage} helperText={errors.max_storage?.[0]} fullWidth />
-                <TextField size="small" label="Max Warehouses" type="number" value={form.max_warehouses} onChange={handleChange('max_warehouses')} inputProps={{ min: 1 }} error={!!errors.max_warehouses} helperText={errors.max_warehouses?.[0]} fullWidth />
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField size="small" label="Max Categories" type="number" value={form.max_categories} onChange={handleChange('max_categories')} inputProps={{ min: 1 }} error={!!errors.max_categories} helperText={errors.max_categories?.[0]} fullWidth />
-                <TextField size="small" label="Max Products" type="number" value={form.max_products} onChange={handleChange('max_products')} inputProps={{ min: 1 }} error={!!errors.max_products} helperText={errors.max_products?.[0]} fullWidth />
-                <Box sx={{ flex: 1 }} />
+            {summary && (
+                <Box sx={{ bgcolor: '#f8fafc', borderRadius: 1, border: '1px solid #e2e8f0', p: 2 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b', mb: 1.5, display: 'block' }}>
+                        System-wide usage (for reference)
+                    </Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5, mb: 2 }}>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Tenants</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.total_tenants}</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Avg Users</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.avg_users}</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Max Users</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.max_users}</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Total Storage</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.total_storage_mb} MB</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Avg Storage</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.avg_storage_mb} MB</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Max Storage</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.max_storage_mb} MB</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Avg Products</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.avg_products}</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Max Products</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.max_products}</Typography>
+                        </Box>
+                        <Box>
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Total Products</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.total_products}</Typography>
+                        </Box>
+                    </Box>
+
+                    <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 1.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b', mb: 1, display: 'block' }}>
+                            Server disk — {summary.server_disk_label ?? 'Unknown'}
+                        </Typography>
+                        {summary.server_disk_total_gb != null ? (
+                            <Box sx={{ display: 'flex', gap: 2, alignItems: 'baseline' }}>
+                                <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                        <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>
+                                            {summary.server_disk_used_gb} GB used of {summary.server_disk_total_gb} GB
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>
+                                            {summary.server_disk_free_gb} GB free
+                                        </Typography>
+                                    </Box>
+                                    {summary.server_disk_pct != null && (
+                                        <Box sx={{ width: '100%', bgcolor: '#e2e8f0', borderRadius: 1, height: 6, overflow: 'hidden' }}>
+                                            <Box sx={{
+                                                width: `${Math.min(summary.server_disk_pct, 100)}%`,
+                                                bgcolor: summary.server_disk_pct > 85 ? '#ef4444' : summary.server_disk_pct > 65 ? '#f59e0b' : '#22c55e',
+                                                height: 6,
+                                                borderRadius: 1,
+                                                transition: 'width 0.3s',
+                                            }} />
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Box>
+                        ) : (
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 12 }}>
+                                Usage tracking available — no capacity limit configured.
+                            </Typography>
+                        )}
+                    </Box>
+                </Box>
+            )}
+
+            <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: '#0f172a', fontWeight: 600, mb: 2 }}>
+                    Resource Limits
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                    Set maximum limits per tenant. Leave blank for unlimited.
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 3 }}>
+                    <TextField size="small" label="Max Users" type="number" value={form.max_users} onChange={handleChange('max_users')} inputProps={{ min: 1 }} error={!!errors.max_users} helperText={errors.max_users?.[0]} fullWidth />
+                    <TextField size="small" label="Max Storage (MB)" type="number" value={form.max_storage} onChange={handleChange('max_storage')} inputProps={{ min: 0 }} error={!!errors.max_storage} helperText={errors.max_storage?.[0]} fullWidth />
+                    <TextField size="small" label="Max Warehouses" type="number" value={form.max_warehouses} onChange={handleChange('max_warehouses')} inputProps={{ min: 1 }} error={!!errors.max_warehouses} helperText={errors.max_warehouses?.[0]} fullWidth />
+                </Box>
+                <Box sx={{ display: 'flex', gap: 3, mt: 2 }}>
+                    <TextField size="small" label="Max Categories" type="number" value={form.max_categories} onChange={handleChange('max_categories')} inputProps={{ min: 1 }} error={!!errors.max_categories} helperText={errors.max_categories?.[0]} fullWidth />
+                    <TextField size="small" label="Max Products" type="number" value={form.max_products} onChange={handleChange('max_products')} inputProps={{ min: 1 }} error={!!errors.max_products} helperText={errors.max_products?.[0]} fullWidth />
+                    <Box sx={{ flex: 1 }} />
+                </Box>
             </Box>
 
-            <TextField
-                size="small"
-                label="Features (comma-separated)"
-                value={form.features}
-                onChange={handleChange('features')}
-                error={!!errors.features}
-                helperText={errors.features?.[0]}
-                placeholder="warehouses, categories, products, api_access"
-                fullWidth
-            />
+            <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: '#0f172a', fontWeight: 600, mb: 1 }}>
+                    Feature Flags
+                </Typography>
+                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                    Comma-separated list of feature keys that will be enabled for this plan.
+                </Typography>
+                <TextField
+                    size="small"
+                    label="Features"
+                    value={form.features}
+                    onChange={handleChange('features')}
+                    error={!!errors.features}
+                    helperText={errors.features?.[0]}
+                    placeholder="warehouses, categories, products, api_access"
+                    fullWidth
+                />
+            </Box>
 
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1.5, pt: 1 }}>
                 <Button variant="outlined" size="small" onClick={onCancel} disabled={submitting}>
                     Cancel
                 </Button>
@@ -201,7 +304,7 @@ export default function Plans() {
     const [globalFilter, setGlobalFilter] = useState('');
     const [sorting, setSorting] = useState([]);
 
-    const [showCreateDialog, setShowCreateDialog] = useState(false);
+    const [mode, setMode] = useState('list');
     const [editingPlan, setEditingPlan] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState({ open: false, plan: null });
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
@@ -248,7 +351,7 @@ export default function Plans() {
     const handleCreatePlan = async (formData) => {
         await api.post('/admin/api/plans', formData);
         toast.success('Plan created successfully');
-        setShowCreateDialog(false);
+        setMode('list');
         fetchPlans();
     };
 
@@ -360,6 +463,30 @@ export default function Plans() {
 
     return (
         <Box>
+            {mode === 'create' ? (
+                <Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                        <Button
+                            variant="text"
+                            size="small"
+                            onClick={() => setMode('list')}
+                            sx={{ textTransform: 'none', fontWeight: 500, color: '#64748b', '&:hover': { bgcolor: 'transparent', color: '#0f172a' } }}
+                        >
+                            ← Back to Plans
+                        </Button>
+                    </Box>
+                    <Box sx={{ bgcolor: '#fff', borderRadius: 2, border: '1px solid #e2e8f0', p: 3 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a', mb: 3 }}>
+                            Create New Plan
+                        </Typography>
+                        <PlanForm
+                            onSubmit={handleCreatePlan}
+                            onCancel={() => setMode('list')}
+                        />
+                    </Box>
+                </Box>
+            ) : (
+            <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
                     Plans
@@ -367,7 +494,7 @@ export default function Plans() {
                 <Button
                     variant="contained"
                     size="small"
-                    onClick={() => setShowCreateDialog(true)}
+                    onClick={() => setMode('create')}
                     sx={{
                         bgcolor: '#22c55e',
                         '&:hover': { bgcolor: '#16a34a' },
@@ -461,22 +588,6 @@ export default function Plans() {
                 />
             )}
 
-            {/* Create Plan Dialog */}
-            <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
-                <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Create New Plan
-                    <IconButton onClick={() => setShowCreateDialog(false)} size="small">
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
-                </DialogTitle>
-                <DialogContent sx={{ p: 2 }}>
-                    <PlanForm
-                        onSubmit={handleCreatePlan}
-                        onCancel={() => setShowCreateDialog(false)}
-                    />
-                </DialogContent>
-            </Dialog>
-
             {/* Edit Plan Dialog */}
             <Dialog open={!!editingPlan} onClose={() => setEditingPlan(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -524,6 +635,8 @@ export default function Plans() {
                     </MenuItem>,
                 ]}
             </Menu>
+        </Box>
+            )}
         </Box>
     );
 }

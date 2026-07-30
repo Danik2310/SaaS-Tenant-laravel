@@ -179,6 +179,7 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
     // Tenant resource usage metrics
     Route::middleware(['permission:manage tenants,admin'])->group(function () {
         Route::get('/api/resource-usage', [TenantMetricsController::class, 'index']);
+        Route::get('/api/resource-usage/summary', [TenantMetricsController::class, 'summary']);
         Route::get('/api/resource-usage/{tenantId}', [TenantMetricsController::class, 'show']);
     });
 });
