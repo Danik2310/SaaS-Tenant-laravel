@@ -126,6 +126,17 @@ class PaymentMethodController extends Controller
     public function toggleActive(TogglePaymentMethodRequest $request, string $id)
     {
         $method = PaymentMethod::findOrFail($id);
+
+        if ($method->active) {
+            $otherActive = PaymentMethod::where('id', '!=', $id)->where('active', true)->exists();
+            if (! $otherActive) {
+                return response()->json([
+                    'message' => 'Cannot deactivate the only active payment method.',
+                    'errors' => ['active' => ['At least one payment method must remain active.']],
+                ], 422);
+            }
+        }
+
         $oldActive = $method->active;
 
         $method->update(['active' => ! $method->active]);

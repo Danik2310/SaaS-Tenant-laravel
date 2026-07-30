@@ -27,6 +27,8 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
     const [deletingPayment, setDeletingPayment] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [toggling, setToggling] = useState(null);
+    const [toggleConfirmOpen, setToggleConfirmOpen] = useState(false);
+    const [togglingPayment, setTogglingPayment] = useState(null);
 
     const handleEditPayment = async (row) => {
         try {
@@ -44,15 +46,27 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
         setDeleteDialogOpen(true);
     };
 
-    const handleToggleActive = async (row) => {
+    const handleToggleActive = (row) => {
+        if (row.active) {
+            setTogglingPayment(row);
+            setToggleConfirmOpen(true);
+        } else {
+            confirmToggleActive(row);
+        }
+    };
+
+    const confirmToggleActive = async (row) => {
         setToggling(row.id);
         try {
             await api.patch(`/admin/api/payment-methods/${row.id}/toggle-active`);
             fetchPaymentMethods();
             toast.success('Payment method status updated');
+            setToggleConfirmOpen(false);
+            setTogglingPayment(null);
         } catch (error) {
-            toast.error('Failed to update payment method status');
-            setError('Failed to update payment method status');
+            const errorMessage = error.response?.data?.message || 'Failed to update payment method status';
+            toast.error(errorMessage);
+            setError(errorMessage);
         } finally {
             setToggling(null);
         }
@@ -103,8 +117,8 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                     control={
                         <Switch
                             checked={cell.getValue()}
-                            onChange={() => handleToggleActive(row)}
-                            disabled={toggling === row.id}
+                            onChange={() => handleToggleActive(row.original)}
+                            disabled={toggling === row.original.id}
                             size="small"
                             sx={{
                                 '& .MuiSwitch-switchBase.Mui-checked': {
@@ -206,6 +220,33 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                         startIcon={deleting ? <CircularProgress size={16} /> : null}
                     >
                         {deleting ? 'Deleting...' : 'Delete'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={toggleConfirmOpen}
+                onClose={() => { setToggleConfirmOpen(false); setTogglingPayment(null); }}
+            >
+                <DialogTitle>Deactivate Payment Method</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to deactivate "{togglingPayment?.name}"?
+                        This payment method will no longer be available for new transactions.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => { setToggleConfirmOpen(false); setTogglingPayment(null); }} disabled={toggling === togglingPayment?.id}>
+                        Cancel
+                    </Button>
+                    <Button
+                        onClick={() => confirmToggleActive(togglingPayment)}
+                        color="warning"
+                        variant="contained"
+                        disabled={toggling === togglingPayment?.id}
+                        startIcon={toggling === togglingPayment?.id ? <CircularProgress size={16} /> : null}
+                    >
+                        {toggling === togglingPayment?.id ? 'Deactivating...' : 'Deactivate'}
                     </Button>
                 </DialogActions>
             </Dialog>
