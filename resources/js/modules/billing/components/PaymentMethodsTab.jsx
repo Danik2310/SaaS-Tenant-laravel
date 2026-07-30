@@ -1,15 +1,9 @@
-import React, { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { MaterialReactTable } from 'material-react-table';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
-import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -21,9 +15,9 @@ import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import InboxIcon from '@mui/icons-material/Inbox';
 import { toast } from 'sonner';
 import api from '../../../services/api';
-import DataTable from '@/Components/DataTable';
 import PaymentMethodModal from './PaymentMethodModal';
 
 export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods, setError }) {
@@ -84,7 +78,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
         }
     };
 
-    const columns = [
+    const columns = useMemo(() => [
         { accessorKey: 'name', header: 'Name' },
         { accessorKey: 'provider', header: 'Provider' },
         {
@@ -128,7 +122,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                 />
             )},
         },
-    ];
+    ], []);
 
     return (
         <Box>
@@ -154,12 +148,39 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                 </Button>
             </Box>
 
-            <DataTable
+            <MaterialReactTable
                 columns={columns}
                 data={paymentMethods}
-                onEdit={handleEditPayment}
-                onDelete={handleDeletePayment}
-                emptyMessage="No payment methods configured yet."
+                enableRowActions
+                enableGlobalFilter
+                enableSorting
+                positionGlobalFilter="left"
+                renderEmptyRowsFallback={() => (
+                    <Box sx={{ textAlign: 'center', py: 6 }}>
+                        <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                            No payment methods configured yet.
+                        </Typography>
+                    </Box>
+                )}
+                renderRowActions={({ row }) => (
+                    <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                        <Tooltip title="Edit">
+                            <Box component="button" onClick={() => handleEditPayment(row.original)} sx={iconButtonSx}>
+                                <EditIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                        <Tooltip title="Delete">
+                            <Box component="button" onClick={() => handleDeletePayment(row.original)} sx={{ ...iconButtonSx, color: 'error.main' }}>
+                                <DeleteIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    </Box>
+                )}
+                muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
+                muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                initialState={{ density: 'compact' }}
+                localization={{ toolbarSearchPlaceholder: 'Search payment methods...' }}
             />
 
             <Dialog
@@ -199,3 +220,10 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
         </Box>
     );
 }
+
+const iconButtonSx = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+    p: 0.5, borderRadius: 1, color: 'text.secondary',
+    '&:hover': { bgcolor: 'action.hover' },
+};
