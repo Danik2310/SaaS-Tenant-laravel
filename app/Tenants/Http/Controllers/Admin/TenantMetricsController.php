@@ -7,6 +7,7 @@ namespace App\Tenants\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TenantResource;
 use App\Http\Resources\TenantResourceUsageResource;
+use App\Models\ResourceUsageHistory;
 use App\Models\Tenant;
 use App\Models\TenantResourceUsage;
 use App\Shared\Contracts\ServerDiskInfo;
@@ -43,7 +44,7 @@ class TenantMetricsController extends Controller
             'exclude_empty' => ['sometimes', 'boolean'],
         ]);
 
-        $query = TenantResourceUsage::with('tenant');
+        $query = TenantResourceUsage::with('tenant.plan', 'tenant.activeSubscription');
 
         if ($request->boolean('exclude_empty')) {
             $query->where(function ($q) {
@@ -62,6 +63,14 @@ class TenantMetricsController extends Controller
             'metrics' => TenantResourceUsageResource::collection($metrics->items()),
             'total' => $metrics->total(),
             'last_page' => $metrics->lastPage(),
+            'server' => [
+                'disk_total_gb' => $this->diskInfo->totalGb(),
+                'disk_free_gb' => $this->diskInfo->freeGb(),
+                'disk_used_gb' => $this->diskInfo->usedGb(),
+                'disk_pct' => $this->diskInfo->usedPct(),
+                'disk_driver' => $this->diskInfo->driver(),
+                'disk_label' => $this->diskInfo->label(),
+            ],
         ]);
     }
 
@@ -127,8 +136,38 @@ class TenantMetricsController extends Controller
                 'limits' => [
                     'max_users' => $tenant->plan?->max_users,
                     'max_storage' => $tenant->plan?->max_storage,
+                    'max_products' => $tenant->plan?->max_products,
+                    'max_warehouses' => $tenant->plan?->max_warehouses,
+                    'max_categories' => $tenant->plan?->max_categories,
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Get usage history for a single tenant.
+     *
+     * Returns daily snapshots for the last 30 days.
+     *
+     * @authenticated
+     *
+     * @urlParam tenantId string required The tenant ID.
+     *
+     * @queryParam days integer Number of days of history (max 90). Example: 30
+     */
+    public function history(string $tenantId, Request $request)
+    {
+        $validated = $request->validate([
+            'days' => ['sometimes', 'integer', 'min:1', 'max:90'],
+        ]);
+
+        $days = (int) ($validated['days'] ?? 30);
+
+        $history = ResourceUsageHistory::where('tenant_id', $tenantId)
+            ->where('snapshot_date', '>=', now()->subDays($days))
+            ->orderBy('snapshot_date')
+            ->get();
+
+        return response()->json(['history' => $history]);
     }
 }

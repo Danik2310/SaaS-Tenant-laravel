@@ -26,6 +26,8 @@ class TenantResourceUsage extends Model
         'db_size_kb',
         'products_count',
         'orders_count',
+        'warehouses_count',
+        'categories_count',
         'collected_at',
     ];
 
@@ -35,6 +37,8 @@ class TenantResourceUsage extends Model
         'db_size_kb' => 'integer',
         'products_count' => 'integer',
         'orders_count' => 'integer',
+        'warehouses_count' => 'integer',
+        'categories_count' => 'integer',
         'collected_at' => 'datetime',
     ];
 
@@ -66,6 +70,8 @@ class TenantResourceUsage extends Model
                         'users_count' => 0,
                         'products_count' => 0,
                         'orders_count' => 0,
+                        'warehouses_count' => 0,
+                        'categories_count' => 0,
                         'storage_kb' => 0,
                         'db_size_kb' => 0,
                     ]

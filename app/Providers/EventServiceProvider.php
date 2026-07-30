@@ -21,10 +21,12 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Observers\Tenant\CategoryObserver;
 use App\Observers\Tenant\OrderObserver;
 use App\Observers\Tenant\ProductImageObserver;
 use App\Observers\Tenant\ProductObserver;
 use App\Observers\Tenant\UserObserver;
+use App\Observers\Tenant\WarehouseObserver;
 use App\Shared\Observers\ActivityLogObserver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
@@ -66,6 +68,8 @@ class EventServiceProvider extends ServiceProvider
         Product::observe(ProductObserver::class);
         Order::observe(OrderObserver::class);
         ProductImage::observe(ProductImageObserver::class);
+        Category::observe(CategoryObserver::class);
+        Warehouse::observe(WarehouseObserver::class);
     }
 
     public function shouldDiscoverEvents(): bool
