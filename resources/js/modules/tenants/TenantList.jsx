@@ -38,12 +38,13 @@ export default function TenantList({
     onBulkAction,
     bulkLoading = false,
     initialSearch = '',
+    initialShowDeleted = false,
 }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
     const [error, setError] = useState(null);
-    const [showDeleted, setShowDeleted] = useState(false);
+    const [showDeleted, setShowDeleted] = useState(initialShowDeleted);
     const [plans, setPlans] = useState([]);
 
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
