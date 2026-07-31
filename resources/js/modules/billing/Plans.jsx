@@ -548,6 +548,7 @@ export default function Plans() {
                     onSortingChange={setSorting}
                     enableGlobalFilter
                     enableSorting
+                    enableRowActions
                     manualPagination
                     manualSorting
                     positionGlobalFilter="left"
@@ -570,6 +571,7 @@ export default function Plans() {
                                 <Tooltip title="Edit">
                                     <Box
                                         component="button"
+                                        aria-label="Edit"
                                         onClick={(e) => { e.stopPropagation(); setEditingPlan(plan); }}
                                         sx={{
                                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -584,6 +586,7 @@ export default function Plans() {
                                 <Tooltip title="Delete">
                                     <Box
                                         component="button"
+                                        aria-label="Delete"
                                         onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, plan }); }}
                                         sx={{
                                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
