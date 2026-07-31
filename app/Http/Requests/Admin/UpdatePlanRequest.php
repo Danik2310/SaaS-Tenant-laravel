@@ -27,7 +27,27 @@ class UpdatePlanRequest extends FormRequest
             'max_warehouses' => 'nullable|integer|min:1',
             'max_categories' => 'nullable|integer|min:1',
             'max_products' => 'nullable|integer|min:1',
-            'features' => 'nullable|string',
+            'features' => $this->featureFlagsRule(),
+        ];
+    }
+
+    private function featureFlagsRule(): array
+    {
+        $known = array_keys(config('plan_features'));
+
+        return [
+            'nullable',
+            function ($attribute, $value, $fail) use ($known) {
+                $keys = is_array($value)
+                    ? $value
+                    : array_filter(array_map('trim', explode(',', (string) $value)));
+
+                $unknown = array_values(array_diff($keys, $known));
+
+                if ($unknown !== []) {
+                    $fail('Unknown feature flag(s): '.implode(', ', $unknown).'. Allowed flags: '.implode(', ', $known).'.');
+                }
+            },
         ];
     }
 

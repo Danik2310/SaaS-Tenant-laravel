@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { MaterialReactTable } from 'material-react-table';
 import api from '@/services/api';
 import ConfirmDialog from '@/Components/ConfirmDialog';
+import FeatureFlagPicker from '@/modules/billing/FeatureFlagPicker';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -37,7 +38,7 @@ function slugify(text) {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-function PlanForm({ plan, onSubmit, onCancel }) {
+function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
     const [form, setForm] = useState({
         name: plan?.name || '',
         slug: plan?.slug || '',
@@ -49,7 +50,7 @@ function PlanForm({ plan, onSubmit, onCancel }) {
         max_warehouses: plan?.max_warehouses || '',
         max_categories: plan?.max_categories || '',
         max_products: plan?.max_products || '',
-        features: Array.isArray(plan?.features) ? plan.features.join(', ') : (plan?.features || ''),
+        features: Array.isArray(plan?.features) ? plan.features : [],
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
@@ -268,17 +269,16 @@ function PlanForm({ plan, onSubmit, onCancel }) {
                     Feature Flags
                 </Typography>
                 <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
-                    Comma-separated list of feature keys that will be enabled for this plan.
+                    Select the features to enable for this plan.
                 </Typography>
-                <TextField
-                    size="small"
-                    label="Features"
+                <FeatureFlagPicker
+                    definitions={featureDefinitions}
                     value={form.features}
-                    onChange={handleChange('features')}
-                    error={!!errors.features}
-                    helperText={errors.features?.[0]}
-                    placeholder="warehouses, categories, products, api_access"
-                    fullWidth
+                    onChange={(features) => {
+                        setForm(prev => ({ ...prev, features }));
+                        setErrors(prev => ({ ...prev, features: undefined }));
+                    }}
+                    error={errors.features?.[0]}
                 />
             </Box>
 
@@ -299,6 +299,7 @@ export default function Plans() {
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
     const [error, setError] = useState(null);
+    const [featureDefs, setFeatureDefs] = useState({});
 
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
     const [globalFilter, setGlobalFilter] = useState('');
@@ -334,6 +335,7 @@ export default function Plans() {
 
             const response = await api.get(`/admin/api/plans?${params}`);
             setData(response.data.plans);
+            setFeatureDefs(response.data.feature_definitions ?? {});
             setTotal(response.data.meta?.total ?? response.data.plans.length);
         } catch (err) {
             const message = 'Failed to fetch plans';
@@ -442,9 +444,10 @@ export default function Plans() {
                 if (!features || !features.length) {
                     return <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>None</Typography>;
                 }
+                const labels = features.map(f => featureDefs?.[f]?.label ?? f);
                 return (
                     <Typography variant="body2" sx={{ fontSize: 13, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {features.join(', ')}
+                        {labels.join(', ')}
                     </Typography>
                 );
             },
@@ -459,7 +462,7 @@ export default function Plans() {
                 </Typography>
             ),
         },
-    ], []);
+    ], [featureDefs]);
 
     return (
         <Box>
@@ -480,6 +483,7 @@ export default function Plans() {
                             Create New Plan
                         </Typography>
                         <PlanForm
+                            featureDefinitions={featureDefs}
                             onSubmit={handleCreatePlan}
                             onCancel={() => setMode('list')}
                         />
@@ -600,6 +604,7 @@ export default function Plans() {
                     {editingPlan && (
                         <PlanForm
                             plan={editingPlan}
+                            featureDefinitions={featureDefs}
                             onSubmit={handleEditPlan}
                             onCancel={() => setEditingPlan(null)}
                         />

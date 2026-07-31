@@ -1,6 +1,6 @@
 import React from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -8,6 +8,10 @@ import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
 
 export default function Upgrade({ currentPlan, plans }) {
+    const featureDefinitions = usePage().props.feature_definitions ?? {};
+
+    const labelFor = (key) => featureDefinitions[key]?.label ?? key;
+
     return (
         <AuthenticatedLayout
             header={<Typography variant="h6">Upgrade Plan</Typography>}
@@ -48,7 +52,7 @@ export default function Upgrade({ currentPlan, plans }) {
                                     <Box sx={{ mb: 2, flex: 1 }}>
                                         {plan.features.map((feature) => (
                                             <Typography key={feature} variant="body2" sx={{ mb: 0.5 }}>
-                                                {feature}
+                                                {labelFor(feature)}
                                             </Typography>
                                         ))}
                                     </Box>

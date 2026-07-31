@@ -23,7 +23,7 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => 1,
                 'max_categories' => 5,
                 'max_products' => 25,
-                '_features' => ['basic'],
+                '_features' => ['basic_reports'],
             ],
             [
                 'name' => 'Growth',
@@ -34,7 +34,7 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => 3,
                 'max_categories' => 20,
                 'max_products' => 200,
-                '_features' => ['advanced', 'api_access'],
+                '_features' => ['advanced', 'api_access', 'multi_warehouse'],
             ],
             [
                 'name' => 'Pro',
@@ -45,7 +45,7 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => 10,
                 'max_categories' => 50,
                 'max_products' => 500,
-                '_features' => ['advanced', 'api_access', 'custom_domain'],
+                '_features' => ['advanced', 'api_access', 'custom_domain', 'multi_warehouse', 'bulk_operations', 'advanced_reports'],
             ],
             [
                 'name' => 'Enterprise',
@@ -56,7 +56,7 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => null,
                 'max_categories' => null,
                 'max_products' => null,
-                '_features' => ['all', 'api_access', 'custom_domain', 'white_label'],
+                '_features' => array_keys(config('plan_features')),
             ],
         ];
 

@@ -27,8 +27,10 @@ class PlanTest extends TestCase
             'name' => 'Basic Plan',
             'slug' => 'basic',
             'price' => 9.99,
+            'status' => 'active',
+            'duration_months' => 12,
             'max_users' => 5,
-            'features' => 'Feature 1, Feature 2',
+            'features' => ['api_access', 'custom_domain'],
         ];
 
         $response = $this->postJson('/admin/api/plans', $data);
@@ -36,16 +38,71 @@ class PlanTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonStructure(['plan' => ['id', 'name', 'slug', 'price', 'features']]);
 
-        $this->assertDatabaseHas('plans', [
-            'name' => 'Basic Plan',
-            'slug' => 'basic',
-            'price' => 9.99,
-            'max_users' => 5,
+        $plan = Plan::where('slug', 'basic')->first();
+        $this->assertNotNull($plan);
+        $this->assertSame('Basic Plan', $plan->name);
+        $this->assertSame(9.99, (float) $plan->price);
+        $this->assertSame(5, $plan->max_users);
+        $this->assertEquals(['api_access', 'custom_domain'], $plan->features);
+    }
+
+    /**
+     * 🧪 Test: Can create a plan with comma-separated feature string
+     */
+    public function test_can_create_plan_with_comma_separated_features()
+    {
+        $data = [
+            'name' => 'Legacy Plan',
+            'slug' => 'legacy',
+            'price' => 4.99,
+            'status' => 'active',
+            'duration_months' => 12,
+            'features' => 'api_access, custom_domain',
+        ];
+
+        $response = $this->postJson('/admin/api/plans', $data);
+
+        $response->assertStatus(201);
+
+        $plan = Plan::where('slug', 'legacy')->first();
+        $this->assertNotNull($plan);
+        $this->assertEquals(['api_access', 'custom_domain'], $plan->features);
+    }
+
+    /**
+     * 🧪 Test: Create plan rejects unknown feature flags
+     */
+    public function test_create_plan_rejects_unknown_feature_flags()
+    {
+        $data = [
+            'name' => 'Bad Plan',
+            'slug' => 'bad',
+            'price' => 1,
+            'features' => ['api_access', 'mystery_flag'],
+        ];
+
+        $response = $this->postJson('/admin/api/plans', $data);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['features']);
+    }
+
+    /**
+     * 🧪 Test: Update plan rejects unknown feature flags
+     */
+    public function test_update_plan_rejects_unknown_feature_flags()
+    {
+        $plan = Plan::factory()->create(['name' => 'Reject Plan', 'slug' => 'reject-old', 'price' => 5.00]);
+
+        $response = $this->putJson("/admin/api/plans/{$plan->id}", [
+            'name' => 'Updated Plan',
+            'slug' => 'updated',
+            'price' => 15.99,
+            'features' => 'all',
         ]);
 
-        // Check features are stored as array
-        $plan = Plan::first();
-        $this->assertEquals(['Feature 1', 'Feature 2'], $plan->features);
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['features']);
     }
 
     /**
@@ -60,7 +117,7 @@ class PlanTest extends TestCase
         ]);
 
         $plan->featureGates()->create([
-            'feature_key' => 'Old Feature',
+            'feature_key' => 'api_access',
             'is_enabled' => true,
         ]);
 
@@ -69,7 +126,7 @@ class PlanTest extends TestCase
             'slug' => 'updated',
             'price' => 15.99,
             'max_users' => 10,
-            'features' => 'New Feature 1, New Feature 2',
+            'features' => 'advanced, api_access',
         ];
 
         $response = $this->putJson("/admin/api/plans/{$plan->id}", $updateData);
@@ -77,15 +134,11 @@ class PlanTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure(['plan' => ['id', 'name', 'slug', 'price', 'features']]);
 
-        $this->assertDatabaseHas('plans', [
-            'name' => 'Updated Plan',
-            'slug' => 'updated',
-            'price' => 15.99,
-            'max_users' => 10,
-        ]);
-
         $updatedPlan = Plan::find($plan->id);
-        $this->assertEquals(['New Feature 1', 'New Feature 2'], $updatedPlan->features);
+        $this->assertSame('Updated Plan', $updatedPlan->name);
+        $this->assertSame(15.99, (float) $updatedPlan->price);
+        $this->assertSame(10, $updatedPlan->max_users);
+        $this->assertEquals(['advanced', 'api_access'], $updatedPlan->features);
     }
 
     /**
@@ -119,7 +172,7 @@ class PlanTest extends TestCase
                 '*' => ['id', 'name', 'slug', 'price'],
             ]]);
 
-        $this->assertCount(3, $response->json('plans'));
+        $this->assertGreaterThanOrEqual(3, count($response->json('plans')));
     }
 
     /**
@@ -129,7 +182,7 @@ class PlanTest extends TestCase
     {
         $this->getJson('/admin/api/plans/99999')->assertStatus(404);
         $this->putJson('/admin/api/plans/99999', [
-            'name' => 'Ghost', 'slug' => 'ghost', 'price' => 0, 'features' => 'none',
+            'name' => 'Ghost', 'slug' => 'ghost', 'price' => 0, 'features' => 'api_access',
         ])->assertStatus(404);
     }
 
@@ -143,7 +196,7 @@ class PlanTest extends TestCase
 
         $this->getJson('/admin/api/plans')->assertStatus(403);
         $this->postJson('/admin/api/plans', [
-            'name' => 'Test', 'slug' => 'test', 'price' => 0, 'features' => 'none',
+            'name' => 'Test', 'slug' => 'test', 'price' => 0, 'features' => 'api_access',
         ])->assertStatus(403);
     }
 

@@ -31,6 +31,7 @@ class PlanController extends Controller
 
         return response()->json([
             'plans' => PlanResource::collection($plans->items()),
+            'feature_definitions' => config('plan_features'),
             'meta' => [
                 'current_page' => $plans->currentPage(),
                 'last_page' => $plans->lastPage(),
@@ -48,27 +49,19 @@ class PlanController extends Controller
      * @bodyParam name string required Plan name.
      * @bodyParam slug string required Unique plan slug.
      * @bodyParam price number required Plan price.
-     * @bodyParam features string optional Comma-separated feature keys.
+     * @bodyParam features array optional Feature flag keys enabled for this plan.
      *
      * @response 201 {"success":true,"message":"Plan created successfully","plan":{"id":1,"name":"Pro"}}
      */
     public function store(StorePlanRequest $request)
     {
         $data = $request->validated();
-        $features = isset($data['features']) ? array_map('trim', explode(',', $data['features'])) : [];
+        $features = $data['features'] ?? [];
         unset($data['features']);
 
         $plan = Plan::create($data);
 
-        foreach ($features as $featureKey) {
-            if (! empty($featureKey)) {
-                PlanFeature::create([
-                    'plan_id' => $plan->id,
-                    'feature_key' => $featureKey,
-                    'is_enabled' => true,
-                ]);
-            }
-        }
+        $this->syncFeatures($plan, $features);
 
         $plan->load('featureGates');
 
@@ -103,28 +96,42 @@ class PlanController extends Controller
     public function update(UpdatePlanRequest $request, string $id)
     {
         $data = $request->validated();
-        $features = isset($data['features']) ? array_map('trim', explode(',', $data['features'])) : [];
+        $features = $data['features'] ?? [];
         unset($data['features']);
 
         $plan = Plan::findOrFail($id);
         $plan->update($data);
 
-        $plan->featureGates()->where('is_enabled', true)->delete();
-        foreach ($features as $featureKey) {
-            if (! empty($featureKey)) {
-                PlanFeature::create([
-                    'plan_id' => $plan->id,
-                    'feature_key' => $featureKey,
-                    'is_enabled' => true,
-                ]);
-            }
-        }
+        $this->syncFeatures($plan, $features);
 
         $plan->load('featureGates');
 
         Log::info('Plan updated', ['plan_id' => $plan->id, 'plan_name' => $plan->name]);
 
         return response()->json(['message' => 'Plan updated successfully', 'plan' => new PlanResource($plan)]);
+    }
+
+    /**
+     * Replace the enabled feature gates of a plan with the given keys.
+     *
+     * Accepts an array of keys or a comma-separated string. Unknown keys are
+     * silently dropped (the request validation already rejects them).
+     */
+    private function syncFeatures(Plan $plan, array|string|null $features): void
+    {
+        $keys = is_array($features) ? $features : array_filter(array_map('trim', explode(',', (string) $features)));
+        $keys = array_values(array_unique(array_filter($keys)));
+        $known = array_keys(config('plan_features'));
+
+        $plan->featureGates()->where('is_enabled', true)->delete();
+
+        foreach (array_intersect($keys, $known) as $featureKey) {
+            PlanFeature::create([
+                'plan_id' => $plan->id,
+                'feature_key' => $featureKey,
+                'is_enabled' => true,
+            ]);
+        }
     }
 
     /**

@@ -66,6 +66,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user()?->only(['id', 'name', 'email']),
             ],
+            'feature_definitions' => config('plan_features'),
             'plan' => $planData,
         ];
     }

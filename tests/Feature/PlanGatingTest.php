@@ -369,7 +369,7 @@ class PlanGatingTest extends TestCase
      */
     public function test_growth_resource_strategy_has_correct_default_limits()
     {
-        $plan = Plan::factory()->create(['slug' => 'growth', 'max_users' => null]);
+        $plan = Plan::factory()->create(['slug' => 'growth-'.uniqid(), 'max_users' => null]);
         foreach (['basic_reports', 'advanced_reports', 'bulk_operations'] as $key) {
             $plan->featureGates()->create(['feature_key' => $key, 'is_enabled' => true]);
         }
@@ -392,7 +392,7 @@ class PlanGatingTest extends TestCase
     public function test_growth_resource_strategy_uses_plan_values_when_set()
     {
         $plan = Plan::factory()->create([
-            'slug' => 'growth',
+            'slug' => 'growth-'.uniqid(),
             'max_users' => 30,
             'max_storage' => 1000,
             'max_warehouses' => 5,
