@@ -3,6 +3,7 @@
 use App\Billing\Http\Controllers\Admin\PaymentMethodController;
 use App\Billing\Http\Controllers\Admin\SubscriptionController;
 use App\Billing\Http\Controllers\Admin\SubscriptionPaymentController;
+use App\Plans\Http\Controllers\Admin\FeatureFlagController;
 use App\Plans\Http\Controllers\Admin\PlanController;
 use App\Shared\Http\Controllers\Admin\ActivityLogController;
 use App\Shared\Http\Controllers\Admin\AdminProfileController;
@@ -111,6 +112,12 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
         Route::get('/api/plans/{id}', [PlanController::class, 'show']);
         Route::put('/api/plans/{id}', [PlanController::class, 'update']);
         Route::delete('/api/plans/{id}', [PlanController::class, 'destroy']);
+
+        Route::get('/api/feature-flags', [FeatureFlagController::class, 'index']);
+        Route::post('/api/feature-flags', [FeatureFlagController::class, 'store']);
+        Route::get('/api/feature-flags/{id}', [FeatureFlagController::class, 'show']);
+        Route::put('/api/feature-flags/{id}', [FeatureFlagController::class, 'update']);
+        Route::delete('/api/feature-flags/{id}', [FeatureFlagController::class, 'destroy']);
     });
 
     // Payment methods management - requires 'manage payment methods' permission

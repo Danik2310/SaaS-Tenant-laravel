@@ -11,7 +11,7 @@ export default function FeatureFlagPicker({ definitions = {}, value = [], onChan
         onChange(next);
     };
 
-    const entries = Object.entries(definitions || {});
+    const entries = Object.entries(definitions || {}).filter(([, def]) => def?.is_active !== false);
 
     return (
         <Box>

@@ -9,6 +9,7 @@ use App\Http\Resources\PlanResource;
 use App\Models\Plan;
 use App\Models\PlanFeature;
 use App\Models\Tenant;
+use App\Plans\Support\FeatureFlagCatalog;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -31,7 +32,7 @@ class PlanController extends Controller
 
         return response()->json([
             'plans' => PlanResource::collection($plans->items()),
-            'feature_definitions' => config('plan_features'),
+            'feature_definitions' => FeatureFlagCatalog::definitions(),
             'meta' => [
                 'current_page' => $plans->currentPage(),
                 'last_page' => $plans->lastPage(),
@@ -121,7 +122,7 @@ class PlanController extends Controller
     {
         $keys = is_array($features) ? $features : array_filter(array_map('trim', explode(',', (string) $features)));
         $keys = array_values(array_unique(array_filter($keys)));
-        $known = array_keys(config('plan_features'));
+        $known = FeatureFlagCatalog::keys();
 
         $plan->featureGates()->where('is_enabled', true)->delete();
 

@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Plan;
 use App\Models\PlanFeature;
+use App\Plans\Support\FeatureFlagCatalog;
 use Illuminate\Database\Seeder;
 
 class PlanSeeder extends Seeder
@@ -56,7 +57,7 @@ class PlanSeeder extends Seeder
                 'max_warehouses' => null,
                 'max_categories' => null,
                 'max_products' => null,
-                '_features' => array_keys(config('plan_features')),
+                '_features' => FeatureFlagCatalog::keys(),
             ],
         ];
 

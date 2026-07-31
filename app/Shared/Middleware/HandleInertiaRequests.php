@@ -3,6 +3,7 @@
 namespace App\Shared\Middleware;
 
 use App\Models\Tenant;
+use App\Plans\Support\FeatureFlagCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -66,7 +67,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user()?->only(['id', 'name', 'email']),
             ],
-            'feature_definitions' => config('plan_features'),
+            'feature_definitions' => FeatureFlagCatalog::definitions(),
             'plan' => $planData,
         ];
     }

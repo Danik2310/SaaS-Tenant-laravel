@@ -3,6 +3,7 @@ import { MaterialReactTable } from 'material-react-table';
 import api from '@/services/api';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 import FeatureFlagPicker from '@/modules/billing/FeatureFlagPicker';
+import FeatureFlags from '@/modules/billing/FeatureFlags';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -21,6 +22,8 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import FormHelperText from '@mui/material/FormHelperText';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import InboxIcon from '@mui/icons-material/Inbox';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -306,6 +309,7 @@ export default function Plans() {
     const [sorting, setSorting] = useState([]);
 
     const [mode, setMode] = useState('list');
+    const [tab, setTab] = useState('plans');
     const [editingPlan, setEditingPlan] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState({ open: false, plan: null });
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
@@ -466,6 +470,17 @@ export default function Plans() {
 
     return (
         <Box>
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary" aria-label="Plans sections">
+                    <Tab label="Plans" value="plans" />
+                    <Tab label="Feature Flags" value="flags" />
+                </Tabs>
+            </Box>
+
+            {tab === 'flags' ? (
+                <FeatureFlags />
+            ) : (
+            <>
             {mode === 'create' ? (
                 <Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
@@ -641,6 +656,8 @@ export default function Plans() {
                 ]}
             </Menu>
         </Box>
+            )}
+            </>
             )}
         </Box>
     );

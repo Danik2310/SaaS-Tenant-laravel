@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Plans\Support\FeatureFlagCatalog;
 use App\Shared\Contracts\ServerDiskInfo;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -31,7 +32,7 @@ class StorePlanRequest extends FormRequest
 
     private function featureFlagsRule(): array
     {
-        $known = array_keys(config('plan_features'));
+        $known = FeatureFlagCatalog::keys();
 
         return [
             'nullable',
