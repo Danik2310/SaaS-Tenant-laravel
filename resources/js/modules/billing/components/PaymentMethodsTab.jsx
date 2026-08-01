@@ -93,19 +93,36 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
     };
 
     const columns = useMemo(() => [
-        { accessorKey: 'name', header: 'Name' },
-        { accessorKey: 'provider', header: 'Provider' },
+        {
+            accessorKey: 'name',
+            header: 'Name',
+            Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                    {cell.getValue()}
+                </Typography>
+            ),
+        },
+        {
+            accessorKey: 'provider',
+            header: 'Provider',
+            Cell: ({ cell }) => (
+                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                    {cell.getValue()}
+                </Typography>
+            ),
+        },
         {
             accessorKey: 'mode',
             header: 'Mode',
-            Cell: ({ cell }) => (
-                <Chip
-                    label={cell.getValue()}
-                    size="small"
-                    color={cell.getValue() === 'live' ? 'success' : 'warning'}
-                    sx={{ fontWeight: 600, fontSize: 12 }}
-                />
-            ),
+            Cell: ({ cell }) => {
+                const value = cell.getValue();
+                const style = value === 'live'
+                    ? { bgcolor: '#dcfce7', color: '#166534' }
+                    : { bgcolor: '#f1f5f9', color: '#64748b' };
+                return (
+                    <Chip label={value} size="small" sx={{ fontWeight: 600, ...style }} />
+                );
+            },
         },
         {
             accessorKey: 'active',
@@ -122,11 +139,11 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                             size="small"
                             sx={{
                                 '& .MuiSwitch-switchBase.Mui-checked': {
-                                    color: '#22c55e',
-                                    '&:hover': { bgcolor: '#22c55e1a' },
+                                    color: 'success.main',
+                                    '&:hover': { bgcolor: 'rgba(5, 150, 105, 0.08)' },
                                 },
                                 '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                                    bgcolor: '#22c55e',
+                                    bgcolor: 'success.main',
                                 },
                             }}
                         />
@@ -180,12 +197,12 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                 renderRowActions={({ row }) => (
                     <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                         <Tooltip title="Edit">
-                            <Box component="button" onClick={() => handleEditPayment(row.original)} sx={iconButtonSx}>
+                            <Box component="button" aria-label="Edit" onClick={(e) => { e.stopPropagation(); handleEditPayment(row.original); }} sx={iconButtonSx}>
                                 <EditIcon fontSize="small" />
                             </Box>
                         </Tooltip>
                         <Tooltip title="Delete">
-                            <Box component="button" onClick={() => handleDeletePayment(row.original)} sx={{ ...iconButtonSx, color: 'error.main' }}>
+                            <Box component="button" aria-label="Delete" onClick={(e) => { e.stopPropagation(); handleDeletePayment(row.original); }} sx={{ ...iconButtonSx, color: 'error.main' }}>
                                 <DeleteIcon fontSize="small" />
                             </Box>
                         </Tooltip>
