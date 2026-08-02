@@ -156,4 +156,20 @@ describe('Plans', () => {
       expect(toast.error).toHaveBeenCalledWith('Cannot delete a plan assigned to 2 tenant(s). Reassign tenants first.');
     });
   });
+
+  test('refetches feature definitions when switching back to the Plans tab', async () => {
+    renderWithProviders(<Plans />);
+
+    await screen.findByText('Free');
+
+    const plansCalls = () => mockApi.get.mock.calls.filter(([url]) => String(url).includes('/admin/api/plans')).length;
+    expect(plansCalls()).toBe(1);
+
+    fireEvent.click(screen.getByText('Feature Flags'));
+    fireEvent.click(screen.getByText('Plans'));
+
+    await waitFor(() => {
+      expect(plansCalls()).toBe(2);
+    });
+  });
 });

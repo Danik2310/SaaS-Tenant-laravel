@@ -72,7 +72,13 @@ class FeatureFlagController extends Controller
      */
     public function store(StoreFeatureFlagRequest $request)
     {
-        $flag = FeatureFlag::create($request->validated());
+        $data = $request->validated();
+
+        if (! isset($data['sort_order'])) {
+            $data['sort_order'] = (int) FeatureFlag::max('sort_order') + 1;
+        }
+
+        $flag = FeatureFlag::create($data);
 
         Log::info('Feature flag created', ['flag_id' => $flag->id, 'flag_key' => $flag->key]);
 

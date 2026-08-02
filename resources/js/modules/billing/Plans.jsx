@@ -4,6 +4,7 @@ import api from '@/services/api';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 import FeatureFlagPicker from '@/modules/billing/FeatureFlagPicker';
 import FeatureFlags from '@/modules/billing/FeatureFlags';
+import { useMoney } from '@/shared/money';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -134,7 +135,7 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
             <Box sx={{ display: 'flex', gap: 3 }}>
                 <TextField
                     size="small"
-                    label="Price"
+                    label="Price (USD)"
                     type="number"
                     value={form.price}
                     onChange={handleChange('price')}
@@ -303,6 +304,7 @@ export default function Plans() {
     const [total, setTotal] = useState(0);
     const [error, setError] = useState(null);
     const [featureDefs, setFeatureDefs] = useState({});
+    const { formatMoney } = useMoney();
 
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
     const [globalFilter, setGlobalFilter] = useState('');
@@ -396,7 +398,7 @@ export default function Plans() {
             enableColumnFilter: false,
             Cell: ({ cell }) => (
                 <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#166534' }}>
-                    ${parseFloat(cell.getValue()).toFixed(2)}
+                    {formatMoney(cell.getValue())}
                 </Typography>
             ),
         },
@@ -466,12 +468,12 @@ export default function Plans() {
                 </Typography>
             ),
         },
-    ], [featureDefs]);
+    ], [featureDefs, formatMoney]);
 
     return (
         <Box>
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary" aria-label="Plans sections">
+                <Tabs value={tab} onChange={(_, v) => { setTab(v); if (v === 'plans') fetchPlans(); }} textColor="primary" indicatorColor="primary" aria-label="Plans sections">
                     <Tab label="Plans" value="plans" />
                     <Tab label="Feature Flags" value="flags" />
                 </Tabs>

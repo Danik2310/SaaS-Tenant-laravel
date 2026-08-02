@@ -30,6 +30,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import { toast } from 'sonner';
 import api from '@/services/api';
+import { useMoney } from '@/shared/money';
 
 const METHOD_OPTIONS = [
     { label: 'Stripe', value: 'stripe' },
@@ -64,6 +65,7 @@ const EMPTY_FORM = {
 };
 
 export default function PaymentHistoryDialog({ open, subscription, onClose }) {
+    const { formatMoney } = useMoney();
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -216,7 +218,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Chip
                             icon={<AttachMoneyIcon sx={{ fontSize: 16 }} />}
-                            label={`Total Paid: $${totalPaid.toFixed(2)}`}
+                            label={`Total Paid: ${formatMoney(totalPaid)}`}
                             size="small"
                             sx={{ bgcolor: '#dcfce7', color: '#166534', fontWeight: 600 }}
                         />
@@ -425,7 +427,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                                             {payment.paid_at ? new Date(payment.paid_at).toLocaleDateString() : '\u2014'}
                                         </TableCell>
                                         <TableCell sx={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>
-                                            ${parseFloat(payment.amount).toFixed(2)}
+                                            {formatMoney(payment.amount)}
                                         </TableCell>
                                         <TableCell sx={{ fontSize: 13, textTransform: 'capitalize' }}>
                                             {payment.method?.replace('_', ' ')}

@@ -10,6 +10,7 @@ import InboxIcon from '@mui/icons-material/Inbox';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { toast } from 'sonner';
+import { useMoney } from '@/shared/money';
 import PaymentHistoryDialog from './components/PaymentHistoryDialog';
 
 const STATUS_OPTIONS = [
@@ -63,6 +64,7 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
     const [error, setError] = useState(null);
+    const { formatMoney } = useMoney();
 
     const [plans, setPlans] = useState([]);
 
@@ -159,7 +161,7 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
                 const price = cell.getValue();
                 return (
                     <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#166534' }}>
-                        ${parseFloat(price).toFixed(2)}
+                        {formatMoney(price)}
                     </Typography>
                 );
             },

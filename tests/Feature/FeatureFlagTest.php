@@ -87,6 +87,21 @@ class FeatureFlagTest extends TestCase
     }
 
     /**
+     * 🧪 Test: Create auto-assigns the next sort order when omitted.
+     */
+    public function test_create_auto_assigns_sort_order_when_omitted()
+    {
+        $max = (int) FeatureFlag::max('sort_order');
+
+        $this->postJson('/admin/api/feature-flags', [
+            'key' => 'auto_'.substr(uniqid(), -8),
+            'label' => 'Auto Ordered',
+        ])->assertStatus(201);
+
+        $this->assertSame($max + 1, (int) FeatureFlag::max('sort_order'));
+    }
+
+    /**
      * 🧪 Test: Create rejects a duplicate key.
      */
     public function test_create_rejects_duplicate_key()

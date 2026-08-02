@@ -23,6 +23,10 @@ import CloseIcon from '@mui/icons-material/Close';
 import LockIcon from '@mui/icons-material/Lock';
 import { toast } from 'sonner';
 
+function slugifyKey(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_+|_+$)/g, '');
+}
+
 function FlagForm({ flag, onSubmit, onCancel }) {
     const isLocked = flag?.is_locked ?? false;
     const [form, setForm] = useState({
@@ -37,7 +41,13 @@ function FlagForm({ flag, onSubmit, onCancel }) {
 
     const handleChange = (field) => (e) => {
         const value = field === 'is_active' ? e.target.checked : e.target.value;
-        setForm(prev => ({ ...prev, [field]: value }));
+        setForm(prev => {
+            const next = { ...prev, [field]: value };
+            if (field === 'label' && !flag) {
+                next.key = slugifyKey(value);
+            }
+            return next;
+        });
         setErrors(prev => ({ ...prev, [field]: undefined }));
     };
 
@@ -46,7 +56,11 @@ function FlagForm({ flag, onSubmit, onCancel }) {
         setSubmitting(true);
         setErrors({});
         try {
-            await onSubmit(form);
+            const payload = { ...form };
+            if (!flag) {
+                delete payload.sort_order;
+            }
+            await onSubmit(payload);
         } catch (err) {
             if (err.response?.status === 422) {
                 setErrors(err.response.data.errors || {});
@@ -66,11 +80,13 @@ function FlagForm({ flag, onSubmit, onCancel }) {
                 label="Key"
                 value={form.key}
                 onChange={handleChange('key')}
-                disabled={isLocked}
+                disabled={isLocked || !flag}
                 error={!!errors.key}
                 helperText={isLocked
                     ? 'Locked flag — key cannot be changed.'
-                    : (errors.key?.[0] ?? 'Lowercase letters, numbers, underscores.')}
+                    : (errors.key?.[0] ?? (flag
+                        ? 'Lowercase letters, numbers, underscores.'
+                        : 'Auto-generated from the label.'))}
                 required
                 fullWidth
             />
@@ -100,16 +116,18 @@ function FlagForm({ flag, onSubmit, onCancel }) {
                     control={<Switch size="small" checked={form.is_active} onChange={handleChange('is_active')} />}
                     label="Active"
                 />
-                <TextField
-                    size="small"
-                    label="Sort Order"
-                    type="number"
-                    value={form.sort_order}
-                    onChange={handleChange('sort_order')}
-                    inputProps={{ min: 0 }}
-                    error={!!errors.sort_order}
-                    helperText={errors.sort_order?.[0]}
-                />
+                {flag && (
+                    <TextField
+                        size="small"
+                        label="Sort Order"
+                        type="number"
+                        value={form.sort_order}
+                        onChange={handleChange('sort_order')}
+                        inputProps={{ min: 0 }}
+                        error={!!errors.sort_order}
+                        helperText={errors.sort_order?.[0]}
+                    />
+                )}
             </Box>
             {isLocked && (
                 <Alert severity="info" icon={<LockIcon fontSize="inherit" />}>

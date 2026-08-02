@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
 import api from '../../services/api';
+import { useMoney } from '@/shared/money';
 
 export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
+    const { formatMoney } = useMoney();
     const [name, setName] = useState(tenant?.name || '');
     const [email, setEmail] = useState(tenant?.email || '');
     const [domain, setDomain] = useState(tenant?.domain || '');
@@ -154,7 +156,7 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                                 <option value="">No Plan</option>
                                 {plans.map((p) => (
                                     <option key={p.id} value={p.id}>
-                                        {p.name} {p.price > 0 ? `($${p.price}/mo)` : '(Free)'}
+                                        {p.name} {p.price > 0 ? `(${formatMoney(p.price)}/mo)` : '(Free)'}
                                     </option>
                                 ))}
                             </>

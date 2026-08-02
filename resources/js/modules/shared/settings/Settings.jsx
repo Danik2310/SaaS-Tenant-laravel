@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
+import { CURRENCIES } from '../../../shared/currencies';
+import { resetMoneyCache } from '../../../shared/money';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -11,6 +13,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
 import InputLabel from '@mui/material/InputLabel';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
@@ -22,7 +25,7 @@ const settingFields = [
     { key: 'app_name', label: 'Application Name', type: 'text' },
     { key: 'app_description', label: 'Application Description', type: 'text' },
     { key: 'support_email', label: 'Support Email', type: 'email' },
-    { key: 'currency', label: 'Currency', type: 'text' },
+    { key: 'currency', label: 'Currency', type: 'select' },
     { key: 'tenant_db_prefix', label: 'Tenant Database Prefix', type: 'text' },
     { key: 'allow_registration', label: 'Allow Registration', type: 'boolean' },
     { key: 'maintenance_mode', label: 'Maintenance Mode', type: 'boolean' },
@@ -70,6 +73,7 @@ export default function Settings() {
                 value: String(value),
             }));
             await api.put('/admin/api/settings', { settings: payload });
+            resetMoneyCache();
             toast.success('Settings saved successfully');
         } catch (err) {
             const message = err.response?.data?.message || 'Failed to save settings';
@@ -114,6 +118,24 @@ export default function Settings() {
                                     }
                                     label={field.label}
                                 />
+                            ) : field.type === 'select' ? (
+                                <FormControl size="small" fullWidth>
+                                    <InputLabel>{field.label}</InputLabel>
+                                    <Select
+                                        label={field.label}
+                                        value={settings[field.key] || ''}
+                                        onChange={(e) => handleChange(field.key, e.target.value)}
+                                    >
+                                        {CURRENCIES.map((c) => (
+                                            <MenuItem key={c.code} value={c.code}>
+                                                {c.name} ({c.code})
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    <FormHelperText>
+                                        Display currency for the admin panel. Prices are stored in USD.
+                                    </FormHelperText>
+                                </FormControl>
                             ) : (
                                 <TextField
                                     label={field.label}

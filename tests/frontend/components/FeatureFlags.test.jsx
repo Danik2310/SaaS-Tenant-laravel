@@ -50,7 +50,9 @@ describe('FeatureFlags', () => {
 
     fireEvent.click(await screen.findByText('+ New Feature Flag'));
 
-    fireEvent.change(screen.getByLabelText(/^Key/), { target: { value: 'cargo_tracking' } });
+    expect(screen.getByLabelText(/^Key/)).toBeDisabled();
+    expect(screen.queryByLabelText(/^Sort Order/)).not.toBeInTheDocument();
+
     fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: 'Cargo Tracking' } });
     fireEvent.change(screen.getByLabelText(/^Description/), { target: { value: 'Track shipments.' } });
 
@@ -62,7 +64,51 @@ describe('FeatureFlags', () => {
         label: 'Cargo Tracking',
         description: 'Track shipments.',
         is_active: true,
-        sort_order: 0,
+      });
+    });
+  });
+
+  test('auto-fills the key from the label and the key is read-only on create', async () => {
+    mockApi.post.mockResolvedValueOnce({ data: { flag: { id: 5 } } });
+
+    renderWithProviders(<FeatureFlags />);
+
+    fireEvent.click(await screen.findByText('+ New Feature Flag'));
+
+    expect(screen.getByLabelText(/^Key/)).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: 'Warehouse Sync' } });
+    expect(screen.getByLabelText(/^Key/)).toHaveValue('warehouse_sync');
+
+    fireEvent.click(screen.getByText('Add Flag'));
+
+    await waitFor(() => {
+      expect(mockApi.post).toHaveBeenCalledWith('/admin/api/feature-flags', expect.objectContaining({
+        key: 'warehouse_sync',
+        label: 'Warehouse Sync',
+      }));
+    });
+  });
+
+  test('editing a custom flag label does not rewrite its key', async () => {
+    mockApi.put.mockResolvedValueOnce({ data: { flag: mockFlags[2] } });
+
+    renderWithProviders(<FeatureFlags />);
+
+    await screen.findByText('Beta Gadget');
+
+    fireEvent.click(screen.getAllByLabelText('Edit')[2]);
+
+    fireEvent.change(screen.getByLabelText(/^Label/), { target: { value: 'Beta Gadget Pro' } });
+    fireEvent.click(screen.getByText('Save Changes'));
+
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith('/admin/api/feature-flags/3', {
+        key: 'beta_gadget',
+        label: 'Beta Gadget Pro',
+        description: 'Experimental feature.',
+        is_active: true,
+        sort_order: 10,
       });
     });
   });

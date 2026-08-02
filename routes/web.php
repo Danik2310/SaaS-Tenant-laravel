@@ -9,6 +9,7 @@ use App\Shared\Http\Controllers\Admin\ActivityLogController;
 use App\Shared\Http\Controllers\Admin\AdminProfileController;
 use App\Shared\Http\Controllers\Admin\Auth\AdminAuthController;
 use App\Shared\Http\Controllers\Admin\DashboardController;
+use App\Shared\Http\Controllers\Admin\ExchangeRateController;
 use App\Shared\Http\Controllers\Admin\ExportController;
 use App\Shared\Http\Controllers\Admin\ImpersonationController;
 use App\Shared\Http\Controllers\Admin\RolePermissionController;
@@ -173,6 +174,7 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
         Route::get('/api/settings', [SettingController::class, 'index']);
         Route::put('/api/settings', [SettingController::class, 'update']);
         Route::get('/api/settings/{key}', [SettingController::class, 'get']);
+        Route::get('/api/exchange-rates', [ExchangeRateController::class, 'index']);
     });
 
     // Data export - POST uses ExportRequest for entity-level authorization

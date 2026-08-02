@@ -19,6 +19,7 @@ import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
 import { toast } from 'sonner';
 
 import api from '../../../services/api';
+import { useMoney } from '@/shared/money';
 
 const LIMIT_ROWS = [
     { key: 'max_users', label: 'Users' },
@@ -33,6 +34,7 @@ function formatLimit(value) {
 }
 
 export default function ChangePlanModal({ open, tenants, onClose, onChanged }) {
+    const { formatMoney } = useMoney();
     const [plans, setPlans] = useState([]);
     const [selectedPlanId, setSelectedPlanId] = useState(null);
     const [step, setStep] = useState('select');
@@ -193,7 +195,7 @@ export default function ChangePlanModal({ open, tenants, onClose, onChanged }) {
                                             )}
                                         </Box>
                                         <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
-                                            {plan.price > 0 ? `$${plan.price}/mo` : 'Free'}
+                                            {plan.price > 0 ? `${formatMoney(plan.price)}/mo` : 'Free'}
                                         </Typography>
                                     </Box>
 

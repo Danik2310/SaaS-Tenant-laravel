@@ -47,7 +47,7 @@ describe('TenantForm', () => {
     expect(screen.getByPlaceholderText('acme.localhost')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Pro ($29/mo)')).toBeInTheDocument();
+      expect(screen.getByText('Pro ($29.00/mo)')).toBeInTheDocument();
     });
   });
 
@@ -80,7 +80,7 @@ describe('TenantForm', () => {
     renderCreate();
 
     await waitFor(() => {
-      expect(screen.getByText('Pro ($29/mo)')).toBeInTheDocument();
+      expect(screen.getByText('Pro ($29.00/mo)')).toBeInTheDocument();
     });
 
     fireEvent.change(screen.getByPlaceholderText('e.g., Acme Corp'), { target: { value: 'NewCo' } });
