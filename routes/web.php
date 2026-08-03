@@ -50,7 +50,9 @@ Route::middleware(['central.domain'])->group(function () {
 
 // Unauthorized page (accessible to authenticated admin users on central domain only)
 Route::middleware(['auth:admin', 'central.domain'])->get('/admin/unauthorized', function () {
-    return Inertia::render('Unauthorized');
+    return Inertia::render('Unauthorized', [
+        'message' => request()->query('message'),
+    ]);
 })->name('admin.unauthorized');
 
 // Protected admin routes — only accessible on central domains

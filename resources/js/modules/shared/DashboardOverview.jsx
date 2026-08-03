@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { useAuthContext } from '../../context/AuthContext';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -92,6 +94,8 @@ export default function DashboardOverview() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.down('md'));
+    const { permissions = [] } = useAuthContext();
+    const canViewStats = permissions.includes('manage tenants');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
     const [recentTenants, setRecentTenants] = useState([]);
@@ -102,8 +106,12 @@ export default function DashboardOverview() {
     const [showDeleted, setShowDeleted] = useState(false);
 
     useEffect(() => {
+        if (!canViewStats) {
+            setLoading(false);
+            return;
+        }
         fetchStats();
-    }, [showDeleted]);
+    }, [showDeleted, canViewStats]);
 
     const fetchStats = async () => {
         try {
@@ -119,6 +127,19 @@ export default function DashboardOverview() {
             setLoading(false);
         }
     };
+
+    if (!canViewStats) {
+        return (
+            <Box>
+                <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', mb: 3 }}>
+                    Dashboard Overview
+                </Typography>
+                <Alert severity="info">
+                    You need the <strong>manage tenants</strong> permission to view dashboard statistics.
+                </Alert>
+            </Box>
+        );
+    }
 
     if (loading) {
         return (

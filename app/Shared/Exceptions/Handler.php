@@ -27,7 +27,10 @@ class Handler extends ExceptionHandler
 
         $this->renderable(function (PlanLimitExceededException $e, $request) {
             if ($request->expectsJson() || $request->is('admin/api/*')) {
-                return response()->json(['message' => $e->getMessage()], 403);
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'type' => 'plan_limit',
+                ], 403);
             }
 
             return back()->with('error', $e->getMessage());

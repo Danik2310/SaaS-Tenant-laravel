@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { router } from '@inertiajs/react';
 
 const api = axios.create({
     baseURL: '/',
@@ -21,11 +20,10 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response?.status === 403) {
+        if (error.response?.status === 403 && error.response?.data?.type !== 'plan_limit') {
             const message = error.response?.data?.message;
-            router.visit('/admin/unauthorized', {
-                data: { message },
-            });
+            const query = message ? `?message=${encodeURIComponent(message)}` : '';
+            window.location.assign(`/admin/unauthorized${query}`);
         }
         return Promise.reject(error);
     }

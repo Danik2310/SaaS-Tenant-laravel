@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from '@inertiajs/react';
 import BlockIcon from '@mui/icons-material/Block';
 import HomeIcon from '@mui/icons-material/Home';
 
@@ -53,8 +52,12 @@ export default function Unauthorized({ message }) {
                     {message || 'You do not have permission to access this page. Please contact your administrator if you believe this is an error.'}
                 </p>
 
-                <Link
+                <a
                     href="/admin/dashboard"
+                    onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = '/admin/dashboard';
+                    }}
                     style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -75,7 +78,7 @@ export default function Unauthorized({ message }) {
                 >
                     <HomeIcon fontSize="small" />
                     Return to Dashboard
-                </Link>
+                </a>
             </div>
         </div>
     );
