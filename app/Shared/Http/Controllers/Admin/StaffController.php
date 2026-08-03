@@ -261,12 +261,12 @@ class StaffController extends Controller
             ->where('guard_name', 'admin')
             ->active()
             ->orderBy('name')
-            ->paginate(5);
+            ->get();
 
         return response()->json([
             'roles' => RoleResource::collection($roles),
             'meta' => [
-                'total' => $roles->total(),
+                'total' => $roles->count(),
             ],
         ]);
     }
@@ -285,7 +285,7 @@ class StaffController extends Controller
         $permissions = Permission::where('guard_name', 'admin')
             ->active()
             ->orderBy('module')
-            ->paginate(5);
+            ->get();
 
         $mapped = $permissions->map(fn ($perm) => [
             'id' => $perm->id,
@@ -297,10 +297,7 @@ class StaffController extends Controller
         return response()->json([
             'permissions' => $mapped,
             'meta' => [
-                'current_page' => $permissions->currentPage(),
-                'last_page' => $permissions->lastPage(),
-                'per_page' => $permissions->perPage(),
-                'total' => $permissions->total(),
+                'total' => $mapped->count(),
             ],
         ]);
     }

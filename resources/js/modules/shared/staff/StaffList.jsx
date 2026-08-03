@@ -240,7 +240,7 @@ export default function StaffList() {
                             <EditIcon fontSize="small" />
                         </Box>
                     </Tooltip>
-                    <Tooltip title="Manage Permissions">
+                    <Tooltip title="Manage Roles">
                         <Box
                             component="button"
                             onClick={(e) => { e.stopPropagation(); handlePermissionsClick(row.original); }}
@@ -393,7 +393,7 @@ export default function StaffList() {
             {/* Manage Permissions Dialog */}
             <Dialog open={!!permissionsTarget} onClose={() => setPermissionsTarget(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    Manage Permissions — {permissionsTarget?.name}
+                    Manage Roles — {permissionsTarget?.name}
                     <IconButton onClick={() => setPermissionsTarget(null)} size="small">
                         <CloseIcon fontSize="small" />
                     </IconButton>
