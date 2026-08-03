@@ -42,7 +42,7 @@ describe('Settings', () => {
     expect(combobox).toBeInTheDocument();
     expect(screen.getByText('US Dollar (USD)')).toBeInTheDocument();
     expect(
-      screen.getByText('Display currency for the admin panel. Prices are stored in USD.')
+      screen.getByText('Display currency for the admin panel. Price inputs accept this currency; values are stored in USD.')
     ).toBeInTheDocument();
   });
 

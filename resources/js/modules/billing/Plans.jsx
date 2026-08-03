@@ -4,7 +4,7 @@ import api from '@/services/api';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 import FeatureFlagPicker from '@/modules/billing/FeatureFlagPicker';
 import FeatureFlags from '@/modules/billing/FeatureFlags';
-import { useMoney } from '@/shared/money';
+import { useMoney, currencySymbol } from '@/shared/money';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -43,10 +43,12 @@ function slugify(text) {
 }
 
 function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
+    const money = useMoney();
+    const [priceTouched, setPriceTouched] = useState(false);
     const [form, setForm] = useState({
         name: plan?.name || '',
         slug: plan?.slug || '',
-        price: plan?.price || '',
+        price: plan ? String(money.convertFromBase(plan.price)) : '',
         status: plan?.status || 'active',
         duration_months: plan?.duration_months || '',
         max_users: plan?.max_users || '',
@@ -66,8 +68,14 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
             .catch(() => {});
     }, []);
 
+    useEffect(() => {
+        if (!plan || priceTouched || !money.ready) return;
+        setForm(prev => ({ ...prev, price: String(money.convertFromBase(plan.price)) }));
+    }, [money.ready, money.displayCurrency, plan, priceTouched]);
+
     const handleChange = (field) => (e) => {
         const value = e.target.value;
+        if (field === 'price') setPriceTouched(true);
         setForm(prev => {
             const next = { ...prev, [field]: value };
             if (field === 'name' && !plan) {
@@ -83,10 +91,19 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
         setSubmitting(true);
         setErrors({});
         try {
+            let priceValue;
+            if (priceTouched) {
+                priceValue = money.convertToBase(parseFloat(form.price));
+            } else if (plan) {
+                priceValue = parseFloat(plan.price);
+            } else {
+                priceValue = parseFloat(form.price);
+            }
+
             const payload = {
                 ...form,
                 slug: form.slug || slugify(form.name),
-                price: parseFloat(form.price),
+                price: priceValue,
             };
             if (form.duration_months) payload.duration_months = parseInt(form.duration_months, 10);
             if (form.max_users) payload.max_users = parseInt(form.max_users, 10);
@@ -135,14 +152,14 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
             <Box sx={{ display: 'flex', gap: 3 }}>
                 <TextField
                     size="small"
-                    label="Price (USD)"
+                    label={`Price (${money.displayCurrency})`}
                     type="number"
                     value={form.price}
                     onChange={handleChange('price')}
-                    inputProps={{ min: 0, step: 0.01 }}
-                    InputProps={{ startAdornment: <Typography variant="body2" sx={{ mr: 0.5 }}>$</Typography> }}
+                    inputProps={{ min: 0, step: '0.01' }}
+                    InputProps={{ startAdornment: <Typography variant="body2" sx={{ mr: 0.5 }}>{currencySymbol(money.displayCurrency)}</Typography> }}
                     error={!!errors.price}
-                    helperText={errors.price?.[0]}
+                    helperText={errors.price?.[0] || (money.displayCurrency !== money.base ? 'Entered in your display currency; stored in USD.' : undefined)}
                     required
                     fullWidth
                 />

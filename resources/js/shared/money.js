@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@/services/api';
-import { FALLBACK_RATES } from './currencies';
+import { CURRENCIES, FALLBACK_RATES } from './currencies';
 
 const DEFAULT_STATE = {
     ready: false,
@@ -64,6 +64,48 @@ export function formatMoneyValue(value, info = {}) {
     }
 }
 
+function decimalsFor(currency) {
+    try {
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits;
+    } catch {
+        return 2;
+    }
+}
+
+export function roundMoney(value, currency) {
+    const factor = 10 ** decimalsFor(currency);
+    return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
+}
+
+export function convertFromBase(value, info = {}) {
+    const amount = Number.parseFloat(value);
+    if (Number.isNaN(amount)) return NaN;
+
+    const base = info.base || DEFAULT_STATE.base;
+    const currency = info.displayCurrency || base;
+    const rates = info.rates || DEFAULT_STATE.rates;
+    const rate = rates[currency] ?? 1;
+
+    return roundMoney(amount * rate, currency);
+}
+
+export function convertToBase(value, info = {}) {
+    const amount = Number.parseFloat(value);
+    if (Number.isNaN(amount)) return NaN;
+
+    const base = info.base || DEFAULT_STATE.base;
+    const currency = info.displayCurrency || base;
+    const rates = info.rates || DEFAULT_STATE.rates;
+    const rate = rates[currency] ?? 1;
+
+    return roundMoney(amount / rate, base);
+}
+
+export function currencySymbol(code) {
+    const entry = CURRENCIES.find((c) => c.code === code);
+    return entry ? entry.symbol : code;
+}
+
 export function useMoney() {
     const [state, setState] = useState(DEFAULT_STATE);
 
@@ -78,6 +120,8 @@ export function useMoney() {
     }, []);
 
     const formatMoney = useCallback((value) => formatMoneyValue(value, state), [state]);
+    const toBase = useCallback((value) => convertToBase(value, state), [state]);
+    const fromBase = useCallback((value) => convertFromBase(value, state), [state]);
 
-    return { ...state, formatMoney };
+    return { ...state, formatMoney, convertToBase: toBase, convertFromBase: fromBase };
 }

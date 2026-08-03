@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
 import Plans from '@/modules/billing/Plans';
+import { resetMoneyCache } from '@/shared/money';
 
 const mockApi = vi.hoisted(() => ({
   get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn(),
@@ -62,6 +63,7 @@ const summaryResponse = {
 describe('Plans', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetMoneyCache();
     mockApi.get.mockImplementation((url) => {
       if (String(url).includes('/admin/api/resource-usage/summary')) return Promise.resolve(summaryResponse);
       if (String(url).includes('/admin/api/plans')) return Promise.resolve(listResponse);
@@ -170,6 +172,47 @@ describe('Plans', () => {
 
     await waitFor(() => {
       expect(plansCalls()).toBe(2);
+    });
+  });
+
+  test('shows and submits plan prices in the display currency', async () => {
+    mockApi.get.mockImplementation((url) => {
+      if (String(url).includes('/admin/api/exchange-rates')) {
+        return Promise.resolve({
+          data: {
+            base: 'USD',
+            display_currency: 'EUR',
+            rates: { USD: 1, EUR: 0.92 },
+            currencies: [],
+            updated_at: null,
+            is_live: false,
+          },
+        });
+      }
+      if (String(url).includes('/admin/api/resource-usage/summary')) return Promise.resolve(summaryResponse);
+      if (String(url).includes('/admin/api/plans')) return Promise.resolve(listResponse);
+      return Promise.reject(new Error('Unexpected request: ' + url));
+    });
+
+    renderWithProviders(<Plans />);
+
+    await screen.findByText('Free');
+    fireEvent.click(screen.getAllByLabelText('Edit')[1]);
+
+    await screen.findByText('Edit Plan');
+    const priceInput = screen.getByLabelText(/^Price \(EUR\)/);
+    await waitFor(() => {
+      expect(priceInput).toHaveValue(27.59);
+    });
+
+    fireEvent.change(priceInput, { target: { value: '30' } });
+    fireEvent.click(screen.getByText('Save Changes'));
+
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith(
+        '/admin/api/plans/2',
+        expect.objectContaining({ price: 32.61 }),
+      );
     });
   });
 });

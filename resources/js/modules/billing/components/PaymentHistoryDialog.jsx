@@ -30,7 +30,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
 import { toast } from 'sonner';
 import api from '@/services/api';
-import { useMoney } from '@/shared/money';
+import { useMoney, currencySymbol } from '@/shared/money';
 
 const METHOD_OPTIONS = [
     { label: 'Stripe', value: 'stripe' },
@@ -65,7 +65,8 @@ const EMPTY_FORM = {
 };
 
 export default function PaymentHistoryDialog({ open, subscription, onClose }) {
-    const { formatMoney } = useMoney();
+    const money = useMoney();
+    const { formatMoney } = money;
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -74,6 +75,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
     const [errors, setErrors] = useState({});
     const [filters, setFilters] = useState(EMPTY_FILTERS);
     const [form, setForm] = useState(EMPTY_FORM);
+    const [amountTouched, setAmountTouched] = useState(false);
 
     useEffect(() => {
         if (open && subscription) {
@@ -82,11 +84,17 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
         }
     }, [open, subscription]);
 
+    useEffect(() => {
+        if (!editingPayment || amountTouched || !money.ready) return;
+        setForm(prev => ({ ...prev, amount: String(money.convertFromBase(editingPayment.amount)) }));
+    }, [money.ready, money.displayCurrency, editingPayment, amountTouched]);
+
     const resetFormState = () => {
         setShowForm(false);
         setEditingPayment(null);
         setFilters(EMPTY_FILTERS);
         setForm(EMPTY_FORM);
+        setAmountTouched(false);
         setErrors({});
     };
 
@@ -137,19 +145,21 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
 
     const handleChange = (field) => (e) => {
         setForm(prev => ({ ...prev, [field]: e.target.value }));
+        if (field === 'amount') setAmountTouched(true);
         setErrors(prev => ({ ...prev, [field]: undefined }));
     };
 
     const handleEdit = (payment) => {
         setEditingPayment(payment);
         setForm({
-            amount: payment.amount,
+            amount: String(money.convertFromBase(payment.amount)),
             method: payment.method,
             reference: payment.reference || '',
             status: payment.status,
             paid_at: payment.paid_at ? payment.paid_at.split('T')[0] : '',
             notes: payment.notes || '',
         });
+        setAmountTouched(false);
         setShowForm(true);
         setErrors({});
     };
@@ -157,6 +167,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
     const handleCancelEdit = () => {
         setEditingPayment(null);
         setForm(EMPTY_FORM);
+        setAmountTouched(false);
         setShowForm(false);
         setErrors({});
     };
@@ -166,7 +177,13 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
         setSubmitting(true);
         setErrors({});
         try {
-            const payload = { ...form, amount: parseFloat(form.amount) };
+            const parsed = parseFloat(form.amount);
+            const amount = editingPayment && !amountTouched
+                ? parseFloat(editingPayment.amount)
+                : amountTouched
+                    ? money.convertToBase(parsed)
+                    : parsed;
+            const payload = { ...form, amount };
             if (editingPayment) {
                 await api.put(
                     `/admin/api/subscriptions/${subscription.id}/payments/${editingPayment.id}`,
@@ -311,9 +328,10 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                                 value={form.amount}
                                 onChange={handleChange('amount')}
                                 error={!!errors.amount}
-                                helperText={errors.amount?.[0]}
+                                helperText={errors.amount?.[0] || (money.displayCurrency !== money.base ? `${money.displayCurrency} — stored in USD.` : undefined)}
                                 sx={{ flex: 1 }}
                                 inputProps={{ step: '0.01', min: '0.01' }}
+                                InputProps={{ startAdornment: <Typography variant="body2" sx={{ mr: 0.5 }}>{currencySymbol(money.displayCurrency)}</Typography> }}
                             />
                             <FormControl size="small" sx={{ flex: 1 }} error={!!errors.method}>
                                 <InputLabel>Method</InputLabel>
