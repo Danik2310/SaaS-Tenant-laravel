@@ -31,6 +31,7 @@ import ClearIcon from '@mui/icons-material/Clear';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { useMoney, currencySymbol } from '@/shared/money';
+import { useAuthContext } from '@/context/AuthContext';
 
 const METHOD_OPTIONS = [
     { label: 'Stripe', value: 'stripe' },
@@ -67,6 +68,8 @@ const EMPTY_FORM = {
 export default function PaymentHistoryDialog({ open, subscription, onClose }) {
     const money = useMoney();
     const { formatMoney } = money;
+    const { permissions = [] } = useAuthContext();
+    const canManagePayments = permissions.includes('manage subscription payments');
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -243,7 +246,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                             {filteredPayments.length} of {payments.length} payment{payments.length !== 1 ? 's' : ''}
                         </Typography>
                     </Box>
-                    {!showForm && (
+                    {!showForm && canManagePayments && (
                         <Button
                             variant="contained"
                             size="small"
@@ -464,16 +467,18 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                                             {payment.notes || '\u2014'}
                                         </TableCell>
                                         <TableCell>
-                                            <Tooltip title="Edit payment">
-                                                <IconButton
-                                                    size="small"
-                                                    data-testid="edit-payment-btn"
-                                                    onClick={() => handleEdit(payment)}
-                                                    sx={{ color: '#0369a1', '&:hover': { bgcolor: '#e0f2fe' } }}
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
+                                            {canManagePayments && (
+                                                <Tooltip title="Edit payment">
+                                                    <IconButton
+                                                        size="small"
+                                                        data-testid="edit-payment-btn"
+                                                        onClick={() => handleEdit(payment)}
+                                                        sx={{ color: '#0369a1', '&:hover': { bgcolor: '#e0f2fe' } }}
+                                                    >
+                                                        <EditIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))}

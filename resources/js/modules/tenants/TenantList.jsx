@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { MaterialReactTable } from 'material-react-table';
 import api from '@/services/api';
+import { useAuthContext } from '@/context/AuthContext';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -40,6 +41,13 @@ export default function TenantList({
     initialSearch = '',
     initialShowDeleted = false,
 }) {
+    const { permissions = [] } = useAuthContext();
+    const canCreate = permissions.includes('create tenants');
+    const canEdit = permissions.includes('edit tenants');
+    const canDelete = permissions.includes('delete tenants');
+    const canRestore = permissions.includes('restore tenants');
+    const canImpersonate = permissions.includes('impersonate tenants');
+
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
@@ -57,10 +65,13 @@ export default function TenantList({
     const [pendingBulkAction, setPendingBulkAction] = useState(null);
 
     useEffect(() => {
+        const canFetchPlans = ['view plans', 'view subscriptions', 'create tenants', 'edit tenants']
+            .some(p => permissions.includes(p));
+        if (!canFetchPlans) return;
         api.get('/admin/api/plans-list').then(r => {
             setPlans(r.data.plans ?? []);
         }).catch(() => {});
-    }, []);
+    }, [permissions]);
 
     const fetchTenants = useCallback(async () => {
         setLoading(true);
@@ -289,19 +300,21 @@ export default function TenantList({
                         label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
                         sx={{ mr: 0 }}
                     />
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={onAdd}
-                        sx={{
-                            bgcolor: '#22c55e',
-                            '&:hover': { bgcolor: '#16a34a' },
-                            fontWeight: 600,
-                            fontSize: '13px',
-                        }}
-                    >
-                        + New Tenant
-                    </Button>
+                    {canCreate && (
+                        <Button
+                            variant="contained"
+                            size="small"
+                            onClick={onAdd}
+                            sx={{
+                                bgcolor: '#22c55e',
+                                '&:hover': { bgcolor: '#16a34a' },
+                                fontWeight: 600,
+                                fontSize: '13px',
+                            }}
+                        >
+                            + New Tenant
+                        </Button>
+                    )}
                 </Box>
             </Box>
 
@@ -327,7 +340,7 @@ export default function TenantList({
                 enableGlobalFilter
                 enableColumnFilters
                 enableSorting
-                enableEditing
+                enableEditing={canEdit}
                 manualFiltering
                 manualPagination
                 manualSorting
@@ -337,53 +350,40 @@ export default function TenantList({
                     const selected = table.getSelectedRowModel().flatRows;
                     if (selected.length === 0) return null;
 
+                    const bulkButtons = showDeleted
+                        ? (canRestore ? [
+                            { label: 'Restore', color: 'success', icon: <CheckCircleIcon />, onClick: () => handleBulkActionWithRefresh('restore') },
+                        ] : [])
+                        : [
+                            ...(canEdit ? [
+                                { label: 'Suspend', color: 'error', onClick: () => confirmBulkAction('suspend') },
+                                { label: 'Activate', color: 'success', onClick: () => handleBulkActionWithRefresh('activate') },
+                            ] : []),
+                            ...(canDelete ? [
+                                { label: 'Delete', color: 'error', onClick: () => confirmBulkAction('delete') },
+                            ] : []),
+                        ];
+
+                    if (bulkButtons.length === 0) return null;
+
                     return (
                         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 2 }}>
                             <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
                                 {selected.length} selected
                             </Typography>
-                            {showDeleted ? (
+                            {bulkButtons.map((btn, i) => (
                                 <Button
+                                    key={i}
                                     size="small"
                                     variant="outlined"
-                                    color="success"
-                                    startIcon={<CheckCircleIcon />}
-                                    onClick={() => handleBulkActionWithRefresh('restore')}
+                                    color={btn.color}
+                                    startIcon={btn.icon}
+                                    onClick={btn.onClick}
                                     disabled={bulkLoading}
                                 >
-                                    Restore
+                                    {btn.label}
                                 </Button>
-                            ) : (
-                                <>
-                                    <Button
-                                        size="small"
-                                        variant="outlined"
-                                        color="error"
-                                        onClick={() => confirmBulkAction('suspend')}
-                                        disabled={bulkLoading}
-                                    >
-                                        Suspend
-                                    </Button>
-                                    <Button
-                                        size="small"
-                                        variant="outlined"
-                                        color="success"
-                                        onClick={() => handleBulkActionWithRefresh('activate')}
-                                        disabled={bulkLoading}
-                                    >
-                                        Activate
-                                    </Button>
-                                    <Button
-                                        size="small"
-                                        variant="outlined"
-                                        color="error"
-                                        onClick={() => confirmBulkAction('delete')}
-                                        disabled={bulkLoading}
-                                    >
-                                        Delete
-                                    </Button>
-                                </>
-                            )}
+                            ))}
                         </Box>
                     );
                 }}
@@ -391,11 +391,11 @@ export default function TenantList({
                     const tenant = row.original;
 
                     const primaryActions = tenant.is_deleted
-                        ? [{ icon: <RestoreIcon fontSize="small" />, label: 'Restore', onClick: () => onRestore(tenant.id) }]
+                        ? (canRestore ? [{ icon: <RestoreIcon fontSize="small" />, label: 'Restore', onClick: () => onRestore(tenant.id) }] : [])
                         : [
-                            { icon: <EditIcon fontSize="small" />, label: 'Edit', onClick: () => onEdit(tenant) },
-                            { icon: <BlockIcon fontSize="small" />, label: tenant.status === 'Active' ? 'Suspend' : 'Activate', onClick: () => onToggleStatus(tenant) },
-                            { icon: <DeleteIcon fontSize="small" />, label: 'Delete', onClick: () => handleRowDelete(row) },
+                            ...(canEdit ? [{ icon: <EditIcon fontSize="small" />, label: 'Edit', onClick: () => onEdit(tenant) }] : []),
+                            ...(canEdit ? [{ icon: <BlockIcon fontSize="small" />, label: tenant.status === 'Active' ? 'Suspend' : 'Activate', onClick: () => onToggleStatus(tenant) }] : []),
+                            ...(canDelete ? [{ icon: <DeleteIcon fontSize="small" />, label: 'Delete', onClick: () => handleRowDelete(row) }] : []),
                           ];
 
                     return (
@@ -420,6 +420,11 @@ export default function TenantList({
                                 <IconButton
                                     size="small"
                                     onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(tenant); }}
+                                    sx={{
+                                        color: canImpersonate ? 'text.secondary' : 'text.disabled',
+                                        ...(canImpersonate ? { '&:hover': { bgcolor: 'action.hover' } } : {}),
+                                    }}
+                                    disabled={!canImpersonate}
                                 >
                                     <MoreVertIcon fontSize="small" />
                                 </IconButton>

@@ -22,6 +22,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import LockIcon from '@mui/icons-material/Lock';
 import { toast } from 'sonner';
+import { useAuthContext } from '@/context/AuthContext';
 
 function slugifyKey(text) {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_+|_+$)/g, '');
@@ -147,6 +148,8 @@ function FlagForm({ flag, onSubmit, onCancel }) {
 }
 
 export default function FeatureFlags() {
+    const { permissions = [] } = useAuthContext();
+    const canManage = permissions.includes('manage feature flags');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
@@ -161,6 +164,7 @@ export default function FeatureFlags() {
     const [confirmDelete, setConfirmDelete] = useState({ open: false, flag: null });
 
     const fetchFlags = useCallback(async () => {
+        if (!canManage) return;
         setLoading(true);
         setError(null);
         try {
@@ -193,7 +197,7 @@ export default function FeatureFlags() {
         } finally {
             setLoading(false);
         }
-    }, [pagination, globalFilter, sorting]);
+    }, [pagination, globalFilter, sorting, canManage]);
 
     useEffect(() => {
         fetchFlags();
@@ -325,24 +329,31 @@ export default function FeatureFlags() {
 
     return (
         <Box>
+            {!canManage && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                    You do not have permission to manage feature flags. Viewing is read-only.
+                </Alert>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
                     Feature Flags
                 </Typography>
-                <Button
-                    variant="contained"
-                    size="small"
-                    onClick={openCreate}
-                    startIcon={<AddIcon />}
-                    sx={{
-                        bgcolor: '#22c55e',
-                        '&:hover': { bgcolor: '#16a34a' },
-                        fontWeight: 600,
-                        fontSize: '13px',
-                    }}
-                >
-                    + New Feature Flag
-                </Button>
+                {canManage && (
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={openCreate}
+                        startIcon={<AddIcon />}
+                        sx={{
+                            bgcolor: '#22c55e',
+                            '&:hover': { bgcolor: '#16a34a' },
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
+                    >
+                        + New Feature Flag
+                    </Button>
+                )}
             </Box>
 
             {error ? (
@@ -393,12 +404,12 @@ export default function FeatureFlags() {
                                     <Box
                                         component="button"
                                         aria-label="Edit"
-                                        onClick={() => openEdit(flag)}
+                                        onClick={() => canManage && openEdit(flag)}
                                         sx={{
                                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                            p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                            '&:hover': { bgcolor: 'action.hover' },
+                                            border: 'none', bgcolor: 'transparent', cursor: canManage ? 'pointer' : 'not-allowed',
+                                            p: 0.5, borderRadius: 1, color: 'text.secondary', opacity: canManage ? 1 : 0.4,
+                                            '&:hover': canManage ? { bgcolor: 'action.hover' } : undefined,
                                         }}
                                     >
                                         <EditIcon fontSize="small" />
@@ -408,12 +419,12 @@ export default function FeatureFlags() {
                                     <Box
                                         component="button"
                                         aria-label="Delete"
-                                        onClick={() => !flag.is_locked && setConfirmDelete({ open: true, flag })}
+                                        onClick={() => canManage && !flag.is_locked && setConfirmDelete({ open: true, flag })}
                                         sx={{
                                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            border: 'none', bgcolor: 'transparent', cursor: flag.is_locked ? 'not-allowed' : 'pointer',
-                                            p: 0.5, borderRadius: 1, color: 'error.main', opacity: flag.is_locked ? 0.4 : 1,
-                                            '&:hover': flag.is_locked ? undefined : { bgcolor: 'action.hover' },
+                                            border: 'none', bgcolor: 'transparent', cursor: flag.is_locked || !canManage ? 'not-allowed' : 'pointer',
+                                            p: 0.5, borderRadius: 1, color: 'error.main', opacity: flag.is_locked || !canManage ? 0.4 : 1,
+                                            '&:hover': flag.is_locked || !canManage ? undefined : { bgcolor: 'action.hover' },
                                         }}
                                     >
                                         <DeleteIcon fontSize="small" />

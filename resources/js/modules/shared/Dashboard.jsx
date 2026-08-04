@@ -80,7 +80,7 @@ export default function Dashboard() {
     }, []);
 
     useEffect(() => {
-        if (permissions.includes('manage tenants')) {
+        if (permissions.includes('view tenants')) {
             fetchTenants();
         } else {
             setLoading(false);
@@ -485,13 +485,13 @@ export default function Dashboard() {
                                         <Button
                                             variant="outlined"
                                             size="small"
-                                            onClick={() => { setView('tenants'); if (permissions.includes('manage tenants')) fetchTenants(); }}
+                                            onClick={() => { setView('tenants'); if (permissions.includes('view tenants')) fetchTenants(); }}
                                         >
                                             Back to Tenants
                                         </Button>
                                     </Box>
                                 </Box>
-                                {permissions.includes('manage tenants') ? (
+                                {permissions.includes('view tenants') ? (
                                     <DataTable
                                         columns={[
                                             { accessorKey: 'id', header: 'ID' },
@@ -541,7 +541,7 @@ export default function Dashboard() {
                                     />
                                 ) : (
                                     <Alert severity="info">
-                                        You need the <strong>manage tenants</strong> permission to list and impersonate tenants.
+                                        You need the <strong>view tenants</strong> permission to list and impersonate tenants.
                                     </Alert>
                                 )}
                             </>

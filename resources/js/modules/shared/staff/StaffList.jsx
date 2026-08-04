@@ -21,8 +21,13 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import CloseIcon from '@mui/icons-material/Close';
 import { toast } from 'sonner';
+import { useAuthContext } from '@/context/AuthContext';
 
 export default function StaffList() {
+    const { permissions = [] } = useAuthContext();
+    const canCreate = permissions.includes('create staff');
+    const canEdit = permissions.includes('edit staff');
+    const canDelete = permissions.includes('delete staff');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [total, setTotal] = useState(0);
@@ -226,66 +231,74 @@ export default function StaffList() {
             size: 120,
             Cell: ({ row }) => (
                 <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                    <Tooltip title="Edit">
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); handleEditClick(row.original); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            <EditIcon fontSize="small" />
-                        </Box>
-                    </Tooltip>
-                    <Tooltip title="Manage Roles">
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); handlePermissionsClick(row.original); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            <AdminPanelSettingsIcon fontSize="small" />
-                        </Box>
-                    </Tooltip>
-                    <Tooltip title={row.original.is_active ? 'Deactivate' : 'Activate'}>
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); handleToggleStatus(row.original); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: row.original.is_active ? 'error.main' : 'success.main',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            {row.original.is_active ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
-                        </Box>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, staff: row.original }); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: 'error.main',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            <DeleteIcon fontSize="small" />
-                        </Box>
-                    </Tooltip>
+                    {canEdit && (
+                        <Tooltip title="Edit">
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); handleEditClick(row.original); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                <EditIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    )}
+                    {canEdit && (
+                        <Tooltip title="Manage Roles">
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); handlePermissionsClick(row.original); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                <AdminPanelSettingsIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    )}
+                    {canEdit && (
+                        <Tooltip title={row.original.is_active ? 'Deactivate' : 'Activate'}>
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); handleToggleStatus(row.original); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: row.original.is_active ? 'error.main' : 'success.main',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                {row.original.is_active ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
+                            </Box>
+                        </Tooltip>
+                    )}
+                    {canDelete && (
+                        <Tooltip title="Delete">
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, staff: row.original }); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: 'error.main',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    )}
                 </Box>
             ),
         },
-    ], []);
+    ], [canEdit, canDelete]);
 
     return (
         <Box>
@@ -293,19 +306,21 @@ export default function StaffList() {
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
                     Staff Management
                 </Typography>
-                <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => setShowCreateDialog(true)}
-                    sx={{
-                        bgcolor: '#22c55e',
-                        '&:hover': { bgcolor: '#16a34a' },
-                        fontWeight: 600,
-                        fontSize: '13px',
-                    }}
-                >
-                    + Create
-                </Button>
+                {canCreate && (
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => setShowCreateDialog(true)}
+                        sx={{
+                            bgcolor: '#22c55e',
+                            '&:hover': { bgcolor: '#16a34a' },
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
+                    >
+                        + Create
+                    </Button>
+                )}
             </Box>
 
             {error ? (

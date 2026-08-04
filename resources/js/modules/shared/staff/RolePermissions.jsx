@@ -22,9 +22,23 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import ConfirmDialog from '@/Components/ConfirmDialog';
+import { useAuthContext } from '@/context/AuthContext';
 
 export default function RolePermissions() {
-    const [tab, setTab] = useState('roles');
+    const { permissions = [] } = useAuthContext();
+    const canViewRoles = permissions.includes('view roles');
+    const canCreateRoles = permissions.includes('create roles');
+    const canEditRoles = permissions.includes('edit roles');
+    const canDeleteRoles = permissions.includes('delete roles');
+    const canViewPermissions = permissions.includes('view permissions');
+    const canCreatePermissions = permissions.includes('create permissions');
+    const canEditPermissions = permissions.includes('edit permissions');
+    const canDeletePermissions = permissions.includes('delete permissions');
+    const [tab, setTab] = useState(() => {
+        if (permissions.includes('view roles')) return 'roles';
+        if (permissions.includes('view permissions')) return 'permissions';
+        return 'roles';
+    });
 
     const [roles, setRoles] = useState([]);
     const [rolesLoading, setRolesLoading] = useState(true);
@@ -35,7 +49,7 @@ export default function RolePermissions() {
     const [rolesColumnFilters, setRolesColumnFilters] = useState([]);
     const [rolesSorting, setRolesSorting] = useState([]);
 
-    const [permissions, setPermissions] = useState([]);
+    const [permissionList, setPermissionList] = useState([]);
     const [permissionsLoading, setPermissionsLoading] = useState(true);
     const [permissionsTotal, setPermissionsTotal] = useState(0);
     const [permissionsError, setPermissionsError] = useState(null);
@@ -53,6 +67,7 @@ export default function RolePermissions() {
     const [deleteTargetPermission, setDeleteTargetPermission] = useState(null);
 
     const fetchRoles = useCallback(async () => {
+        if (!canViewRoles) return;
         setRolesLoading(true);
         setRolesError(null);
         try {
@@ -85,9 +100,10 @@ export default function RolePermissions() {
         } finally {
             setRolesLoading(false);
         }
-    }, [rolesPagination, rolesGlobalFilter, rolesColumnFilters, rolesSorting]);
+    }, [rolesPagination, rolesGlobalFilter, rolesColumnFilters, rolesSorting, canViewRoles]);
 
     const fetchPermissions = useCallback(async () => {
+        if (!canViewPermissions) return;
         setPermissionsLoading(true);
         setPermissionsError(null);
         try {
@@ -114,7 +130,7 @@ export default function RolePermissions() {
             }
 
             const response = await api.get(`/admin/api/permissions?${params}`);
-            setPermissions(response.data.permissions);
+            setPermissionList(response.data.permissions);
             setPermissionsTotal(response.data.total);
         } catch (err) {
             const message = 'Failed to load permissions';
@@ -123,7 +139,7 @@ export default function RolePermissions() {
         } finally {
             setPermissionsLoading(false);
         }
-    }, [permissionsPagination, permissionsGlobalFilter, permissionsColumnFilters, permissionsSorting]);
+    }, [permissionsPagination, permissionsGlobalFilter, permissionsColumnFilters, permissionsSorting, canViewPermissions]);
 
     useEffect(() => {
         if (tab === 'roles') fetchRoles();
@@ -202,9 +218,9 @@ export default function RolePermissions() {
     };
 
     const uniqueModules = useMemo(() => {
-        const modules = [...new Set(permissions.map(p => p.module).filter(Boolean))];
+        const modules = [...new Set(permissionList.map(p => p.module).filter(Boolean))];
         return modules.sort();
-    }, [permissions]);
+    }, [permissionList]);
 
     const roleColumns = useMemo(() => [
         { accessorKey: 'name', header: 'Name', enableColumnFilter: false },
@@ -254,38 +270,42 @@ export default function RolePermissions() {
             size: 80,
             Cell: ({ row }) => (
                 <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                    <Tooltip title="Edit">
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); setEditingRole(row.original); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            <EditIcon fontSize="small" />
-                        </Box>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); setDeleteTargetRole(row.original); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: 'error.main',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            <DeleteIcon fontSize="small" />
-                        </Box>
-                    </Tooltip>
+                    {canEditRoles && (
+                        <Tooltip title="Edit">
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); setEditingRole(row.original); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                <EditIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    )}
+                    {canDeleteRoles && (
+                        <Tooltip title="Delete">
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); setDeleteTargetRole(row.original); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: 'error.main',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    )}
                 </Box>
             ),
         },
-    ], []);
+    ], [canEditRoles, canDeleteRoles]);
 
     const permColumns = useMemo(() => [
         { accessorKey: 'name', header: 'Permission', enableColumnFilter: false },
@@ -329,80 +349,90 @@ export default function RolePermissions() {
             size: 80,
             Cell: ({ row }) => (
                 <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                    <Tooltip title="Edit">
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); setEditingPermission(row.original); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            <EditIcon fontSize="small" />
-                        </Box>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                        <Box
-                            component="button"
-                            onClick={(e) => { e.stopPropagation(); setDeleteTargetPermission(row.original); }}
-                            sx={{
-                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                p: 0.5, borderRadius: 1, color: 'error.main',
-                                '&:hover': { bgcolor: 'action.hover' },
-                            }}
-                        >
-                            <DeleteIcon fontSize="small" />
-                        </Box>
-                    </Tooltip>
+                    {canEditPermissions && (
+                        <Tooltip title="Edit">
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); setEditingPermission(row.original); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                <EditIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    )}
+                    {canDeletePermissions && (
+                        <Tooltip title="Delete">
+                            <Box
+                                component="button"
+                                onClick={(e) => { e.stopPropagation(); setDeleteTargetPermission(row.original); }}
+                                sx={{
+                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                    p: 0.5, borderRadius: 1, color: 'error.main',
+                                    '&:hover': { bgcolor: 'action.hover' },
+                                }}
+                            >
+                                <DeleteIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    )}
                 </Box>
             ),
         },
-    ], [uniqueModules]);
+    ], [uniqueModules, canEditPermissions, canDeletePermissions]);
 
     return (
         <>
             <Paper sx={{ p: 2, mb: 2 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={1.5}>
                     <Stack direction="row" spacing={1}>
-                        <Button
-                            size="small"
-                            onClick={() => setTab('roles')}
-                            sx={{
-                                bgcolor: tab === 'roles' ? 'primary.main' : 'grey.100',
-                                color: tab === 'roles' ? 'common.white' : 'text.secondary',
-                                '&:hover': { bgcolor: tab === 'roles' ? 'primary.dark' : 'grey.200' },
-                                textTransform: 'none',
-                                fontWeight: tab === 'roles' ? 600 : 500,
-                            }}
-                        >
-                            Roles
-                        </Button>
-                        <Button
-                            size="small"
-                            onClick={() => setTab('permissions')}
-                            sx={{
-                                bgcolor: tab === 'permissions' ? 'primary.main' : 'grey.100',
-                                color: tab === 'permissions' ? 'common.white' : 'text.secondary',
-                                '&:hover': { bgcolor: tab === 'permissions' ? 'primary.dark' : 'grey.200' },
-                                textTransform: 'none',
-                                fontWeight: tab === 'permissions' ? 600 : 500,
-                            }}
-                        >
-                            Permissions
-                        </Button>
+                        {canViewRoles && (
+                            <Button
+                                size="small"
+                                onClick={() => setTab('roles')}
+                                sx={{
+                                    bgcolor: tab === 'roles' ? 'primary.main' : 'grey.100',
+                                    color: tab === 'roles' ? 'common.white' : 'text.secondary',
+                                    '&:hover': { bgcolor: tab === 'roles' ? 'primary.dark' : 'grey.200' },
+                                    textTransform: 'none',
+                                    fontWeight: tab === 'roles' ? 600 : 500,
+                                }}
+                            >
+                                Roles
+                            </Button>
+                        )}
+                        {canViewPermissions && (
+                            <Button
+                                size="small"
+                                onClick={() => setTab('permissions')}
+                                sx={{
+                                    bgcolor: tab === 'permissions' ? 'primary.main' : 'grey.100',
+                                    color: tab === 'permissions' ? 'common.white' : 'text.secondary',
+                                    '&:hover': { bgcolor: tab === 'permissions' ? 'primary.dark' : 'grey.200' },
+                                    textTransform: 'none',
+                                    fontWeight: tab === 'permissions' ? 600 : 500,
+                                }}
+                            >
+                                Permissions
+                            </Button>
+                        )}
                     </Stack>
-                    <Button
-                        variant="contained"
-                        color="success"
-                        size="small"
-                        onClick={() => tab === 'roles' ? setShowRoleDialog(true) : setShowPermissionDialog(true)}
-                        sx={{ textTransform: 'none', fontWeight: 600 }}
-                    >
-                        + {tab === 'roles' ? 'Add Role' : 'Add Permission'}
-                    </Button>
+                    {(tab === 'roles' ? canCreateRoles : canCreatePermissions) && (
+                        <Button
+                            variant="contained"
+                            color="success"
+                            size="small"
+                            onClick={() => tab === 'roles' ? setShowRoleDialog(true) : setShowPermissionDialog(true)}
+                            sx={{ textTransform: 'none', fontWeight: 600 }}
+                        >
+                            + {tab === 'roles' ? 'Add Role' : 'Add Permission'}
+                        </Button>
+                    )}
                 </Stack>
             </Paper>
 
@@ -460,7 +490,7 @@ export default function RolePermissions() {
                 ) : (
                     <MaterialReactTable
                         columns={permColumns}
-                        data={permissions}
+                        data={permissionList}
                         rowCount={permissionsTotal}
                         state={{
                             isLoading: permissionsLoading,
@@ -752,7 +782,7 @@ function PermissionForm({ permission = null, onSubmit, onCancel, embedded = fals
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., manage tenants"
+                    placeholder="e.g., view tenants"
                     required
                 />
             </FormInput>

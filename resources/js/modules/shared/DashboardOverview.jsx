@@ -95,7 +95,7 @@ export default function DashboardOverview() {
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const isTablet = useMediaQuery(theme.breakpoints.down('md'));
     const { permissions = [] } = useAuthContext();
-    const canViewStats = permissions.includes('manage tenants');
+    const canViewStats = permissions.includes('view tenants');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
     const [recentTenants, setRecentTenants] = useState([]);
@@ -135,7 +135,7 @@ export default function DashboardOverview() {
                     Dashboard Overview
                 </Typography>
                 <Alert severity="info">
-                    You need the <strong>manage tenants</strong> permission to view dashboard statistics.
+                    You need the <strong>view tenants</strong> permission to view dashboard statistics.
                 </Alert>
             </Box>
         );

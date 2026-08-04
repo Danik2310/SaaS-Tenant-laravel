@@ -19,8 +19,13 @@ import InboxIcon from '@mui/icons-material/Inbox';
 import { toast } from 'sonner';
 import api from '../../../services/api';
 import PaymentMethodModal from './PaymentMethodModal';
+import { useAuthContext } from '@/context/AuthContext';
 
 export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods, setError }) {
+    const { permissions = [] } = useAuthContext();
+    const canCreate = permissions.includes('create payment methods');
+    const canEdit = permissions.includes('edit payment methods');
+    const canDelete = permissions.includes('delete payment methods');
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [editingPayment, setEditingPayment] = useState(null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -135,7 +140,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                         <Switch
                             checked={cell.getValue()}
                             onChange={() => handleToggleActive(row.original)}
-                            disabled={toggling === row.original.id}
+                            disabled={!canEdit || toggling === row.original.id}
                             size="small"
                             sx={{
                                 '& .MuiSwitch-switchBase.Mui-checked': {
@@ -153,7 +158,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                 />
             )},
         },
-    ], []);
+    ], [canEdit]);
 
     return (
         <Box>
@@ -161,22 +166,24 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
                     Payment Gateways
                 </Typography>
-                <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => {
-                        setEditingPayment(null);
-                        setPaymentModalOpen(true);
-                    }}
-                    sx={{
-                        bgcolor: '#22c55e',
-                        '&:hover': { bgcolor: '#16a34a' },
-                        fontWeight: 600,
-                        fontSize: '13px',
-                    }}
-                >
-                    Add Method
-                </Button>
+                {canCreate && (
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => {
+                            setEditingPayment(null);
+                            setPaymentModalOpen(true);
+                        }}
+                        sx={{
+                            bgcolor: '#22c55e',
+                            '&:hover': { bgcolor: '#16a34a' },
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
+                    >
+                        Add Method
+                    </Button>
+                )}
             </Box>
 
             <MaterialReactTable
@@ -196,16 +203,20 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                 )}
                 renderRowActions={({ row }) => (
                     <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                        <Tooltip title="Edit">
-                            <Box component="button" aria-label="Edit" onClick={(e) => { e.stopPropagation(); handleEditPayment(row.original); }} sx={iconButtonSx}>
-                                <EditIcon fontSize="small" />
-                            </Box>
-                        </Tooltip>
-                        <Tooltip title="Delete">
-                            <Box component="button" aria-label="Delete" onClick={(e) => { e.stopPropagation(); handleDeletePayment(row.original); }} sx={{ ...iconButtonSx, color: 'error.main' }}>
-                                <DeleteIcon fontSize="small" />
-                            </Box>
-                        </Tooltip>
+                        {canEdit && (
+                            <Tooltip title="Edit">
+                                <Box component="button" aria-label="Edit" onClick={(e) => { e.stopPropagation(); handleEditPayment(row.original); }} sx={iconButtonSx}>
+                                    <EditIcon fontSize="small" />
+                                </Box>
+                            </Tooltip>
+                        )}
+                        {canDelete && (
+                            <Tooltip title="Delete">
+                                <Box component="button" aria-label="Delete" onClick={(e) => { e.stopPropagation(); handleDeletePayment(row.original); }} sx={{ ...iconButtonSx, color: 'error.main' }}>
+                                    <DeleteIcon fontSize="small" />
+                                </Box>
+                            </Tooltip>
+                        )}
                     </Box>
                 )}
                 muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}

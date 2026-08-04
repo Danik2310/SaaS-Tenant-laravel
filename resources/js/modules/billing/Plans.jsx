@@ -4,6 +4,7 @@ import api from '@/services/api';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 import FeatureFlagPicker from '@/modules/billing/FeatureFlagPicker';
 import FeatureFlags from '@/modules/billing/FeatureFlags';
+import { useAuthContext } from '@/context/AuthContext';
 import { useMoney, currencySymbol } from '@/shared/money';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -44,6 +45,8 @@ function slugify(text) {
 
 function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
     const money = useMoney();
+    const { permissions = [] } = useAuthContext();
+    const canViewResourceUsage = permissions.includes('view tenants') || permissions.includes('view plans');
     const [priceTouched, setPriceTouched] = useState(false);
     const [form, setForm] = useState({
         name: plan?.name || '',
@@ -63,10 +66,11 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
     const [summary, setSummary] = useState(null);
 
     useEffect(() => {
+        if (!canViewResourceUsage) return;
         api.get('/admin/api/resource-usage/summary')
             .then(res => setSummary(res.data.summary))
             .catch(() => {});
-    }, []);
+    }, [canViewResourceUsage]);
 
     useEffect(() => {
         if (!plan || priceTouched || !money.ready) return;
@@ -322,6 +326,11 @@ export default function Plans() {
     const [error, setError] = useState(null);
     const [featureDefs, setFeatureDefs] = useState({});
     const { formatMoney } = useMoney();
+    const { permissions = [] } = useAuthContext();
+    const canCreate = permissions.includes('create plans');
+    const canEdit = permissions.includes('edit plans');
+    const canDelete = permissions.includes('delete plans');
+    const canManageFlags = permissions.includes('manage feature flags');
 
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 });
     const [globalFilter, setGlobalFilter] = useState('');
@@ -492,7 +501,7 @@ export default function Plans() {
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                 <Tabs value={tab} onChange={(_, v) => { setTab(v); if (v === 'plans') fetchPlans(); }} textColor="primary" indicatorColor="primary" aria-label="Plans sections">
                     <Tab label="Plans" value="plans" />
-                    <Tab label="Feature Flags" value="flags" />
+                    {canManageFlags && <Tab label="Feature Flags" value="flags" />}
                 </Tabs>
             </Box>
 
@@ -529,19 +538,21 @@ export default function Plans() {
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
                     Plans
                 </Typography>
-                <Button
-                    variant="contained"
-                    size="small"
-                    onClick={() => setMode('create')}
-                    sx={{
-                        bgcolor: '#22c55e',
-                        '&:hover': { bgcolor: '#16a34a' },
-                        fontWeight: 600,
-                        fontSize: '13px',
-                    }}
-                >
-                    + New Plan
-                </Button>
+                {canCreate && (
+                    <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => setMode('create')}
+                        sx={{
+                            bgcolor: '#22c55e',
+                            '&:hover': { bgcolor: '#16a34a' },
+                            fontWeight: 600,
+                            fontSize: '13px',
+                        }}
+                    >
+                        + New Plan
+                    </Button>
+                )}
             </Box>
 
             {error ? (
@@ -587,42 +598,48 @@ export default function Plans() {
                         const plan = row.original;
                         return (
                             <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                                <Tooltip title="Edit">
-                                    <Box
-                                        component="button"
-                                        aria-label="Edit"
-                                        onClick={(e) => { e.stopPropagation(); setEditingPlan(plan); }}
-                                        sx={{
-                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                            p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                            '&:hover': { bgcolor: 'action.hover' },
-                                        }}
+                                {canEdit && (
+                                    <Tooltip title="Edit">
+                                        <Box
+                                            component="button"
+                                            aria-label="Edit"
+                                            onClick={(e) => { e.stopPropagation(); setEditingPlan(plan); }}
+                                            sx={{
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                                p: 0.5, borderRadius: 1, color: 'text.secondary',
+                                                '&:hover': { bgcolor: 'action.hover' },
+                                            }}
+                                        >
+                                            <EditIcon fontSize="small" />
+                                        </Box>
+                                    </Tooltip>
+                                )}
+                                {canDelete && (
+                                    <Tooltip title="Delete">
+                                        <Box
+                                            component="button"
+                                            aria-label="Delete"
+                                            onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, plan }); }}
+                                            sx={{
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                                p: 0.5, borderRadius: 1, color: 'error.main',
+                                                '&:hover': { bgcolor: 'action.hover' },
+                                            }}
+                                        >
+                                            <DeleteIcon fontSize="small" />
+                                        </Box>
+                                    </Tooltip>
+                                )}
+                                {canEdit && (
+                                    <IconButton
+                                        size="small"
+                                        onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(plan); }}
                                     >
-                                        <EditIcon fontSize="small" />
-                                    </Box>
-                                </Tooltip>
-                                <Tooltip title="Delete">
-                                    <Box
-                                        component="button"
-                                        aria-label="Delete"
-                                        onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, plan }); }}
-                                        sx={{
-                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                            p: 0.5, borderRadius: 1, color: 'error.main',
-                                            '&:hover': { bgcolor: 'action.hover' },
-                                        }}
-                                    >
-                                        <DeleteIcon fontSize="small" />
-                                    </Box>
-                                </Tooltip>
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(plan); }}
-                                >
-                                    <MoreVertIcon fontSize="small" />
-                                </IconButton>
+                                        <MoreVertIcon fontSize="small" />
+                                    </IconButton>
+                                )}
                             </Box>
                         );
                     }}

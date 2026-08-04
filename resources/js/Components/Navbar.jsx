@@ -15,17 +15,17 @@ import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 
 const permissionMap = {
     overview: null,
-    tenants: 'manage tenants',
-    'resource-usage': 'manage tenants',
-    staff: 'manage staff',
-    roles: 'manage staff',
-    subscriptions: 'manage subscriptions',
-    'payment-methods': 'manage payment methods',
-    plans: 'manage plans',
-    settings: 'manage settings',
-    activity: 'view activity logs',
-    impersonate: 'impersonate tenants',
-    profile: 'manage profile',
+    tenants: ['view tenants'],
+    'resource-usage': ['view tenants'],
+    staff: ['view staff'],
+    roles: ['view roles', 'view permissions'],
+    subscriptions: ['view subscriptions'],
+    'payment-methods': ['view payment methods'],
+    plans: ['view plans'],
+    settings: ['view settings'],
+    activity: ['view activity logs'],
+    impersonate: ['impersonate tenants'],
+    profile: ['manage profile'],
 };
 
 const views = [
@@ -45,7 +45,11 @@ const views = [
 
 export default function Navbar({ view, setView }) {
     const { user, permissions = [] } = useAuthContext();
-    const filtered = views.filter(v => !permissionMap[v.id] || permissions.includes(permissionMap[v.id]));
+    const filtered = views.filter(v => {
+        const required = permissionMap[v.id];
+        if (!required) return true;
+        return required.some(p => permissions.includes(p));
+    });
     const grouped = filtered.reduce((acc, v) => {
         if (!acc[v.section]) acc[v.section] = [];
         acc[v.section].push(v);
