@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -13,14 +14,14 @@ class TenantUserRolePermissionSeeder extends Seeder
         $guard = 'web';
 
         $permissions = [
-            'manage customers',
-            'manage products',
-            'manage categories',
-            'manage orders',
-            'manage inventory',
-            'manage payments',
-            'manage settings',
-            'view reports',
+            PermissionNames::MANAGE_CUSTOMERS,
+            PermissionNames::MANAGE_PRODUCTS,
+            PermissionNames::MANAGE_CATEGORIES,
+            PermissionNames::MANAGE_ORDERS,
+            PermissionNames::MANAGE_INVENTORY,
+            PermissionNames::MANAGE_PAYMENTS,
+            PermissionNames::MANAGE_SETTINGS,
+            PermissionNames::VIEW_REPORTS,
         ];
 
         $createdPermissions = [];
@@ -32,29 +33,29 @@ class TenantUserRolePermissionSeeder extends Seeder
         }
 
         $adminRole = Role::updateOrCreate(
-            ['name' => 'tenant-admin', 'guard_name' => $guard]
+            ['name' => PermissionNames::ROLE_TENANT_ADMIN, 'guard_name' => $guard]
         );
         $adminRole->givePermissionTo($createdPermissions);
 
         $managerRole = Role::updateOrCreate(
-            ['name' => 'manager', 'guard_name' => $guard]
+            ['name' => PermissionNames::ROLE_MANAGER, 'guard_name' => $guard]
         );
         $managerRole->givePermissionTo([
-            'manage customers',
-            'manage products',
-            'manage categories',
-            'manage orders',
-            'manage inventory',
-            'view reports',
+            PermissionNames::MANAGE_CUSTOMERS,
+            PermissionNames::MANAGE_PRODUCTS,
+            PermissionNames::MANAGE_CATEGORIES,
+            PermissionNames::MANAGE_ORDERS,
+            PermissionNames::MANAGE_INVENTORY,
+            PermissionNames::VIEW_REPORTS,
         ]);
 
         $cashierRole = Role::updateOrCreate(
-            ['name' => 'cashier', 'guard_name' => $guard]
+            ['name' => PermissionNames::ROLE_CASHIER, 'guard_name' => $guard]
         );
         $cashierRole->givePermissionTo([
-            'manage customers',
-            'manage orders',
-            'manage payments',
+            PermissionNames::MANAGE_CUSTOMERS,
+            PermissionNames::MANAGE_ORDERS,
+            PermissionNames::MANAGE_PAYMENTS,
         ]);
     }
 }

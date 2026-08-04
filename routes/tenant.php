@@ -17,6 +17,7 @@ use App\Products\Http\Controllers\Tenant\CategoryController;
 use App\Products\Http\Controllers\Tenant\InventoryMovementController;
 use App\Products\Http\Controllers\Tenant\ProductController;
 use App\Products\Http\Controllers\Tenant\WarehouseController;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Http\Controllers\Admin\AuthController;
 use App\Shared\Http\Controllers\Tenant\DashboardController;
 use Illuminate\Support\Facades\Route;
@@ -119,7 +120,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
                 ->name('billing.upgrade');
 
             // Products
-            Route::prefix('products')->name('tenant.products.')->middleware(['permission:manage products'])->group(function () {
+            Route::prefix('products')->name('tenant.products.')->middleware([PermissionNames::middleware([PermissionNames::MANAGE_PRODUCTS], 'web')])->group(function () {
                 Route::get('/', [ProductController::class, 'index'])->name('index');
                 Route::get('/create', [ProductController::class, 'create'])->name('create');
                 Route::post('/', [ProductController::class, 'store'])->middleware('storage.limit')->name('store');
@@ -129,7 +130,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             });
 
             // Categories
-            Route::prefix('categories')->name('tenant.categories.')->middleware(['permission:manage categories'])->group(function () {
+            Route::prefix('categories')->name('tenant.categories.')->middleware([PermissionNames::middleware([PermissionNames::MANAGE_CATEGORIES], 'web')])->group(function () {
                 Route::get('/', [CategoryController::class, 'index'])->name('index');
                 Route::post('/', [CategoryController::class, 'store'])->name('store');
                 Route::put('/{category}', [CategoryController::class, 'update'])->name('update');
@@ -137,7 +138,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             });
 
             // Warehouses
-            Route::prefix('warehouses')->name('tenant.warehouses.')->middleware(['permission:manage inventory'])->group(function () {
+            Route::prefix('warehouses')->name('tenant.warehouses.')->middleware([PermissionNames::middleware([PermissionNames::MANAGE_INVENTORY], 'web')])->group(function () {
                 Route::get('/', [WarehouseController::class, 'index'])->name('index');
                 Route::post('/', [WarehouseController::class, 'store'])->name('store');
                 Route::put('/{warehouse}', [WarehouseController::class, 'update'])->name('update');
@@ -145,7 +146,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             });
 
             // Inventory Movements — premium feature (not available on free plan)
-            Route::prefix('inventory')->name('tenant.inventory.')->middleware(['permission:manage inventory', 'feature:advanced', 'storage.limit'])->group(function () {
+            Route::prefix('inventory')->name('tenant.inventory.')->middleware([PermissionNames::middleware([PermissionNames::MANAGE_INVENTORY], 'web'), 'feature:advanced', 'storage.limit'])->group(function () {
                 Route::get('/', [InventoryMovementController::class, 'index'])->name('index');
                 Route::get('/create', [InventoryMovementController::class, 'create'])->name('create');
                 Route::post('/', [InventoryMovementController::class, 'store'])->name('store');
