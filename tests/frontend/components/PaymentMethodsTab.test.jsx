@@ -9,6 +9,9 @@ const mockApi = vi.hoisted(() => ({
 }));
 vi.mock('@/services/api', () => ({ default: mockApi }));
 
+const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
+vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
+
 const mockProps = {
   paymentMethods: mockPaymentMethods,
   fetchPaymentMethods: vi.fn(),
@@ -18,6 +21,9 @@ const mockProps = {
 describe('PaymentMethodsTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthContextMock.mockReturnValue({
+      permissions: ['view payment methods', 'create payment methods', 'edit payment methods', 'delete payment methods'],
+    });
   });
 
   test('renders payment methods', () => {

@@ -12,6 +12,9 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
+vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
+
 const mockSubscriptions = [
   {
     id: 1,
@@ -68,6 +71,7 @@ const mockPlans = [
 describe('Subscriptions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthContextMock.mockReturnValue({ permissions: ['view subscriptions', 'manage subscription payments'] });
     mockApi.get.mockImplementation((url) => {
       if (url.includes('/subscriptions') && !url.includes('/payments')) {
         return Promise.resolve({ data: { subscriptions: mockSubscriptions, total: 3 } });

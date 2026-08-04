@@ -10,6 +10,9 @@ const mockApi = vi.hoisted(() => ({
 vi.mock('@/services/api', () => ({ default: mockApi }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
+const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
+vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
+
 const subscription = { id: 7, tenant_name: 'Acme', plan_name: 'Pro' };
 
 const paymentsResponse = {
@@ -52,6 +55,7 @@ describe('PaymentHistoryDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetMoneyCache();
+    useAuthContextMock.mockReturnValue({ permissions: ['view subscriptions', 'manage subscription payments'] });
     mockExchangeRates('USD');
   });
 

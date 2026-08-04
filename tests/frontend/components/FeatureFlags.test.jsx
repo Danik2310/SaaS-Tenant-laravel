@@ -8,6 +8,9 @@ const mockApi = vi.hoisted(() => ({
 }));
 vi.mock('@/services/api', () => ({ default: mockApi }));
 
+const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
+vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { toast } from 'sonner';
 
@@ -27,6 +30,7 @@ const listResponse = {
 describe('FeatureFlags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthContextMock.mockReturnValue({ permissions: ['manage feature flags'] });
     mockApi.get.mockResolvedValue(listResponse);
   });
 

@@ -63,8 +63,8 @@ describe('DashboardOverview', () => {
     });
   });
 
-  test('fetches dashboard stats when user has manage tenants permission', async () => {
-    useAuthContextMock.mockReturnValue({ permissions: ['manage tenants'] });
+  test('fetches dashboard stats when user has view tenants permission', async () => {
+    useAuthContextMock.mockReturnValue({ permissions: ['view tenants'] });
     mockApi.get.mockResolvedValue(statsResponse);
 
     renderWithProviders(<DashboardOverview />);
@@ -74,14 +74,14 @@ describe('DashboardOverview', () => {
     expect(mockApi.get).toHaveBeenCalledWith('/admin/api/dashboard-stats');
   });
 
-  test('shows fallback alert and skips stats fetch without manage tenants permission', async () => {
+  test('shows fallback alert and skips stats fetch without view tenants permission', async () => {
     useAuthContextMock.mockReturnValue({ permissions: ['manage profile'] });
 
     renderWithProviders(<DashboardOverview />);
 
     expect(screen.getByText('Dashboard Overview')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'You need the manage tenants permission to view dashboard statistics.'
+      'You need the view tenants permission to view dashboard statistics.'
     );
     expect(mockApi.get).not.toHaveBeenCalled();
   });

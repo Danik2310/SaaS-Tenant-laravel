@@ -9,6 +9,9 @@ const mockApi = vi.hoisted(() => ({
 }));
 vi.mock('@/services/api', () => ({ default: mockApi }));
 
+const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
+vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { toast } from 'sonner';
 
@@ -64,6 +67,9 @@ describe('Plans', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetMoneyCache();
+    useAuthContextMock.mockReturnValue({
+      permissions: ['view tenants', 'view plans', 'create plans', 'edit plans', 'delete plans', 'manage feature flags'],
+    });
     mockApi.get.mockImplementation((url) => {
       if (String(url).includes('/admin/api/resource-usage/summary')) return Promise.resolve(summaryResponse);
       if (String(url).includes('/admin/api/plans')) return Promise.resolve(listResponse);
