@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StorePaymentMethodRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check() && auth('admin')->user()->can('manage payment methods');
+        return auth('admin')->check() && auth('admin')->user()->can(PermissionNames::CREATE_PAYMENT_METHODS);
     }
 
     public function rules(): array

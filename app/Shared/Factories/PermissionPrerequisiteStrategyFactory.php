@@ -2,6 +2,7 @@
 
 namespace App\Shared\Factories;
 
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\PermissionPrerequisiteStrategyInterface;
 use App\Shared\Strategies\NullPrerequisiteStrategy;
 use App\Shared\Strategies\TenantModulePrerequisiteStrategy;
@@ -9,9 +10,9 @@ use App\Shared\Strategies\TenantModulePrerequisiteStrategy;
 class PermissionPrerequisiteStrategyFactory
 {
     private const STRATEGY_MAP = [
-        'impersonate tenants' => TenantModulePrerequisiteStrategy::class,
-        'manage subscriptions' => TenantModulePrerequisiteStrategy::class,
-        'restore tenants' => TenantModulePrerequisiteStrategy::class,
+        PermissionNames::IMPERSONATE_TENANTS => TenantModulePrerequisiteStrategy::class,
+        PermissionNames::MANAGE_SUBSCRIPTION_PAYMENTS => TenantModulePrerequisiteStrategy::class,
+        PermissionNames::RESTORE_TENANTS => TenantModulePrerequisiteStrategy::class,
     ];
 
     public static function make(string $permissionName): PermissionPrerequisiteStrategyInterface

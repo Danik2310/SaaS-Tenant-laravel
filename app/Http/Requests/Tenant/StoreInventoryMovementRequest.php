@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Tenant;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreInventoryMovementRequest extends FormRequest
@@ -12,7 +13,7 @@ class StoreInventoryMovementRequest extends FormRequest
             return false;
         }
 
-        return $this->user()->can('manage inventory');
+        return $this->user()->can(PermissionNames::MANAGE_INVENTORY);
     }
 
     public function rules(): array

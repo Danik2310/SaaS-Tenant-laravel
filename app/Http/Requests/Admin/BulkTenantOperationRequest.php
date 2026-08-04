@@ -5,13 +5,24 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use App\Models\Tenant;
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class BulkTenantOperationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check() && auth('admin')->user()->can('manage tenants');
+        $user = auth('admin')->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return match ($this->input('action')) {
+            'delete' => $user->can(PermissionNames::DELETE_TENANTS),
+            'restore' => $user->can(PermissionNames::RESTORE_TENANTS),
+            default => $user->can(PermissionNames::EDIT_TENANTS),
+        };
     }
 
     public function rules(): array

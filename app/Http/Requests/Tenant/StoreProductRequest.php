@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tenant;
 
 use App\Billing\Factories\ResourceEnforcementFactory;
 use App\Models\Product;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Exceptions\PlanLimitExceededException;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -15,7 +16,7 @@ class StoreProductRequest extends FormRequest
             return false;
         }
 
-        if (! $this->user()->can('manage products')) {
+        if (! $this->user()->can(PermissionNames::MANAGE_PRODUCTS)) {
             return false;
         }
 

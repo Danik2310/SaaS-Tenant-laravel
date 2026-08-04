@@ -2,11 +2,12 @@
 
 namespace App\Shared\Strategies;
 
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\PermissionPrerequisiteStrategyInterface;
 
 class TenantModulePrerequisiteStrategy implements PermissionPrerequisiteStrategyInterface
 {
-    private const PREREQUISITES = ['manage tenants'];
+    private const PREREQUISITES = [PermissionNames::VIEW_TENANTS];
 
     public function getPrerequisites(): array
     {

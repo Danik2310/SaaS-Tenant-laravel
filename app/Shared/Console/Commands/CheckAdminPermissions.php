@@ -3,6 +3,7 @@
 namespace App\Shared\Console\Commands;
 
 use App\Models\AdminUser;
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Console\Command;
 
 class CheckAdminPermissions extends Command
@@ -37,7 +38,14 @@ class CheckAdminPermissions extends Command
         $this->info('Admin User: '.$user->name.' ('.$user->email.')');
         $this->info('Roles: '.$user->roles->pluck('name')->join(', '));
 
-        $permissions = ['manage tenants', 'manage staff', 'manage plans', 'impersonate tenants', 'manage profile'];
+        $permissions = [
+            PermissionNames::VIEW_TENANTS,
+            PermissionNames::CREATE_TENANTS,
+            PermissionNames::EDIT_TENANTS,
+            PermissionNames::DELETE_TENANTS,
+            PermissionNames::VIEW_STAFF,
+            PermissionNames::MANAGE_PROFILE,
+        ];
 
         foreach ($permissions as $permission) {
             $hasPermission = $user->hasPermissionTo($permission);

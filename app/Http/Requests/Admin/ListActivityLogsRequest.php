@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ListActivityLogsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check() && auth('admin')->user()->can('view activity logs');
+        return auth('admin')->check() && auth('admin')->user()->can(PermissionNames::VIEW_ACTIVITY_LOGS);
     }
 
     public function rules(): array

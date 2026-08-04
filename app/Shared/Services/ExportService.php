@@ -8,6 +8,7 @@ use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\ExportServiceInterface;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -166,7 +167,7 @@ class ExportService implements ExportServiceInterface
         $headers = $this->resolveHeaders($columns, ['ID', 'Tenant', 'Plan', 'Status', 'Start', 'End', 'Created']);
         $allColumns = ['id', 'tenant_name', 'plan_name', 'status', 'starts_at', 'ends_at', 'created_at'];
 
-        $canViewTenantName = auth('admin')->user()?->can('manage tenants') ?? false;
+        $canViewTenantName = auth('admin')->user()?->can(PermissionNames::VIEW_TENANTS) ?? false;
 
         $rows = [];
         $counter = 0;

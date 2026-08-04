@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Tenant;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateCategoryRequest extends FormRequest
@@ -12,7 +13,7 @@ class UpdateCategoryRequest extends FormRequest
             return false;
         }
 
-        return $this->user()->can('manage categories');
+        return $this->user()->can(PermissionNames::MANAGE_CATEGORIES);
     }
 
     public function rules(): array

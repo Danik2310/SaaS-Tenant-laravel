@@ -4,6 +4,7 @@ namespace App\Http\Requests\Tenant;
 
 use App\Billing\Factories\ResourceEnforcementFactory;
 use App\Models\Category;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Exceptions\PlanLimitExceededException;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -15,7 +16,7 @@ class StoreCategoryRequest extends FormRequest
             return false;
         }
 
-        if (! $this->user()->can('manage categories')) {
+        if (! $this->user()->can(PermissionNames::MANAGE_CATEGORIES)) {
             return false;
         }
 

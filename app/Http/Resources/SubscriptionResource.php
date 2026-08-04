@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -9,11 +10,11 @@ class SubscriptionResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $canManageTenants = auth('admin')->user()?->can('manage tenants') ?? false;
+        $canViewTenants = auth('admin')->user()?->can(PermissionNames::VIEW_TENANTS) ?? false;
         $tenantStatus = 'restricted';
         $tenantName = 'Restricted';
 
-        if ($canManageTenants && $this->relationLoaded('tenant')) {
+        if ($canViewTenants && $this->relationLoaded('tenant')) {
             if ($this->tenant === null) {
                 $tenantStatus = 'missing';
                 $tenantName = 'Missing Tenant';

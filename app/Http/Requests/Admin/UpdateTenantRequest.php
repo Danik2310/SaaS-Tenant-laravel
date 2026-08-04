@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateTenantRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check() && auth('admin')->user()->can('manage tenants');
+        return auth('admin')->check() && auth('admin')->user()->can(PermissionNames::EDIT_TENANTS);
     }
 
     public function rules(): array

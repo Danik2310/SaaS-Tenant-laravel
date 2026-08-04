@@ -3,6 +3,7 @@
 namespace App\Shared\Console\Commands;
 
 use App\Models\AdminUser;
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Console\Command;
 use Spatie\Permission\Models\Role;
 
@@ -41,7 +42,7 @@ class AssignStaffRole extends Command
             return 1;
         }
 
-        $role = Role::where('name', 'staff')->where('guard_name', 'web')->first();
+        $role = Role::where('name', PermissionNames::ROLE_STAFF)->where('guard_name', 'admin')->first();
 
         if (! $role) {
             $this->error('Staff role not found. Please run php artisan db:seed --class=CentralRolePermissionSeeder first.');

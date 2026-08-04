@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ExportRequest extends FormRequest
@@ -15,11 +16,11 @@ class ExportRequest extends FormRequest
         }
 
         return match ($this->route('entity')) {
-            'tenants' => $user->can('manage tenants'),
-            'subscriptions' => $user->can('manage subscriptions'),
-            'staff' => $user->can('manage staff'),
-            'plans' => $user->can('manage plans'),
-            'activity-logs' => $user->can('view activity logs'),
+            'tenants' => $user->can(PermissionNames::VIEW_TENANTS),
+            'subscriptions' => $user->can(PermissionNames::VIEW_SUBSCRIPTIONS),
+            'staff' => $user->can(PermissionNames::VIEW_STAFF),
+            'plans' => $user->can(PermissionNames::VIEW_PLANS),
+            'activity-logs' => $user->can(PermissionNames::VIEW_ACTIVITY_LOGS),
             default => false,
         };
     }

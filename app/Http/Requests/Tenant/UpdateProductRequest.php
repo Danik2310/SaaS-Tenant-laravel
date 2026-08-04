@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Tenant;
 
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateProductRequest extends FormRequest
@@ -12,7 +13,7 @@ class UpdateProductRequest extends FormRequest
             return false;
         }
 
-        return $this->user()->can('manage products');
+        return $this->user()->can(PermissionNames::MANAGE_PRODUCTS);
     }
 
     public function rules(): array

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Plans\Support\FeatureFlagCatalog;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\ServerDiskInfo;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -10,7 +11,7 @@ class UpdatePlanRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth('admin')->check() && auth('admin')->user()->can('manage plans');
+        return auth('admin')->check() && auth('admin')->user()->can(PermissionNames::EDIT_PLANS);
     }
 
     public function rules(): array
