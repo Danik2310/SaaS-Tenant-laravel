@@ -49,7 +49,7 @@ class PermissionEdgeCasesTest extends TestCase
         $this->authenticateAsSuperAdmin();
 
         $response = $this->postJson('/admin/api/permissions', [
-            'name' => 'manage tenants',
+            'name' => 'view tenants',
             'module' => 'tenants',
         ]);
 
@@ -153,13 +153,12 @@ class PermissionEdgeCasesTest extends TestCase
         $perm = Permission::where('guard_name', 'admin')->first();
         $perm->update(['is_active' => false]);
 
-        $response = $this->getJson('/admin/api/permissions');
+        $response = $this->getJson('/admin/api/permissions?search='.rawurlencode($perm->name).'&per_page=100');
 
         $response->assertStatus(200);
-        $modules = $response->json('permissions');
-        $allPermissions = collect($modules)->flatten(1);
+        $permissions = $response->json('permissions');
 
-        $found = $allPermissions->firstWhere('id', $perm->id);
+        $found = collect($permissions)->firstWhere('id', $perm->id);
         $this->assertNotNull($found);
         $this->assertFalse($found['is_active']);
     }
@@ -201,7 +200,7 @@ class PermissionEdgeCasesTest extends TestCase
         ]);
         $role->syncPermissions(
             Permission::where('guard_name', 'admin')
-                ->whereIn('name', ['manage tenants', 'manage staff'])
+                ->whereIn('name', ['view tenants', 'view staff'])
                 ->pluck('id')
         );
         $originalPerms = $role->permissions()->pluck('id')->sort()->values()->toArray();

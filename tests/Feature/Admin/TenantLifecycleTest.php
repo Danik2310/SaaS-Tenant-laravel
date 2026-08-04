@@ -562,7 +562,7 @@ class TenantLifecycleTest extends TestCase
         $this->assertDatabaseHas('tenants', ['id' => $tenant->id]);
 
         $role = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'admin']);
-        $permission = Permission::firstOrCreate(['name' => 'manage tenants', 'guard_name' => 'admin']);
+        $permission = Permission::firstOrCreate(['name' => 'delete tenants', 'guard_name' => 'admin']);
         $role->givePermissionTo($permission);
         $user = AdminUser::factory()->create();
         $user->assignRole('super-admin');
@@ -592,7 +592,7 @@ class TenantLifecycleTest extends TestCase
         ]);
 
         $role = Role::firstOrCreate(['name' => 'super-admin', 'guard_name' => 'admin']);
-        $permission = Permission::firstOrCreate(['name' => 'manage tenants', 'guard_name' => 'admin']);
+        $permission = Permission::firstOrCreate(['name' => 'delete tenants', 'guard_name' => 'admin']);
         $role->givePermissionTo($permission);
         $user = AdminUser::factory()->create();
         $user->assignRole('super-admin');

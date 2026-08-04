@@ -16,7 +16,7 @@ class LimitedStaffDashboardAccessTest extends TestCase
 
     /**
      * Create an admin user with a limited role that does NOT include
-     * the "manage tenants" permission (the scenario that used to produce
+     * any tenant-management permission (the scenario that used to produce
      * a 403 when landing on the dashboard).
      */
     private function createLimitedStaff(): AdminUser
@@ -47,7 +47,7 @@ class LimitedStaffDashboardAccessTest extends TestCase
         $this->get('/admin/dashboard')->assertOk();
     }
 
-    public function test_limited_staff_user_endpoint_returns_permissions_without_manage_tenants(): void
+    public function test_limited_staff_user_endpoint_returns_permissions_without_tenant_access(): void
     {
         $staff = $this->createLimitedStaff();
         $this->actingAs($staff, 'admin');
@@ -61,7 +61,7 @@ class LimitedStaffDashboardAccessTest extends TestCase
         $permissions = $response->json('permissions');
 
         $this->assertContains('manage profile', $permissions);
-        $this->assertNotContains('manage tenants', $permissions);
+        $this->assertNotContains('view tenants', $permissions);
     }
 
     public function test_limited_staff_cannot_fetch_dashboard_stats(): void

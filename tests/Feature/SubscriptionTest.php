@@ -330,7 +330,7 @@ class SubscriptionTest extends TestCase
         $response->assertJsonPath('subscription.tenant_name', 'Living Corp');
     }
 
-    public function test_subscription_tenant_status_restricted_without_manage_tenants(): void
+    public function test_subscription_tenant_status_restricted_without_view_tenants(): void
     {
         $plan = Plan::factory()->create();
         $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
@@ -338,7 +338,7 @@ class SubscriptionTest extends TestCase
 
         $regularAdmin = AdminUser::factory()->create();
         $regularRole = Role::firstOrCreate(['name' => 'regular', 'guard_name' => 'admin']);
-        $permission = Permission::firstOrCreate(['name' => 'manage subscriptions', 'guard_name' => 'admin']);
+        $permission = Permission::firstOrCreate(['name' => 'view subscriptions', 'guard_name' => 'admin']);
         $regularRole->syncPermissions([$permission]);
         $regularAdmin->assignRole('regular');
         $this->actingAs($regularAdmin, 'admin');

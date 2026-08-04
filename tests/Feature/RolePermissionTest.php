@@ -84,7 +84,7 @@ class RolePermissionTest extends TestCase
 
         // Use permissions without prerequisites to avoid dependency validation
         $permissionIds = Permission::where('guard_name', 'admin')
-            ->whereIn('name', ['manage tenants', 'manage staff', 'manage plans'])
+            ->whereIn('name', ['view tenants', 'view staff', 'view plans'])
             ->pluck('id')
             ->toArray();
 
@@ -121,7 +121,7 @@ class RolePermissionTest extends TestCase
 
         // Create a role with initial permissions (safe set without prerequisites)
         $initialPermissionIds = Permission::where('guard_name', 'admin')
-            ->whereIn('name', ['manage tenants', 'manage staff'])
+            ->whereIn('name', ['view tenants', 'view staff'])
             ->pluck('id')
             ->toArray();
 
@@ -130,7 +130,7 @@ class RolePermissionTest extends TestCase
 
         // Update the role with different permissions (safe set without prerequisites)
         $updatedPermissionIds = Permission::where('guard_name', 'admin')
-            ->whereIn('name', ['manage tenants', 'manage staff', 'manage plans'])
+            ->whereIn('name', ['view tenants', 'view staff', 'view plans'])
             ->pluck('id')
             ->toArray();
 
@@ -217,31 +217,29 @@ class RolePermissionTest extends TestCase
     {
         $this->authenticateAsSuperAdmin();
 
-        $response = $this->getJson('/admin/api/permissions');
+        $response = $this->getJson('/admin/api/permissions?per_page=100');
 
         $response->assertStatus(200);
 
-        // Assert the response has a "permissions" object with module keys
+        // Assert the response is a flat, paginated permission list
         $response->assertJsonStructure([
             'permissions' => [
-                'tenants',
-                'staff',
-                'plans',
-                'billing',
-                'profile',
-                'system',
+                '*' => ['id', 'name', 'description', 'module', 'is_active'],
             ],
+            'total',
         ]);
 
-        $permissions = $response->json('permissions');
+        $permissions = collect($response->json('permissions'));
+        $this->assertGreaterThanOrEqual(33, $permissions->count());
 
-        // Each module should have at least one permission
-        foreach (['tenants', 'staff', 'plans', 'billing', 'profile', 'system'] as $module) {
-            $this->assertNotEmpty($permissions[$module], "Module '$module' should have permissions");
+        // Every module from the granular catalog should be represented
+        $modules = $permissions->pluck('module')->unique()->values()->all();
+        foreach (['tenants', 'staff', 'roles', 'permissions', 'plans', 'billing', 'system', 'profile'] as $module) {
+            $this->assertContains($module, $modules, "Module '$module' should have permissions");
         }
 
         // Each permission entry should have the expected structure
-        foreach ($permissions['tenants'] as $permission) {
+        foreach ($permissions as $permission) {
             $this->assertArrayHasKey('id', $permission);
             $this->assertArrayHasKey('name', $permission);
             $this->assertArrayHasKey('description', $permission);
@@ -380,7 +378,7 @@ class RolePermissionTest extends TestCase
         $role = $this->createRole('support-agent');
         $role->syncPermissions(
             Permission::where('guard_name', 'admin')
-                ->whereIn('name', ['manage tenants'])
+                ->whereIn('name', ['view tenants'])
                 ->pluck('id')
         );
 
@@ -394,5 +392,44 @@ class RolePermissionTest extends TestCase
         ]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_cannot_delete_view_tenants_when_dependent_permissions_assigned(): void
+    {
+        $this->authenticateAsSuperAdmin();
+
+        $dependentNames = ['impersonate tenants', 'manage subscription payments', 'restore tenants'];
+
+        // Clear all dependent permissions and 'view tenants' from seeded roles so
+        // only the dedicated test role influences the dependency check.
+        Role::query()->each(function (Role $role) use ($dependentNames) {
+            $role->revokePermissionTo($dependentNames);
+            $role->revokePermissionTo('view tenants');
+        });
+
+        // A role holding a dependent permission ('impersonate tenants').
+        $role = $this->createRole('impersonator');
+        $role->syncPermissions([
+            Permission::where('name', 'impersonate tenants')
+                ->where('guard_name', 'admin')
+                ->value('id'),
+        ]);
+
+        $viewTenantsId = Permission::where('name', 'view tenants')
+            ->where('guard_name', 'admin')
+            ->value('id');
+
+        $response = $this->deleteJson("/admin/api/permissions/{$viewTenantsId}");
+
+        $response->assertStatus(422)
+            ->assertJsonStructure(['message']);
+
+        $this->assertDatabaseHas('permissions', ['id' => $viewTenantsId]);
+
+        // Once the dependent permission is removed, deletion succeeds.
+        $role->syncPermissions([]);
+
+        $this->deleteJson("/admin/api/permissions/{$viewTenantsId}")->assertStatus(204);
+        $this->assertDatabaseMissing('permissions', ['id' => $viewTenantsId]);
     }
 }

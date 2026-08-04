@@ -205,7 +205,7 @@ class PaymentMethodTest extends TestCase
      */
     public function test_cannot_create_payment_method_without_proper_permissions()
     {
-        // Create admin user without 'manage plans' permission
+        // Create admin user without 'create payment methods' permission
         $role = Role::firstOrCreate([
             'name' => 'limited-admin',
             'guard_name' => 'admin',
@@ -213,7 +213,7 @@ class PaymentMethodTest extends TestCase
 
         // Create permission but don't assign it
         $permission = Permission::firstOrCreate([
-            'name' => 'manage plans',
+            'name' => 'create payment methods',
             'guard_name' => 'admin',
         ]);
 

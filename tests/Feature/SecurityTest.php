@@ -126,10 +126,10 @@ class SecurityTest extends TestCase
         $admin = AdminUser::factory()->create();
         $this->actingAs($admin, 'admin');
 
-        // Should be blocked without 'manage tenants' permission
+        // Should be blocked without 'view tenants' permission
         $this->get('/admin/api/tenants')->assertStatus(403);
 
-        // Should be blocked without 'manage staff' permission
+        // Should be blocked without 'view staff' permission
         $this->get('/admin/api/staff')->assertStatus(403);
     }
 
@@ -142,11 +142,11 @@ class SecurityTest extends TestCase
         $admin = AdminUser::factory()->create();
         $this->actingAs($admin, 'admin');
 
-        // Should be blocked without 'manage tenants' permission
+        // Should be blocked without 'view tenants' permission
         $this->get('/admin/api/tenants')->assertStatus(403);
         $this->post('/admin/api/tenants')->assertStatus(403);
 
-        // Should be blocked without 'manage staff' permission
+        // Should be blocked without 'view staff' permission
         $this->get('/admin/api/staff')->assertStatus(403);
         $this->post('/admin/api/staff')->assertStatus(403);
     }

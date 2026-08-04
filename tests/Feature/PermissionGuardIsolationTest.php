@@ -50,14 +50,12 @@ class PermissionGuardIsolationTest extends TestCase
         ]);
         $this->authenticateAsSuperAdmin();
 
-        $response = $this->getJson('/admin/api/permissions');
+        $response = $this->getJson('/admin/api/permissions?per_page=100');
 
         $response->assertStatus(200);
-        $modules = $response->json('permissions');
-        $allPermissions = collect($modules)->flatten(1);
+        $names = collect($response->json('permissions'))->pluck('name');
 
-        $names = $allPermissions->pluck('name');
-        $this->assertContains('manage tenants', $names);
+        $this->assertContains('view tenants', $names);
         $this->assertNotContains('web-permission', $names);
     }
 
@@ -131,7 +129,7 @@ class PermissionGuardIsolationTest extends TestCase
         $response->assertStatus(200);
         $names = collect($response->json('permissions'))->pluck('name');
 
-        $this->assertContains('manage tenants', $names);
+        $this->assertContains('view tenants', $names);
         $this->assertNotContains('web-permission', $names);
     }
 
@@ -146,7 +144,7 @@ class PermissionGuardIsolationTest extends TestCase
             'role_ids' => [$webRole->id],
         ]);
 
-        $response->assertStatus(200);
+        $response->assertStatus(422);
         $this->assertFalse($staff->fresh()->hasRole('web-role'));
     }
 

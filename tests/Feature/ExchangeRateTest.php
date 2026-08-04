@@ -33,7 +33,7 @@ class ExchangeRateTest extends TestCase
     private function grantManageSettings(): void
     {
         $permission = Permission::firstOrCreate([
-            'name' => 'manage settings',
+            'name' => 'edit settings',
             'guard_name' => 'admin',
         ]);
         Role::findByName('super-admin', 'admin')->givePermissionTo($permission);
@@ -170,11 +170,11 @@ class ExchangeRateTest extends TestCase
     }
 
     /**
-     * 🧪 Test: Admins without 'manage settings' cannot access exchange rates.
+     * 🧪 Test: Admins without 'view settings' cannot access exchange rates.
      */
     public function test_unauthorized_cannot_access_exchange_rates(): void
     {
-        Role::findByName('super-admin', 'admin')->revokePermissionTo('manage settings');
+        Role::findByName('super-admin', 'admin')->revokePermissionTo('view settings');
 
         $this->getJson('/admin/api/exchange-rates')->assertStatus(403);
     }

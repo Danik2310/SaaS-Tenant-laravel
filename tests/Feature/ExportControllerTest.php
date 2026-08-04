@@ -153,33 +153,33 @@ class ExportControllerTest extends TestCase
     //  Permission granularity
     // ──────────────────────────────────────────────
 
-    public function test_user_with_manage_subscriptions_can_export_subscriptions(): void
+    public function test_user_with_view_subscriptions_can_export_subscriptions(): void
     {
-        $this->authenticateAsUserWithPermission('manage subscriptions');
+        $this->authenticateAsUserWithPermission('view subscriptions');
 
         $this->postJson('/admin/api/export/subscriptions')
             ->assertOk();
     }
 
-    public function test_user_with_manage_subscriptions_cannot_export_tenants(): void
+    public function test_user_with_view_subscriptions_cannot_export_tenants(): void
     {
-        $this->authenticateAsUserWithPermission('manage subscriptions');
+        $this->authenticateAsUserWithPermission('view subscriptions');
 
         $this->postJson('/admin/api/export/tenants')
             ->assertForbidden();
     }
 
-    public function test_user_with_manage_staff_cannot_export_tenants(): void
+    public function test_user_with_view_staff_cannot_export_tenants(): void
     {
-        $this->authenticateAsUserWithPermission('manage staff');
+        $this->authenticateAsUserWithPermission('view staff');
 
         $this->postJson('/admin/api/export/tenants')
             ->assertForbidden();
     }
 
-    public function test_user_with_manage_plans_cannot_export_tenants(): void
+    public function test_user_with_view_plans_cannot_export_tenants(): void
     {
-        $this->authenticateAsUserWithPermission('manage plans');
+        $this->authenticateAsUserWithPermission('view plans');
 
         $this->postJson('/admin/api/export/tenants')
             ->assertForbidden();
