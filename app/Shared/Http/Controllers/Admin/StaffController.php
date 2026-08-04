@@ -13,6 +13,7 @@ use App\Models\AdminUser;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Shared\Commands\SyncStaffRolesCommand;
+use App\Shared\Contracts\PermissionServiceInterface;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -358,6 +359,10 @@ class StaffController extends Controller
     public function assignPermissions(AssignPermissionsRequest $request, string $id)
     {
         $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        app(PermissionServiceInterface::class)->validateDirectPermissionAssignment(
+            $request->validated('permission_ids')
+        );
 
         $admin->syncPermissions($request->validated('permission_ids'));
 

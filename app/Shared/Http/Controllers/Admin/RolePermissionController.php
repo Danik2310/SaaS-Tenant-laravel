@@ -12,6 +12,7 @@ use App\Http\Resources\RoleResource;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Shared\Commands\SyncRolePermissionsCommand;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Factories\PermissionPrerequisiteStrategyFactory;
 use Illuminate\Support\Facades\Auth;
 
@@ -266,7 +267,11 @@ class RolePermissionController extends Controller
     public function updatePermission(UpdatePermissionRequest $request, string $id)
     {
         $permission = Permission::where('guard_name', 'admin')->findOrFail($id);
-        $permission->update($request->validated());
+        $permission->update([
+            'name' => $request->validated('name'),
+            'description' => $request->validated('description', ''),
+            'module' => $request->validated('module'),
+        ]);
 
         activity('permission')
             ->causedBy(Auth::guard('admin')->user())
@@ -299,14 +304,14 @@ class RolePermissionController extends Controller
             return response()->json(['message' => 'Cannot delete permission assigned to roles'], 422);
         }
 
-        if ($permission->name === 'manage tenants') {
+        if ($permission->name === PermissionNames::VIEW_TENANTS) {
             $dependentNames = PermissionPrerequisiteStrategyFactory::getManagedPermissions();
             $rolesWithDependents = Role::whereHas('permissions', fn ($q) => $q->whereIn('name', $dependentNames)
             )->where('guard_name', 'admin')->count();
 
             if ($rolesWithDependents > 0) {
                 return response()->json([
-                    'message' => "Cannot delete 'manage tenants': {$rolesWithDependents} role(s) have dependent permissions assigned. Remove dependents first.",
+                    'message' => "Cannot delete '".PermissionNames::VIEW_TENANTS."': {$rolesWithDependents} role(s) have dependent permissions assigned. Remove dependents first.",
                 ], 422);
             }
         }

@@ -17,6 +17,12 @@ class PermissionService implements PermissionServiceInterface
         $role->syncPermissions($permissionIds);
     }
 
+    public function validateDirectPermissionAssignment(array $permissionIds): void
+    {
+        $this->validatePrivilegeHierarchy($permissionIds);
+        $this->validateDependencies($permissionIds);
+    }
+
     private function validatePrivilegeHierarchy(array $permissionIds): void
     {
         $user = Auth::guard('admin')->user();
