@@ -44,6 +44,17 @@ describe('api 403 response interceptor', () => {
     expect(assignSpy).toHaveBeenCalledWith('/admin/unauthorized?message=User%20does%20not%20have%20the%20right%20permissions.');
   });
 
+  test('does not redirect when the caller opts out with bypass403Redirect', async () => {
+    const bypassError = {
+      ...permissionError,
+      config: { bypass403Redirect: true },
+    };
+
+    await expect(rejected(bypassError)).rejects.toEqual(bypassError);
+
+    expect(assignSpy).not.toHaveBeenCalled();
+  });
+
   test('does not redirect on a plan-limit 403', async () => {
     const planLimitError = {
       response: { status: 403, data: { message: 'You have reached the users limit of 5.', type: 'plan_limit' } },

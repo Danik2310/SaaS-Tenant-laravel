@@ -170,11 +170,25 @@ class ExchangeRateTest extends TestCase
     }
 
     /**
-     * 🧪 Test: Admins without 'view settings' cannot access exchange rates.
+     * 🧪 Test: Admins with a price-viewing permission can access exchange rates.
+     */
+    public function test_price_viewing_admin_can_access_exchange_rates(): void
+    {
+        $this->fakeLiveApi();
+        Role::findByName('super-admin', 'admin')->syncPermissions(['view plans']);
+
+        $this->getJson('/admin/api/exchange-rates')
+            ->assertStatus(200)
+            ->assertJsonPath('base', 'USD');
+    }
+
+    /**
+     * 🧪 Test: Admins without price-viewing permissions cannot access exchange rates.
      */
     public function test_unauthorized_cannot_access_exchange_rates(): void
     {
-        Role::findByName('super-admin', 'admin')->revokePermissionTo('view settings');
+        Role::findByName('super-admin', 'admin')
+            ->revokePermissionTo(['view plans', 'view subscriptions', 'create tenants', 'edit tenants']);
 
         $this->getJson('/admin/api/exchange-rates')->assertStatus(403);
     }

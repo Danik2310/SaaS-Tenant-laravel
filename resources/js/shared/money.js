@@ -16,7 +16,7 @@ let inFlight = null;
 
 async function fetchMoneyInfo() {
     try {
-        const res = await api.get('/admin/api/exchange-rates');
+        const res = await api.get('/admin/api/exchange-rates', { bypass403Redirect: true });
         const data = res.data || {};
         return {
             ready: true,

@@ -20,7 +20,7 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        if (error.response?.status === 403 && error.response?.data?.type !== 'plan_limit') {
+        if (error.response?.status === 403 && error.response?.data?.type !== 'plan_limit' && !error.config?.bypass403Redirect) {
             const message = error.response?.data?.message;
             const query = message ? `?message=${encodeURIComponent(message)}` : '';
             window.location.assign(`/admin/unauthorized${query}`);

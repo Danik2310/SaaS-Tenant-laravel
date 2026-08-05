@@ -180,9 +180,12 @@ Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'cent
     Route::middleware([PermissionNames::middleware([PermissionNames::VIEW_SETTINGS], 'admin')])->group(function () {
         Route::get('/api/settings', [SettingController::class, 'index']);
         Route::get('/api/settings/{key}', [SettingController::class, 'get']);
-        Route::get('/api/exchange-rates', [ExchangeRateController::class, 'index']);
     });
     Route::put('/api/settings', [SettingController::class, 'update'])->middleware(PermissionNames::middleware([PermissionNames::EDIT_SETTINGS], 'admin'));
+
+    // Reference data - any role that can view prices needs exchange rates
+    Route::get('/api/exchange-rates', [ExchangeRateController::class, 'index'])
+        ->middleware(PermissionNames::middleware([PermissionNames::VIEW_PLANS, PermissionNames::VIEW_SUBSCRIPTIONS, PermissionNames::CREATE_TENANTS, PermissionNames::EDIT_TENANTS], 'admin'));
 
     // Data export - POST uses ExportRequest for entity-level authorization.
     // Route-level permission middleware acts as a safety net covering all exportable entities.
