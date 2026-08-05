@@ -56,9 +56,11 @@ Route::middleware(['auth:admin', 'central.domain'])->get('/admin/unauthorized', 
     ]);
 })->name('admin.unauthorized');
 
+// Auth-state probe — returns 200 {user:null} when logged out (AdminAuthController handles the null case)
+Route::middleware(['throttle:100,1', 'impersonation.expiry', 'central.domain'])->get('/admin/user', [AdminAuthController::class, 'user']);
+
 // Protected admin routes — only accessible on central domains
 Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'central.domain'])->prefix('admin')->group(function () {
-    Route::get('/user', [AdminAuthController::class, 'user']);
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Dashboard statistics - requires read-level tenant access
