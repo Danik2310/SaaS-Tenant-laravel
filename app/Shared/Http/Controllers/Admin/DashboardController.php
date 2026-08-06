@@ -37,9 +37,10 @@ class DashboardController extends Controller
             Cache::forget($cacheKey);
         }
 
-        [$totalTenants, $activeTenants, $suspendedTenants, $deletedTenants, $staffCount, $activeStaff, $plansCount, $recentTenants, $tenantsByMonth] = Cache::remember($cacheKey, 300, function () {
+        [$totalTenants, $activeTenants, $trialTenants, $suspendedTenants, $deletedTenants, $staffCount, $activeStaff, $plansCount, $recentTenants, $tenantsByMonth] = Cache::remember($cacheKey, 300, function () {
             $totalTenants = Tenant::withTrashed()->count();
             $activeTenants = Tenant::where('status', 'Active')->count();
+            $trialTenants = Tenant::where('status', 'Trial')->count();
             $suspendedTenants = Tenant::where('status', 'Suspended')->count();
             $deletedTenants = Tenant::onlyTrashed()->count();
 
@@ -53,7 +54,7 @@ class DashboardController extends Controller
                 : Tenant::query();
 
             $recentTenants = $tenantQuery->clone()
-                ->select(['id', 'name', 'status', 'created_at'])
+                ->select(['id', 'name', 'status', 'trial_ends_at', 'created_at'])
                 ->with('domains:tenant_id,domain')
                 ->latest()
                 ->take(5)
@@ -63,6 +64,7 @@ class DashboardController extends Controller
                         'name' => $tenant->name,
                         'domain' => $tenant->domains->first()?->domain ?? 'N/A',
                         'status' => $tenant->status,
+                        'trial_ends_at' => $tenant->trial_ends_at,
                         'created_at' => $tenant->created_at->format('Y-m-d'),
                     ];
                 })->values()->toArray();
@@ -74,11 +76,12 @@ class DashboardController extends Controller
                 ->get()
                 ->toArray();
 
-            return [$totalTenants, $activeTenants, $suspendedTenants, $deletedTenants, $staffCount, $activeStaff, $plansCount, $recentTenants, $tenantsByMonth];
+            return [$totalTenants, $activeTenants, $trialTenants, $suspendedTenants, $deletedTenants, $staffCount, $activeStaff, $plansCount, $recentTenants, $tenantsByMonth];
         });
 
         $statusDistribution = [
             ['name' => 'Active', 'value' => $activeTenants],
+            ['name' => 'Trial', 'value' => $trialTenants],
             ['name' => 'Suspended', 'value' => $suspendedTenants],
             ['name' => 'Deleted', 'value' => $deletedTenants],
         ];
@@ -87,6 +90,7 @@ class DashboardController extends Controller
             'stats' => [
                 'total_tenants' => $totalTenants,
                 'active_tenants' => $activeTenants,
+                'trial_tenants' => $trialTenants,
                 'suspended_tenants' => $suspendedTenants,
                 'deleted_tenants' => $deletedTenants,
                 'total_staff' => $staffCount,
