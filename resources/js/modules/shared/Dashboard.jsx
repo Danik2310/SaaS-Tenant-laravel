@@ -520,16 +520,17 @@ export default function Dashboard() {
                                                             size="small"
                                                             color={
                                                                 s === 'Active' ? 'success'
+                                                                : s === 'Trial' ? 'warning'
                                                                 : s === 'Suspended' ? 'error'
                                                                 : 'default'
                                                             }
-                                                            variant={s === 'Active' || s === 'Suspended' ? 'filled' : 'outlined'}
+                                                            variant={s === 'Active' || s === 'Trial' || s === 'Suspended' ? 'filled' : 'outlined'}
                                                         />
                                                     );
                                                 },
                                             },
                                         ]}
-                                        data={tenants.filter(t => showDeleted ? true : t.status === 'Active')}
+                                        data={tenants.filter(t => showDeleted ? true : ['Active', 'Trial'].includes(t.status))}
                                         onImpersonate={handleImpersonateTenant}
                                         emptyMessage={showDeleted ? 'No tenants found.' : 'No active tenants to impersonate.'}
                                         loading={loading}

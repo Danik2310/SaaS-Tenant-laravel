@@ -11,6 +11,7 @@ import CardContent from '@mui/material/CardContent';
 import Skeleton from '@mui/material/Skeleton';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
+import MuiTooltip from '@mui/material/Tooltip';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -179,7 +180,7 @@ export default function DashboardOverview() {
     const chartHeight = isMobile ? 220 : isTablet ? 260 : 300;
     const pieRadius = isMobile ? 60 : 80;
 
-    const COLORS = [theme.palette.success.light, theme.palette.error.light, theme.palette.text.secondary];
+    const COLORS = [theme.palette.success.light, theme.palette.warning.light, theme.palette.error.light, theme.palette.text.secondary];
 
     const paginatedTenants = recentTenants.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -402,18 +403,38 @@ export default function DashboardOverview() {
                                             </Typography>
                                         </TableCell>
                                         <TableCell>
-                                            <Chip
-                                                label={tenant.status}
-                                                size="small"
-                                                sx={{
-                                                    bgcolor: tenant.status === 'Active' ? '#dcfce7' : tenant.status === 'Suspended' ? '#fee2e2' : '#f1f5f9',
-                                                    color: tenant.status === 'Active' ? '#166534' : tenant.status === 'Suspended' ? '#991b1b' : '#64748b',
-                                                    fontWeight: 600,
-                                                    height: 24,
-                                                    fontSize: 12,
-                                                    fontStyle: tenant.status === 'Deleted' ? 'italic' : 'normal',
-                                                }}
-                                            />
+                                            {tenant.status === 'Trial' ? (
+                                                <MuiTooltip
+                                                    title={tenant.trial_ends_at
+                                                        ? `Trial - temporary full access until ${new Date(tenant.trial_ends_at).toLocaleDateString()}`
+                                                        : 'Trial - temporary full access'}
+                                                >
+                                                    <Chip
+                                                        label={tenant.status}
+                                                        size="small"
+                                                        sx={{
+                                                            bgcolor: '#fef9c3',
+                                                            color: '#854d0e',
+                                                            fontWeight: 600,
+                                                            height: 24,
+                                                            fontSize: 12,
+                                                        }}
+                                                    />
+                                                </MuiTooltip>
+                                            ) : (
+                                                <Chip
+                                                    label={tenant.status}
+                                                    size="small"
+                                                    sx={{
+                                                        bgcolor: tenant.status === 'Active' ? '#dcfce7' : tenant.status === 'Suspended' ? '#fee2e2' : '#f1f5f9',
+                                                        color: tenant.status === 'Active' ? '#166534' : tenant.status === 'Suspended' ? '#991b1b' : '#64748b',
+                                                        fontWeight: 600,
+                                                        height: 24,
+                                                        fontSize: 12,
+                                                        fontStyle: tenant.status === 'Deleted' ? 'italic' : 'normal',
+                                                    }}
+                                                />
+                                            )}
                                         </TableCell>
                                         <TableCell sx={{ color: 'text.secondary', fontSize: 13 }}>
                                             {tenant.created_at}

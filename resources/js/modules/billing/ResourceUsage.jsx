@@ -227,12 +227,9 @@ function TenantUsageCard({ metric }) {
     const tenant = metric?.tenant || {};
     const planLimits = metric?.limits || {};
 
-    const statusColor = tenant.status === 'Active' ? 'success' : 'error';
+    const statusColor = tenant.status === 'Active' ? 'success' : tenant.status === 'Trial' ? 'warning' : 'error';
 
     const subscriptionChip = () => {
-        if (tenant.is_on_trial) {
-            return <Chip label="Trial" size="small" color="warning" variant="outlined" sx={{ height: 20, fontSize: 10 }} />;
-        }
         if (tenant.subscription_status === 'active') {
             return <Chip label="Active" size="small" color="success" variant="outlined" sx={{ height: 20, fontSize: 10 }} />;
         }
@@ -272,7 +269,7 @@ function TenantUsageCard({ metric }) {
                         label={tenant.status || 'N/A'}
                         size="small"
                         color={statusColor}
-                        variant={tenant.status === 'Active' ? 'filled' : 'outlined'}
+                        variant={tenant.status === 'Active' || tenant.status === 'Trial' ? 'filled' : 'outlined'}
                     />
                 </Box>
             </Box>

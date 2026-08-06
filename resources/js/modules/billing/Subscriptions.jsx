@@ -53,7 +53,7 @@ function TenantCell({ cell, row }) {
     }
 
     return (
-        <Tooltip title={`Tenant is ${status}`}>
+        <Tooltip title={status === 'Trial' ? 'Tenant is on trial - temporary full access' : `Tenant is ${status}`}>
             <Chip label={name} size="small" sx={{ fontWeight: 600, ...TENANT_STATUS_STYLES[status] }} />
         </Tooltip>
     );

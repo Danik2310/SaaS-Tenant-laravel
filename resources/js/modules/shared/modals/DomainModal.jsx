@@ -144,8 +144,8 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                             ) : (
                                                 <CheckCircleIcon sx={{ fontSize: 16, color: '#22c55e' }} />
                                             )}
-                                            <Typography variant="body2" sx={{ color: tenant.trial_has_expired ? '#ef4444' : '#22c55e' }}>
-                                                Trial {tenant.trial_has_expired ? 'expired' : 'active'}
+                                            <Typography variant="body2" sx={{ color: tenant.trial_has_expired ? '#ef4444' : '#854d0e' }}>
+                                                Trial {tenant.trial_has_expired ? 'expired' : 'active (temporary full access)'}
                                                 {tenant.trial_ends_at && ` — ends ${new Date(tenant.trial_ends_at).toLocaleDateString()}`}
                                             </Typography>
                                         </Box>

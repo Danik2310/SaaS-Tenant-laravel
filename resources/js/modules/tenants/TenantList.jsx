@@ -210,6 +210,21 @@ export default function TenantList({
                     );
                 }
                 const status = cell.getValue();
+                if (status === 'Trial') {
+                    const endsAt = row.original.trial_ends_at;
+                    const title = row.original.trial_has_expired
+                        ? 'Trial has ended - pending suspension'
+                        : `Trial - temporary full access${endsAt ? ` until ${new Date(endsAt).toLocaleDateString()}` : ''}`;
+                    return (
+                        <Tooltip title={title}>
+                            <Chip
+                                label={status}
+                                size="small"
+                                sx={{ bgcolor: '#fef9c3', color: '#854d0e', fontWeight: 600 }}
+                            />
+                        </Tooltip>
+                    );
+                }
                 return (
                     <Tooltip title={status === 'Active' ? 'Tenant is active and operational' : 'Tenant is suspended and cannot access the system'}>
                         <Chip
