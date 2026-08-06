@@ -85,4 +85,34 @@ describe('DashboardOverview', () => {
     );
     expect(mockApi.get).not.toHaveBeenCalled();
   });
+
+  test('renders Trial status in the status distribution and recent tenants', async () => {
+    useAuthContextMock.mockReturnValue({ permissions: ['view tenants'] });
+    mockApi.get.mockResolvedValue({
+      data: {
+        ...statsResponse.data,
+        status_distribution: [
+          { name: 'Active', value: 8 },
+          { name: 'Trial', value: 2 },
+          { name: 'Suspended', value: 1 },
+          { name: 'Deleted', value: 1 },
+        ],
+        recent_tenants: [
+          {
+            name: 'Acme Corp',
+            domain: 'acme.test',
+            status: 'Trial',
+            trial_ends_at: '2026-09-01T00:00:00Z',
+            created_at: '2026-08-01',
+          },
+        ],
+      },
+    });
+
+    renderWithProviders(<DashboardOverview />);
+
+    expect(await screen.findByText(/Trial \(2\)/)).toBeInTheDocument();
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
+    expect(screen.getByText('Trial')).toBeInTheDocument();
+  });
 });

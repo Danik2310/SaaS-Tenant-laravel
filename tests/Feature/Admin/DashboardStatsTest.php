@@ -8,6 +8,7 @@ use App\Models\AdminUser;
 use App\Models\Plan;
 use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -33,6 +34,8 @@ class DashboardStatsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The stats endpoint caches per key; flush so test data is never stale.
+        Cache::flush();
         // setUpAdminAuth() called inline in tests that need it.
     }
 
@@ -66,6 +69,7 @@ class DashboardStatsTest extends TestCase
         // Create tenants with different statuses
         $this->createTenantWithoutEvents(['status' => 'Active']);
         $this->createTenantWithoutEvents(['status' => 'Active']);
+        $this->createTenantWithoutEvents(['status' => 'Trial']);
         $this->createTenantWithoutEvents(['status' => 'Suspended']);
         // Soft-deleted tenant (for trashed count) — use helper to avoid DDL
         $deleted = $this->createTenantWithoutEvents(['status' => 'Deleted']);
@@ -85,6 +89,7 @@ class DashboardStatsTest extends TestCase
                 'stats' => [
                     'total_tenants',
                     'active_tenants',
+                    'trial_tenants',
                     'suspended_tenants',
                     'deleted_tenants',
                     'total_staff',
@@ -98,8 +103,9 @@ class DashboardStatsTest extends TestCase
 
         $response->assertJson([
             'stats' => [
-                'total_tenants' => 4,
+                'total_tenants' => 5,
                 'active_tenants' => 2,
+                'trial_tenants' => 1,
                 'suspended_tenants' => 1,
                 'deleted_tenants' => 1,
                 'total_staff' => 4, // 1 from setUpAdminAuth() + 3 created above
@@ -109,7 +115,7 @@ class DashboardStatsTest extends TestCase
         ]);
     }
 
-    public function test_recent_tenants_returns_latest_seven(): void
+    public function test_recent_tenants_returns_latest_five(): void
     {
         $this->setUpAdminAuth();
 
@@ -127,11 +133,11 @@ class DashboardStatsTest extends TestCase
         $response->assertOk();
         $recent = $response->json('recent_tenants');
 
-        $this->assertCount(7, $recent);
-        // Most recent 7 should be Tenant 10 through Tenant 04
+        $this->assertCount(5, $recent);
+        // Most recent 5 should be Tenant 10 through Tenant 06
         $this->assertEquals('Tenant 10', $recent[0]['name']);
         $this->assertEquals('Tenant 09', $recent[1]['name']);
-        $this->assertEquals('Tenant 04', $recent[6]['name']);
+        $this->assertEquals('Tenant 06', $recent[4]['name']);
     }
 
     public function test_tenants_by_month_returns_grouped_counts(): void
@@ -159,6 +165,7 @@ class DashboardStatsTest extends TestCase
 
         $this->createTenantWithoutEvents(['status' => 'Active']);
         $this->createTenantWithoutEvents(['status' => 'Active']);
+        $this->createTenantWithoutEvents(['status' => 'Trial']);
         $this->createTenantWithoutEvents(['status' => 'Suspended']);
         $deleted = $this->createTenantWithoutEvents(['status' => 'Deleted']);
         $this->softDeleteTenant($deleted);
@@ -168,10 +175,11 @@ class DashboardStatsTest extends TestCase
         $response->assertOk();
         $distribution = $response->json('status_distribution');
 
-        $this->assertCount(3, $distribution);
+        $this->assertCount(4, $distribution);
         $this->assertEquals(['name' => 'Active', 'value' => 2], $distribution[0]);
-        $this->assertEquals(['name' => 'Suspended', 'value' => 1], $distribution[1]);
-        $this->assertEquals(['name' => 'Deleted', 'value' => 1], $distribution[2]);
+        $this->assertEquals(['name' => 'Trial', 'value' => 1], $distribution[1]);
+        $this->assertEquals(['name' => 'Suspended', 'value' => 1], $distribution[2]);
+        $this->assertEquals(['name' => 'Deleted', 'value' => 1], $distribution[3]);
     }
 
     public function test_unauthenticated_request_is_blocked(): void
