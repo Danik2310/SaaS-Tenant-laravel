@@ -38,7 +38,8 @@ class AdminAuthTest extends TestCase
         ]);
 
         $response->assertStatus(200)
-            ->assertJson(['success' => true]);
+            ->assertJson(['success' => true])
+            ->assertCookie('token');
 
         $this->assertAuthenticated('admin');
     }
