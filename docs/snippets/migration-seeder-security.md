@@ -217,6 +217,26 @@ Never `dropColumn`, `renameColumn`, or change a column type in one step on produ
 1. **Expand**: Add new column (nullable), deploy code that writes to both old and new
 2. **Contract**: Backfill, drop old column, deploy code that reads only new
 
+**Index changes** follow the same discipline. Replacing a single-column index with a wider compound index is done in **two separate migrations** so a deployment can never be left without a usable index:
+
+1. **Expand**: add the compound index (e.g. `subscriptions[status, ends_at]`), deploy code
+2. **Contract**: drop the now-redundant leftmost-prefix index (e.g. `subscriptions.status`), deploy
+
+Dropping a single-column index is only safe when its leftmost columns are already covered by another index **and** no foreign key depends on it (MySQL requires an index on the FK column — check `SHOW INDEXES` for the FK-backed index before dropping). Prefer guarded, idempotent drops:
+
+```php
+if (Schema::hasTable('subscriptions')
+    && Schema::hasIndex('subscriptions', 'subscriptions_status_ends_at_index')
+    && ! Schema::hasIndex('subscriptions', 'subscriptions_status_index')
+) {
+    // drop...
+}
+```
+
+See `2026_08_10_000002_add_missing_indexes_to_central_tables.php` /
+`2026_08_10_000003_drop_redundant_indexes_from_central_tables.php` (central) and
+`2026_08_10_000001_drop_redundant_indexes_from_tenant_tables.php` (tenant) for the reference implementation.
+
 ---
 
 ## 4. PII Handling
