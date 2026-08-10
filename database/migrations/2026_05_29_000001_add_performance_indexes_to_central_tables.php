@@ -119,5 +119,49 @@ return new class extends Migration
         } catch (Throwable) {
             // Index may have already been dropped — that's fine
         }
+
+        // Restore the foreign keys we dropped above so a single-step rollback
+        // (migrate:rollback) leaves referential integrity intact. Mirrors the
+        // drop-FK → drop-index → re-add-FK pattern from
+        // 2026_05_09_000001_add_tenant_status_index_to_subscriptions::down().
+        //
+        // Each re-add reuses the original constraint definition and lets MySQL
+        // auto-create the single-column index the FK requires. During a full
+        // multi-step rollback the earlier migrations' down() methods drop these
+        // FKs (with guards) before removing their columns, so re-adding here is
+        // safe for both --step=1 and --step=N.
+        try {
+            Schema::table('tenants', function (Blueprint $table) {
+                $table->foreign('plan_id')
+                    ->references('id')
+                    ->on('plans')
+                    ->nullOnDelete();
+            });
+        } catch (Throwable) {
+            // FK may still exist or driver may not support ALTER ADD CONSTRAINT
+            // (e.g. SQLite) — fine, integrity is already preserved.
+        }
+
+        try {
+            Schema::table('domains', function (Blueprint $table) {
+                $table->foreign('tenant_id')
+                    ->references('id')
+                    ->on('tenants')
+                    ->cascadeOnDelete();
+            });
+        } catch (Throwable) {
+            // See above.
+        }
+
+        try {
+            Schema::table('subscriptions', function (Blueprint $table) {
+                $table->foreign('plan_id')
+                    ->references('id')
+                    ->on('plans')
+                    ->nullOnDelete();
+            });
+        } catch (Throwable) {
+            // See above.
+        }
     }
 };
