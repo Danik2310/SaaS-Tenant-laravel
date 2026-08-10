@@ -197,6 +197,9 @@ return [
         '--force' => true, // This needs to be true to run migrations in production.
         '--path' => [database_path('migrations/tenant')],
         '--realpath' => true,
+        // Run each migration in its own batch so tenants:rollback rolls back
+        // one migration at a time instead of all at once.
+        '--step' => true,
     ],
 
     /**
