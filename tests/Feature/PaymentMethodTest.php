@@ -651,6 +651,10 @@ class PaymentMethodTest extends TestCase
      */
     public function test_can_toggle_payment_method_active_status()
     {
+        // The "at least one active payment method" rule must be satisfiable,
+        // so seed a second active method the toggle cannot touch.
+        PaymentMethod::factory()->create(['name' => 'Anchor Active Method', 'active' => true]);
+
         $paymentMethod = PaymentMethod::factory()->create([
             'name' => 'Toggle Test Method',
             'active' => true,

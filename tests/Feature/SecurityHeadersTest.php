@@ -94,7 +94,7 @@ class SecurityHeadersTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
 
         $this->assertStringContainsString("default-src 'self'", $csp);
-        $this->assertStringContainsString("script-src 'self' 'unsafe-inline'", $csp);
+        $this->assertStringContainsString("script-src 'self' 'nonce-", $csp);
         $this->assertStringNotContainsString("'unsafe-eval'", $csp);
         $this->assertStringContainsString("style-src 'self' 'unsafe-inline' https://fonts.bunny.net", $csp);
         $this->assertStringContainsString("font-src 'self' data: https://fonts.bunny.net", $csp);

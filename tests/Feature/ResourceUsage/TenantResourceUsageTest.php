@@ -197,7 +197,7 @@ class TenantResourceUsageTest extends TestCase
         $model = new TenantResourceUsage;
 
         $this->assertEquals(
-            'mysql',
+            'mysql_central',
             $model->getConnectionName(),
             'TenantResourceUsage must use the central mysql connection'
         );

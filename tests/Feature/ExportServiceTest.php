@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Shared\Services\ExportService;
 use Database\Seeders\CentralRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -54,7 +55,15 @@ class ExportServiceTest extends TestCase
 
     private function createTenant(): Tenant
     {
-        return Tenant::withoutEvents(function () {
+        // Tenant::create() always writes to the 'mysql' connection — stancl's
+        // CentralConnection trait pins it to config('tenancy.database.central_connection')
+        // (= 'mysql'), ignoring on('mysql_central'). withoutEvents() also
+        // suppresses the CREATE DATABASE hook that other tests rely on to
+        // implicitly commit (MySQL DDL auto-commits) and release the tenant row
+        // for mysql_central's FK check. Without a commit, the Subscription FK
+        // check on the uncommitted tenant row deadlocks with "1205 Lock wait
+        // timeout". Commit explicitly so the row is visible on both connections.
+        $tenant = Tenant::withoutEvents(function () {
             $tenant = Tenant::create([
                 'id' => 'test-'.uniqid(),
                 'name' => 'Test Tenant',
@@ -68,6 +77,10 @@ class ExportServiceTest extends TestCase
 
             return $tenant;
         });
+
+        DB::connection('mysql')->commit();
+
+        return $tenant;
     }
 
     // ──────────────────────────────────────────────
