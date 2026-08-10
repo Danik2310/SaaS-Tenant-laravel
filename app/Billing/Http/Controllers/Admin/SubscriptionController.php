@@ -23,6 +23,7 @@ class SubscriptionController extends Controller
      * @authenticated
      *
      * @queryParam status string Filter by status (active, cancelled, pending, expired). Example: active
+     * @queryParam plan_id integer Filter by plan ID. Example: 2
      * @queryParam plan_name string Filter by plan name. Example: Pro
      * @queryParam tenant_name string Filter by tenant name. Example: Acme
      * @queryParam search string Search by plan name or tenant name. Example: Acme
@@ -36,6 +37,10 @@ class SubscriptionController extends Controller
 
         if ($status = $request->query('status')) {
             $query->where('subscriptions.status', $status);
+        }
+
+        if ($planId = $request->query('plan_id')) {
+            $query->where('subscriptions.plan_id', $planId);
         }
 
         if ($planName = $request->query('plan_name')) {
