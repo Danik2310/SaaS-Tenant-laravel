@@ -204,9 +204,53 @@ class TenantMigrationTest extends TestCase
                     "Tenant table '{$expectedTable}' should exist in database '{$dbName}'"
                 );
             }
+
+            // Verify the index state produced by the tenant migrations.
+            // The redundant leftmost-prefix indexes must have been dropped
+            // (2026_08_10_000001) while the wider compound indexes remain.
+            $this->assertTenantIndexState($dbName, $connectionName);
         } finally {
             DB::purge($connectionName);
         }
+    }
+
+    /**
+     * Check that the tenant schema has the expected index state.
+     *
+     * products.active / permissions.guard_name / roles.guard_name are
+     * leftmost prefixes of wider compound indexes, so the single-column
+     * variants are dropped (2026_08_10_000001) and the compound ones stay.
+     */
+    private function assertTenantIndexState(string $dbName, string $connectionName): void
+    {
+        $keyNames = fn (string $table) => array_map(
+            fn ($row) => $row->Key_name,
+            DB::connection($connectionName)->select("SHOW INDEXES FROM `{$table}`")
+        );
+
+        $productIndexes = $keyNames('products');
+        $this->assertContains('products_active_created_at_index', $productIndexes,
+            "products_active_created_at_index should exist in database '{$dbName}'"
+        );
+        $this->assertNotContains('products_active_index', $productIndexes,
+            "redundant products_active_index should be dropped in database '{$dbName}'"
+        );
+
+        $permissionIndexes = $keyNames('permissions');
+        $this->assertContains('permissions_guard_module_name_index', $permissionIndexes,
+            "permissions_guard_module_name_index should exist in database '{$dbName}'"
+        );
+        $this->assertNotContains('permissions_guard_name_index', $permissionIndexes,
+            "redundant permissions_guard_name_index should be dropped in database '{$dbName}'"
+        );
+
+        $roleIndexes = $keyNames('roles');
+        $this->assertContains('roles_guard_name_name_index', $roleIndexes,
+            "roles_guard_name_name_index should exist in database '{$dbName}'"
+        );
+        $this->assertNotContains('roles_guard_name_index', $roleIndexes,
+            "redundant roles_guard_name_index should be dropped in database '{$dbName}'"
+        );
     }
 
     /**

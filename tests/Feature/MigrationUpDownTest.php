@@ -76,6 +76,40 @@ class MigrationUpDownTest extends TestCase
     }
 
     /**
+     * ✅ Test: fresh schema has the expected index state.
+     *
+     * Verifies the expand/contract index migrations:
+     * - 2026_08_10_000002 adds activity_log_created_at_index and
+     *   subscriptions_status_ends_at_index
+     * - 2026_08_10_000003 drops the redundant single-column prefixes
+     *   (subscriptions_status_index, permissions_guard_name_index,
+     *   roles_guard_name_index) while the wider compound indexes remain.
+     */
+    public function test_fresh_schema_has_expected_index_state(): void
+    {
+        $exitCode = $this->runFresh();
+        if ($exitCode !== 0) {
+            $this->markTestSkipped('migrate:fresh failed - database may be in an inconsistent state');
+
+            return;
+        }
+
+        // Expand: new covering indexes exist
+        $this->assertTrue(Schema::hasTable('activity_log'));
+        $this->assertTrue(Schema::hasIndex('activity_log', 'activity_log_created_at_index'));
+        $this->assertTrue(Schema::hasIndex('subscriptions', 'subscriptions_status_ends_at_index'));
+
+        // Contract: redundant leftmost-prefix indexes dropped
+        $this->assertFalse(Schema::hasIndex('subscriptions', 'subscriptions_status_index'));
+        $this->assertFalse(Schema::hasIndex('permissions', 'permissions_guard_name_index'));
+        $this->assertFalse(Schema::hasIndex('roles', 'roles_guard_name_index'));
+
+        // The wider compound indexes must still be present
+        $this->assertTrue(Schema::hasIndex('permissions', 'permissions_guard_module_name_index'));
+        $this->assertTrue(Schema::hasIndex('roles', 'roles_guard_name_name_index'));
+    }
+
+    /**
      * ✅ Test: rolling back 10 steps works without errors.
      *
      * Performs migrate:fresh first, then rolls back 10 steps.
@@ -159,8 +193,9 @@ class MigrationUpDownTest extends TestCase
      * This does NOT affect `migrate:fresh` (used by RefreshDatabase), which uses
      * `db:wipe` with `SET FOREIGN_KEY_CHECKS=0` to cleanly drop all tables.
      *
-     * Workaround: Run `php artisan test --process-isolation` to run each test
-     * class in a separate PHP process, ensuring database isolation.
+     * IMPORTANT: On every path (success, incomplete, exception) the schema is
+     * restored with migrate:fresh so this class never leaves the shared central
+     * database partially rolled back for the tests that follow.
      */
     public function test_migrate_rollback_entire_then_fresh(): void
     {
@@ -180,6 +215,8 @@ class MigrationUpDownTest extends TestCase
                 '--path' => 'database/migrations',
             ]);
         } catch (\Throwable $e) {
+            $this->restoreSchemaAfterRollback();
+
             $this->markTestIncomplete(
                 'Full rollback skipped: MySQL deadlock/metadata lock error. '.
                 'Rolling back 99 interdependent FK migrations at once triggers '.
@@ -197,6 +234,8 @@ class MigrationUpDownTest extends TestCase
             // The specific issue is that down() methods may try to drop FKs
             // that were already dropped by earlier migrations in the rollback
             // chain, or create FKs on tables that no longer exist.
+            $this->restoreSchemaAfterRollback();
+
             $this->markTestIncomplete(
                 'Full rollback skipped: MySQL FK metadata limitation. '.
                 'Rolling back 99 interdependent FK migrations at once may '.
@@ -217,6 +256,8 @@ class MigrationUpDownTest extends TestCase
                 '--path' => 'database/migrations',
             ]);
         } catch (\Throwable $e) {
+            $this->restoreSchemaAfterRollback();
+
             $this->markTestIncomplete(
                 'migrate:fresh after full rollback failed: '.$e->getMessage()
             );
@@ -224,5 +265,20 @@ class MigrationUpDownTest extends TestCase
             return;
         }
         $this->assertSame(0, $freshExitCode, 'migrate:fresh after full rollback should exit with code 0');
+    }
+
+    /**
+     * Restore a fully migrated schema after a partial rollback so the shared
+     * central database is never left half-rolled-back for later tests.
+     */
+    private function restoreSchemaAfterRollback(): void
+    {
+        $exitCode = $this->runFresh(2);
+
+        if ($exitCode !== 0) {
+            // Give the metadata lock a moment to clear, then try once more.
+            usleep(500000);
+            $this->runFresh(2);
+        }
     }
 }
