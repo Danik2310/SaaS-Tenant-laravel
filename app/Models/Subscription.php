@@ -13,6 +13,7 @@ class Subscription extends Model
     use HasFactory;
 
     protected $fillable = [
+        'tenant_id',
         'plan_id',
         'starts_at',
         'ends_at',
