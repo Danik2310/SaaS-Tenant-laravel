@@ -2,14 +2,13 @@
 
 namespace App\Http\Requests;
 
-use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProfileDeleteRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null && $this->user()->can(PermissionNames::MANAGE_PROFILE);
+        return $this->user() !== null;
     }
 
     public function rules(): array
