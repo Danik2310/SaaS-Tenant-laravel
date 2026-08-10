@@ -46,21 +46,21 @@ Route::get('/', function () {
 Route::middleware(['central.domain'])->group(function () {
     Route::get('/central/login', [AdminAuthController::class, 'showLogin'])->name('central.login');
     Route::post('/central/login', [AdminAuthController::class, 'login'])->middleware('throttle:5,1');
-    Route::post('/central/logout', [AdminAuthController::class, 'logout'])->middleware('auth:admin')->name('central.logout');
+    Route::post('/central/logout', [AdminAuthController::class, 'logout'])->middleware(['jwt.cookie', 'auth:admin'])->name('central.logout');
 });
 
 // Unauthorized page (accessible to authenticated admin users on central domain only)
-Route::middleware(['auth:admin', 'central.domain'])->get('/admin/unauthorized', function () {
+Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'central.domain'])->get('/admin/unauthorized', function () {
     return Inertia::render('Unauthorized', [
         'message' => request()->query('message'),
     ]);
 })->name('admin.unauthorized');
 
 // Auth-state probe — returns 200 {user:null} when logged out (AdminAuthController handles the null case)
-Route::middleware(['throttle:100,1', 'impersonation.expiry', 'central.domain'])->get('/admin/user', [AdminAuthController::class, 'user']);
+Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'throttle:100,1', 'impersonation.expiry', 'central.domain'])->get('/admin/user', [AdminAuthController::class, 'user']);
 
 // Protected admin routes — only accessible on central domains
-Route::middleware(['auth:admin', 'throttle:100,1', 'impersonation.expiry', 'central.domain'])->prefix('admin')->group(function () {
+Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:100,1', 'impersonation.expiry', 'central.domain'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Dashboard statistics - requires read-level tenant access

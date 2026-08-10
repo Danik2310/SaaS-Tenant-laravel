@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -40,6 +41,16 @@ class Handler extends ExceptionHandler
             if ($request->expectsJson() || $request->is('admin/api/*')) {
                 return response()->json(['message' => 'Unauthenticated.'], 401);
             }
+        });
+
+        $this->renderable(function (JWTException $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+
+            $isCentral = in_array($request->getHost(), config('tenancy.central_domains', []), true);
+
+            return redirect()->guest($isCentral ? route('central.login') : route('login'));
         });
 
         $this->renderable(function (AuthorizationException $e, $request) {

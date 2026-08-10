@@ -8,6 +8,7 @@ use App\Providers\AuthServiceProvider;
 use App\Providers\EventServiceProvider;
 use App\Providers\RouteServiceProvider;
 use App\Providers\TenancyServiceProvider;
+use App\Shared\Providers\JwtServiceProvider;
 use App\Shared\SharedServiceProvider;
 use App\Tenants\TenantServiceProvider;
 use Illuminate\Support\Facades\Facade;
@@ -181,6 +182,7 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         EventServiceProvider::class,
         SharedServiceProvider::class,
+        JwtServiceProvider::class,
         TenantServiceProvider::class,
         PlansServiceProvider::class,
         BillingServiceProvider::class,

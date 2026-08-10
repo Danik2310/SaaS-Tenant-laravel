@@ -8,8 +8,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class AdminUser extends Authenticatable
+class AdminUser extends Authenticatable implements JWTSubject
 {
     use EnforcesActivePermissions, HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
@@ -86,5 +87,15 @@ class AdminUser extends Authenticatable
             ->merge($this->roles->flatMap->permissions)
             ->unique('id')
             ->values();
+    }
+
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    public function getJWTCustomClaims()
+    {
+        return [];
     }
 }

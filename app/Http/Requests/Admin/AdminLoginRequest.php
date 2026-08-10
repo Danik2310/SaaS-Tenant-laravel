@@ -24,14 +24,15 @@ class AdminLoginRequest extends FormRequest
         ];
     }
 
-    public function authenticate(): void
+    public function authenticate(): string
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::guard('admin')->attempt(
-            $this->only('email', 'password') + ['is_active' => true],
-            $this->boolean('remember')
-        )) {
+        $token = Auth::guard('admin')->attempt(
+            $this->only('email', 'password') + ['is_active' => true]
+        );
+
+        if (! $token) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -40,6 +41,8 @@ class AdminLoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        return $token;
     }
 
     public function ensureIsNotRateLimited(): void

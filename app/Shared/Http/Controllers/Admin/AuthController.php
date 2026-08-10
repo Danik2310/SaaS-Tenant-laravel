@@ -4,6 +4,7 @@ namespace App\Shared\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminLoginRequest;
+use App\Shared\Support\JwtCookie;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -40,11 +41,12 @@ class AuthController extends Controller
      */
     public function login(AdminLoginRequest $request)
     {
-        $request->authenticate();
+        $token = $request->authenticate();
 
         $request->session()->regenerate();
 
-        return response()->json(['success' => true, 'message' => 'Logged in successfully']);
+        return response()->json(['success' => true, 'message' => 'Logged in successfully'])
+            ->withCookie(JwtCookie::make($token));
     }
 
     /**
@@ -62,6 +64,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return response()->json(['success' => true, 'message' => 'Logged out successfully']);
+        return response()->json(['success' => true, 'message' => 'Logged out successfully'])
+            ->withCookie(JwtCookie::forget());
     }
 }

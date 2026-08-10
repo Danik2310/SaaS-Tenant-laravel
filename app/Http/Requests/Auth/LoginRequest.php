@@ -36,13 +36,17 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate the request's credentials.
      *
+     * @return string
+     *
      * @throws ValidationException
      */
-    public function authenticate(): void
+    public function authenticate(): string
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::guard('web')->attempt($this->only('email', 'password') + ['is_active' => true], $this->boolean('remember'))) {
+        $token = Auth::guard('web')->attempt($this->only('email', 'password') + ['is_active' => true]);
+
+        if (! $token) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -51,6 +55,8 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        return $token;
     }
 
     /**

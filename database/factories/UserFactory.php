@@ -34,6 +34,18 @@ class UserFactory extends Factory
     }
 
     /**
+     * Indicate that the user's account is inactive.
+     *
+     * Only valid when the users table has an is_active column (tenant DB).
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

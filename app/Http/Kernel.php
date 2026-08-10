@@ -11,6 +11,7 @@ use App\Http\Middleware\TrustHosts;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\ValidateSignature;
 use App\Http\Middleware\VerifyCsrfToken;
+use App\Shared\Middleware\AuthenticateJwtFromCookie;
 use App\Shared\Middleware\CheckImpersonationExpiry;
 use App\Shared\Middleware\CheckStorageLimit;
 use App\Shared\Middleware\CheckTenantState;
@@ -18,8 +19,10 @@ use App\Shared\Middleware\CspNonce;
 use App\Shared\Middleware\EnsureCentralDomain;
 use App\Shared\Middleware\HandleInertiaRequests;
 use App\Shared\Middleware\PaymentMethodRateLimit;
+use App\Shared\Middleware\RefreshJwtToken;
 use App\Shared\Middleware\RequiresPlanFeature;
 use App\Shared\Middleware\SecurityHeaders;
+use App\Shared\Middleware\ValidateTenantToken;
 use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
@@ -109,5 +112,8 @@ class Kernel extends HttpKernel
         'impersonation.expiry' => CheckImpersonationExpiry::class,
         'storage.limit' => CheckStorageLimit::class,
         'central.domain' => EnsureCentralDomain::class,
+        'jwt.cookie' => AuthenticateJwtFromCookie::class,
+        'jwt.refresh' => RefreshJwtToken::class,
+        'jwt.tenant' => ValidateTenantToken::class,
     ];
 }
