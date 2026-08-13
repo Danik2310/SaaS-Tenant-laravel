@@ -16,6 +16,19 @@ class PlanSeeder extends Seeder
     {
         $plans = [
             [
+                'name' => 'Trial',
+                'slug' => 'trial',
+                'status' => 'active',
+                'price' => 0,
+                'duration_months' => null,
+                'max_users' => null,
+                'max_storage' => null,
+                'max_warehouses' => null,
+                'max_categories' => null,
+                'max_products' => null,
+                '_features' => FeatureFlagCatalog::keys(),
+            ],
+            [
                 'name' => 'Free',
                 'slug' => 'free',
                 'price' => 0,

@@ -31,6 +31,7 @@ class BillingController extends Controller
         $tenant = tenant();
 
         $plans = Plan::with('featureGates')
+            ->where('slug', '!=', 'trial')
             ->orderBy('price')
             ->orderBy('name')
             ->paginate(5);
