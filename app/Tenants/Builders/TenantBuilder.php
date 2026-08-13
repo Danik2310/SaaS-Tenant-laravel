@@ -75,6 +75,11 @@ class TenantBuilder implements TenantBuilderInterface
                 throw new InvalidArgumentException("Plan '{$plan->name}' does not support any users.");
             }
 
+            if ($plan->isTrial()) {
+                $this->tenant->status = 'Trial';
+                $this->tenant->trial_ends_at ??= now()->addDays((int) config('tenancy.trial_days', 14));
+            }
+
             $this->tenant->plan_id = $plan->id;
             $this->tenant->save();
 

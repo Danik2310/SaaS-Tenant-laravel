@@ -32,6 +32,11 @@ return [
     'default_plan_slug' => env('DEFAULT_PLAN_SLUG', 'free'),
 
     /**
+     * The number of days a tenant gets when entering a trial period.
+     */
+    'trial_days' => (int) env('TRIAL_DAYS', 14),
+
+    /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
      * Their responsibility is making Laravel features tenant-aware.
      *

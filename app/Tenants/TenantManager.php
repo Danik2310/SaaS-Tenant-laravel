@@ -221,12 +221,28 @@ class TenantManager implements TenantManagerInterface
 
             $oldPlan = $tenant->plan ?? Plan::where('slug', config('tenancy.default_plan_slug', 'free'))->firstOrFail();
 
+            $enteringTrial = $newPlan->isTrial();
+            $leavingTrial = ! $enteringTrial && $tenant->status === 'Trial';
+
+            if ($enteringTrial) {
+                $tenant->status = 'Trial';
+                $tenant->trial_ends_at = now()->addDays((int) config('tenancy.trial_days', 14));
+            } elseif ($leavingTrial) {
+                $tenant->status = 'Active';
+                $tenant->trial_ends_at = null;
+            }
+
             $tenant->activeSubscription?->update([
                 'status' => 'cancelled',
                 'ends_at' => now()->subDay(),
             ]);
 
-            Subscription::createForTenant($tenant, $newPlan, 'active');
+            Subscription::createForTenant(
+                $tenant,
+                $newPlan,
+                'active',
+                $enteringTrial ? $tenant->trial_ends_at : null,
+            );
 
             $tenant->plan_id = $newPlan->id;
             $tenant->save();

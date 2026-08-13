@@ -83,4 +83,9 @@ class Plan extends Model
             default => PHP_INT_MAX,
         };
     }
+
+    public function isTrial(): bool
+    {
+        return $this->slug === 'trial';
+    }
 }
