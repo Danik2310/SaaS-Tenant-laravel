@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class Subscription extends Model
 {
@@ -35,11 +36,20 @@ class Subscription extends Model
         $subscription->tenant_id = $tenant->id;
         $subscription->plan_id = $plan->id;
         $subscription->starts_at = $startsAt ?? now();
-        $subscription->ends_at = $endsAt;
+        $subscription->ends_at = $endsAt ?? self::resolveEndsAt($plan, $subscription->starts_at);
         $subscription->status = $status;
         $subscription->save();
 
         return $subscription;
+    }
+
+    protected static function resolveEndsAt(Plan $plan, \DateTimeInterface $startsAt): ?Carbon
+    {
+        if ($plan->isTrial() || $plan->duration_months === null) {
+            return null;
+        }
+
+        return Carbon::parse($startsAt)->addMonths($plan->duration_months);
     }
 
     public function tenant(): BelongsTo

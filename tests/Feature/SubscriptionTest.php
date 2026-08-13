@@ -30,7 +30,7 @@ class SubscriptionTest extends TestCase
 
     public function test_create_for_tenant_creates_active_subscription(): void
     {
-        $plan = Plan::factory()->create();
+        $plan = Plan::factory()->create(['duration_months' => null]);
         $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
 
         $subscription = Subscription::createForTenant($tenant, $plan, 'active');
@@ -45,6 +45,48 @@ class SubscriptionTest extends TestCase
         $this->assertNull($subscription->ends_at);
     }
 
+    public function test_create_for_tenant_derives_ends_at_from_plan_duration(): void
+    {
+        $plan = Plan::factory()->create(['duration_months' => 3]);
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
+
+        $expected = now()->addMonths(3);
+        $this->assertEquals($expected->format('Y-m-d H:i'), $subscription->ends_at->format('Y-m-d H:i'));
+    }
+
+    public function test_create_for_tenant_uses_given_starts_at_for_duration(): void
+    {
+        $plan = Plan::factory()->create(['duration_months' => 2]);
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+        $startsAt = now()->subMonths(1);
+
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active', null, $startsAt);
+
+        $this->assertEquals($startsAt->addMonths(2)->format('Y-m-d H:i'), $subscription->ends_at->format('Y-m-d H:i'));
+    }
+
+    public function test_create_for_tenant_keeps_ends_at_null_without_plan_duration(): void
+    {
+        $plan = Plan::factory()->create(['duration_months' => null]);
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
+
+        $this->assertNull($subscription->ends_at);
+    }
+
+    public function test_create_for_tenant_trial_plan_has_no_duration_ends_at(): void
+    {
+        $plan = Plan::factory()->create(['slug' => 'trial', 'duration_months' => null]);
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active');
+
+        $this->assertNull($subscription->ends_at);
+    }
+
     public function test_create_for_tenant_sets_ends_at_when_provided(): void
     {
         $plan = Plan::factory()->create();
@@ -53,7 +95,7 @@ class SubscriptionTest extends TestCase
 
         $subscription = Subscription::createForTenant($tenant, $plan, 'active', $endsAt);
 
-        $this->assertEquals($endsAt->format('Y-m-d'), $subscription->ends_at->format('Y-m-d'));
+        $this->assertTrue($endsAt->startOfSecond()->equalTo($subscription->ends_at));
     }
 
     public function test_tenant_has_subscriptions_relationship(): void
@@ -275,6 +317,23 @@ class SubscriptionTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonPath('subscription.id', $subscription->id);
+    }
+
+    public function test_subscription_period_includes_time_precision(): void
+    {
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+        $now = now();
+        $startsAt = $now->copy()->subDays(10);
+        $endsAt = $now->copy()->addDays(20);
+        $subscription = Subscription::createForTenant($tenant, $plan, 'active', $endsAt, $startsAt);
+
+        $response = $this->getJson("/admin/api/subscriptions/{$subscription->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('subscription.starts_at', $startsAt->format('Y-m-d H:i'))
+            ->assertJsonPath('subscription.ends_at', $endsAt->format('Y-m-d H:i'))
+            ->assertJsonPath('subscription.duration_days', 30);
     }
 
     public function test_subscription_show_returns_404_for_nonexistent(): void
