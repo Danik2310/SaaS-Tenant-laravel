@@ -212,13 +212,25 @@ export default function TenantList({
                 const status = cell.getValue();
                 if (status === 'Trial') {
                     const endsAt = row.original.trial_ends_at;
+                    const endsDate = endsAt ? new Date(endsAt) : null;
+                    const validEnd = endsDate && !Number.isNaN(endsDate.getTime()) ? endsDate : null;
+                    const daysLeft = validEnd ? Math.ceil((validEnd.getTime() - Date.now()) / 86400000) : null;
+                    const until = validEnd
+                        ? validEnd.toLocaleString(undefined, {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                          })
+                        : '';
                     const title = row.original.trial_has_expired
                         ? 'Trial has ended - pending suspension'
-                        : `Trial - temporary full access${endsAt ? ` until ${new Date(endsAt).toLocaleDateString()}` : ''}`;
+                        : `Trial - temporary full access${until ? ` until ${until}` : ''}`;
                     return (
                         <Tooltip title={title}>
                             <Chip
-                                label={status}
+                                label={status + (daysLeft !== null && daysLeft >= 0 ? ` \u00b7 ${daysLeft}d left` : '')}
                                 size="small"
                                 sx={{ bgcolor: '#fef9c3', color: '#854d0e', fontWeight: 600 }}
                             />
@@ -262,6 +274,59 @@ export default function TenantList({
                         size="small"
                         sx={{ bgcolor: '#f0f9ff', color: '#0369a1', fontWeight: 600, border: '1px solid #bae6fd' }}
                     />
+                );
+            },
+        },
+        {
+            accessorKey: 'subscription_ends_at',
+            header: 'Subscription Ends',
+            enableColumnFilter: false,
+            enableSorting: false,
+            Cell: ({ cell, row }) => {
+                const isDeleted = row.original.is_deleted;
+                const hasActive = row.original.has_active_subscription;
+                const endsAt = cell.getValue();
+                const endsDate = endsAt ? new Date(endsAt) : null;
+                const validEnd = endsDate && !Number.isNaN(endsDate.getTime()) ? endsDate : null;
+                const isExpired = validEnd && validEnd.getTime() < Date.now();
+
+                if (isDeleted || !hasActive) {
+                    return (
+                        <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                            {'\u2014'}
+                        </Typography>
+                    );
+                }
+                if (!validEnd) {
+                    return (
+                        <Tooltip title="Subscription has no end date - ongoing">
+                            <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                                Ongoing
+                            </Typography>
+                        </Tooltip>
+                    );
+                }
+                return (
+                    <Tooltip title={`${isExpired ? 'Subscription expired' : 'Subscription ends'} on ${validEnd.toLocaleString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                    })}`}>
+                        <Typography
+                            variant="body2"
+                            sx={{ color: isExpired ? '#b45309' : '#334155', fontWeight: isExpired ? 600 : 400, fontSize: 13 }}
+                        >
+                            {validEnd.toLocaleString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            })}
+                        </Typography>
+                    </Tooltip>
                 );
             },
         },

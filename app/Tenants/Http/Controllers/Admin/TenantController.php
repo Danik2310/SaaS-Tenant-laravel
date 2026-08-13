@@ -49,7 +49,7 @@ class TenantController extends Controller
      */
     public function index()
     {
-        $query = Tenant::with(['domains', 'plan.featureGates']);
+        $query = Tenant::with(['domains', 'plan.featureGates', 'activeSubscription']);
 
         if (request()->boolean('trashed')) {
             $query->withTrashed();
@@ -115,7 +115,7 @@ class TenantController extends Controller
      */
     public function show(string $id)
     {
-        $tenant = Tenant::withTrashed()->with(['domains', 'plan.featureGates'])->findOrFail($id);
+        $tenant = Tenant::withTrashed()->with(['domains', 'plan.featureGates', 'activeSubscription'])->findOrFail($id);
 
         return response()->json([
             'tenant' => new TenantResource($tenant),

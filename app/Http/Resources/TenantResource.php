@@ -22,6 +22,8 @@ class TenantResource extends JsonResource
             'plan' => $this->whenLoaded('plan', fn () => new PlanResource($this->plan)),
             'plan_name' => $this->whenLoaded('plan', fn () => $this->plan?->name),
             'plan_slug' => $this->whenLoaded('plan', fn () => $this->plan?->slug),
+            'subscription_ends_at' => $this->whenLoaded('activeSubscription', fn () => $this->activeSubscription?->ends_at),
+            'has_active_subscription' => $this->whenLoaded('activeSubscription', fn () => $this->activeSubscription !== null),
             'trial_ends_at' => $this->trial_ends_at,
             'is_on_trial' => $this->status === 'Trial' && $this->trial_ends_at !== null && $this->trial_ends_at->isFuture(),
             'trial_has_expired' => $this->status === 'Trial' && $this->trial_ends_at !== null && $this->trial_ends_at->isPast(),

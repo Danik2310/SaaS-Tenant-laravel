@@ -12,6 +12,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
@@ -190,6 +191,34 @@ class TenantLifecycleTest extends TestCase
 
         $tenant->refresh();
         $this->assertEquals($newPlan->id, $tenant->plan_id);
+    }
+
+    public function test_change_plan_to_paid_plan_derives_ends_at_from_plan_duration(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create(['duration_months' => null]);
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+        $paidPlan = Plan::factory()->create(['duration_months' => 3]);
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}/plan", [
+            'plan_id' => $paidPlan->id,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Tenant plan changed successfully');
+
+        $tenant->refresh();
+        $this->assertEquals($paidPlan->id, $tenant->plan_id);
+
+        $active = $tenant->activeSubscription;
+        $this->assertNotNull($active);
+        $this->assertEquals('active', $active->status);
+        $this->assertEquals(
+            now()->addMonths(3)->format('Y-m-d H:i'),
+            $active->ends_at->format('Y-m-d H:i')
+        );
     }
 
     public function test_update_name_email_and_plan_simultaneously(): void
@@ -462,6 +491,35 @@ class TenantLifecycleTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure(['tenants', 'meta' => ['current_page', 'last_page', 'per_page', 'total']]);
+    }
+
+    public function test_tenant_list_includes_subscription_ends_at(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $endsAt = now()->addDays(20);
+
+        $withSubscription = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::createForTenant($withSubscription, $plan, 'active', $endsAt);
+
+        $withoutSubscription = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+
+        $response = $this->get('/admin/api/tenants');
+
+        $response->assertStatus(200);
+
+        $tenants = collect($response->json('tenants'))->keyBy('id');
+
+        $this->assertTrue($tenants[$withSubscription->id]['has_active_subscription']);
+        $this->assertNotNull($tenants[$withSubscription->id]['subscription_ends_at']);
+        $this->assertEquals(
+            $endsAt->setTimezone('UTC')->format('Y-m-d H:i'),
+            Carbon::parse($tenants[$withSubscription->id]['subscription_ends_at'])->setTimezone('UTC')->format('Y-m-d H:i')
+        );
+
+        $this->assertNull($tenants[$withoutSubscription->id]['has_active_subscription']);
+        $this->assertNull($tenants[$withoutSubscription->id]['subscription_ends_at']);
     }
 
     public function test_can_show_tenant(): void
