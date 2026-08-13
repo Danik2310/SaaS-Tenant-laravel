@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\Role;
 use App\Models\Subscription;
 use App\Models\Tenant;
+use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\Support\AdminAuthSetup;
@@ -392,6 +393,21 @@ class TenantLifecycleTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure(['plans']);
+    }
+
+    public function test_plans_list_includes_trial_plan(): void
+    {
+        $this->setUpAdminAuth();
+
+        $this->seed(PlanSeeder::class);
+
+        $response = $this->get('/admin/api/plans-list');
+
+        $response->assertStatus(200);
+        $slugs = collect($response->json('plans'))->pluck('slug')->all();
+
+        $this->assertContains('trial', $slugs);
+        $this->assertContains('free', $slugs);
     }
 
     protected function tearDown(): void
