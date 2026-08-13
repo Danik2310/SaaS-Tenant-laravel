@@ -294,6 +294,100 @@ class TenantLifecycleTest extends TestCase
         });
     }
 
+    public function test_change_plan_to_trial_sets_trial_status_and_end_date(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+        $trialPlan = Plan::factory()->create(['slug' => 'trial', 'price' => 0]);
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}/plan", [
+            'plan_id' => $trialPlan->id,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Tenant plan changed successfully');
+
+        $tenant->refresh();
+        $this->assertEquals('Trial', $tenant->status);
+        $this->assertNotNull($tenant->trial_ends_at);
+        $this->assertTrue($tenant->trial_ends_at->isFuture());
+        $this->assertEqualsWithDelta(14, now()->diffInDays($tenant->trial_ends_at, false), 1);
+    }
+
+    public function test_change_plan_away_from_trial_activates_tenant(): void
+    {
+        $this->setUpAdminAuth();
+
+        $trialPlan = Plan::factory()->create(['slug' => 'trial', 'price' => 0]);
+        $tenant = Tenant::factory()->create([
+            'status' => 'Trial',
+            'plan_id' => $trialPlan->id,
+            'trial_ends_at' => now()->addDays(5),
+        ]);
+        Subscription::factory()->for($tenant)->for($trialPlan)->create(['status' => 'active']);
+        $paidPlan = Plan::factory()->create();
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}/plan", [
+            'plan_id' => $paidPlan->id,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Tenant plan changed successfully');
+
+        $tenant->refresh();
+        $this->assertEquals('Active', $tenant->status);
+        $this->assertNull($tenant->trial_ends_at);
+    }
+
+    public function test_bulk_change_plan_to_trial_marks_tenants_as_trial(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenants = Tenant::factory(2)->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        foreach ($tenants as $tenant) {
+            Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+        }
+        $trialPlan = Plan::factory()->create(['slug' => 'trial', 'price' => 0]);
+
+        $this->post('/admin/api/tenants/bulk', [
+            'tenant_ids' => $tenants->pluck('id')->toArray(),
+            'action' => 'change_plan',
+            'payload' => ['plan_id' => $trialPlan->id],
+        ])->assertStatus(200)
+            ->assertJsonPath('succeeded', 2);
+
+        $tenants->each(function (Tenant $tenant): void {
+            $tenant->refresh();
+            $this->assertEquals('Trial', $tenant->status);
+            $this->assertNotNull($tenant->trial_ends_at);
+        });
+    }
+
+    public function test_creating_tenant_with_trial_plan_enters_trial(): void
+    {
+        $this->setUpAdminAuth();
+
+        Plan::factory()->create(['slug' => 'trial', 'price' => 0]);
+
+        $response = $this->post('/admin/api/tenants', [
+            'name' => 'Trial Tenant',
+            'email' => 'trial@example.com',
+            'domain' => 'trial.example.com',
+            'plan' => 'trial',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('tenant.status', 'Trial');
+
+        $tenant = Tenant::where('email', 'trial@example.com')->first();
+        $this->assertNotNull($tenant->trial_ends_at);
+        $this->assertTrue($tenant->trial_ends_at->isFuture());
+    }
+
     public function test_bulk_extend_trial(): void
     {
         $this->setUpAdminAuth();
