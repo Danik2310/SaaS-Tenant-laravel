@@ -28,6 +28,19 @@ const TENANT_STATUS_STYLES = {
     Deleted:   { bgcolor: '#f1f5f9', color: '#64748b', fontStyle: 'italic' },
 };
 
+function formatPeriod(value) {
+    if (!value) return '\u2014';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return date.toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+}
+
 function TenantCell({ cell, row }) {
     const name = cell.getValue();
     const status = row.original.tenant_actual_status;
@@ -188,6 +201,36 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
                             sx={{ fontWeight: 600, textTransform: 'capitalize', ...s }}
                         />
                     </Tooltip>
+                );
+            },
+        },
+        {
+            accessorKey: 'starts_at',
+            header: 'Period',
+            enableColumnFilter: false,
+            enableSorting: false,
+            Cell: ({ row }) => {
+                const starts = row.original.starts_at;
+                const ends = row.original.ends_at;
+                const duration = row.original.duration_days;
+                if (!starts) {
+                    return (
+                        <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                            {'\u2014'}
+                        </Typography>
+                    );
+                }
+                return (
+                    <Box>
+                        <Typography variant="body2" sx={{ color: '#334155', fontSize: 13 }}>
+                            {formatPeriod(starts)} {'\u2192'} {ends ? formatPeriod(ends) : 'Present'}
+                        </Typography>
+                        {duration !== null && duration !== undefined && (
+                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>
+                                {duration}d
+                            </Typography>
+                        )}
+                    </Box>
                 );
             },
         },

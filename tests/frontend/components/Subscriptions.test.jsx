@@ -27,8 +27,9 @@ const mockSubscriptions = [
     plan_price: '29.00',
     plan_slug: 'pro',
     status: 'active',
-    starts_at: '2025-01-01',
-    ends_at: '2026-01-01',
+    starts_at: '2025-01-01 10:00:00',
+    ends_at: '2026-01-01 10:00:00',
+    duration_days: 365,
     created_at: '2025-01-01 00:00:00',
   },
   {
@@ -42,8 +43,9 @@ const mockSubscriptions = [
     plan_price: '99.00',
     plan_slug: 'enterprise',
     status: 'active',
-    starts_at: '2025-03-15',
-    ends_at: '2026-03-15',
+    starts_at: '2025-03-15 09:30:00',
+    ends_at: '2026-03-15 09:30:00',
+    duration_days: 365,
     created_at: '2025-03-15 00:00:00',
   },
   {
@@ -57,8 +59,9 @@ const mockSubscriptions = [
     plan_price: '29.00',
     plan_slug: 'pro',
     status: 'active',
-    starts_at: '2024-06-01',
-    ends_at: '2025-06-01',
+    starts_at: '2024-06-01 08:00:00',
+    ends_at: '2025-06-01 08:00:00',
+    duration_days: 365,
     created_at: '2024-06-01 00:00:00',
   },
 ];
@@ -126,6 +129,14 @@ describe('Subscriptions', () => {
     await waitFor(() => {
       const statusChips = screen.getAllByText('active');
       expect(statusChips.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('displays subscription period duration', async () => {
+    renderWithProviders(<Subscriptions />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('365d').length).toBeGreaterThan(0);
     });
   });
 
