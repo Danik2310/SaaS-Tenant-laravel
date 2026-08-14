@@ -497,11 +497,11 @@ class TenantLifecycleTest extends TestCase
     {
         $this->setUpAdminAuth();
 
-        $plan = Plan::factory()->create();
-        $endsAt = now()->addDays(20);
+        $plan = Plan::factory()->create(['duration_months' => 3]);
+        $startsAt = now();
 
         $withSubscription = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
-        Subscription::createForTenant($withSubscription, $plan, 'active', $endsAt);
+        Subscription::createForTenant($withSubscription, $plan, 'active', null, $startsAt);
 
         $withoutSubscription = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
 
@@ -514,12 +514,63 @@ class TenantLifecycleTest extends TestCase
         $this->assertTrue($tenants[$withSubscription->id]['has_active_subscription']);
         $this->assertNotNull($tenants[$withSubscription->id]['subscription_ends_at']);
         $this->assertEquals(
-            $endsAt->setTimezone('UTC')->format('Y-m-d H:i'),
+            $startsAt->addMonths(3)->format('Y-m-d H:i'),
             Carbon::parse($tenants[$withSubscription->id]['subscription_ends_at'])->setTimezone('UTC')->format('Y-m-d H:i')
         );
+        $this->assertEquals($plan->name, $tenants[$withSubscription->id]['subscription_plan_name']);
+        $this->assertEquals(3, $tenants[$withSubscription->id]['subscription_duration_months']);
 
         $this->assertNull($tenants[$withoutSubscription->id]['has_active_subscription']);
         $this->assertNull($tenants[$withoutSubscription->id]['subscription_ends_at']);
+        $this->assertNull($tenants[$withoutSubscription->id]['subscription_plan_name']);
+    }
+
+    public function test_tenant_list_subscription_ends_at_tracks_plan_duration_changes(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create(['duration_months' => 3]);
+        $startsAt = now();
+
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::createForTenant($tenant, $plan, 'active', null, $startsAt);
+
+        $plan->update(['duration_months' => 6]);
+
+        $response = $this->get('/admin/api/tenants');
+
+        $response->assertStatus(200);
+
+        $tenants = collect($response->json('tenants'))->keyBy('id');
+
+        $this->assertEquals(
+            $startsAt->addMonths(6)->format('Y-m-d H:i'),
+            Carbon::parse($tenants[$tenant->id]['subscription_ends_at'])->setTimezone('UTC')->format('Y-m-d H:i')
+        );
+        $this->assertEquals(6, $tenants[$tenant->id]['subscription_duration_months']);
+    }
+
+    public function test_tenant_list_subscription_ends_at_falls_back_to_stored_value_when_plan_has_no_duration(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create(['duration_months' => null]);
+        $endsAt = now()->addDays(20);
+
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::createForTenant($tenant, $plan, 'active', $endsAt);
+
+        $response = $this->get('/admin/api/tenants');
+
+        $response->assertStatus(200);
+
+        $tenants = collect($response->json('tenants'))->keyBy('id');
+
+        $this->assertNull($tenants[$tenant->id]['subscription_duration_months']);
+        $this->assertEquals(
+            $endsAt->setTimezone('UTC')->format('Y-m-d H:i'),
+            Carbon::parse($tenants[$tenant->id]['subscription_ends_at'])->setTimezone('UTC')->format('Y-m-d H:i')
+        );
     }
 
     public function test_can_show_tenant(): void
