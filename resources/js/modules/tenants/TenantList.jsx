@@ -285,10 +285,20 @@ export default function TenantList({
             Cell: ({ cell, row }) => {
                 const isDeleted = row.original.is_deleted;
                 const hasActive = row.original.has_active_subscription;
+                const planName = row.original.subscription_plan_name;
+                const durationMonths = row.original.subscription_duration_months;
                 const endsAt = cell.getValue();
                 const endsDate = endsAt ? new Date(endsAt) : null;
                 const validEnd = endsDate && !Number.isNaN(endsDate.getTime()) ? endsDate : null;
                 const isExpired = validEnd && validEnd.getTime() < Date.now();
+                const planInfo = planName ? (typeof durationMonths === 'number' ? `${planName} \u00b7 ${durationMonths} mo` : planName) : '';
+                const formatDate = (date) => date.toLocaleString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
 
                 if (isDeleted || !hasActive) {
                     return (
@@ -299,33 +309,35 @@ export default function TenantList({
                 }
                 if (!validEnd) {
                     return (
-                        <Tooltip title="Subscription has no end date - ongoing">
-                            <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
-                                Ongoing
-                            </Typography>
+                        <Tooltip title={`Subscription has no end date - ongoing${planInfo ? ` (${planInfo})` : ''}`}>
+                            <Box>
+                                <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                                    Ongoing
+                                </Typography>
+                                {planInfo && (
+                                    <Typography variant="caption" sx={{ color: '#64748b', fontSize: 11, display: 'block' }}>
+                                        {planInfo}
+                                    </Typography>
+                                )}
+                            </Box>
                         </Tooltip>
                     );
                 }
                 return (
-                    <Tooltip title={`${isExpired ? 'Subscription expired' : 'Subscription ends'} on ${validEnd.toLocaleString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                    })}`}>
-                        <Typography
-                            variant="body2"
-                            sx={{ color: isExpired ? '#b45309' : '#334155', fontWeight: isExpired ? 600 : 400, fontSize: 13 }}
-                        >
-                            {validEnd.toLocaleString(undefined, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            })}
-                        </Typography>
+                    <Tooltip title={`${isExpired ? 'Subscription expired' : 'Subscription ends'} on ${formatDate(validEnd)}${planInfo ? ` \u00b7 allocated by ${planInfo}` : ''}`}>
+                        <Box>
+                            <Typography
+                                variant="body2"
+                                sx={{ color: isExpired ? '#b45309' : '#334155', fontWeight: isExpired ? 600 : 400, fontSize: 13 }}
+                            >
+                                {formatDate(validEnd)}
+                            </Typography>
+                            {planInfo && (
+                                <Typography variant="caption" sx={{ color: '#64748b', fontSize: 11, display: 'block' }}>
+                                    {planInfo}
+                                </Typography>
+                            )}
+                        </Box>
                     </Tooltip>
                 );
             },
