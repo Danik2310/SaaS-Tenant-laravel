@@ -224,14 +224,6 @@ class TenantManager implements TenantManagerInterface
             $enteringTrial = $newPlan->isTrial();
             $leavingTrial = ! $enteringTrial && $tenant->status === 'Trial';
 
-            if ($enteringTrial) {
-                $tenant->status = 'Trial';
-                $tenant->trial_ends_at = now()->addDays((int) config('tenancy.trial_days', 14));
-            } elseif ($leavingTrial) {
-                $tenant->status = 'Active';
-                $tenant->trial_ends_at = null;
-            }
-
             $tenant->activeSubscription?->update([
                 'status' => 'cancelled',
                 'ends_at' => now()->subDay(),
@@ -241,11 +233,16 @@ class TenantManager implements TenantManagerInterface
                 $tenant,
                 $newPlan,
                 'active',
-                $enteringTrial ? $tenant->trial_ends_at : null,
+                $enteringTrial ? now()->addDays((int) config('tenancy.trial_days', 14)) : null,
             );
 
-            $tenant->plan_id = $newPlan->id;
-            $tenant->save();
+            $tenant->update([
+                'status' => $enteringTrial ? 'Trial' : ($leavingTrial ? 'Active' : $tenant->status),
+                'trial_ends_at' => $enteringTrial
+                    ? now()->addDays((int) config('tenancy.trial_days', 14))
+                    : ($leavingTrial ? null : $tenant->trial_ends_at),
+                'plan_id' => $newPlan->id,
+            ]);
         });
 
         try {
