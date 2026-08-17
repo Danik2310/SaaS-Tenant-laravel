@@ -95,6 +95,7 @@ class TenantController extends Controller
 
         return response()->json([
             'tenants' => TenantResource::collection($tenants->items()),
+            'total' => $tenants->total(),
             'meta' => [
                 'current_page' => $tenants->currentPage(),
                 'last_page' => $tenants->lastPage(),

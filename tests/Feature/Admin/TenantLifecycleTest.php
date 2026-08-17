@@ -490,7 +490,8 @@ class TenantLifecycleTest extends TestCase
         $response = $this->get('/admin/api/tenants');
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['tenants', 'meta' => ['current_page', 'last_page', 'per_page', 'total']]);
+            ->assertJsonPath('total', 3)
+            ->assertJsonStructure(['tenants', 'total', 'meta' => ['current_page', 'last_page', 'per_page', 'total']]);
     }
 
     public function test_tenant_list_includes_subscription_ends_at(): void
