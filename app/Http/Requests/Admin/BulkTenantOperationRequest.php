@@ -47,7 +47,7 @@ class BulkTenantOperationRequest extends FormRequest
                     }
                 },
             ],
-            'action' => ['required', 'string', 'in:suspend,activate,delete,restore,change_plan,extend_trial'],
+            'action' => ['required', 'string', 'in:suspend,activate,delete,restore,change_plan,extend_trial,start_trial'],
             'payload' => ['nullable', 'array'],
             'payload.plan_id' => ['required_if:action,change_plan', 'integer', 'exists:mysql_central.plans,id'],
             'payload.status' => ['prohibited'],
@@ -61,7 +61,7 @@ class BulkTenantOperationRequest extends FormRequest
             'tenant_ids.required' => 'At least one tenant must be selected.',
             'tenant_ids.min' => 'At least one tenant must be selected.',
             'tenant_ids.max' => 'Cannot operate on more than 100 tenants at once.',
-            'action.in' => 'Invalid action. Supported: suspend, activate, delete, restore, change_plan, extend_trial.',
+            'action.in' => 'Invalid action. Supported: suspend, activate, delete, restore, change_plan, extend_trial, start_trial.',
             'payload.plan_id.required_if' => 'Plan ID is required when changing plans.',
             'payload.days.required_if' => 'Number of days is required when extending trials.',
         ];

@@ -329,12 +329,16 @@ class TenantController extends Controller
             $newPlan = Plan::findOrFail($payload['plan_id']);
         }
 
+        if ($action === 'start_trial') {
+            $trialPlan = Plan::where('slug', 'trial')->firstOrFail();
+        }
+
         $results = [];
         $succeeded = 0;
         $failed = 0;
 
         foreach ($tenantIds as $id) {
-            $needsTransaction = $action !== 'delete';
+            $needsTransaction = ! in_array($action, ['delete', 'start_trial']);
 
             if ($needsTransaction) {
                 DB::beginTransaction();
@@ -353,6 +357,7 @@ class TenantController extends Controller
                     'delete' => $this->tenantManager->delete($tenant),
                     'restore' => $this->tenantManager->restore($tenant),
                     'change_plan' => $this->tenantManager->changePlan($tenant, $newPlan),
+                    'start_trial' => $this->tenantManager->changePlan($tenant, $trialPlan),
                     'extend_trial' => $this->extendTrial($tenant, $payload['days']),
                 };
 
@@ -370,7 +375,10 @@ class TenantController extends Controller
                 $succeeded++;
             } catch (\Throwable $e) {
                 if ($needsTransaction) {
-                    DB::rollBack();
+                    try {
+                        DB::rollBack();
+                    } catch (\Throwable) {
+                    }
                 }
                 \Log::warning("Bulk operation failed for tenant {$id}: {$e->getMessage()}");
                 $results[] = ['tenant_id' => $id, 'status' => 'failed', 'error' => 'An error occurred while processing this tenant.'];

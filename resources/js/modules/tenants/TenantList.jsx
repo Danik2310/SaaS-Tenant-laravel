@@ -22,6 +22,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import RestoreIcon from '@mui/icons-material/Restore';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import InboxIcon from '@mui/icons-material/Inbox';
+import ScienceIcon from '@mui/icons-material/Science';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/Components/ConfirmDialog';
@@ -139,7 +140,7 @@ export default function TenantList({
     }, [onBulkAction, selectedIds]);
 
     const confirmBulkAction = useCallback((action) => {
-        const destructive = action === 'delete' || action === 'suspend';
+        const destructive = action === 'delete' || action === 'suspend' || action === 'start_trial';
         if (destructive) {
             setPendingBulkAction(action);
         } else {
@@ -450,6 +451,7 @@ export default function TenantList({
                             ...(canEdit ? [
                                 { label: 'Suspend', color: 'error', onClick: () => confirmBulkAction('suspend') },
                                 { label: 'Activate', color: 'success', onClick: () => handleBulkActionWithRefresh('activate') },
+                                { label: 'Start Trial', color: 'info', icon: <ScienceIcon sx={{ fontSize: 16 }} />, onClick: () => confirmBulkAction('start_trial') },
                             ] : []),
                             ...(canDelete ? [
                                 { label: 'Delete', color: 'error', onClick: () => confirmBulkAction('delete') },
@@ -549,11 +551,18 @@ export default function TenantList({
                 {actionMenuRow && !actionMenuRow.is_deleted && (() => {
                     const extras = typeof rowMenuActions === 'function' ? rowMenuActions(actionMenuRow) : rowMenuActions;
                     const items = extras.filter(a => !a.divider);
+                    const canStartTrial = canEdit && actionMenuRow.status === 'Active';
                     return [
                         <MenuItem key="impersonate" onClick={() => { setActionMenuAnchor(null); onImpersonate(actionMenuRow); }}>
                             <ListItemIcon><LoginIcon fontSize="small" /></ListItemIcon>
                             <ListItemText>Impersonate</ListItemText>
                         </MenuItem>,
+                        ...canStartTrial ? [
+                            <MenuItem key="start-trial" onClick={() => { setActionMenuAnchor(null); onBulkAction('start_trial', [actionMenuRow.id]); }}>
+                                <ListItemIcon><ScienceIcon fontSize="small" /></ListItemIcon>
+                                <ListItemText>Start Trial</ListItemText>
+                            </MenuItem>,
+                        ] : [],
                         ...items.map((action, i) => (
                             <MenuItem key={`extra-${i}`} onClick={() => { setActionMenuAnchor(null); action.onClick?.(actionMenuRow); }}>
                                 <ListItemIcon>{action.icon}</ListItemIcon>
@@ -566,9 +575,11 @@ export default function TenantList({
 
             <ConfirmDialog
                 open={!!pendingBulkAction}
-                title={pendingBulkAction === 'delete' ? 'Delete Tenants' : 'Suspend Tenants'}
-                message={`This will ${pendingBulkAction} the selected tenant(s). This action can be undone later. Continue?`}
-                confirmLabel={pendingBulkAction === 'delete' ? 'Delete' : 'Suspend'}
+                title={pendingBulkAction === 'delete' ? 'Delete Tenants' : pendingBulkAction === 'start_trial' ? 'Start Trial' : 'Suspend Tenants'}
+                message={pendingBulkAction === 'start_trial'
+                    ? 'This will switch the selected tenant(s) to the Trial plan with full access for the configured trial period. Their current plan will be replaced. Continue?'
+                    : `This will ${pendingBulkAction} the selected tenant(s). This action can be undone later. Continue?`}
+                confirmLabel={pendingBulkAction === 'delete' ? 'Delete' : pendingBulkAction === 'start_trial' ? 'Start Trial' : 'Suspend'}
                 onConfirm={handleConfirmBulkAction}
                 onCancel={() => setPendingBulkAction(null)}
             />
