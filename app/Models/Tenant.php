@@ -66,22 +66,22 @@ class Tenant extends BaseTenant implements TenantWithDatabase
                     ->max() ?? 0;
 
                 $counter = $max + 1;
-        } else {
-            $counter = $counter + 1;
-        }
+            } else {
+                $counter = $counter + 1;
+            }
 
-        // Guard against collisions with rows created outside this counter
-        // (e.g. seeds or tests that write faker-generated reference ids).
-        // Keep bumping until the candidate is free.
-        $candidate = 'TEN-'.$date.'-'.str_pad((string) $counter, 4, '0', STR_PAD_LEFT);
-        while (static::withTrashed()->where('reference_id', $candidate)->exists()) {
-            $counter++;
+            // Guard against collisions with rows created outside this counter
+            // (e.g. seeds or tests that write faker-generated reference ids).
+            // Keep bumping until the candidate is free.
             $candidate = 'TEN-'.$date.'-'.str_pad((string) $counter, 4, '0', STR_PAD_LEFT);
-        }
+            while (static::withTrashed()->where('reference_id', $candidate)->exists()) {
+                $counter++;
+                $candidate = 'TEN-'.$date.'-'.str_pad((string) $counter, 4, '0', STR_PAD_LEFT);
+            }
 
-        Cache::put("ref_id_counter:{$date}", $counter, now()->addDays(2));
+            Cache::put("ref_id_counter:{$date}", $counter, now()->addDays(2));
 
-        return $candidate;
+            return $candidate;
         } finally {
             $lock->release();
         }

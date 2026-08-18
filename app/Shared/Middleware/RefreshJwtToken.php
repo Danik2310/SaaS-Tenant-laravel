@@ -11,11 +11,9 @@ use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
 
 class RefreshJwtToken
 {
-    public function __construct(protected AuthManager $auth)
-    {
-    }
+    public function __construct(protected AuthManager $auth) {}
 
-    public function handle(Request $request, Closure $next, string $guard = null)
+    public function handle(Request $request, Closure $next, ?string $guard = null)
     {
         $guardName = $guard ?: $this->auth->getDefaultDriver();
 
