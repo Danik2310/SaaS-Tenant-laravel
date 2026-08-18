@@ -511,6 +511,61 @@ class TenantLifecycleTest extends TestCase
         $this->assertNull($tenant->trial_ends_at);
     }
 
+    public function test_bulk_activate_trial(): void
+    {
+        $this->setUpAdminAuth();
+
+        $trialPlan = Plan::factory()->create(['slug' => 'trial', 'price' => 0]);
+        $tenant = Tenant::factory()->create([
+            'status' => 'Trial',
+            'plan_id' => $trialPlan->id,
+            'trial_ends_at' => now()->addDays(5),
+        ]);
+        Subscription::factory()->for($tenant)->for($trialPlan)->create(['status' => 'active']);
+        $paidPlan = Plan::factory()->create();
+
+        $this->post('/admin/api/tenants/bulk', [
+            'tenant_ids' => [$tenant->id],
+            'action' => 'activate_trial',
+            'payload' => ['plan_id' => $paidPlan->id],
+        ])->assertStatus(200)
+            ->assertJsonPath('succeeded', 1)
+            ->assertJsonPath('failed', 0);
+
+        $tenant->refresh();
+        $this->assertEquals('Active', $tenant->status);
+        $this->assertEquals($paidPlan->id, $tenant->plan_id);
+        $this->assertNull($tenant->trial_ends_at);
+
+        $oldSubscription = $tenant->subscriptions()->where('plan_id', $trialPlan->id)->first();
+        $this->assertEquals('cancelled', $oldSubscription->status);
+
+        $newSubscription = $tenant->subscriptions()->where('plan_id', $paidPlan->id)->first();
+        $this->assertNotNull($newSubscription);
+        $this->assertEquals('active', $newSubscription->status);
+    }
+
+    public function test_bulk_activate_trial_rejects_missing_plan_id(): void
+    {
+        $this->setUpAdminAuth();
+
+        $trialPlan = Plan::factory()->create(['slug' => 'trial', 'price' => 0]);
+        $tenant = Tenant::factory()->create([
+            'status' => 'Trial',
+            'plan_id' => $trialPlan->id,
+            'trial_ends_at' => now()->addDays(5),
+        ]);
+
+        $this->post('/admin/api/tenants/bulk', [
+            'tenant_ids' => [$tenant->id],
+            'action' => 'activate_trial',
+        ])->assertStatus(422);
+
+        $tenant->refresh();
+        $this->assertEquals('Trial', $tenant->status);
+        $this->assertEquals($trialPlan->id, $tenant->plan_id);
+    }
+
     public function test_unauthenticated_user_gets_401(): void
     {
         $response = $this->post('/admin/api/tenants', [
