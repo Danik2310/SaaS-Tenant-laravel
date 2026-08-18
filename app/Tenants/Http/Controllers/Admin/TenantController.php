@@ -195,12 +195,14 @@ class TenantController extends Controller
             $tenant->fill($data)->save();
             $this->tenantManager->changePlan($tenant, $newPlan);
             $needsSave = false;
+            $planChanged = true;
         } else {
             $tenant->fill($data);
             $needsSave = true;
+            $planChanged = false;
         }
 
-        if ($status !== null) {
+        if ($status !== null && ! $planChanged) {
             try {
                 $this->tenantManager->setStatus($tenant, $status);
             } catch (InvalidArgumentException $e) {
@@ -333,12 +335,16 @@ class TenantController extends Controller
             $trialPlan = Plan::where('slug', 'trial')->firstOrFail();
         }
 
+        if ($action === 'activate_trial') {
+            $activatePlan = Plan::findOrFail($payload['plan_id']);
+        }
+
         $results = [];
         $succeeded = 0;
         $failed = 0;
 
         foreach ($tenantIds as $id) {
-            $needsTransaction = ! in_array($action, ['delete', 'start_trial']);
+            $needsTransaction = ! in_array($action, ['delete', 'start_trial', 'activate_trial']);
 
             if ($needsTransaction) {
                 DB::beginTransaction();
@@ -358,6 +364,7 @@ class TenantController extends Controller
                     'restore' => $this->tenantManager->restore($tenant),
                     'change_plan' => $this->tenantManager->changePlan($tenant, $newPlan),
                     'start_trial' => $this->tenantManager->changePlan($tenant, $trialPlan),
+                    'activate_trial' => $this->tenantManager->changePlan($tenant, $activatePlan),
                     'extend_trial' => $this->extendTrial($tenant, $payload['days']),
                 };
 
