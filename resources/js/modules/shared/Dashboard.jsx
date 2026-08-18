@@ -40,6 +40,7 @@ const DatabaseModal = lazy(() => import('@/modules/shared/modals/DatabaseModal')
 const MigrationModal = lazy(() => import('@/modules/shared/modals/MigrationModal'));
 const DomainModal = lazy(() => import('@/modules/shared/modals/DomainModal'));
 const ChangePlanModal = lazy(() => import('@/modules/billing/modals/ChangePlanModal'));
+const ActivateTrialModal = lazy(() => import('@/modules/billing/modals/ActivateTrialModal'));
 
 export default function Dashboard() {
     const { user, permissions = [] } = useAuthContext();
@@ -65,6 +66,7 @@ export default function Dashboard() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const incrementRefreshTrigger = useCallback(() => setRefreshTrigger(r => r + 1), []);
     const [bulkPlanChangeOpen, setBulkPlanChangeOpen] = useState(false);
+    const [activateTrialTenants, setActivateTrialTenants] = useState(null);
     const [deleteConfirmTenant, setDeleteConfirmTenant] = useState(null);
     const [restoreConfirmId, setRestoreConfirmId] = useState(null);
     const [impersonateConfirmTenant, setImpersonateConfirmTenant] = useState(null);
@@ -247,6 +249,10 @@ export default function Dashboard() {
     };
 
     const handleToggleActive = async (tenant) => {
+        if (tenant.status === 'Trial') {
+            handleOpenActivateTrial([tenant]);
+            return;
+        }
         const newStatus = tenant.status === 'Active' ? 'Suspended' : 'Active';
         try {
             await api.put(`/admin/api/tenants/${tenant.id}`, { status: newStatus });
@@ -258,6 +264,10 @@ export default function Dashboard() {
             toast.error(message);
             setError(message);
         }
+    };
+
+    const handleOpenActivateTrial = (tenants) => {
+        setActivateTrialTenants(tenants);
     };
 
     const handleSetView = (newView) => {
@@ -423,6 +433,7 @@ export default function Dashboard() {
                                 onRestore={handleRestoreTenant}
                                 onSelectionChange={setSelectedTenantIds}
                                 onToggleStatus={handleToggleActive}
+                                onActivateTrial={handleOpenActivateTrial}
                                 rowMenuActions={(tenant) => {
                                     if (tenant.is_deleted) {
                                         return [
@@ -431,7 +442,7 @@ export default function Dashboard() {
                                     }
                                     return [
                                         { divider: true },
-                                        { label: tenant.status === 'Active' ? 'Suspend' : 'Activate', icon: <BlockIcon fontSize="small" />, onClick: () => handleToggleActive(tenant) },
+                                        { label: tenant.status === 'Active' ? 'Suspend' : 'Activate', icon: <BlockIcon fontSize="small" />, onClick: () => tenant.status === 'Trial' ? handleOpenActivateTrial([tenant]) : handleToggleActive(tenant) },
                                         { label: 'Change Plan', icon: <ChangeCircleIcon fontSize="small" />, onClick: () => setPlanChangeTenant(tenant) },
                                         { divider: true },
                                         { label: 'View Details', icon: <VisibilityIcon fontSize="small" />, onClick: () => openModal('domain', tenant) },
@@ -584,6 +595,17 @@ export default function Dashboard() {
                             onChanged={() => {
                                 setBulkPlanChangeOpen(false);
                                 setSelectedTenantIds(new Set());
+                                fetchTenants();
+                                incrementRefreshTrigger();
+                            }}
+                        />
+
+                        <ActivateTrialModal
+                            open={activateTrialTenants !== null}
+                            tenants={activateTrialTenants || []}
+                            onClose={() => setActivateTrialTenants(null)}
+                            onActivated={() => {
+                                setActivateTrialTenants(null);
                                 fetchTenants();
                                 incrementRefreshTrigger();
                             }}

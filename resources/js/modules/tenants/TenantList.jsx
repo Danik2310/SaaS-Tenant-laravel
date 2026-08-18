@@ -34,6 +34,7 @@ export default function TenantList({
     onEdit,
     onImpersonate,
     onToggleStatus,
+    onActivateTrial,
     onRestore,
     onSelectionChange,
     rowMenuActions = [],
@@ -450,7 +451,19 @@ export default function TenantList({
                         : [
                             ...(canEdit ? [
                                 { label: 'Suspend', color: 'error', onClick: () => confirmBulkAction('suspend') },
-                                { label: 'Activate', color: 'success', onClick: () => handleBulkActionWithRefresh('activate') },
+                                {
+                                    label: 'Activate', color: 'success', onClick: () => {
+                                        const selectedRows = table.getSelectedRowModel().flatRows;
+                                        const trialTenants = selectedRows.filter(r => r.original.status === 'Trial').map(r => r.original);
+                                        const nonTrialIds = selectedRows.filter(r => r.original.status !== 'Trial').map(r => r.original.id);
+                                        if (trialTenants.length > 0 && onActivateTrial) {
+                                            onActivateTrial(trialTenants);
+                                        }
+                                        if (nonTrialIds.length > 0) {
+                                            onBulkAction?.('activate', nonTrialIds);
+                                        }
+                                    },
+                                },
                                 { label: 'Start Trial', color: 'info', icon: <ScienceIcon sx={{ fontSize: 16 }} />, onClick: () => confirmBulkAction('start_trial') },
                             ] : []),
                             ...(canDelete ? [
@@ -488,7 +501,7 @@ export default function TenantList({
                         ? (canRestore ? [{ icon: <RestoreIcon fontSize="small" />, label: 'Restore', onClick: () => onRestore(tenant.id) }] : [])
                         : [
                             ...(canEdit ? [{ icon: <EditIcon fontSize="small" />, label: 'Edit', onClick: () => onEdit(tenant) }] : []),
-                            ...(canEdit ? [{ icon: <BlockIcon fontSize="small" />, label: tenant.status === 'Active' ? 'Suspend' : 'Activate', onClick: () => onToggleStatus(tenant) }] : []),
+                            ...(canEdit ? [{ icon: <BlockIcon fontSize="small" />, label: tenant.status === 'Active' ? 'Suspend' : 'Activate', onClick: () => tenant.status === 'Trial' && onActivateTrial ? onActivateTrial([tenant]) : onToggleStatus(tenant) }] : []),
                             ...(canDelete ? [{ icon: <DeleteIcon fontSize="small" />, label: 'Delete', onClick: () => handleRowDelete(row) }] : []),
                           ];
 
