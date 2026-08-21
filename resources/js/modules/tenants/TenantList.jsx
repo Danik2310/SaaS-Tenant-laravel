@@ -358,7 +358,8 @@ export default function TenantList({
 
     const handleSaveRow = useCallback(async ({ exitEditingMode, row, values }) => {
         try {
-            await api.put(`/admin/api/tenants/${row.original.id}`, values);
+            const { name, email } = values;
+            await api.put(`/admin/api/tenants/${row.original.id}`, { name, email });
             toast.success('Tenant updated successfully');
             exitEditingMode();
             fetchTenants();

@@ -19,7 +19,7 @@ class UpdateTenantRequest extends FormRequest
         return [
             'name' => 'nullable|string|max:255',
             'email' => 'nullable|email|unique:tenants,email,'.$tenantId,
-            'status' => 'nullable|in:Active,Suspended,Deleted',
+            'status' => 'nullable|in:Active,Suspended',
             'plan_id' => 'nullable|integer|exists:mysql_central.plans,id',
         ];
     }

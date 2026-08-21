@@ -205,9 +205,10 @@ export default function Dashboard() {
                 data.plan_id = tenantOrOriginal.plan_id;
             }
         } else {
-            // inline edit from table
+            // inline edit from table — only send fields the backend accepts
             id = tenantOrOriginal.id;
-            data = values;
+            const { name, email } = values;
+            data = { name, email };
         }
 
         try {
