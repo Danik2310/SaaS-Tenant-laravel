@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\DeleteAccountRequest;
 use App\Http\Requests\Admin\UpdatePasswordRequest;
 use App\Http\Requests\Admin\UpdateProfileRequest;
 use App\Http\Resources\AdminUserResource;
+use App\Models\AdminUser;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -107,6 +108,13 @@ class AdminProfileController extends Controller
         if (! Hash::check($validated['password'], $user->password)) {
             return response()->json(
                 ['message' => 'Password is incorrect'],
+                422
+            );
+        }
+
+        if (AdminUser::where('id', '!=', $user->id)->where('is_active', true)->count() === 0) {
+            return response()->json(
+                ['message' => 'Cannot delete the last active admin account'],
                 422
             );
         }
