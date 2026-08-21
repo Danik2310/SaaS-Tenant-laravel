@@ -928,4 +928,60 @@ class TenantLifecycleTest extends TestCase
 
         $this->assertDatabaseMissing('subscriptions', ['id' => $subscription->id]);
     }
+
+    public function test_update_rejects_deleted_status(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
+            'status' => 'Deleted',
+        ]);
+
+        $response->assertStatus(422);
+        $tenant->refresh();
+        $this->assertEquals('Active', $tenant->status);
+    }
+
+    public function test_update_allows_suspended_status(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
+            'status' => 'Suspended',
+        ]);
+
+        $response->assertStatus(200);
+        $tenant->refresh();
+        $this->assertEquals('Suspended', $tenant->status);
+    }
+
+    public function test_update_strips_extra_fields_from_payload(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id, 'name' => 'Original Name']);
+        Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
+            'name' => 'Updated Name',
+            'email' => $tenant->email,
+            'status' => 'Deleted',
+            'reference_id' => 'HACKED-001',
+            'created_at' => '2000-01-01 00:00:00',
+        ]);
+
+        $response->assertStatus(422);
+        $tenant->refresh();
+        $this->assertEquals('Original Name', $tenant->name);
+        $this->assertEquals('Active', $tenant->status);
+    }
 }
