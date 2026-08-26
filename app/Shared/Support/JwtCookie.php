@@ -15,7 +15,7 @@ class JwtCookie
             (int) config('jwt.refresh_ttl', 10080),
             '/',
             null,
-            (bool) env('SESSION_SECURE_COOKIE', false),
+            (bool) config('session.secure', false),
             true,
             false,
             'lax'
