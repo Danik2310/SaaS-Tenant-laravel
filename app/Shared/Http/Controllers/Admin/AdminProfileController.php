@@ -8,7 +8,9 @@ use App\Http\Requests\Admin\UpdatePasswordRequest;
 use App\Http\Requests\Admin\UpdateProfileRequest;
 use App\Http\Resources\AdminUserResource;
 use App\Models\AdminUser;
+use App\Shared\Support\JwtCookie;
 use Illuminate\Support\Facades\Hash;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 /**
  * @group Admin Profile
@@ -82,9 +84,14 @@ class AdminProfileController extends Controller
             'password' => Hash::make($validated['new_password']),
         ]);
 
+        $token = JWTAuth::parseToken();
+        JWTAuth::invalidate($token);
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return response()->json([
             'message' => 'Password updated successfully',
-        ]);
+        ])->withCookie(JwtCookie::forget());
     }
 
     /**

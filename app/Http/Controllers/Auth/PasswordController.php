@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Shared\Support\JwtCookie;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class PasswordController extends Controller
 {
@@ -24,6 +26,16 @@ class PasswordController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        return back();
+        try {
+            $token = JWTAuth::parseToken();
+            JWTAuth::invalidate($token);
+        } catch (\Exception $e) {
+            // Token may already be invalid — continue with session cleanup.
+        }
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login')->withCookie(JwtCookie::forget());
     }
 }
