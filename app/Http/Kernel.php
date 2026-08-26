@@ -17,6 +17,7 @@ use App\Shared\Middleware\CheckStorageLimit;
 use App\Shared\Middleware\CheckTenantState;
 use App\Shared\Middleware\CspNonce;
 use App\Shared\Middleware\EnsureCentralDomain;
+use App\Shared\Middleware\EnsureSessionNotExpired;
 use App\Shared\Middleware\HandleInertiaRequests;
 use App\Shared\Middleware\PaymentMethodRateLimit;
 use App\Shared\Middleware\RefreshJwtToken;
@@ -115,5 +116,6 @@ class Kernel extends HttpKernel
         'jwt.cookie' => AuthenticateJwtFromCookie::class,
         'jwt.refresh' => RefreshJwtToken::class,
         'jwt.tenant' => ValidateTenantToken::class,
+        'session.expiry' => EnsureSessionNotExpired::class,
     ];
 }

@@ -77,7 +77,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
         ->middleware('throttle:5,1');
 
     // Authenticated tenant routes
-    Route::middleware(['jwt.cookie', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'throttle:60,1'])->group(function () {
+    Route::middleware(['jwt.cookie', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'session.expiry:web', 'throttle:60,1'])->group(function () {
         // Email verification — auth only, NOT verified (avoids infinite redirect loop)
         Route::get('verify-email', EmailVerificationPromptController::class)
             ->name('verification.notice');

@@ -37,6 +37,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Absolute Session Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | Hard cap on session age in minutes, regardless of activity. Even if the
+    | user is actively making requests, the session expires after this duration
+    | and forces re-authentication. Set to 0 to disable.
+    |
+    | Recommended: 720 (12 hours) for production, 1440 (24 hours) for dev.
+    |
+    */
+
+    'absolute_lifetime' => (int) env('SESSION_ABSOLUTE_LIFETIME', 720),
+
+    /*
+    |--------------------------------------------------------------------------
     | Session Encryption
     |--------------------------------------------------------------------------
     |
