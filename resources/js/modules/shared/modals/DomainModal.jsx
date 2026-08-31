@@ -26,7 +26,26 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import EmailIcon from '@mui/icons-material/Email';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import BusinessIcon from '@mui/icons-material/Business';
+import PhoneIcon from '@mui/icons-material/Phone';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { toast } from 'sonner';
+
+const formatContactName = (tenant) => {
+    const parts = [tenant.first_name, tenant.last_name].filter(Boolean);
+    return parts.length > 0 ? parts.join(' ') : '—';
+};
+
+const formatAddress = (tenant) => {
+    const lines = [
+        tenant.address_line1,
+        tenant.address_line2,
+        [tenant.city, tenant.state, tenant.postal_code].filter(Boolean).join(', '),
+        tenant.country,
+    ].filter(Boolean);
+
+    return lines.length > 0 ? lines.join(', ') : '—';
+};
 
 export default function DomainModal({ tenant, onClose, onImpersonate, onViewDatabase, onRunMigrations, onRestore }) {
     if (!tenant) return null;
@@ -232,6 +251,42 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                         ))}
                                     </Box>
                                 )}
+                            </CardContent>
+                        </Card>
+                    </Grid>
+
+                    <Grid item xs={12} sm={12} md={12} lg={12}>
+                        <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
+                            <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
+                                    Personal & Business Information
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <BusinessIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                            Company: <strong>{tenant.company_name || '—'}</strong>
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <PersonIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                            Contact: <strong>{formatContactName(tenant)}</strong>
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <PhoneIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                            Phone: <strong>{tenant.phone || '—'}</strong>
+                                        </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                                        <LocationOnIcon sx={{ fontSize: 16, color: '#94a3b8', mt: 0.3 }} />
+                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                            Address: <strong>{formatAddress(tenant)}</strong>
+                                        </Typography>
+                                    </Box>
+                                </Box>
                             </CardContent>
                         </Card>
                     </Grid>

@@ -94,6 +94,61 @@ describe('TenantForm', () => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         name: 'NewCo',
         email: 'admin@newco.com',
+        company_name: null,
+        first_name: null,
+        last_name: null,
+        phone: null,
+        address_line1: null,
+        address_line2: null,
+        city: null,
+        state: null,
+        postal_code: null,
+        country: null,
+        domain: 'newco.localhost',
+        plan: 'pro',
+      });
+    });
+  });
+
+  test('calls onSubmit with business and contact details for create', async () => {
+    mockOnSubmit.mockResolvedValue();
+
+    renderCreate();
+
+    await waitFor(() => {
+      expect(screen.getByText('Pro ($29.00/mo)')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., Acme Corp'), { target: { value: 'NewCo' } });
+    fireEvent.change(screen.getByPlaceholderText('admin@tenant.com'), { target: { value: 'admin@newco.com' } });
+    fireEvent.change(screen.getByPlaceholderText('acme.localhost'), { target: { value: 'newco.localhost' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g., Acme Corp LLC'), { target: { value: 'NewCo LLC' } });
+    fireEvent.change(screen.getByPlaceholderText('Jane'), { target: { value: 'Jane' } });
+    fireEvent.change(screen.getByPlaceholderText('Doe'), { target: { value: 'Doe' } });
+    fireEvent.change(screen.getByPlaceholderText('+1 555 123 4567'), { target: { value: '+1 555 123 4567' } });
+    fireEvent.change(screen.getByPlaceholderText('123 Main St'), { target: { value: '123 Main St' } });
+    fireEvent.change(screen.getByPlaceholderText('Springfield'), { target: { value: 'Springfield' } });
+    fireEvent.change(screen.getByPlaceholderText('IL'), { target: { value: 'IL' } });
+    fireEvent.change(screen.getByPlaceholderText('62701'), { target: { value: '62701' } });
+    fireEvent.change(screen.getByPlaceholderText('United States'), { target: { value: 'United States' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '2' } });
+
+    fireEvent.click(screen.getByText('Create Tenant'));
+
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith({
+        name: 'NewCo',
+        email: 'admin@newco.com',
+        company_name: 'NewCo LLC',
+        first_name: 'Jane',
+        last_name: 'Doe',
+        phone: '+1 555 123 4567',
+        address_line1: '123 Main St',
+        address_line2: null,
+        city: 'Springfield',
+        state: 'IL',
+        postal_code: '62701',
+        country: 'United States',
         domain: 'newco.localhost',
         plan: 'pro',
       });
@@ -117,6 +172,16 @@ describe('TenantForm', () => {
         id: 't-1',
         name: 'Updated Corp',
         email: 'admin@acme.com',
+        company_name: null,
+        first_name: null,
+        last_name: null,
+        phone: null,
+        address_line1: null,
+        address_line2: null,
+        city: null,
+        state: null,
+        postal_code: null,
+        country: null,
         plan_id: 2,
       });
     });

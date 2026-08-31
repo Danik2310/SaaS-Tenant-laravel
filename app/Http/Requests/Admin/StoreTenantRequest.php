@@ -21,6 +21,16 @@ class StoreTenantRequest extends FormRequest
             'email' => 'required|email',
             'domain' => 'required|string',
             'plan' => 'nullable|string|exists:mysql_central.plans,slug',
+            'company_name' => 'nullable|string|max:255',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:50',
+            'address_line1' => 'nullable|string|max:255',
+            'address_line2' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:20',
+            'country' => 'nullable|string|max:100',
         ];
     }
 

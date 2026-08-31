@@ -10,6 +10,16 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
     const [email, setEmail] = useState(tenant?.email || '');
     const [domain, setDomain] = useState(tenant?.domain || '');
     const [planId, setPlanId] = useState(tenant?.plan?.id || '');
+    const [companyName, setCompanyName] = useState(tenant?.company_name || '');
+    const [firstName, setFirstName] = useState(tenant?.first_name || '');
+    const [lastName, setLastName] = useState(tenant?.last_name || '');
+    const [phone, setPhone] = useState(tenant?.phone || '');
+    const [addressLine1, setAddressLine1] = useState(tenant?.address_line1 || '');
+    const [addressLine2, setAddressLine2] = useState(tenant?.address_line2 || '');
+    const [city, setCity] = useState(tenant?.city || '');
+    const [state, setState] = useState(tenant?.state || '');
+    const [postalCode, setPostalCode] = useState(tenant?.postal_code || '');
+    const [country, setCountry] = useState(tenant?.country || '');
     const [plans, setPlans] = useState([]);
     const [plansLoading, setPlansLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -20,6 +30,16 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
         setEmail(tenant?.email || '');
         setDomain(tenant?.domain || '');
         setPlanId(tenant?.plan?.id || '');
+        setCompanyName(tenant?.company_name || '');
+        setFirstName(tenant?.first_name || '');
+        setLastName(tenant?.last_name || '');
+        setPhone(tenant?.phone || '');
+        setAddressLine1(tenant?.address_line1 || '');
+        setAddressLine2(tenant?.address_line2 || '');
+        setCity(tenant?.city || '');
+        setState(tenant?.state || '');
+        setPostalCode(tenant?.postal_code || '');
+        setCountry(tenant?.country || '');
         setError(null);
     }, [tenant]);
 
@@ -45,7 +65,20 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
         setError(null);
 
         try {
-            const payload = { name, email };
+            const payload = {
+                name,
+                email,
+                company_name: companyName || null,
+                first_name: firstName || null,
+                last_name: lastName || null,
+                phone: phone || null,
+                address_line1: addressLine1 || null,
+                address_line2: addressLine2 || null,
+                city: city || null,
+                state: state || null,
+                postal_code: postalCode || null,
+                country: country || null,
+            };
             if (tenant) {
                 payload.id = tenant.id;
                 if (planId) {
@@ -66,6 +99,16 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                 setEmail('');
                 setDomain('');
                 setPlanId('');
+                setCompanyName('');
+                setFirstName('');
+                setLastName('');
+                setPhone('');
+                setAddressLine1('');
+                setAddressLine2('');
+                setCity('');
+                setState('');
+                setPostalCode('');
+                setCountry('');
             }
         } catch (err) {
             const message = err.message || (tenant ? 'Failed to update tenant' : 'Failed to create tenant');
@@ -162,6 +205,50 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                             </>
                         )}
                     </select>
+                </FormInput>
+
+                <div style={{ margin: '20px 0 16px', padding: '14px 16px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                    <strong style={{ color: '#334155', fontSize: '14px', display: 'block', marginBottom: '4px' }}>Business & Contact Information</strong>
+                    <p style={{ margin: '0', color: '#94a3b8', fontSize: '12px' }}>Optional details about the tenant company and primary contact.</p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                    <FormInput label="Company Name" hint="Legal or trading name of the company">
+                        <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g., Acme Corp LLC" />
+                    </FormInput>
+                    <FormInput label="Phone" hint="Primary contact phone number">
+                        <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 123 4567" />
+                    </FormInput>
+                    <FormInput label="First Name" hint="Primary contact's first name">
+                        <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" />
+                    </FormInput>
+                    <FormInput label="Last Name" hint="Primary contact's last name">
+                        <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" />
+                    </FormInput>
+                </div>
+
+                <FormInput label="Address Line 1" hint="Street address (e.g., 123 Main St)">
+                    <input type="text" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="123 Main St" />
+                </FormInput>
+
+                <FormInput label="Address Line 2" hint="Apartment, suite, unit, etc. (optional)">
+                    <input type="text" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Suite 400" />
+                </FormInput>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
+                    <FormInput label="City" hint="City or locality">
+                        <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Springfield" />
+                    </FormInput>
+                    <FormInput label="State / Province" hint="State, province, or region">
+                        <input type="text" value={state} onChange={(e) => setState(e.target.value)} placeholder="IL" />
+                    </FormInput>
+                    <FormInput label="Postal Code" hint="ZIP / postal code">
+                        <input type="text" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="62701" />
+                    </FormInput>
+                </div>
+
+                <FormInput label="Country" hint="Country of the registered address">
+                    <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="United States" />
                 </FormInput>
 
                 <FormActions>

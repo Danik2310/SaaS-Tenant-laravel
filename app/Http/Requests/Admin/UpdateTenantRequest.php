@@ -21,6 +21,16 @@ class UpdateTenantRequest extends FormRequest
             'email' => 'nullable|email|unique:tenants,email,'.$tenantId,
             'status' => 'nullable|in:Active,Suspended',
             'plan_id' => 'nullable|integer|exists:mysql_central.plans,id',
+            'company_name' => 'nullable|string|max:255',
+            'first_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:50',
+            'address_line1' => 'nullable|string|max:255',
+            'address_line2' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:20',
+            'country' => 'nullable|string|max:100',
         ];
     }
 }

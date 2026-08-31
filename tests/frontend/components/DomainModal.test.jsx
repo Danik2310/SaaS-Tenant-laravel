@@ -105,6 +105,41 @@ describe('DomainModal', () => {
     expect(screen.getByText('pro')).toBeInTheDocument();
   });
 
+  test('displays personal and business information', () => {
+    const detailTenant = {
+      ...activeTenant,
+      company_name: 'Acme Corp LLC',
+      first_name: 'Jane',
+      last_name: 'Doe',
+      phone: '+1 555 123 4567',
+      address_line1: '123 Main St',
+      address_line2: 'Suite 400',
+      city: 'Springfield',
+      state: 'IL',
+      postal_code: '62701',
+      country: 'United States',
+    };
+    renderWithProviders(
+      <DomainModal tenant={detailTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText(/Company:/)).toHaveTextContent('Acme Corp LLC');
+    expect(screen.getByText(/Contact:/)).toHaveTextContent('Jane Doe');
+    expect(screen.getByText(/Phone:/)).toHaveTextContent('+1 555 123 4567');
+    expect(screen.getByText(/Address:/)).toHaveTextContent('123 Main St, Suite 400, Springfield, IL, 62701, United States');
+  });
+
+  test('shows placeholders when business details are missing', () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
+    );
+
+    expect(screen.getByText(/Company:/)).toHaveTextContent('—');
+    expect(screen.getByText(/Contact:/)).toHaveTextContent('—');
+    expect(screen.getByText(/Phone:/)).toHaveTextContent('—');
+    expect(screen.getByText(/Address:/)).toHaveTextContent('—');
+  });
+
   test('shows trial active section', () => {
     renderWithProviders(
       <DomainModal tenant={trialTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />

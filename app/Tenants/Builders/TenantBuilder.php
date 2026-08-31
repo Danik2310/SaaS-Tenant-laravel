@@ -36,6 +36,16 @@ class TenantBuilder implements TenantBuilderInterface
             'email' => $data['email'],
             'status' => $status,
             'trial_ends_at' => $data['trial_ends_at'] ?? null,
+            'company_name' => $data['company_name'] ?? null,
+            'first_name' => $data['first_name'] ?? null,
+            'last_name' => $data['last_name'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'address_line1' => $data['address_line1'] ?? null,
+            'address_line2' => $data['address_line2'] ?? null,
+            'city' => $data['city'] ?? null,
+            'state' => $data['state'] ?? null,
+            'postal_code' => $data['postal_code'] ?? null,
+            'country' => $data['country'] ?? null,
         ];
 
         if (isset($data['id'])) {

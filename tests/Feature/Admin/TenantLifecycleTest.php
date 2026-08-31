@@ -48,6 +48,125 @@ class TenantLifecycleTest extends TestCase
         $this->assertDatabaseHas('tenants', ['email' => 'new@example.com']);
     }
 
+    public function test_can_create_tenant_with_business_and_contact_details(): void
+    {
+        $this->setUpAdminAuth();
+
+        Plan::factory()->create(['slug' => 'pro']);
+
+        $response = $this->post('/admin/api/tenants', [
+            'name' => 'Acme Corp',
+            'email' => 'acme@example.com',
+            'domain' => 'acme.example.com',
+            'plan' => 'pro',
+            'company_name' => 'Acme Corp LLC',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'phone' => '+1 555 123 4567',
+            'address_line1' => '123 Main St',
+            'address_line2' => 'Suite 400',
+            'city' => 'Springfield',
+            'state' => 'IL',
+            'postal_code' => '62701',
+            'country' => 'United States',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('tenant.company_name', 'Acme Corp LLC')
+            ->assertJsonPath('tenant.first_name', 'Jane')
+            ->assertJsonPath('tenant.last_name', 'Doe')
+            ->assertJsonPath('tenant.phone', '+1 555 123 4567')
+            ->assertJsonPath('tenant.address_line1', '123 Main St')
+            ->assertJsonPath('tenant.address_line2', 'Suite 400')
+            ->assertJsonPath('tenant.city', 'Springfield')
+            ->assertJsonPath('tenant.state', 'IL')
+            ->assertJsonPath('tenant.postal_code', '62701')
+            ->assertJsonPath('tenant.country', 'United States');
+
+        $this->assertDatabaseHas('tenants', [
+            'email' => 'acme@example.com',
+            'company_name' => 'Acme Corp LLC',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'city' => 'Springfield',
+        ]);
+    }
+
+    public function test_can_update_tenant_business_and_contact_details(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+        Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
+
+        $response = $this->put("/admin/api/tenants/{$tenant->id}", [
+            'company_name' => 'Updated LLC',
+            'first_name' => 'John',
+            'last_name' => 'Smith',
+            'phone' => '+1 555 999 0000',
+            'address_line1' => '456 Oak Ave',
+            'city' => 'Chicago',
+            'state' => 'IL',
+            'postal_code' => '60601',
+            'country' => 'United States',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Tenant updated successfully')
+            ->assertJsonPath('tenant.company_name', 'Updated LLC')
+            ->assertJsonPath('tenant.first_name', 'John');
+
+        $tenant->refresh();
+        $this->assertEquals('Updated LLC', $tenant->company_name);
+        $this->assertEquals('John', $tenant->first_name);
+        $this->assertEquals('Smith', $tenant->last_name);
+        $this->assertEquals('60601', $tenant->postal_code);
+    }
+
+    public function test_creating_tenant_rejects_overlong_business_fields(): void
+    {
+        $this->setUpAdminAuth();
+
+        Plan::factory()->create(['slug' => 'pro']);
+
+        $response = $this->post('/admin/api/tenants', [
+            'name' => 'Acme Corp',
+            'email' => 'acme@example.com',
+            'domain' => 'acme.example.com',
+            'plan' => 'pro',
+            'company_name' => str_repeat('X', 256),
+            'country' => str_repeat('Y', 101),
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['company_name', 'country']);
+
+        $this->assertDatabaseMissing('tenants', ['email' => 'acme@example.com']);
+    }
+
+    public function test_show_tenant_exposes_business_and_contact_details(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create([
+            'plan_id' => $plan->id,
+            'company_name' => 'Acme Corp LLC',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'phone' => '+1 555 123 4567',
+        ]);
+
+        $response = $this->get("/admin/api/tenants/{$tenant->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('tenant.company_name', 'Acme Corp LLC')
+            ->assertJsonPath('tenant.first_name', 'Jane')
+            ->assertJsonPath('tenant.last_name', 'Doe')
+            ->assertJsonPath('tenant.phone', '+1 555 123 4567');
+    }
+
     public function test_duplicate_email_returns_422(): void
     {
         $this->setUpAdminAuth();

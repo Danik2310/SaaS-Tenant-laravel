@@ -35,6 +35,16 @@ class TenantResource extends JsonResource
             'is_deleted' => $this->trashed(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'company_name' => $this->company_name,
+            'first_name' => $this->first_name,
+            'last_name' => $this->last_name,
+            'phone' => $this->phone,
+            'address_line1' => $this->address_line1,
+            'address_line2' => $this->address_line2,
+            'city' => $this->city,
+            'state' => $this->state,
+            'postal_code' => $this->postal_code,
+            'country' => $this->country,
         ];
     }
 
