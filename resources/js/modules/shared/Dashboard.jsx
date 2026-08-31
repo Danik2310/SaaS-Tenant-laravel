@@ -368,15 +368,6 @@ export default function Dashboard() {
                             {user?.name}
                         </Typography>
                     </Box>
-                    {(showForm || editingTenant) && (
-                        <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => { setEditingTenant(null); setShowForm(false); }}
-                        >
-                            Cancel
-                        </Button>
-                    )}
                     <Button
                         variant="contained"
                         color="error"
