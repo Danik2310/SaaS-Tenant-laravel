@@ -24,7 +24,9 @@ export default function Login() {
                 window.location.href = '/admin/dashboard';
             }
         } catch (err) {
-            const message = err.response?.data?.message || 'Login failed. Please try again.';
+            const message = err.response?.data?.errors?.email?.[0]
+                || err.response?.data?.message
+                || 'Login failed. Please try again.';
             toast.error(message);
             setError(message);
         } finally {

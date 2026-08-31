@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\AdminUser;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -35,8 +36,15 @@ class AdminLoginRequest extends FormRequest
         if (! $token) {
             RateLimiter::hit($this->throttleKey());
 
+            $blocked = AdminUser::withoutTrashed()
+                ->where('email', $this->string('email'))
+                ->where('is_active', false)
+                ->exists();
+
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => $blocked
+                    ? 'Your account has been blocked. Please contact the system administrator for assistance.'
+                    : trans('auth.failed'),
             ]);
         }
 

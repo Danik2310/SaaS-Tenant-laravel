@@ -62,6 +62,43 @@ class AdminAuthTest extends TestCase
         $this->assertGuest('admin');
     }
 
+    public function test_blocked_admin_receives_distinct_blocked_message_on_login(): void
+    {
+        AdminUser::factory()->inactive()->create([
+            'email' => 'blocked@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $response = $this->postJson('/central/login', [
+            'email' => 'blocked@example.com',
+            'password' => 'password',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email'])
+            ->assertJsonFragment([
+                'email' => ['Your account has been blocked. Please contact the system administrator for assistance.'],
+            ]);
+
+        $this->assertGuest('admin');
+    }
+
+    public function test_unknown_email_does_not_reveal_blocked_message(): void
+    {
+        $response = $this->postJson('/central/login', [
+            'email' => 'does-not-exist@example.com',
+            'password' => 'password',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email'])
+            ->assertJsonMissing([
+                'email' => ['Your account has been blocked. Please contact the system administrator for assistance.'],
+            ]);
+
+        $this->assertGuest('admin');
+    }
+
     public function test_guest_cannot_access_admin_routes(): void
     {
         $response = $this->getJson('/admin/api/tenants');
