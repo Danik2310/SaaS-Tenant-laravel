@@ -36,6 +36,7 @@
         "@emotion/styled": "^11.14.1",
         "@mui/icons-material": "^7.3.8",
         "@mui/material": "^7.3.8",
+        "dayjs": "^1.11.23",
         "material-react-table": "^3.2.1",
         "recharts": "^3.8.1",
         "sonner": "^2.0.7"

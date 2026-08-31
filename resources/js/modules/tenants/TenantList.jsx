@@ -27,6 +27,14 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 
+const formatFilterDate = (value) => {
+    if (!value) return '';
+    if (typeof value === 'string') return value.slice(0, 10);
+    const date = typeof value.toISOString === 'function' ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().slice(0, 10);
+};
+
 export default function TenantList({
     refreshTrigger,
     onAdd,
@@ -94,8 +102,8 @@ export default function TenantList({
                     params.set('plan_name', f.value);
                 }
                 if (f.id === 'created_at' && Array.isArray(f.value)) {
-                    if (f.value[0]) params.set('date_from', f.value[0]);
-                    if (f.value[1]) params.set('date_to', f.value[1]);
+                    if (f.value[0]) params.set('date_from', formatFilterDate(f.value[0]));
+                    if (f.value[1]) params.set('date_to', formatFilterDate(f.value[1]));
                 }
             });
 

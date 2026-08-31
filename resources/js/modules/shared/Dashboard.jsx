@@ -421,6 +421,7 @@ export default function Dashboard() {
                                 }}
                             />
                         )}
+                        <ErrorBoundary fallbackMessage="Tenant management failed to load">
                         {view === 'tenants' && !showForm && !editingTenant && (
                             <TenantList
                                 refreshTrigger={refreshTrigger}
@@ -456,6 +457,7 @@ export default function Dashboard() {
                                 onBulkAction={handleBulkAction}
                             />
                         )}
+                        </ErrorBoundary>
                         <ErrorBoundary fallbackMessage="Subscriptions failed to load">
                             {view === 'subscriptions' && <Subscriptions initialSearch={subscriptionSearch} onViewTenant={handleViewTenant} />}
                         </ErrorBoundary>

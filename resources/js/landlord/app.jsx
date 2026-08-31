@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from '@mui/material/styles';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Toaster } from 'sonner';
 import CircularProgress from '@mui/material/CircularProgress';
 import theme from '../theme';
@@ -26,12 +28,14 @@ function AppContent() {
 export default function LandlordApp() {
     return (
         <ThemeProvider theme={theme}>
-            <AuthProvider>
-                <ErrorBoundary fallbackMessage="Application failed to load">
-                    <AppContent />
-                </ErrorBoundary>
-                <Toaster richColors position="top-right" />
-            </AuthProvider>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <AuthProvider>
+                    <ErrorBoundary fallbackMessage="Application failed to load">
+                        <AppContent />
+                    </ErrorBoundary>
+                    <Toaster richColors position="top-right" />
+                </AuthProvider>
+            </LocalizationProvider>
         </ThemeProvider>
     );
 }
