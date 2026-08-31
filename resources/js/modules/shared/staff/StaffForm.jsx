@@ -16,18 +16,21 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
     const [roles, setRoles] = useState([]);
     const [loading, setLoading] = useState(false);
     const [rolesLoading, setRolesLoading] = useState(true);
+    const [staffRoleNames, setStaffRoleNames] = useState([]);
 
     useEffect(() => {
         if (staff) {
+            setStaffRoleNames((staff.roles || []).map((role) => (typeof role === 'object' ? role.name : role)));
             setFormData({
                 name: staff.name,
                 email: staff.email,
                 password: '',
                 password_confirmation: '',
-                roles: (staff.roles || []).map((role) => (typeof role === 'object' ? role.id : role)),
+                roles: [],
                 is_active: staff.is_active,
             });
         } else {
+            setStaffRoleNames([]);
             setFormData({
                 name: '',
                 email: '',
@@ -39,6 +42,17 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
         }
         fetchRoles();
     }, [staff]);
+
+    useEffect(() => {
+        if (staffRoleNames.length > 0) {
+            setFormData((prev) => ({
+                ...prev,
+                roles: roles
+                    .filter((role) => staffRoleNames.includes(role.name))
+                    .map((role) => role.id),
+            }));
+        }
+    }, [roles]);
 
     const fetchRoles = async () => {
         try {
