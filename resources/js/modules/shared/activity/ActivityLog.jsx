@@ -29,6 +29,7 @@ import PersonIcon from '@mui/icons-material/Person';
 
 export default function ActivityLog() {
     const [activities, setActivities] = useState([]);
+    const [meta, setMeta] = useState({ current_page: 1, last_page: 1, per_page: 5, total: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedActivity, setSelectedActivity] = useState(null);
@@ -60,10 +61,11 @@ export default function ActivityLog() {
         }
     };
 
-    const fetchActivities = async () => {
+    const fetchActivities = async (page = 1) => {
         setLoading(true);
         try {
             const params = new URLSearchParams();
+            params.append('page', page);
             if (logNameFilter) params.append('log_name', logNameFilter);
             if (search) params.append('search', search);
             if (causerId) params.append('causer_id', causerId);
@@ -71,6 +73,7 @@ export default function ActivityLog() {
             if (dateTo) params.append('date_to', dateTo);
             const res = await api.get(`/admin/api/activity-logs?${params.toString()}`);
             setActivities(res.data.activities);
+            setMeta(res.data.meta);
             setError(null);
         } catch (err) {
             const message = 'Failed to fetch activity logs';
@@ -102,12 +105,20 @@ export default function ActivityLog() {
     useEffect(() => {
         fetchLogNames();
         fetchCausers();
-        fetchActivities();
+        fetchActivities(1);
     }, []);
 
     useEffect(() => {
-        fetchActivities();
+        fetchActivities(1);
     }, [logNameFilter, search, causerId, dateFrom, dateTo]);
+
+    const handlePageChange = (newPage) => {
+        fetchActivities(newPage + 1);
+    };
+
+    const handleRowsPerPageChange = (newPerPage) => {
+        fetchActivities(1);
+    };
 
     const columns = [
         { accessorKey: 'id', header: 'ID' },
@@ -220,6 +231,11 @@ export default function ActivityLog() {
                 loading={loading}
                 onView={handleViewDetails}
                 emptyMessage="No activity logs yet."
+                total={meta.total}
+                page={meta.current_page - 1}
+                rowsPerPage={meta.per_page}
+                onPageChange={handlePageChange}
+                onRowsPerPageChange={handleRowsPerPageChange}
             />
 
             <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="md" fullWidth>
