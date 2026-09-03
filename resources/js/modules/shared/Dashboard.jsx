@@ -232,11 +232,11 @@ export default function Dashboard() {
         if (!impersonateConfirmTenant) return;
         try {
             const res = await api.post('/admin/api/impersonate', { tenant_id: impersonateConfirmTenant.id });
-            const domain = res.data.domain;
-            if (domain) {
-                window.location.href = `http://${domain}`;
+            const enterUrl = res.data.enterUrl;
+            if (enterUrl) {
+                window.location.href = enterUrl;
             } else {
-                const message = 'No domain available for tenant';
+                const message = 'No entry point available for tenant';
                 toast.error(message);
                 setError(message);
             }

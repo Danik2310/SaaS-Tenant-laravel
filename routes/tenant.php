@@ -20,6 +20,7 @@ use App\Products\Http\Controllers\Tenant\WarehouseController;
 use App\Shared\Constants\PermissionNames;
 use App\Shared\Http\Controllers\Admin\AuthController;
 use App\Shared\Http\Controllers\Tenant\DashboardController;
+use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
@@ -76,8 +77,13 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
     Route::post('/admin/login', [AuthController::class, 'login'])
         ->middleware('throttle:5,1');
 
+    // God mode entry — public so the central admin can be landed here before
+    // any tenant session exists. Auth is established via the signed token.
+    Route::get('/god-mode/enter', [ImpersonationEntryController::class, 'enter'])
+        ->name('god-mode.enter');
+
     // Authenticated tenant routes
-    Route::middleware(['jwt.cookie', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'session.expiry:web', 'throttle:60,1'])->group(function () {
+    Route::middleware(['jwt.cookie', 'impersonation.session', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'session.expiry:web', 'throttle:60,1'])->group(function () {
         // Email verification — auth only, NOT verified (avoids infinite redirect loop)
         Route::get('verify-email', EmailVerificationPromptController::class)
             ->name('verification.notice');
@@ -110,6 +116,10 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             // Tenant admin auth
             Route::post('/admin/logout', [AuthController::class, 'logout'])
                 ->name('admin.logout');
+
+            // God mode exit
+            Route::post('/god-mode/stop', [ImpersonationEntryController::class, 'stop'])
+                ->name('god-mode.stop');
 
             // Dashboard
             Route::get('/dashboard', [DashboardController::class, 'index'])

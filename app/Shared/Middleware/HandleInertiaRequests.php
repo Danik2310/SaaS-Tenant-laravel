@@ -62,11 +62,23 @@ class HandleInertiaRequests extends Middleware
             $planData = $this->cachedPlanData($currentTenant, $tenantId);
         }
 
+        $impersonation = session('impersonation');
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user()?->only(['id', 'name', 'email']),
+                'user' => $impersonation
+                    ? ['id' => null, 'name' => $impersonation['admin_name'] ?? 'Administrator', 'email' => $impersonation['admin_email'] ?? '']
+                    : $request->user()?->only(['id', 'name', 'email']),
             ],
+            'impersonation' => $impersonation && $currentTenant instanceof Tenant ? [
+                'active' => true,
+                'tenant_name' => $currentTenant->name,
+                'tenant_id' => $currentTenant->id,
+                'admin_name' => $impersonation['admin_name'] ?? 'Administrator',
+                'read_only' => (bool) config('impersonation.read_only', true),
+                'started_at' => $impersonation['started_at'] ?? null,
+            ] : ['active' => false],
             'feature_definitions' => FeatureFlagCatalog::definitions(),
             'plan' => $planData,
         ];

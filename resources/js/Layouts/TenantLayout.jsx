@@ -7,6 +7,8 @@ import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MoveUpIcon from '@mui/icons-material/MoveUp';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 const navItems = [
     { id: 'tenant.dashboard', label: 'Dashboard', icon: <DashboardIcon />, section: 'Main' },
@@ -19,9 +21,10 @@ const navItems = [
 const sectionLabels = { Main: 'Main', Inventory: 'Inventory', System: 'System' };
 
 const TenantLayout = React.memo(function TenantLayout({ children }) {
-    const { auth } = usePage().props;
+    const { auth, impersonation } = usePage().props;
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const impersonating = impersonation?.active === true;
 
     const isActive = (routeName) => {
         try {
@@ -205,6 +208,40 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
             {/* Main content */}
             <main style={{ flex: 1, minWidth: 0, padding: '16px 32px' }}>
                 <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+                    {impersonating && (
+                        <div data-testid="god-mode-banner" style={{
+                            display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                            background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 8,
+                            padding: '10px 16px', marginBottom: 16,
+                        }}>
+                            <AdminPanelSettingsIcon style={{ color: '#b45309' }} />
+                            <div style={{ flex: 1, minWidth: 220 }}>
+                                <div style={{ fontWeight: 700, fontSize: 14, color: '#78350f' }}>
+                                    God Mode — Viewing tenant: {impersonation?.tenant_name}
+                                </div>
+                                <div style={{ fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                    {impersonation?.read_only && (
+                                        <>
+                                            <VisibilityOffIcon style={{ fontSize: 14 }} />
+                                            <span>Read-only session — changes are disabled.</span>
+                                        </>
+                                    )}
+                                    {!impersonation?.read_only && <span>Full access.</span>}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => router.post(route('god-mode.stop'))}
+                                aria-label="Return to Admin"
+                                style={{
+                                    background: '#b45309', color: 'white', border: 'none',
+                                    borderRadius: 6, padding: '8px 14px', cursor: 'pointer',
+                                    fontSize: 13, fontWeight: 600,
+                                }}
+                            >
+                                Return to Admin
+                            </button>
+                        </div>
+                    )}
                     {children}
                 </div>
             </main>

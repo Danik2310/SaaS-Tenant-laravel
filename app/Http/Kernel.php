@@ -17,6 +17,7 @@ use App\Shared\Middleware\CheckStorageLimit;
 use App\Shared\Middleware\CheckTenantState;
 use App\Shared\Middleware\CspNonce;
 use App\Shared\Middleware\EnsureCentralDomain;
+use App\Shared\Middleware\EnsureImpersonationValid;
 use App\Shared\Middleware\EnsureSessionNotExpired;
 use App\Shared\Middleware\HandleInertiaRequests;
 use App\Shared\Middleware\PaymentMethodRateLimit;
@@ -111,6 +112,7 @@ class Kernel extends HttpKernel
         'feature' => RequiresPlanFeature::class,
         'tenant.state' => CheckTenantState::class,
         'impersonation.expiry' => CheckImpersonationExpiry::class,
+        'impersonation.session' => EnsureImpersonationValid::class,
         'storage.limit' => CheckStorageLimit::class,
         'central.domain' => EnsureCentralDomain::class,
         'jwt.cookie' => AuthenticateJwtFromCookie::class,

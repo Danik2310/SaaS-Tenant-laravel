@@ -5,6 +5,7 @@ namespace App\Shared\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImpersonateTenantRequest;
 use App\Models\Tenant;
+use App\Shared\Support\ImpersonationToken;
 
 /**
  * @group Tenant Impersonation
@@ -35,6 +36,18 @@ class ImpersonationController extends Controller
             return response()->json(['message' => 'Tenant has no domain configured'], 422);
         }
 
+        $admin = auth('admin')->user();
+
+        $token = ImpersonationToken::sign([
+            'tenant_id' => $tenant->id,
+            'admin_id' => $admin?->getAuthIdentifier(),
+            'admin_name' => $admin?->name,
+            'admin_email' => $admin?->email,
+        ], (int) config('impersonation.token_ttl', 300));
+
+        $scheme = config('app.env') === 'production' ? 'https' : 'http';
+        $enterUrl = "{$scheme}://{$domain}/god-mode/enter?impersonate_token={$token}";
+
         session([
             'impersonate_tenant' => $tenant->id,
             'impersonate_started_at' => now()->timestamp,
@@ -46,7 +59,7 @@ class ImpersonationController extends Controller
             ->withProperties(['tenant_name' => $tenant->name, 'domain' => $domain])
             ->log("Impersonated tenant {$tenant->name}");
 
-        return response()->json(['message' => 'Impersonation started', 'domain' => $domain]);
+        return response()->json(['message' => 'Impersonation started', 'domain' => $domain, 'enterUrl' => $enterUrl]);
     }
 
     /**
