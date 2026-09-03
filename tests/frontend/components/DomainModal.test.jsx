@@ -3,6 +3,9 @@ import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
 import DomainModal from '@/modules/shared/modals/DomainModal';
 
+const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
+vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const activeTenant = {
@@ -51,6 +54,9 @@ const deletedTenant = {
 describe('DomainModal', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthContextMock.mockReturnValue({
+      permissions: ['view tenants', 'impersonate tenants', 'edit tenants', 'restore tenants'],
+    });
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockResolvedValue() },
     });
@@ -215,6 +221,56 @@ describe('DomainModal', () => {
 
     fireEvent.click(screen.getByText('Run Migrations'));
     expect(onRunMigrations).toHaveBeenCalledWith(activeTenant);
+  });
+
+  test('hides Impersonate and Run Migrations for read-only users', () => {
+    useAuthContextMock.mockReturnValue({ permissions: ['view tenants'] });
+
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={vi.fn()} />
+    );
+
+    expect(screen.queryByText('Impersonate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Run Migrations')).not.toBeInTheDocument();
+    expect(screen.getByText('Database Info')).toBeInTheDocument();
+    expect(screen.queryByText("You don't have permission to perform actions on this tenant.")).not.toBeInTheDocument();
+  });
+
+  test('hides Restore Tenant for users without restore permission', () => {
+    useAuthContextMock.mockReturnValue({ permissions: ['view tenants'] });
+
+    renderWithProviders(
+      <DomainModal tenant={deletedTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={vi.fn()} />
+    );
+
+    expect(screen.queryByText('Restore Tenant')).not.toBeInTheDocument();
+    expect(screen.getByText("You don't have permission to perform actions on this tenant.")).toBeInTheDocument();
+  });
+
+  test('shows Restore Tenant for users with restore permission', () => {
+    useAuthContextMock.mockReturnValue({ permissions: ['view tenants', 'restore tenants'] });
+
+    renderWithProviders(
+      <DomainModal tenant={deletedTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={vi.fn()} />
+    );
+
+    expect(screen.getByText('Restore Tenant')).toBeInTheDocument();
+    expect(screen.queryByText("You don't have permission to perform actions on this tenant.")).not.toBeInTheDocument();
+  });
+
+  test('shows no-access message when user lacks all actions', () => {
+    useAuthContextMock.mockReturnValue({
+      permissions: [],
+    });
+
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} onRestore={vi.fn()} />
+    );
+
+    expect(screen.queryByText('Database Info')).not.toBeInTheDocument();
+    expect(screen.queryByText('Impersonate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Run Migrations')).not.toBeInTheDocument();
+    expect(screen.getByText("You don't have permission to perform actions on this tenant.")).toBeInTheDocument();
   });
 
   test('close button fires onClose', () => {

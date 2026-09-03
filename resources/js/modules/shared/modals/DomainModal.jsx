@@ -29,6 +29,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import BusinessIcon from '@mui/icons-material/Business';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { useAuthContext } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
 const formatContactName = (tenant) => {
@@ -67,6 +68,16 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
     const isDeleted = tenant.is_deleted || tenant.status === 'Deleted';
     const planName = tenant.plan_name || 'No plan';
     const planSlug = tenant.plan_slug || '';
+
+    const { permissions = [] } = useAuthContext();
+    const canImpersonate = permissions.includes('impersonate tenants');
+    const canRunMigrations = permissions.includes('edit tenants');
+    const canRestore = permissions.includes('restore tenants');
+    const canViewDatabase = permissions.includes('view tenants');
+
+    const showQuickActions = isDeleted
+        ? canRestore
+        : canImpersonate || canRunMigrations || canViewDatabase;
 
     return (
         <Dialog
@@ -296,58 +307,10 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                         <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2, mt: 1 }}>
                             {isDeleted ? 'Actions' : 'Quick Actions'}
                         </Typography>
-                        <Grid container spacing={2}>
-                            {isDeleted ? (
-                                <Grid item xs={12} sm={4} md={4} lg={4}>
-                                    <Card
-                                        sx={{
-                                            borderRadius: 2,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                            border: '1px solid #e2e8f0',
-                                            '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
-                                        }}
-                                        onClick={() => onRestore && onRestore(tenant.id)}
-                                    >
-                                        <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                            <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
-                                                <RestoreIcon />
-                                            </Avatar>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                                                Restore Tenant
-                                            </Typography>
-                                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                                Reactivate this tenant
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            ) : (
-                                <>
-                                    <Grid item xs={12} sm={4} md={4} lg={4}>
-                                        <Card
-                                            sx={{
-                                                borderRadius: 2,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                border: '1px solid #e2e8f0',
-                                                '&:hover': { borderColor: '#a78bfa', bgcolor: '#f5f3ff', transform: 'translateY(-2px)' },
-                                            }}
-                                            onClick={() => onImpersonate(tenant)}
-                                        >
-                                            <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                                <Avatar sx={{ bgcolor: '#8b5cf6', width: 40, height: 40, mx: 'auto', mb: 1 }}>
-                                                    <PersonIcon />
-                                                </Avatar>
-                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                                                    Impersonate
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                                    Log in as tenant admin
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
+                        {showQuickActions ? (
+                            <Grid container spacing={2}>
+                                {isDeleted ? (
+                                    canRestore && (
                                     <Grid item xs={12} sm={4} md={4} lg={4}>
                                         <Card
                                             sx={{
@@ -357,48 +320,110 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                 border: '1px solid #e2e8f0',
                                                 '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
                                             }}
-                                            onClick={() => onViewDatabase(tenant)}
+                                            onClick={() => onRestore && onRestore(tenant.id)}
                                         >
                                             <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
                                                 <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
-                                                    <StorageIcon />
+                                                    <RestoreIcon />
                                                 </Avatar>
                                                 <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                                                    Database Info
+                                                    Restore Tenant
                                                 </Typography>
                                                 <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                                    View connection details
+                                                    Reactivate this tenant
                                                 </Typography>
                                             </CardContent>
                                         </Card>
                                     </Grid>
-                                    <Grid item xs={12} sm={4} md={4} lg={4}>
-                                        <Card
-                                            sx={{
-                                                borderRadius: 2,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                border: '1px solid #e2e8f0',
-                                                '&:hover': { borderColor: '#f59e0b', bgcolor: '#fffbeb', transform: 'translateY(-2px)' },
-                                            }}
-                                            onClick={() => onRunMigrations(tenant)}
-                                        >
-                                            <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                                <Avatar sx={{ bgcolor: '#f59e0b', width: 40, height: 40, mx: 'auto', mb: 1 }}>
-                                                    <SyncIcon />
-                                                </Avatar>
-                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
-                                                    Run Migrations
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                                                    Execute pending migrations
-                                                </Typography>
-                                            </CardContent>
-                                        </Card>
-                                    </Grid>
-                                </>
-                            )}
-                        </Grid>
+                                    )
+                                ) : (
+                                    <>
+                                        {canImpersonate && (
+                                        <Grid item xs={12} sm={4} md={4} lg={4}>
+                                            <Card
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    border: '1px solid #e2e8f0',
+                                                    '&:hover': { borderColor: '#a78bfa', bgcolor: '#f5f3ff', transform: 'translateY(-2px)' },
+                                                }}
+                                                onClick={() => onImpersonate(tenant)}
+                                            >
+                                                <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                    <Avatar sx={{ bgcolor: '#8b5cf6', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                        <PersonIcon />
+                                                    </Avatar>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                        Impersonate
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                        Log in as tenant admin
+                                                    </Typography>
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                        )}
+                                        {canViewDatabase && (
+                                        <Grid item xs={12} sm={4} md={4} lg={4}>
+                                            <Card
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    border: '1px solid #e2e8f0',
+                                                    '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
+                                                }}
+                                                onClick={() => onViewDatabase(tenant)}
+                                            >
+                                                <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                    <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                        <StorageIcon />
+                                                    </Avatar>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                        Database Info
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                        View connection details
+                                                    </Typography>
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                        )}
+                                        {canRunMigrations && (
+                                        <Grid item xs={12} sm={4} md={4} lg={4}>
+                                            <Card
+                                                sx={{
+                                                    borderRadius: 2,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    border: '1px solid #e2e8f0',
+                                                    '&:hover': { borderColor: '#f59e0b', bgcolor: '#fffbeb', transform: 'translateY(-2px)' },
+                                                }}
+                                                onClick={() => onRunMigrations(tenant)}
+                                            >
+                                                <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
+                                                    <Avatar sx={{ bgcolor: '#f59e0b', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                        <SyncIcon />
+                                                    </Avatar>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                        Run Migrations
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                        Execute pending migrations
+                                                    </Typography>
+                                                </CardContent>
+                                            </Card>
+                                        </Grid>
+                                        )}
+                                    </>
+                                )}
+                            </Grid>
+                        ) : (
+                            <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                                You don't have permission to perform actions on this tenant.
+                            </Typography>
+                        )}
                     </Grid>
                 </Grid>
             </DialogContent>
