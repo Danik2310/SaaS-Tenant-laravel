@@ -21,8 +21,10 @@ use App\Shared\Constants\PermissionNames;
 use App\Shared\Http\Controllers\Admin\AuthController;
 use App\Shared\Http\Controllers\Tenant\DashboardController;
 use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 /*
@@ -163,4 +165,30 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             });
         });
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Experimental: path-based tenancy identification
+|--------------------------------------------------------------------------
+|
+| DEV-ONLY proof that tenant identification can live inside the monolith by
+| resolving the tenant from a URL path segment instead of an external
+| subdomain. The {tenant} param is the tenant id (first route parameter so
+| InitializeTenancyByPath can pick it up). Requests hit the central host
+| (saas-app.test) and are routed to the tenant's own database.
+|
+| No auth guard is applied here on purpose — this isolates *identification*
+| from the still-open auth/session question. Do not build on this block for
+| production until that isolation is resolved.
+|
+*/
+Route::middleware(['web', InitializeTenancyByPath::class])->prefix('p/{tenant}')->group(function () {
+    Route::get('/hello', function () {
+        return response()->json([
+            'tenant_id' => tenant('id'),
+            'tenant_name' => tenant('name'),
+            'connection' => DB::connection()->getDatabaseName(),
+        ]);
+    })->name('tenant.path.hello');
 });
