@@ -3,6 +3,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
+import GodModeIndicator from '@/Components/GodModeIndicator';
 import { Link } from '@inertiajs/react';
 
 export default function Authenticated({ user, header, children }) {
@@ -120,6 +121,8 @@ export default function Authenticated({ user, header, children }) {
             )}
 
             <main>{children}</main>
+
+            <GodModeIndicator />
         </div>
     );
 }
