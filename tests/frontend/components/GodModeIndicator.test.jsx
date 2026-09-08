@@ -24,9 +24,10 @@ describe('GodModeIndicator', () => {
   test('renders nothing when not in God Mode', () => {
     renderWithProviders(<GodModeIndicator />);
     expect(screen.queryByTestId('god-mode-indicator')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('god-mode-eye')).not.toBeInTheDocument();
   });
 
-  test('renders tenant name and read-only notice when impersonating', () => {
+  test('renders tenant name, read-only notice, and blinking red eye when impersonating', () => {
     usePage.mockReturnValue({
       props: {
         impersonation: {
@@ -43,6 +44,11 @@ describe('GodModeIndicator', () => {
     renderWithProviders(<GodModeIndicator />);
 
     expect(screen.getByTestId('god-mode-indicator')).toBeInTheDocument();
+    expect(screen.getByTestId('god-mode-eye')).toBeInTheDocument();
+    expect(screen.getByTestId('god-mode-eye')).toHaveStyle({
+      color: '#ef4444',
+      animation: 'god-mode-blink 1.2s ease-in-out infinite',
+    });
     expect(screen.getByText(/God Mode — Acme Corp/)).toBeInTheDocument();
     expect(screen.getByText(/Read-only session/)).toBeInTheDocument();
     expect(screen.getByText('Return to Admin')).toBeInTheDocument();

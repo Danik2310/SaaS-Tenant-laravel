@@ -1,6 +1,5 @@
 import { usePage, router } from '@inertiajs/react';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import CloseIcon from '@mui/icons-material/Close';
 
 export default function GodModeIndicator() {
@@ -29,14 +28,16 @@ export default function GodModeIndicator() {
                 cursor: 'default',
             }}
         >
-            <AdminPanelSettingsIcon style={{ color: '#b45309' }} />
+            <VisibilityIcon
+                data-testid="god-mode-eye"
+                style={{ color: '#ef4444', animation: 'god-mode-blink 1.2s ease-in-out infinite' }}
+            />
             <div style={{ lineHeight: 1.3 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#78350f' }}>
                     God Mode — {impersonation?.tenant_name}
                 </div>
                 {impersonation?.read_only && (
                     <div style={{ fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <VisibilityOffIcon style={{ fontSize: 14 }} />
                         <span>Read-only session</span>
                     </div>
                 )}
@@ -62,6 +63,12 @@ export default function GodModeIndicator() {
                 <CloseIcon style={{ fontSize: 15 }} />
                 Return to Admin
             </button>
+            <style>{`
+                @keyframes god-mode-blink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.2; }
+                }
+            `}</style>
         </div>
     );
 }
