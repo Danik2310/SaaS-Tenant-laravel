@@ -230,17 +230,24 @@ export default function Dashboard() {
 
     const confirmImpersonateTenant = async () => {
         if (!impersonateConfirmTenant) return;
+        const entryTab = window.open('', '_blank');
         try {
             const res = await api.post('/admin/api/impersonate', { tenant_id: impersonateConfirmTenant.id });
             const enterUrl = res.data.enterUrl;
             if (enterUrl) {
-                window.location.href = enterUrl;
+                if (entryTab) {
+                    entryTab.location.href = enterUrl;
+                } else {
+                    window.location.href = enterUrl;
+                }
             } else {
+                entryTab?.close();
                 const message = 'No entry point available for tenant';
                 toast.error(message);
                 setError(message);
             }
         } catch (err) {
+            entryTab?.close();
             const message = err.response?.data?.message || 'Failed to impersonate tenant';
             toast.error(message);
             setError(message);
