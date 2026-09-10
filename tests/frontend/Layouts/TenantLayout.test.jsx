@@ -49,7 +49,8 @@ describe('TenantLayout', () => {
     );
 
     expect(screen.getByTestId('god-mode-indicator')).toBeInTheDocument();
-    expect(screen.getByText(/God Mode — Acme Corp/)).toBeInTheDocument();
+    expect(screen.getByText(/God Mode — running as Super Admin/)).toBeInTheDocument();
+    expect(screen.getByText('Acme Corp')).toBeInTheDocument();
     expect(screen.getByText(/Read-only session/)).toBeInTheDocument();
     expect(screen.getByText('Return to Admin')).toBeInTheDocument();
   });

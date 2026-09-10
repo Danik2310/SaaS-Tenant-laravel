@@ -1,13 +1,75 @@
+import { useEffect, useState } from 'react';
 import { usePage, router } from '@inertiajs/react';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CloseIcon from '@mui/icons-material/Close';
 
+const SESSION_KEY = 'god_mode_session';
+
+const storage = {
+    get() {
+        try {
+            return sessionStorage.getItem(SESSION_KEY);
+        } catch {
+            return null;
+        }
+    },
+    set(value) {
+        try {
+            sessionStorage.setItem(SESSION_KEY, value);
+        } catch {
+            // Storage unavailable (e.g. opaque origin) — server prop will cover this render.
+        }
+    },
+    remove() {
+        try {
+            sessionStorage.removeItem(SESSION_KEY);
+        } catch {
+            // ignore
+        }
+    },
+};
+
 export default function GodModeIndicator() {
     const { impersonation } = usePage().props;
+    const [persisted, setPersisted] = useState(null);
 
-    if (impersonation?.active !== true) {
+    useEffect(() => {
+        if (impersonation?.active === true) {
+            const data = {
+                admin_name: impersonation.admin_name,
+                tenant_name: impersonation.tenant_name,
+                tenant_id: impersonation.tenant_id,
+                read_only: impersonation.read_only,
+            };
+            storage.set(JSON.stringify(data));
+            setPersisted(data);
+        }
+    }, [impersonation]);
+
+    useEffect(() => {
+        if (impersonation?.active !== true && persisted === null) {
+            const stored = storage.get();
+            if (stored) {
+                try {
+                    setPersisted(JSON.parse(stored));
+                } catch {
+                    storage.remove();
+                }
+            }
+        }
+    }, [impersonation, persisted]);
+
+    const display = impersonation?.active === true ? impersonation : persisted;
+
+    if (!display) {
         return null;
     }
+
+    const handleStop = () => {
+        storage.remove();
+        setPersisted(null);
+        router.post(route('god-mode.stop'));
+    };
 
     return (
         <div
@@ -34,16 +96,19 @@ export default function GodModeIndicator() {
             />
             <div style={{ lineHeight: 1.3 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#78350f' }}>
-                    God Mode — {impersonation?.tenant_name}
+                    God Mode — running as {display.admin_name}
                 </div>
-                {impersonation?.read_only && (
+                <div style={{ fontSize: 12, color: '#92400e' }}>
+                    {display.tenant_name}
+                </div>
+                {display.read_only && (
                     <div style={{ fontSize: 12, color: '#92400e', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span>Read-only session</span>
                     </div>
                 )}
             </div>
             <button
-                onClick={() => router.post(route('god-mode.stop'))}
+                onClick={handleStop}
                 aria-label="Return to Admin"
                 title="Return to Admin"
                 style={{
