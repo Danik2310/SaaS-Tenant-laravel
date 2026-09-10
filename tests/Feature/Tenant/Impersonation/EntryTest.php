@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Tenant\Impersonation;
 
 use App\Models\Tenant;
+use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
 use App\Shared\Support\ImpersonationToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -95,5 +97,30 @@ class EntryTest extends TestCase
         ]])
             ->post('/god-mode/stop')
             ->assertRedirect();
+    }
+
+    public function test_stop_clears_all_impersonation_session_keys(): void
+    {
+        session([
+            'impersonation' => [
+                'admin_id' => '1',
+                'admin_name' => 'Super Admin',
+                'tenant_id' => $this->tenant->id,
+                'started_at' => time(),
+                'ttl' => 60,
+            ],
+            'impersonate_tenant' => $this->tenant->id,
+            'impersonate_started_at' => now()->timestamp,
+        ]);
+
+        $request = Request::create('/god-mode/stop', 'POST');
+        $request->setLaravelSession(session()->driver());
+
+        $response = (new ImpersonationEntryController)->stop($request);
+
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertFalse(session()->has('impersonation'));
+        $this->assertFalse(session()->has('impersonate_tenant'));
+        $this->assertFalse(session()->has('impersonate_started_at'));
     }
 }

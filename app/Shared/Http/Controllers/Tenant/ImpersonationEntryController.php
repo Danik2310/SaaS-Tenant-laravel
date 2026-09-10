@@ -4,6 +4,7 @@ namespace App\Shared\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Shared\Support\ImpersonationState;
 use App\Shared\Support\ImpersonationToken;
 use Illuminate\Http\Request;
 
@@ -68,7 +69,7 @@ class ImpersonationEntryController extends Controller
     {
         $impersonation = $request->session()->get('impersonation');
 
-        $request->session()->forget('impersonation');
+        ImpersonationState::clear();
 
         if ($impersonation) {
             activity('impersonation')

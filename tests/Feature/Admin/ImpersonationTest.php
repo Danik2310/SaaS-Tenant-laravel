@@ -83,18 +83,27 @@ class ImpersonationTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_starting_impersonation_when_already_active_is_rejected(): void
+    public function test_starting_impersonation_when_stale_session_exists_replaces_it(): void
     {
         $this->setUpAdminAuth();
 
-        session(['impersonate_tenant' => $this->tenant->id, 'impersonate_started_at' => now()->timestamp]);
+        session([
+            'impersonate_tenant' => $this->tenant->id,
+            'impersonate_started_at' => now()->timestamp,
+            'impersonation' => ['admin_id' => '1', 'tenant_id' => $this->tenant->id],
+        ]);
 
         $response = $this->postJson('/admin/api/impersonate', [
             'tenant_id' => $this->tenant->id,
         ]);
 
-        $response->assertStatus(422)
-            ->assertJsonPath('message', 'Already impersonating a tenant. Stop current impersonation first.');
+        $response->assertOk()
+            ->assertJsonPath('message', 'Impersonation started');
+
+        // The stale state is fully cleared and replaced with a fresh handoff.
+        $this->assertSame($this->tenant->id, session('impersonate_tenant'));
+        $this->assertNotNull(session('impersonate_started_at'));
+        $this->assertNull(session('impersonation'));
     }
 
     public function test_starting_impersonation_for_tenant_without_domain_is_rejected(): void

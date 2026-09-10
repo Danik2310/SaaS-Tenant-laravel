@@ -95,11 +95,17 @@ class EnsureImpersonationValidTest extends TestCase
 
     public function test_expired_session_is_cleared(): void
     {
-        session(['impersonation' => $this->impersonation(['started_at' => time() - (61 * 60)])]);
+        session([
+            'impersonation' => $this->impersonation(['started_at' => time() - (61 * 60)]),
+            'impersonate_tenant' => $this->tenant->id,
+            'impersonate_started_at' => now()->timestamp,
+        ]);
 
         $response = $this->act(Request::create('/dashboard', 'GET'));
 
         $this->assertFalse(session()->has('impersonation'));
+        $this->assertFalse(session()->has('impersonate_tenant'));
+        $this->assertFalse(session()->has('impersonate_started_at'));
         $this->assertNotSame(200, $response->getStatusCode());
     }
 

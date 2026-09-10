@@ -5,6 +5,7 @@ namespace App\Shared\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ImpersonateTenantRequest;
 use App\Models\Tenant;
+use App\Shared\Support\ImpersonationState;
 use App\Shared\Support\ImpersonationToken;
 
 /**
@@ -25,8 +26,12 @@ class ImpersonationController extends Controller
      */
     public function start(ImpersonateTenantRequest $request)
     {
-        if (session()->has('impersonate_tenant')) {
-            return response()->json(['message' => 'Already impersonating a tenant. Stop current impersonation first.'], 422);
+        if (ImpersonationState::active()) {
+            ImpersonationState::clear();
+
+            activity('impersonation')
+                ->causedBy(auth('admin')->user())
+                ->log('Replaced stale impersonation session');
         }
 
         $tenant = Tenant::with('domains')->find($request->validated('tenant_id'));
@@ -69,7 +74,7 @@ class ImpersonationController extends Controller
      */
     public function stop()
     {
-        session()->forget(['impersonate_tenant', 'impersonate_started_at']);
+        ImpersonationState::clear();
 
         return response()->json(['message' => 'Impersonation stopped']);
     }

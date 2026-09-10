@@ -3,6 +3,7 @@
 namespace App\Shared\Middleware;
 
 use App\Shared\Support\ImpersonatedAdmin;
+use App\Shared\Support\ImpersonationState;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,7 @@ class EnsureImpersonationValid
         $ttl = (int) ($impersonation['ttl'] ?? config('impersonation.ttl', 60));
 
         if ($startedAt + ($ttl * 60) < now()->getTimestamp()) {
-            session()->forget('impersonation');
+            ImpersonationState::clear();
 
             activity('impersonation')
                 ->log('Impersonation session expired');
@@ -42,7 +43,7 @@ class EnsureImpersonationValid
         }
 
         if ((string) ($impersonation['tenant_id'] ?? '') !== (string) tenant('id')) {
-            session()->forget('impersonation');
+            ImpersonationState::clear();
 
             abort(403, 'Impersonation session does not match this tenant.');
         }
