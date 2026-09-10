@@ -132,14 +132,14 @@ class TenantController extends Controller
      *
      * @bodyParam name string required The tenant name. Example: Acme Corp
      * @bodyParam email string required Tenant admin email. Example: admin@acme.com
-     * @bodyParam domain string required Primary domain. Example: acme.example.com
+     * @bodyParam domain string required Primary domain. Example: acme.sasapp
      * @bodyParam plan string optional Plan slug to assign. Example: pro
      *
      * @response 201 {"message":"Tenant created successfully","tenant":{"id":"...","name":"Acme Corp","email":"admin@acme.com","status":"Trial"}}
      *
      * @responseField errors object Field-level error messages when validation or provisioning fails.
      *
-     * @response 422 {"message":"Cannot create tenant. The following conflicts were found:","errors":{"email":["A tenant with the email 'admin@example.com' already exists (ID: TEN-000003)."],"domain":["The domain 'example.localhost' is already in use by 'Acme Corp'."]}}
+     * @response 422 {"message":"Cannot create tenant. The following conflicts were found:","errors":{"email":["A tenant with the email 'admin@example.com' already exists (ID: TEN-000003)."],"domain":["The domain 'example.sasapp' is already in use by 'Acme Corp'."]}}
      */
     public function store(StoreTenantRequest $request)
     {

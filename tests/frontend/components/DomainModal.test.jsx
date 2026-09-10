@@ -19,8 +19,8 @@ const activeTenant = {
   is_on_trial: false,
   trial_has_expired: false,
   all_domains: [
-    { domain: 'acme.localhost', is_primary: true },
-    { domain: 'acme-backup.localhost', is_primary: false },
+    { domain: 'acme.sasapp', is_primary: true },
+    { domain: 'acme-backup.sasapp', is_primary: false },
   ],
 };
 
@@ -167,8 +167,8 @@ describe('DomainModal', () => {
       <DomainModal tenant={activeTenant} onClose={vi.fn()} onImpersonate={vi.fn()} onViewDatabase={vi.fn()} onRunMigrations={vi.fn()} />
     );
 
-    expect(screen.getByText('acme.localhost')).toBeInTheDocument();
-    expect(screen.getByText('acme-backup.localhost')).toBeInTheDocument();
+    expect(screen.getByText('acme.sasapp')).toBeInTheDocument();
+    expect(screen.getByText('acme-backup.sasapp')).toBeInTheDocument();
   });
 
   test('shows empty state when no domains', () => {
@@ -189,7 +189,7 @@ describe('DomainModal', () => {
     fireEvent.click(copyButtons[0]);
 
     await waitFor(() => {
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('acme.localhost');
+      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('acme.sasapp');
     });
   });
 

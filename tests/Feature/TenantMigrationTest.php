@@ -80,7 +80,7 @@ class TenantMigrationTest extends TestCase
             $tenantId = 'test-migrate-'.uniqid();
             $t = Tenant::create([
                 'id' => $tenantId,
-                'domain' => $tenantId.'.localhost',
+                'domain' => $tenantId.'.sasapp',
             ]);
 
             $t->database()->makeCredentials();

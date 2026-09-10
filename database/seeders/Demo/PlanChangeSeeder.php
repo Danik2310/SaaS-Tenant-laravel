@@ -21,7 +21,7 @@ class PlanChangeSeeder extends Seeder
         $demoTenant = $tenantManager->provision([
             'name' => 'Demo Plan Change',
             'email' => 'demo-planchange@example.com',
-            'domain' => 'demo-planchange.localhost',
+            'domain' => 'demo-planchange.'.config('tenancy.tenant_domain_suffix'),
             'plan' => 'free',
             'status' => 'Active',
         ]);

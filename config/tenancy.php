@@ -37,6 +37,12 @@ return [
     'trial_days' => (int) env('TRIAL_DAYS', 14),
 
     /**
+     * The domain suffix appended to tenant slugs when no explicit domain is provided.
+     * E.g. 'sasapp' makes tenant domains look like: my-tenant.sasapp
+     */
+    'tenant_domain_suffix' => env('TENANT_DOMAIN_SUFFIX', 'sasapp'),
+
+    /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
      * Their responsibility is making Laravel features tenant-aware.
      *

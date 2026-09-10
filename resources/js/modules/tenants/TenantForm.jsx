@@ -153,12 +153,12 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                 </FormInput>
 
                 {!tenant && (
-                    <FormInput label="Domain" required hint="Unique domain for tenant access, e.g., acme.localhost">
+                    <FormInput label="Domain" required hint="Unique domain for tenant access, e.g., acme.sasapp">
                         <input
                             type="text"
                             value={domain}
                             onChange={(e) => setDomain(e.target.value)}
-                            placeholder="acme.localhost"
+                            placeholder="acme.sasapp"
                             required
                         />
                     </FormInput>

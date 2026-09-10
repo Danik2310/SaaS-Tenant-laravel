@@ -84,7 +84,11 @@ abstract class TestCase extends BaseTestCase
             return;
         }
 
-        $pattern = '/^'.preg_quote($prefix, '/').'[a-z0-9-]+$/';
+        // Test-generated tenants always use an id prefixed with "test-",
+        // producing databases like "tenanttest-abcd1234". Narrow the drop to
+        // those so real (seeded / admin-created) tenant databases — e.g.
+        // "tenantagencia-de-viajes-aventura" — are never destroyed by tests.
+        $pattern = '/^'.preg_quote($prefix, '/').'test-[a-z0-9-]+$/';
 
         foreach ($central->select('SHOW DATABASES') as $db) {
             $name = $db->Database ?? $db->name;
@@ -176,7 +180,7 @@ abstract class TestCase extends BaseTestCase
             $tenantId = 'test-'.uniqid();
             $t = Tenant::create([
                 'id' => $tenantId,
-                'domain' => $tenantId.'.localhost',
+                'domain' => $tenantId.'.sasapp',
             ]);
 
             $t->database()->makeCredentials();

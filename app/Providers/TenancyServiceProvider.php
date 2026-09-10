@@ -6,6 +6,7 @@ namespace App\Providers;
 
 use App\Tenants\Events\TenantReactivated;
 use App\Tenants\Events\TenantSuspended;
+use App\Tenants\Listeners\CreateTenantStorageSkeleton;
 use App\Tenants\Listeners\HandleTenantReactivation;
 use App\Tenants\Listeners\HandleTenantSuspension;
 use Illuminate\Contracts\Http\Kernel;
@@ -33,6 +34,7 @@ class TenancyServiceProvider extends ServiceProvider
             // Tenant events — provisioning pipeline runs asynchronously
             Events\CreatingTenant::class => [],
             Events\TenantCreated::class => [
+                CreateTenantStorageSkeleton::class,
                 JobPipeline::make([
                     Jobs\CreateDatabase::class,
                     Jobs\MigrateDatabase::class,

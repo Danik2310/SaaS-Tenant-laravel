@@ -179,7 +179,7 @@ class TenantManager implements TenantManagerInterface
             // If no domains exist, create a primary one
             if ($tenant->domains()->count() === 0) {
                 $tenant->domains()->create([
-                    'domain' => $tenant->domain ?? $tenant->id.'.localhost',
+                    'domain' => $tenant->domain ?? $tenant->id.'.'.config('tenancy.tenant_domain_suffix'),
                     'is_primary' => true,
                 ]);
             }

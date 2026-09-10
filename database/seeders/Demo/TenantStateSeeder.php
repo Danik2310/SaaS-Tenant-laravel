@@ -15,7 +15,7 @@ class TenantStateSeeder extends Seeder
         $demoTenant = $tenantManager->provision([
             'name' => 'Demo State Transitions',
             'email' => 'demo-state@example.com',
-            'domain' => 'demo-state.localhost',
+            'domain' => 'demo-state.'.config('tenancy.tenant_domain_suffix'),
             'plan' => 'free',
             'status' => 'Active',
         ]);

@@ -870,12 +870,12 @@ class TenantLifecycleTest extends TestCase
         $this->createdTenantDbNames[] = $tenant->database()->getName();
 
         $domain = $tenant->domains()->create([
-            'domain' => 'test.localhost',
+            'domain' => 'test.sasapp',
         ]);
 
         $this->assertNotNull($domain->id);
         $this->assertDatabaseHas('domains', [
-            'domain' => 'test.localhost',
+            'domain' => 'test.sasapp',
             'tenant_id' => $tenant->id,
         ]);
 

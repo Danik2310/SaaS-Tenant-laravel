@@ -25,7 +25,7 @@ function renderCreate() {
 function renderEdit() {
   return renderWithProviders(
     <TenantForm
-      tenant={{ id: 't-1', name: 'Acme Corp', email: 'admin@acme.com', domain: 'acme.localhost', plan: { id: 2 } }}
+      tenant={{ id: 't-1', name: 'Acme Corp', email: 'admin@acme.com', domain: 'acme.sasapp', plan: { id: 2 } }}
       onSubmit={mockOnSubmit}
       onCancel={mockOnCancel}
     />
@@ -44,7 +44,7 @@ describe('TenantForm', () => {
     expect(screen.getByText('Create New Tenant')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g., Acme Corp')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('admin@tenant.com')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('acme.localhost')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('acme.sasapp')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByText('Pro ($29.00/mo)')).toBeInTheDocument();
@@ -57,13 +57,13 @@ describe('TenantForm', () => {
     expect(screen.getByText('Edit Tenant')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Acme Corp')).toBeInTheDocument();
     expect(screen.getByDisplayValue('admin@acme.com')).toBeInTheDocument();
-    expect(screen.getByText(/acme\.localhost/)).toBeInTheDocument();
+    expect(screen.getByText(/acme\.sasapp/)).toBeInTheDocument();
   });
 
   test('edit form does not show domain input', () => {
     renderEdit();
 
-    expect(screen.queryByPlaceholderText('acme.localhost')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('acme.sasapp')).not.toBeInTheDocument();
   });
 
   test('fetches plans on mount', async () => {
@@ -85,7 +85,7 @@ describe('TenantForm', () => {
 
     fireEvent.change(screen.getByPlaceholderText('e.g., Acme Corp'), { target: { value: 'NewCo' } });
     fireEvent.change(screen.getByPlaceholderText('admin@tenant.com'), { target: { value: 'admin@newco.com' } });
-    fireEvent.change(screen.getByPlaceholderText('acme.localhost'), { target: { value: 'newco.localhost' } });
+    fireEvent.change(screen.getByPlaceholderText('acme.sasapp'), { target: { value: 'newco.sasapp' } });
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '2' } });
 
     fireEvent.click(screen.getByText('Create Tenant'));
@@ -104,7 +104,7 @@ describe('TenantForm', () => {
         state: null,
         postal_code: null,
         country: null,
-        domain: 'newco.localhost',
+        domain: 'newco.sasapp',
         plan: 'pro',
       });
     });
@@ -121,7 +121,7 @@ describe('TenantForm', () => {
 
     fireEvent.change(screen.getByPlaceholderText('e.g., Acme Corp'), { target: { value: 'NewCo' } });
     fireEvent.change(screen.getByPlaceholderText('admin@tenant.com'), { target: { value: 'admin@newco.com' } });
-    fireEvent.change(screen.getByPlaceholderText('acme.localhost'), { target: { value: 'newco.localhost' } });
+    fireEvent.change(screen.getByPlaceholderText('acme.sasapp'), { target: { value: 'newco.sasapp' } });
     fireEvent.change(screen.getByPlaceholderText('e.g., Acme Corp LLC'), { target: { value: 'NewCo LLC' } });
     fireEvent.change(screen.getByPlaceholderText('Jane'), { target: { value: 'Jane' } });
     fireEvent.change(screen.getByPlaceholderText('Doe'), { target: { value: 'Doe' } });
@@ -149,7 +149,7 @@ describe('TenantForm', () => {
         state: 'IL',
         postal_code: '62701',
         country: 'United States',
-        domain: 'newco.localhost',
+        domain: 'newco.sasapp',
         plan: 'pro',
       });
     });
@@ -198,7 +198,7 @@ describe('TenantForm', () => {
 
     fireEvent.change(screen.getByPlaceholderText('e.g., Acme Corp'), { target: { value: 'Test' } });
     fireEvent.change(screen.getByPlaceholderText('admin@tenant.com'), { target: { value: 'a@b.com' } });
-    fireEvent.change(screen.getByPlaceholderText('acme.localhost'), { target: { value: 't.localhost' } });
+    fireEvent.change(screen.getByPlaceholderText('acme.sasapp'), { target: { value: 't.sasapp' } });
 
     fireEvent.click(screen.getByText('Create Tenant'));
 

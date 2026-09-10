@@ -251,7 +251,7 @@ class PlanGatingTest extends TestCase
         $response = $this->postJson('/admin/api/tenants', [
             'name' => 'Test Tenant',
             'email' => 'tenant@example.com',
-            'domain' => 'test-'.uniqid().'.localhost',
+            'domain' => 'test-'.uniqid().'.sasapp',
             'plan' => 'nonexistent-plan',
         ]);
 
@@ -297,7 +297,7 @@ class PlanGatingTest extends TestCase
         $response = $this->postJson('/admin/api/tenants', [
             'name' => 'Test Tenant',
             'email' => 'tenant@example.com',
-            'domain' => 'test-'.$suffix.'.localhost',
+            'domain' => 'test-'.$suffix.'.sasapp',
             'plan' => $slug,
         ]);
 
