@@ -25,7 +25,7 @@ const permissionMap = {
     settings: ['view settings'],
     activity: ['view activity logs'],
     impersonate: ['impersonate tenants'],
-    profile: ['manage profile'],
+    profile: null,
 };
 
 const views = [

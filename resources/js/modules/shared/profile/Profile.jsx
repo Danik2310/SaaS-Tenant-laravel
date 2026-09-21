@@ -31,7 +31,7 @@ export default function Profile() {
 
     const fetchProfile = async () => {
         try {
-            const res = await api.get('/admin/api/profile');
+            const res = await api.get('/admin/api/profile', { bypass403Redirect: true });
             setProfile(res.data.profile);
             setName(res.data.profile.name);
             setEmail(res.data.profile.email);
@@ -46,7 +46,7 @@ export default function Profile() {
         e.preventDefault();
         setSaving(true);
         try {
-            const res = await api.put('/admin/api/profile', { name, email });
+            const res = await api.put('/admin/api/profile', { name, email }, { bypass403Redirect: true });
             toast.success('Profile updated successfully');
             setProfile(res.data.profile);
         } catch (err) {
@@ -71,7 +71,7 @@ export default function Profile() {
                 current_password: currentPassword,
                 new_password: newPassword,
                 new_password_confirmation: newPasswordConfirmation,
-            });
+            }, { bypass403Redirect: true });
             toast.success('Password updated successfully');
             setCurrentPassword('');
             setNewPassword('');
@@ -109,7 +109,7 @@ export default function Profile() {
                             {profile?.email}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
-                            Member since {profile?.created_at}
+                            Member since {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}
                         </Typography>
                     </Box>
                 </Box>
@@ -134,7 +134,7 @@ export default function Profile() {
                         size="small"
                     />
                     <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button type="submit" variant="contained" disabled={saving}>
+                        <Button type="submit" variant="contained" disabled={saving || !profile}>
                             {saving ? 'Saving...' : 'Save Changes'}
                         </Button>
                     </Box>
