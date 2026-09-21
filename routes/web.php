@@ -67,12 +67,10 @@ Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:10
     Route::get('/api/dashboard-stats', [DashboardController::class, 'stats'])->middleware(PermissionNames::middleware([PermissionNames::VIEW_TENANTS], 'admin'));
 
     // Admin profile endpoints (everyone authenticated should be able to manage own profile)
-    Route::middleware([PermissionNames::middleware([PermissionNames::MANAGE_PROFILE], 'admin')])->group(function () {
-        Route::get('/api/profile', [AdminProfileController::class, 'show']);
-        Route::put('/api/profile', [AdminProfileController::class, 'updateProfile']);
-        Route::put('/api/profile/password', [AdminProfileController::class, 'updatePassword']);
-        Route::delete('/api/profile', [AdminProfileController::class, 'deleteAccount']);
-    });
+    Route::get('/api/profile', [AdminProfileController::class, 'show']);
+    Route::put('/api/profile', [AdminProfileController::class, 'updateProfile']);
+    Route::put('/api/profile/password', [AdminProfileController::class, 'updatePassword']);
+    Route::delete('/api/profile', [AdminProfileController::class, 'deleteAccount']);
 
     // Tenant management - granular per-action permissions
     Route::middleware([PermissionNames::middleware([PermissionNames::VIEW_TENANTS], 'admin')])->group(function () {
