@@ -18,7 +18,10 @@ class StoreStaffRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:admin_users,email',
+            'email' => [
+                'required', 'email',
+                Rule::unique('admin_users', 'email')->whereNull('deleted_at'),
+            ],
             'password' => ['required', Password::min(8)->mixedCase()->numbers()->symbols()],
             'roles' => 'sometimes|array',
             'roles.*' => Rule::exists('roles', 'id')->where('guard_name', 'admin'),

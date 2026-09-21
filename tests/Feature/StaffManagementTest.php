@@ -162,6 +162,67 @@ class StaffManagementTest extends TestCase
     }
 
     /**
+     * 👥 Test: Updating a staff member without a roles key preserves existing roles
+     */
+    public function test_updating_staff_without_roles_preserves_existing_roles()
+    {
+        Role::create(['name' => 'support', 'guard_name' => 'admin']);
+        $staff = AdminUser::factory()->create();
+        $staff->assignRole('support');
+
+        $response = $this->putJson("/admin/api/staff/{$staff->id}", [
+            'name' => 'New Name',
+            'email' => 'new@example.com',
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertTrue($staff->fresh()->hasRole('support'));
+    }
+
+    /**
+     * 👥 Test: Updating a staff member with an explicit empty roles array clears roles
+     */
+    public function test_updating_staff_with_empty_roles_clears_them()
+    {
+        Role::create(['name' => 'support', 'guard_name' => 'admin']);
+        $staff = AdminUser::factory()->create();
+        $staff->assignRole('support');
+
+        $response = $this->putJson("/admin/api/staff/{$staff->id}", [
+            'name' => $staff->name,
+            'email' => $staff->email,
+            'roles' => [],
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertFalse($staff->fresh()->hasRole('support'));
+    }
+
+    /**
+     * 👥 Test: A staff email can be reused once the previous account is soft-deleted
+     */
+    public function test_can_recreate_staff_with_email_of_soft_deleted_staff()
+    {
+        $staff = AdminUser::factory()->create(['email' => 'recreate@example.com']);
+        $staff->delete();
+
+        $this->assertSoftDeleted('admin_users', ['id' => $staff->id]);
+
+        $response = $this->postJson('/admin/api/staff', [
+            'name' => 'Recreated',
+            'email' => 'recreate@example.com',
+            'password' => 'Password123!',
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(201);
+    }
+
+    /**
      * 👥 Test: Validation errors are returned properly
      */
     public function test_staff_creation_validation_errors()

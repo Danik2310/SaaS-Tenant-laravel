@@ -20,7 +20,10 @@ class UpdateStaffRequest extends FormRequest
 
         return [
             'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:admin_users,email,'.$staffId,
+            'email' => [
+                'sometimes', 'email',
+                Rule::unique('admin_users', 'email')->ignore($staffId)->whereNull('deleted_at'),
+            ],
             'password' => ['sometimes', Password::min(8)->mixedCase()->numbers()->symbols()],
             'roles' => 'sometimes|array',
             'roles.*' => Rule::exists('roles', 'id')->where('guard_name', 'admin'),
