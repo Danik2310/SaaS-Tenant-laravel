@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AdminUser;
+use App\Models\Permission;
 use App\Models\Role;
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
@@ -278,5 +280,264 @@ class StaffManagementTest extends TestCase
     {
         auth('admin')->logout();
         $this->getJson('/admin/api/staff')->assertStatus(401);
+    }
+
+    /**
+     * 🕹️ Test: A staff member can only be created with a single role
+     */
+    public function test_cannot_create_staff_with_multiple_roles()
+    {
+        $roleA = Role::create(['name' => 'role-a', 'guard_name' => 'admin']);
+        $roleB = Role::create(['name' => 'role-b', 'guard_name' => 'admin']);
+
+        $response = $this->postJson('/admin/api/staff', [
+            'name' => 'Multiple',
+            'email' => 'multiple@example.com',
+            'password' => 'Password123!',
+            'roles' => [$roleA->id, $roleB->id],
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('roles');
+    }
+
+    /**
+     * 🕹️ Test: A staff member can only be updated with a single role
+     */
+    public function test_cannot_update_staff_with_multiple_roles()
+    {
+        $roleA = Role::create(['name' => 'role-a', 'guard_name' => 'admin']);
+        $roleB = Role::create(['name' => 'role-b', 'guard_name' => 'admin']);
+        $staff = AdminUser::factory()->create();
+
+        $response = $this->putJson("/admin/api/staff/{$staff->id}", [
+            'name' => $staff->name,
+            'email' => $staff->email,
+            'roles' => [$roleA->id, $roleB->id],
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('roles');
+    }
+
+    /**
+     * 🕹️ Test: Roles endpoint rejects more than one role
+     */
+    public function test_cannot_assign_multiple_roles_via_roles_endpoint()
+    {
+        $roleA = Role::create(['name' => 'role-a', 'guard_name' => 'admin']);
+        $roleB = Role::create(['name' => 'role-b', 'guard_name' => 'admin']);
+        $staff = AdminUser::factory()->create();
+
+        $response = $this->postJson("/admin/api/staff/{$staff->id}/roles", [
+            'role_ids' => [$roleA->id, $roleB->id],
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('role_ids');
+    }
+
+    /**
+     * 🛡️ Test: A super-admin cannot change the roles of their own account (update endpoint)
+     */
+    public function test_super_admin_cannot_change_own_roles_via_update()
+    {
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+        $me = auth('admin')->user();
+
+        $response = $this->putJson("/admin/api/staff/{$me->id}", [
+            'name' => $me->name,
+            'email' => $me->email,
+            'roles' => [$basic->id],
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson(['message' => 'You cannot change the roles of your own Administrator account.']);
+
+        $this->assertTrue($me->fresh()->hasRole('super-admin'));
+    }
+
+    /**
+     * 🛡️ Test: A super-admin cannot change the roles of their own account (roles endpoint)
+     */
+    public function test_super_admin_cannot_change_own_roles_via_roles_endpoint()
+    {
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+        $me = auth('admin')->user();
+
+        $response = $this->postJson("/admin/api/staff/{$me->id}/roles", [
+            'role_ids' => [$basic->id],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson(['message' => 'You cannot change the roles of your own Administrator account.']);
+
+        $this->assertTrue($me->fresh()->hasRole('super-admin'));
+    }
+
+    /**
+     * 🛡️ Test: The super-admin role cannot be removed from the last active super-admin
+     */
+    public function test_cannot_remove_super_admin_from_last_super_admin()
+    {
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+
+        auth('admin')->user()->forceDelete();
+
+        $target = AdminUser::factory()->create();
+        $target->assignRole('super-admin');
+
+        $manager = $this->createStaffManager();
+
+        $response = $this->postJson("/admin/api/staff/{$target->id}/roles", [
+            'role_ids' => [$basic->id],
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJson(['message' => 'Cannot remove the super-admin role from the last administrator account.']);
+
+        $this->assertTrue($target->fresh()->hasRole('super-admin'));
+    }
+
+    /**
+     * 🛡️ Test: Another super-admin can be edited when more than one exists
+     */
+    public function test_can_edit_another_super_admin_when_multiple_exist()
+    {
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+        $other = AdminUser::factory()->create();
+        $other->assignRole('super-admin');
+
+        $response = $this->postJson("/admin/api/staff/{$other->id}/roles", [
+            'role_ids' => [$basic->id],
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertFalse($other->fresh()->hasRole('super-admin'));
+        $this->assertTrue($other->fresh()->hasRole('basic'));
+    }
+
+    /**
+     * 🔄 Test: Changing your own (non-super-admin) role ends the session and requires sign-in
+     */
+    public function test_self_role_change_triggers_session_reset()
+    {
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+        $manager = $this->createStaffManager();
+
+        $response = $this->putJson("/admin/api/staff/{$manager->id}", [
+            'name' => $manager->name,
+            'email' => $manager->email,
+            'roles' => [$basic->id],
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson(['relogin_required' => true]);
+
+        $this->assertTrue(auth('admin')->guest());
+        $this->assertTrue($manager->fresh()->hasRole('basic'));
+
+        $clearedCookie = collect($response->headers->getCookies())
+            ->contains(fn ($cookie) => $cookie->isCleared());
+        $this->assertTrue($clearedCookie);
+    }
+
+    /**
+     * 🔄 Test: Changing your own role via the roles endpoint also ends the session
+     */
+    public function test_self_role_change_via_roles_endpoint_triggers_session_reset()
+    {
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+        $manager = $this->createStaffManager();
+
+        $response = $this->postJson("/admin/api/staff/{$manager->id}/roles", [
+            'role_ids' => [$basic->id],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson(['relogin_required' => true]);
+
+        $this->assertTrue(auth('admin')->guest());
+    }
+
+    /**
+     * 🔄 Test: Submitting the same role on your own account does not end the session
+     */
+    public function test_self_role_change_with_unchanged_role_does_not_end_session()
+    {
+        $manager = $this->createStaffManager();
+        $managerRole = Role::where('name', 'staff-manager')->where('guard_name', 'admin')->first();
+
+        $response = $this->putJson("/admin/api/staff/{$manager->id}", [
+            'name' => $manager->name,
+            'email' => $manager->email,
+            'roles' => [$managerRole->id],
+            'is_active' => true,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonMissing(['relogin_required' => true]);
+
+        $this->assertTrue(auth('admin')->check());
+    }
+
+    /**
+     * 🔄 Test: Changing another staff member's role does not end the session
+     */
+    public function test_non_self_role_change_does_not_end_session()
+    {
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+        $manager = $this->createStaffManager();
+        $other = AdminUser::factory()->create();
+        $other->assignRole('staff-manager');
+
+        $response = $this->postJson("/admin/api/staff/{$other->id}/roles", [
+            'role_ids' => [$basic->id],
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonMissing(['relogin_required' => true]);
+
+        $this->assertTrue(auth('admin')->check());
+        $this->assertSame($manager->id, auth('admin')->id());
+    }
+
+    /**
+     * 🚩 Test: The show endpoint exposes is_self and is_last_super_admin flags
+     */
+    public function test_show_returns_self_and_last_super_admin_flags()
+    {
+        $admin = auth('admin')->user();
+
+        $selfResponse = $this->getJson("/admin/api/staff/{$admin->id}");
+        $selfResponse->assertStatus(200)
+            ->assertJsonFragment(['is_self' => true])
+            ->assertJsonFragment(['is_last_super_admin' => true]);
+
+        $staff = AdminUser::factory()->create();
+        $otherResponse = $this->getJson("/admin/api/staff/{$staff->id}");
+        $otherResponse->assertStatus(200)
+            ->assertJsonFragment(['is_self' => false])
+            ->assertJsonFragment(['is_last_super_admin' => false]);
+    }
+
+    private function createStaffManager(): AdminUser
+    {
+        $role = Role::firstOrCreate([
+            'name' => 'staff-manager',
+            'guard_name' => 'admin',
+        ]);
+        $role->givePermissionTo(Permission::firstOrCreate([
+            'name' => PermissionNames::EDIT_STAFF,
+            'guard_name' => 'admin',
+        ]));
+
+        $manager = AdminUser::factory()->create();
+        $manager->assignRole('staff-manager');
+        $this->actingAs($manager, 'admin');
+
+        return $manager;
     }
 }

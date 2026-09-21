@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 import { useAuthContext } from '@/context/AuthContext';
 
 export default function StaffList() {
-    const { permissions = [] } = useAuthContext();
+    const { user, permissions = [] } = useAuthContext();
     const canCreate = permissions.includes('create staff');
     const canEdit = permissions.includes('edit staff');
     const canDelete = permissions.includes('delete staff');
@@ -100,10 +100,13 @@ export default function StaffList() {
 
     const handleUpdateStaff = async (formData) => {
         try {
-            await api.put(`/admin/api/staff/${editingStaff.id}`, formData);
+            const response = await api.put(`/admin/api/staff/${editingStaff.id}`, formData);
             toast.success('Staff member updated successfully');
             setEditingStaff(null);
             fetchStaff();
+            if (response.data.relogin_required) {
+                window.location.href = '/central/login';
+            }
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to update staff');
         }
@@ -134,7 +137,11 @@ export default function StaffList() {
     const handleEditClick = async (row) => {
         try {
             const response = await api.get(`/admin/api/staff/${row.id}`);
-            setEditingStaff(response.data.staff);
+            setEditingStaff({
+                ...response.data.staff,
+                is_self: response.data.is_self,
+                is_last_super_admin: response.data.is_last_super_admin,
+            });
         } catch (err) {
             toast.error('Failed to load staff details');
         }
@@ -400,6 +407,16 @@ export default function StaffList() {
                             onSubmit={handleUpdateStaff}
                             onCancel={() => setEditingStaff(null)}
                             embedded
+                            isSelf={editingStaff.is_self === true}
+                            rolesLocked={
+                                (editingStaff.is_self === true && (editingStaff.roles || []).includes('super-admin')) ||
+                                editingStaff.is_last_super_admin === true
+                            }
+                            rolesLockedHint={
+                                editingStaff.is_self === true && (editingStaff.roles || []).includes('super-admin')
+                                    ? 'You cannot change the roles of your own Administrator account.'
+                                    : 'This is the last Administrator account; its role cannot be changed.'
+                            }
                         />
                     )}
                 </DialogContent>

@@ -196,3 +196,28 @@ export function CheckboxInput({ label, checked, onChange }) {
         </label>
     );
 }
+
+export function RadioInput({ label, checked, onChange, disabled = false }) {
+    return (
+        <label
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                gap: '8px',
+                marginBottom: '8px',
+                opacity: disabled ? 0.6 : 1,
+            }}
+        >
+            <input
+                type="radio"
+                name="role-selection"
+                checked={checked}
+                onChange={onChange}
+                disabled={disabled}
+                style={{ width: '16px', height: '16px', accentColor: '#3b82f6', cursor: disabled ? 'not-allowed' : 'pointer' }}
+            />
+            <span style={{ fontSize: '14px', color: '#334155' }}>{label}</span>
+        </label>
+    );
+}

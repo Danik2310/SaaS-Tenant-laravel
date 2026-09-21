@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput } from '@/Components/FormElements';
+import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput, RadioInput } from '@/Components/FormElements';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 import { toast } from 'sonner';
 
 const PASSWORD_RULES = [
     { key: 'length', label: 'At least 8 characters', test: (p) => p.length >= 8 },
-    { key: 'uppercase', label: 'At least one uppercase letter (A–Z)', test: (p) => /[A-Z]/.test(p) },
-    { key: 'lowercase', label: 'At least one lowercase letter (a–z)', test: (p) => /[a-z]/.test(p) },
-    { key: 'number', label: 'At least one number (0–9)', test: (p) => /\d/.test(p) },
-    { key: 'symbol', label: 'At least one symbol (!@#$%…)', test: (p) => /[^A-Za-z0-9]/.test(p) },
+    { key: 'uppercase', label: 'At least one uppercase letter (A-Z)', test: (p) => /[A-Z]/.test(p) },
+    { key: 'lowercase', label: 'At least one lowercase letter (a-z)', test: (p) => /[a-z]/.test(p) },
+    { key: 'number', label: 'At least one number (0-9)', test: (p) => /\d/.test(p) },
+    { key: 'symbol', label: 'At least one symbol (!@#$%...)', test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
 const STRENGTH_COLORS = [
@@ -69,7 +70,7 @@ function PasswordStrengthMeter({ password }) {
     );
 }
 
-export default function StaffForm({ staff = null, onSubmit, onCancel, embedded = false }) {
+export default function StaffForm({ staff = null, onSubmit, onCancel, embedded = false, isSelf = false, rolesLocked = false, rolesLockedHint = '' }) {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -84,6 +85,8 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
     const [rolesLoading, setRolesLoading] = useState(true);
     const [staffRoleNames, setStaffRoleNames] = useState([]);
     const [rolesTouched, setRolesTouched] = useState(false);
+    const [initialRoleIds, setInitialRoleIds] = useState([]);
+    const [showReloginWarning, setShowReloginWarning] = useState(false);
 
     useEffect(() => {
         setRolesTouched(false);
@@ -112,15 +115,17 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
     }, [staff]);
 
     useEffect(() => {
+        const initialIds = roles
+            .filter((role) => staffRoleNames.includes(role.name))
+            .map((role) => role.id);
+        setInitialRoleIds(initialIds);
         if (staffRoleNames.length > 0) {
             setFormData((prev) => ({
                 ...prev,
-                roles: roles
-                    .filter((role) => staffRoleNames.includes(role.name))
-                    .map((role) => role.id),
+                roles: initialIds,
             }));
         }
-    }, [roles]);
+    }, [roles]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const fetchRoles = async () => {
         try {
@@ -149,15 +154,33 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
     };
 
     const handleRoleChange = (roleId) => {
+        if (rolesLocked) return;
         setRolesTouched(true);
         setFormData((prev) => ({
             ...prev,
-            roles: prev.roles.includes(roleId) ? prev.roles.filter((id) => id !== roleId) : [...prev.roles, roleId],
+            roles: prev.roles.includes(roleId) ? [] : [roleId],
         }));
     };
 
-    const handleSubmit = async (e) => {
+    const rolesActuallyChanged = () => {
+        if (!staff) return false;
+        const current = [...formData.roles].sort();
+        const original = [...initialRoleIds].sort();
+        return JSON.stringify(current) !== JSON.stringify(original);
+    };
+
+    const handleSubmit = (e) => {
         e.preventDefault();
+
+        if (staff && isSelf && !rolesLocked && rolesTouched && rolesActuallyChanged()) {
+            setShowReloginWarning(true);
+            return;
+        }
+
+        performSubmit();
+    };
+
+    const performSubmit = async () => {
         setLoading(true);
         setErrors({});
 
@@ -184,6 +207,11 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleConfirmRelogin = () => {
+        setShowReloginWarning(false);
+        performSubmit();
     };
 
     const formContent = (
@@ -227,7 +255,13 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
             </FormInput>
             <PasswordStrengthMeter password={formData.password} />
 
-            <FormInput label="Roles">
+            <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500, fontSize: '13px', color: '#334155' }}>
+                    Role
+                </label>
+                {errors?.roles?.[0] ? (
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#ef4444' }}>{errors.roles[0]}</p>
+                ) : null}
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc', maxHeight: '200px', overflowY: 'auto' }}>
                     {rolesLoading ? (
                         <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Loading roles...</p>
@@ -235,16 +269,24 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
                         <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>No roles available</p>
                     ) : (
                         roles.map((role) => (
-                            <CheckboxInput
+                            <RadioInput
                                 key={role.id}
                                 label={`${role.name} — ${role.description || 'No description'}`}
                                 checked={formData.roles.includes(role.id)}
                                 onChange={() => handleRoleChange(role.id)}
+                                disabled={rolesLocked}
                             />
                         ))
                     )}
                 </div>
-            </FormInput>
+                {rolesLocked && rolesLockedHint ? (
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#d97706' }}>{rolesLockedHint}</p>
+                ) : (
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                        Select one role. Click the selected role again to remove it.
+                    </p>
+                )}
+            </div>
 
             <div style={{ marginBottom: '16px' }}>
                 <CheckboxInput
@@ -263,17 +305,37 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
         </form>
     );
 
+    const reloginDialog = (
+        <ConfirmDialog
+            open={showReloginWarning}
+            title="Change your own role"
+            message="Your session will close if you save this change. You will need to sign in again for your new role to take effect."
+            confirmLabel="Continue"
+            cancelLabel="Cancel"
+            onConfirm={handleConfirmRelogin}
+            onCancel={() => setShowReloginWarning(false)}
+        />
+    );
+
     if (embedded) {
-        return formContent;
+        return (
+            <>
+                {formContent}
+                {reloginDialog}
+            </>
+        );
     }
 
     return (
-        <FormCard
-            title={staff ? 'Edit Staff Member' : 'Create Staff Member'}
-            subtitle={staff ? 'Update staff member details and permissions' : 'Add a new administrator to the platform'}
-            onClose={onCancel}
-        >
-            {formContent}
-        </FormCard>
+        <>
+            <FormCard
+                title={staff ? 'Edit Staff Member' : 'Create Staff Member'}
+                subtitle={staff ? 'Update staff member details and permissions' : 'Add a new administrator to the platform'}
+                onClose={onCancel}
+            >
+                {formContent}
+            </FormCard>
+            {reloginDialog}
+        </>
     );
 }

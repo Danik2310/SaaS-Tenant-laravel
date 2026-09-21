@@ -9,6 +9,7 @@ use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -78,6 +79,14 @@ class Handler extends ExceptionHandler
                 return response()->json([
                     'message' => 'Resource not found.',
                 ], 404);
+            }
+        });
+
+        $this->renderable(function (HttpException $e, $request) {
+            if ($request->expectsJson() || $request->is('admin/api/*')) {
+                return response()->json([
+                    'message' => $e->getMessage() ?: 'An error occurred.',
+                ], $e->getStatusCode());
             }
         });
 

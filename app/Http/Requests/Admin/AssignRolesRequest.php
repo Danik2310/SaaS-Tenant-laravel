@@ -16,7 +16,7 @@ class AssignRolesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'role_ids' => 'required|array',
+            'role_ids' => 'required|array|max:1',
             'role_ids.*' => Rule::exists('roles', 'id')->where('guard_name', 'admin'),
         ];
     }

@@ -13,7 +13,11 @@ use App\Models\AdminUser;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Shared\Commands\SyncStaffRolesCommand;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\PermissionServiceInterface;
+use App\Shared\Support\JwtCookie;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -76,6 +80,14 @@ class StaffController extends Controller
         try {
             $admin = AdminUser::with('roles.permissions')->findOrFail($id);
 
+            $isSelf = auth('admin')->id() === (int) $admin->id;
+            $hasSuperAdmin = $admin->hasRole(PermissionNames::ROLE_SUPER_ADMIN);
+            $isLastSuperAdmin = $hasSuperAdmin && ! AdminUser::query()
+                ->where('id', '!=', $admin->id)
+                ->where('is_active', true)
+                ->role(PermissionNames::ROLE_SUPER_ADMIN, 'admin')
+                ->exists();
+
             return response()->json([
                 'staff' => new StaffResource($admin),
                 'available_roles' => Role::with('permissions')
@@ -92,6 +104,8 @@ class StaffController extends Controller
                             'module' => $perm->module,
                         ])->toArray(),
                     ])->toArray(),
+                'is_self' => $isSelf,
+                'is_last_super_admin' => $isLastSuperAdmin,
             ]);
         } catch (\Throwable $e) {
             return response()->json(['message' => 'Staff member not found'], 404);
@@ -106,7 +120,7 @@ class StaffController extends Controller
      * @bodyParam name string required Staff member name.
      * @bodyParam email string required Staff member email.
      * @bodyParam password string required Initial password.
-     * @bodyParam roles integer[] optional Array of role IDs.
+     * @bodyParam roles integer[] optional Array of role IDs (max 1).
      *
      * @response 201 {"message":"Staff member created successfully","staff":{"id":1,"name":"John","email":"john@example.com"}}
      */
@@ -150,11 +164,16 @@ class StaffController extends Controller
      * @bodyParam name string optional Staff member name.
      * @bodyParam email string optional Staff member email.
      * @bodyParam password string optional New password.
-     * @bodyParam roles integer[] optional Array of role IDs.
+     * @bodyParam roles integer[] optional Array of role IDs (max 1).
+     *
+     * @responseField relogin_required boolean True when the authenticated user changed their own role and must sign in again.
      */
     public function update(UpdateStaffRequest $request, string $id)
     {
         $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        $oldRoleIds = $admin->roles->pluck('id')->sort()->values()->all();
+        $isSelf = auth('admin')->id() === (int) $admin->id;
 
         if ($name = $request->validated('name')) {
             $admin->name = $name;
@@ -185,6 +204,20 @@ class StaffController extends Controller
             ->performedOn($admin)
             ->withProperties(['name' => $admin->name, 'email' => $admin->email])
             ->log("Updated staff member: {$admin->name}");
+
+        $rolesSubmitted = isset($request->validated()['roles']);
+        $rolesChanged = $rolesSubmitted
+            && $oldRoleIds !== collect($request->validated('roles'))->sort()->values()->all();
+
+        if ($isSelf && $rolesChanged) {
+            $this->endAdminSession($request);
+
+            return response()->json([
+                'message' => 'Staff member updated successfully',
+                'staff' => new StaffResource($admin),
+                'relogin_required' => true,
+            ])->withCookie(JwtCookie::forget());
+        }
 
         return response()->json([
             'message' => 'Staff member updated successfully',
@@ -218,6 +251,13 @@ class StaffController extends Controller
         $admin->delete();
 
         return response()->noContent();
+    }
+
+    private function endAdminSession(Request $request): void
+    {
+        Auth::guard('admin')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
     }
 
     /**
@@ -310,14 +350,18 @@ class StaffController extends Controller
      *
      * @urlParam id integer required The staff member ID.
      *
-     * @bodyParam role_ids integer[] required Array of role IDs.
+     * @bodyParam role_ids integer[] required Array of role IDs (max 1).
      *
      * @responseField message string Success message.
      * @responseField staff object The updated staff resource.
+     * @responseField relogin_required boolean True when the authenticated user changed their own role and must sign in again.
      */
     public function assignRoles(AssignRolesRequest $request, string $id)
     {
         $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        $oldRoleIds = $admin->roles->pluck('id')->sort()->values()->all();
+        $isSelf = auth('admin')->id() === (int) $admin->id;
 
         $command = app(SyncStaffRolesCommand::class, [
             'user' => $admin,
@@ -337,6 +381,18 @@ class StaffController extends Controller
             ->causedBy(auth('admin')->user())
             ->withProperties(['staff_name' => $admin->name, 'roles' => $roleNames])
             ->log("Assigned roles to {$admin->name}: {$roleNames}");
+
+        $rolesChanged = $oldRoleIds !== collect($request->validated('role_ids'))->sort()->values()->all();
+
+        if ($isSelf && $rolesChanged) {
+            $this->endAdminSession($request);
+
+            return response()->json([
+                'message' => 'Roles assigned successfully',
+                'staff' => new StaffResource($admin),
+                'relogin_required' => true,
+            ])->withCookie(JwtCookie::forget());
+        }
 
         return response()->json([
             'message' => 'Roles assigned successfully',

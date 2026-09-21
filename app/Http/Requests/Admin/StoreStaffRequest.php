@@ -23,7 +23,7 @@ class StoreStaffRequest extends FormRequest
                 Rule::unique('admin_users', 'email')->whereNull('deleted_at'),
             ],
             'password' => ['required', Password::min(8)->mixedCase()->numbers()->symbols()],
-            'roles' => 'sometimes|array',
+            'roles' => 'sometimes|array|max:1',
             'roles.*' => Rule::exists('roles', 'id')->where('guard_name', 'admin'),
             'is_active' => 'sometimes|boolean',
         ];

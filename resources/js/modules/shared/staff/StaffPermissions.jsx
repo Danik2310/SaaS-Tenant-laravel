@@ -1,32 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
+import ConfirmDialog from '@/Components/ConfirmDialog';
 
 export default function StaffPermissions({ staffId, staffName, onClose, onUpdate, embedded = false }) {
     const [staff, setStaff] = useState(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [selectedRoles, setSelectedRoles] = useState([]);
+    const [initialRoleIds, setInitialRoleIds] = useState([]);
     const [availableRoles, setAvailableRoles] = useState([]);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+    const [isSelf, setIsSelf] = useState(false);
+    const [isLastSuperAdmin, setIsLastSuperAdmin] = useState(false);
+    const [showReloginWarning, setShowReloginWarning] = useState(false);
 
     useEffect(() => {
         fetchStaffDetails();
     }, [staffId]);
 
     const fetchStaffDetails = async () => {
+        setLoading(true);
         try {
             const response = await api.get(`/admin/api/staff/${staffId}`);
             setStaff(response.data.staff);
             setAvailableRoles(response.data.available_roles);
+            setIsSelf(response.data.is_self === true);
+            setIsLastSuperAdmin(response.data.is_last_super_admin === true);
             const availableRoleList = response.data.available_roles || [];
             const currentRoleNames = response.data.staff.roles || [];
-            setSelectedRoles(
-                availableRoleList
-                    .filter(r => currentRoleNames.includes(r.name))
-                    .map(r => r.id)
-            );
+            const initialIds = availableRoleList
+                .filter(r => currentRoleNames.includes(r.name))
+                .map(r => r.id);
+            setInitialRoleIds(initialIds);
+            setSelectedRoles(initialIds);
             setError(null);
         } catch (err) {
             const message = 'Failed to load staff details';
@@ -38,25 +46,48 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
         }
     };
 
+    const rolesLocked = isLastSuperAdmin || (isSelf && (staff?.roles || []).includes('super-admin'));
+    const rolesLockedHint = isSelf && (staff?.roles || []).includes('super-admin')
+        ? 'You cannot change the roles of your own Administrator account.'
+        : 'This is the last Administrator account; its role cannot be changed.';
+
     const toggleRole = (roleId) => {
+        if (rolesLocked) return;
         setSelectedRoles(prev =>
             prev.includes(roleId)
-                ? prev.filter(id => id !== roleId)
-                : [...prev, roleId]
+                ? []
+                : [roleId]
         );
     };
 
-    const handleSaveRoles = async () => {
+    const rolesActuallyChanged = () => {
+        const current = [...selectedRoles].sort();
+        const original = [...initialRoleIds].sort();
+        return JSON.stringify(current) !== JSON.stringify(original);
+    };
+
+    const handleSaveRoles = () => {
+        if (isSelf && !rolesLocked && rolesActuallyChanged()) {
+            setShowReloginWarning(true);
+            return;
+        }
+        performSaveRoles();
+    };
+
+    const performSaveRoles = async () => {
         setUpdating(true);
+        setError(null);
         try {
-            await api.post(`/admin/api/staff/${staffId}/roles`, {
+            const response = await api.post(`/admin/api/staff/${staffId}/roles`, {
                 role_ids: selectedRoles,
             });
-            const message = 'Roles updated successfully';
-            toast.success(message);
-            setSuccess(message);
+            setSuccess('Roles updated successfully');
+            toast.success('Roles updated successfully');
             onUpdate();
             setTimeout(() => setSuccess(null), 3000);
+            if (response.data.relogin_required) {
+                window.location.href = '/central/login';
+            }
         } catch (err) {
             const message = err.response?.data?.message || 'Failed to update roles';
             toast.error(message);
@@ -64,6 +95,11 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
         } finally {
             setUpdating(false);
         }
+    };
+
+    const handleConfirmRelogin = () => {
+        setShowReloginWarning(false);
+        performSaveRoles();
     };
 
     if (loading) {
@@ -176,21 +212,25 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                                     display: 'flex',
                                     alignItems: 'flex-start',
                                     gap: '12px',
+                                    opacity: rolesLocked ? 0.6 : 1,
                                 }}
                             >
                                 <input
-                                    type="checkbox"
+                                    type="radio"
+                                    name={`roles-${staffId}`}
                                     id={`role-${role.id}`}
                                     checked={selectedRoles.includes(role.id)}
                                     onChange={() => toggleRole(role.id)}
+                                    disabled={rolesLocked}
                                     style={{
-                                        cursor: 'pointer',
+                                        cursor: rolesLocked ? 'not-allowed' : 'pointer',
                                         marginTop: '4px',
                                         width: '18px',
                                         height: '18px',
+                                        accentColor: '#3b82f6',
                                     }}
                                 />
-                                <label htmlFor={`role-${role.id}`} style={{ flex: 1, cursor: 'pointer' }}>
+                                <label htmlFor={`role-${role.id}`} style={{ flex: 1, cursor: rolesLocked ? 'not-allowed' : 'pointer' }}>
                                     <div style={{
                                         fontWeight: '600',
                                         marginBottom: '4px',
@@ -207,12 +247,12 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                                             {role.description}
                                         </div>
                                     )}
-                                    {role.permissions_count > 0 && (
+                                    {(role.permissions && role.permissions.length > 0) && (
                                         <div style={{
                                             fontSize: '12px',
                                             color: '#999',
                                         }}>
-                                            Includes {role.permissions_count} permission{role.permissions_count !== 1 ? 's' : ''}
+                                            Includes {role.permissions.length} permission{role.permissions.length !== 1 ? 's' : ''}
                                         </div>
                                     )}
                                 </label>
@@ -220,6 +260,15 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                         ))
                     )}
                 </div>
+
+                {rolesLocked && rolesLockedHint && (
+                    <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#d97706' }}>{rolesLockedHint}</p>
+                )}
+                {!rolesLocked && (
+                    <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#999' }}>
+                        Select one role. Click the selected role again to remove it.
+                    </p>
+                )}
 
                 <div style={{
                     display: 'flex',
@@ -243,14 +292,14 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                     </button>
                     <button
                         onClick={handleSaveRoles}
-                        disabled={updating}
+                        disabled={updating || rolesLocked}
                         style={{
                             padding: '10px 20px',
-                            background: updating ? '#ccc' : '#27ae60',
+                            background: updating || rolesLocked ? '#ccc' : '#27ae60',
                             color: 'white',
                             border: 'none',
                             borderRadius: '4px',
-                            cursor: updating ? 'not-allowed' : 'pointer',
+                            cursor: updating || rolesLocked ? 'not-allowed' : 'pointer',
                             fontSize: '14px',
                             fontWeight: '600',
                         }}
@@ -259,6 +308,16 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                     </button>
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={showReloginWarning}
+                title="Change your own role"
+                message="Your session will close if you save this change. You will need to sign in again for your new role to take effect."
+                confirmLabel="Continue"
+                cancelLabel="Cancel"
+                onConfirm={handleConfirmRelogin}
+                onCancel={() => setShowReloginWarning(false)}
+            />
         </div>
     );
 }
