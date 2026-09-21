@@ -119,6 +119,13 @@ class AdminProfileController extends Controller
             );
         }
 
+        if ($user->is_main_admin) {
+            return response()->json(
+                ['message' => "The system's main administrator account cannot be deleted."],
+                422
+            );
+        }
+
         if (AdminUser::where('id', '!=', $user->id)->where('is_active', true)->count() === 0) {
             return response()->json(
                 ['message' => 'Cannot delete the last active admin account'],

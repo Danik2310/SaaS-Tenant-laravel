@@ -15,6 +15,7 @@ class AdminUserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'is_active' => $this->is_active,
+            'is_main_admin' => $this->is_main_admin,
             'roles' => $this->whenLoaded('roles', fn () => $this->roles->pluck('name')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

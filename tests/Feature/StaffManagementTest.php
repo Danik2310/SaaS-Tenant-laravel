@@ -523,6 +523,134 @@ class StaffManagementTest extends TestCase
             ->assertJsonFragment(['is_last_super_admin' => false]);
     }
 
+    /**
+     * 🔒 Test: The main administrator cannot be deleted by another administrator
+     */
+    public function test_another_admin_cannot_delete_main_admin()
+    {
+        $mainAdmin = $this->createMainAdmin();
+
+        $response = $this->deleteJson("/admin/api/staff/{$mainAdmin->id}");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', "The system's main administrator account cannot be modified.");
+
+        $this->assertDatabaseHas('admin_users', ['id' => $mainAdmin->id, 'deleted_at' => null]);
+    }
+
+    /**
+     * 🔒 Test: The main administrator cannot be deactivated by another administrator
+     */
+    public function test_another_admin_cannot_toggle_main_admin_status()
+    {
+        $mainAdmin = $this->createMainAdmin();
+
+        $response = $this->patchJson("/admin/api/staff/{$mainAdmin->id}/toggle-status");
+
+        $response->assertStatus(422);
+        $this->assertTrue($mainAdmin->fresh()->is_active);
+    }
+
+    /**
+     * 🔒 Test: The main administrator cannot be updated by another administrator
+     */
+    public function test_another_admin_cannot_update_main_admin()
+    {
+        $mainAdmin = $this->createMainAdmin();
+
+        $response = $this->putJson("/admin/api/staff/{$mainAdmin->id}", [
+            'name' => 'Hacked Name',
+            'email' => 'hacked@example.com',
+        ]);
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseMissing('admin_users', [
+            'id' => $mainAdmin->id,
+            'name' => 'Hacked Name',
+        ]);
+        $this->assertSame($mainAdmin->email, $mainAdmin->fresh()->email);
+    }
+
+    /**
+     * 🔒 Test: The main administrator's roles cannot be changed by another administrator
+     */
+    public function test_another_admin_cannot_assign_roles_to_main_admin()
+    {
+        $mainAdmin = $this->createMainAdmin();
+        $basic = Role::create(['name' => 'basic', 'guard_name' => 'admin']);
+
+        $response = $this->postJson("/admin/api/staff/{$mainAdmin->id}/roles", [
+            'role_ids' => [$basic->id],
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertTrue($mainAdmin->fresh()->hasRole('super-admin'));
+    }
+
+    /**
+     * 🔒 Test: The main administrator's permissions cannot be changed by another administrator
+     */
+    public function test_another_admin_cannot_assign_permissions_to_main_admin()
+    {
+        $mainAdmin = $this->createMainAdmin();
+        $permission = Permission::firstOrCreate(['name' => 'view tenants', 'guard_name' => 'admin']);
+
+        $response = $this->postJson("/admin/api/staff/{$mainAdmin->id}/permissions", [
+            'permission_ids' => [$permission->id],
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertCount(0, $mainAdmin->fresh()->permissions);
+    }
+
+    /**
+     * 🔓 Test: The main administrator can still edit their own account
+     */
+    public function test_main_admin_can_update_own_account()
+    {
+        $mainAdmin = $this->createMainAdmin();
+        $this->actingAs($mainAdmin, 'admin');
+
+        $response = $this->putJson("/admin/api/staff/{$mainAdmin->id}", [
+            'name' => 'Renamed Main Admin',
+            'email' => $mainAdmin->email,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('admin_users', [
+            'id' => $mainAdmin->id,
+            'name' => 'Renamed Main Admin',
+        ]);
+    }
+
+    /**
+     * 🔒 Test: Staff endpoints expose the is_main_admin flag
+     */
+    public function test_staff_endpoints_expose_is_main_admin_flag()
+    {
+        $mainAdmin = $this->createMainAdmin();
+        $other = AdminUser::factory()->create();
+
+        $this->getJson('/admin/api/staff')
+            ->assertStatus(200)
+            ->assertJsonFragment(['id' => $mainAdmin->id, 'is_main_admin' => true])
+            ->assertJsonFragment(['id' => $other->id, 'is_main_admin' => false]);
+
+        $this->getJson("/admin/api/staff/{$mainAdmin->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('staff.is_main_admin', true);
+    }
+
+    private function createMainAdmin(): AdminUser
+    {
+        $admin = AdminUser::factory()->create(['is_main_admin' => true]);
+        $admin->assignRole('super-admin');
+
+        return $admin;
+    }
+
     private function createStaffManager(): AdminUser
     {
         $role = Role::firstOrCreate([

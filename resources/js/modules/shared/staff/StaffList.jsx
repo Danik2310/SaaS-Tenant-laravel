@@ -20,6 +20,7 @@ import BlockIcon from '@mui/icons-material/Block';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import CloseIcon from '@mui/icons-material/Close';
+import LockIcon from '@mui/icons-material/Lock';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/context/AuthContext';
 
@@ -156,6 +157,36 @@ export default function StaffList() {
             accessorKey: 'name',
             header: 'Name',
             enableColumnFilter: false,
+            Cell: ({ row }) => (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Typography variant="body2" sx={{ fontSize: 13 }}>
+                        {row.original.name}
+                    </Typography>
+                    {row.original.is_main_admin === true && (
+                        <Tooltip title="System main administrator">
+                            <Box
+                                component="span"
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    px: 0.75,
+                                    py: 0.25,
+                                    borderRadius: 0.75,
+                                    bgcolor: '#ccfbf1',
+                                    color: '#0f766e',
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.04em',
+                                    textTransform: 'uppercase',
+                                }}
+                            >
+                                <LockIcon sx={{ fontSize: 12, mr: 0.35 }} />
+                                Main Admin
+                            </Box>
+                        </Tooltip>
+                    )}
+                </Box>
+            ),
         },
         {
             accessorKey: 'email',
@@ -236,8 +267,19 @@ export default function StaffList() {
             enableSorting: false,
             enableGlobalFilter: false,
             size: 120,
-            Cell: ({ row }) => (
-                <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+            Cell: ({ row }) => {
+                const protectedAccount = row.original.is_main_admin === true && row.original.id !== user.id;
+                if (protectedAccount) {
+                    return (
+                        <Tooltip title="Protected system administrator — cannot be modified">
+                            <Box sx={{ display: 'inline-flex', alignItems: 'center', p: 0.5, color: '#94a3b8' }}>
+                                <LockIcon fontSize="small" />
+                            </Box>
+                        </Tooltip>
+                    );
+                }
+                return (
+                    <Box sx={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
                     {canEdit && (
                         <Tooltip title="Edit">
                             <Box
@@ -302,10 +344,11 @@ export default function StaffList() {
                             </Box>
                         </Tooltip>
                     )}
-                </Box>
-            ),
+                    </Box>
+                );
+            },
         },
-    ], [canEdit, canDelete]);
+    ], [canEdit, canDelete, user]);
 
     return (
         <Box>

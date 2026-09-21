@@ -106,6 +106,29 @@ class AdminProfileTest extends TestCase
         $this->assertDatabaseHas('admin_users', ['id' => $admin->id, 'deleted_at' => null]);
     }
 
+    public function test_delete_account_blocks_main_admin(): void
+    {
+        $role = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'admin']);
+        $permission = Permission::firstOrCreate(['name' => 'manage profile', 'guard_name' => 'admin']);
+        $role->givePermissionTo($permission);
+
+        $admin = AdminUser::factory()->create([
+            'password' => Hash::make('secret123'),
+            'is_main_admin' => true,
+        ]);
+        $admin->assignRole('admin');
+        $this->actingAs($admin, 'admin');
+
+        $response = $this->deleteJson('/admin/api/profile', [
+            'password' => 'secret123',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', "The system's main administrator account cannot be deleted.");
+
+        $this->assertDatabaseHas('admin_users', ['id' => $admin->id, 'deleted_at' => null]);
+    }
+
     public function test_any_authenticated_admin_can_view_own_profile(): void
     {
         $admin = AdminUser::factory()->create(['is_active' => true]);

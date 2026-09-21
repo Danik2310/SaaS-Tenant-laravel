@@ -16,6 +16,7 @@ class StaffResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'is_active' => $this->is_active,
+            'is_main_admin' => $this->is_main_admin,
             'roles' => $roleNames,
             'permissions_count' => $rolePerms->count(),
             'permissions' => $rolePerms->pluck('name')->toArray(),

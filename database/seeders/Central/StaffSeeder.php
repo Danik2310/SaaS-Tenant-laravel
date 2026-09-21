@@ -25,6 +25,7 @@ class StaffSeeder extends Seeder
                 'email' => $email,
                 'password' => Hash::make($password),
                 'is_active' => true,
+                'is_main_admin' => true,
                 'role' => 'super-admin',
             ],
             [

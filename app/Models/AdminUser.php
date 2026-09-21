@@ -32,6 +32,7 @@ class AdminUser extends Authenticatable implements JWTSubject
         'email',
         'password',
         'is_active',
+        'is_main_admin',
     ];
 
     protected $hidden = [
@@ -41,6 +42,7 @@ class AdminUser extends Authenticatable implements JWTSubject
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_main_admin' => 'boolean',
         'email_verified_at' => 'datetime',
     ];
 

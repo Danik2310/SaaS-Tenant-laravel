@@ -167,10 +167,15 @@ class StaffController extends Controller
      * @bodyParam roles integer[] optional Array of role IDs (max 1).
      *
      * @responseField relogin_required boolean True when the authenticated user changed their own role and must sign in again.
+     *
+     * The system's main administrator account cannot be modified by other
+     * administrators and will receive a 422 response.
      */
     public function update(UpdateStaffRequest $request, string $id)
     {
         $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        $this->assertMainAdminProtected($admin);
 
         $oldRoleIds = $admin->roles->pluck('id')->sort()->values()->all();
         $isSelf = auth('admin')->id() === (int) $admin->id;
@@ -233,10 +238,14 @@ class StaffController extends Controller
      * @urlParam id integer required The staff member ID.
      *
      * @response 204 No content.
+     *
+     * The system's main administrator account cannot be deleted (422).
      */
     public function destroy(string $id)
     {
         $admin = AdminUser::findOrFail($id);
+
+        $this->assertMainAdminProtected($admin);
 
         if (auth('admin')->id() === (int) $id) {
             return response()->json(['message' => 'Cannot delete your own account'], 422);
@@ -258,6 +267,19 @@ class StaffController extends Controller
         Auth::guard('admin')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+    }
+
+    /**
+     * Block non-self modifications to the system's main administrator account.
+     *
+     * Only the main administrator themselves may edit their own account;
+     * every other administrator is rejected to prevent a system lockout.
+     */
+    private function assertMainAdminProtected(AdminUser $admin): void
+    {
+        if ($admin->is_main_admin && (int) $admin->id !== (int) auth('admin')->id()) {
+            abort(422, "The system's main administrator account cannot be modified.");
+        }
     }
 
     /**
@@ -355,10 +377,15 @@ class StaffController extends Controller
      * @responseField message string Success message.
      * @responseField staff object The updated staff resource.
      * @responseField relogin_required boolean True when the authenticated user changed their own role and must sign in again.
+     *
+     * The system's main administrator account cannot be modified by other
+     * administrators and will receive a 422 response.
      */
     public function assignRoles(AssignRolesRequest $request, string $id)
     {
         $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        $this->assertMainAdminProtected($admin);
 
         $oldRoleIds = $admin->roles->pluck('id')->sort()->values()->all();
         $isSelf = auth('admin')->id() === (int) $admin->id;
@@ -411,10 +438,15 @@ class StaffController extends Controller
      *
      * @responseField message string Success message.
      * @responseField staff object The updated staff resource.
+     *
+     * The system's main administrator account cannot be modified by other
+     * administrators and will receive a 422 response.
      */
     public function assignPermissions(AssignPermissionsRequest $request, string $id)
     {
         $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        $this->assertMainAdminProtected($admin);
 
         app(PermissionServiceInterface::class)->validateDirectPermissionAssignment(
             $request->validated('permission_ids')
@@ -449,10 +481,15 @@ class StaffController extends Controller
      *
      * @responseField message string Success message.
      * @responseField staff object The updated staff resource.
+     *
+     * The system's main administrator account cannot be modified by other
+     * administrators and will receive a 422 response.
      */
     public function toggleStatus(string $id)
     {
         $admin = AdminUser::with('roles.permissions', 'permissions')->findOrFail($id);
+
+        $this->assertMainAdminProtected($admin);
 
         if (auth('admin')->id() === (int) $id) {
             return response()->json(['message' => 'Cannot deactivate your own account'], 422);
