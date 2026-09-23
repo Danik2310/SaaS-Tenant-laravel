@@ -26,7 +26,7 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
 
                 <h2 className="mt-4 text-xl font-semibold text-gray-900">Your workspace is ready</h2>
                 <p className="mt-1 text-sm text-gray-600">
-                    {plan} plan · {trialDays}-day free trial
+                    {plan} plan{trialDays ? ` · ${trialDays}-day free trial` : ''}
                 </p>
 
                 <div className="mt-6 rounded-lg bg-gray-50 p-4 text-center">
