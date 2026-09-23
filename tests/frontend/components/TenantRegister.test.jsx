@@ -50,10 +50,10 @@ describe('TenantRegister', () => {
         global.route.mockImplementation((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
     });
 
-    test('renders the plan card carousel before the form', () => {
+    test('renders the plan card grid before the form', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
-        expect(screen.getByTestId('plan-carousel')).toBeInTheDocument();
+        expect(screen.getByTestId('plan-grid')).toBeInTheDocument();
         expect(screen.getByTestId('plan-card-trial')).toBeInTheDocument();
         expect(screen.getByTestId('plan-card-free')).toBeInTheDocument();
         expect(screen.getByTestId('plan-card-growth')).toBeInTheDocument();
