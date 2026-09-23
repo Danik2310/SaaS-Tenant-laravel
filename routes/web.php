@@ -18,6 +18,7 @@ use App\Shared\Http\Controllers\Admin\SettingController;
 use App\Shared\Http\Controllers\Admin\StaffController;
 use App\Tenants\Http\Controllers\Admin\TenantController;
 use App\Tenants\Http\Controllers\Admin\TenantMetricsController;
+use App\Tenants\Http\Controllers\Public\TenantRegistrationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -48,6 +49,18 @@ Route::middleware(['central.domain'])->group(function () {
     Route::post('/central/login', [AdminAuthController::class, 'login'])->middleware('throttle:5,1');
     Route::post('/central/logout', [AdminAuthController::class, 'logout'])->middleware(['jwt.cookie', 'auth:admin'])->name('central.logout');
 });
+
+// Public tenant self-service registration (restricted to central domains).
+// Each central domain gets an explicit domain-constrained route, because the
+// tenant `/register` route (routes/tenant.php) shares the same URI and Laravel's
+// route collection keys routes by method+domain+URI — an unconstrained
+// duplicate would be silently overwritten.
+foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
+    Route::domain($centralDomain)->middleware(['central.domain', 'guest'])->group(function () {
+        Route::get('/register', [TenantRegistrationController::class, 'create'])->name('register.tenant');
+        Route::post('/register', [TenantRegistrationController::class, 'store'])->middleware('throttle:3,1');
+    });
+}
 
 // Unauthorized page (accessible to authenticated admin users on central domain only)
 Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'central.domain'])->get('/admin/unauthorized', function () {

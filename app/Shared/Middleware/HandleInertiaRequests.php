@@ -81,6 +81,7 @@ class HandleInertiaRequests extends Middleware
             ] : ['active' => false],
             'feature_definitions' => FeatureFlagCatalog::definitions(),
             'plan' => $planData,
+            'tenant_domain_suffix' => (string) config('tenancy.tenant_domain_suffix', 'sasapp'),
         ];
     }
 }
