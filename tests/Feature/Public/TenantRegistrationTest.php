@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Public;
 
+use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Tenants\Contracts\TenantManagerInterface;
@@ -53,26 +54,62 @@ class TenantRegistrationTest extends TestCase
             'phone' => '+1 555 0100',
             'password' => 'StrongPass1!',
             'password_confirmation' => 'StrongPass1!',
+            'plan' => 'trial',
             'terms' => true,
         ], $overrides);
     }
 
-    public function test_register_page_renders(): void
+    public function test_register_page_renders_active_plans(): void
     {
+        Plan::create([
+            'name' => 'Legacy',
+            'slug' => 'legacy',
+            'status' => 'inactive',
+            'price' => 0,
+            'max_users' => 1,
+        ]);
+
         $this->get('/register')
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('Auth/TenantRegister'));
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->has('plans', 5)
+                ->has('plans.0', fn (Assert $plan) => $plan
+                    ->where('status', 'active')
+                    ->has('name')
+                    ->has('slug')
+                    ->has('price')
+                    ->has('currency')
+                    ->has('duration_months')
+                    ->has('can_signup')
+                    ->has('features')
+                    ->has('limits'))
+                ->where('selected_plan', null)
+                ->where('plans.0.slug', 'trial')
+                ->where('plans.1.slug', 'free')
+                ->where('plans.2.slug', 'growth'));
+    }
+
+    public function test_register_page_does_not_list_or_preselect_tampered_plan(): void
+    {
+        $this->get('/register?plan=nonexistent')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->where('selected_plan', null));
     }
 
     public function test_guest_can_register_a_workspace_with_trial_plan(): void
     {
-        $response = $this->post('/register', $this->payload());
+        $response = $this->post('/register', $this->payload(['plan' => 'trial']));
 
         $response->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
                 ->where('domain', 'acme-corp.sasapp')
-                ->where('email', 'jane@acme.test'));
+                ->where('email', 'jane@acme.test')
+                ->where('plan', 'Trial')
+                ->where('trialDays', (int) config('tenancy.trial_days', 14)));
 
         $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
 
@@ -100,6 +137,83 @@ class TenantRegistrationTest extends TestCase
         $this->assertTrue(Hash::check('StrongPass1!', $user->password));
 
         $this->forgetTenant();
+    }
+
+    public function test_guest_can_register_a_workspace_with_free_plan(): void
+    {
+        $response = $this->post('/register', $this->payload(['plan' => 'free']));
+
+        $response->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('plan', 'Free')
+                ->where('trialDays', null));
+
+        $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertSame('Active', $tenant->status);
+        $this->assertNull($tenant->trial_ends_at);
+        $this->assertSame('free', $tenant->plan->slug);
+        $this->assertSame('active', $tenant->activeSubscription->status);
+        $this->assertNull($tenant->activeSubscription->ends_at);
+
+        $this->assertDatabaseHas('domains', [
+            'tenant_id' => $tenant->id,
+            'domain' => 'acme-corp.sasapp',
+        ]);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'jane@acme.test')->first();
+
+        $this->assertNotNull($user);
+        $this->assertTrue($user->hasRole('tenant-admin'));
+
+        $this->forgetTenant();
+    }
+
+    public function test_paid_plan_selection_falls_back_to_trial(): void
+    {
+        $response = $this->post('/register', $this->payload(['plan' => 'growth']));
+
+        $response->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('plan', 'Trial'));
+
+        $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertSame('Trial', $tenant->status);
+        $this->assertSame('trial', $tenant->plan->slug);
+        $this->assertSame('active', $tenant->activeSubscription->status);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+    }
+
+    public function test_inactive_plan_slug_is_rejected(): void
+    {
+        Plan::create([
+            'name' => 'Legacy',
+            'slug' => 'legacy',
+            'status' => 'inactive',
+            'price' => 0,
+            'max_users' => 1,
+        ]);
+
+        $this->post('/register', $this->payload(['plan' => 'legacy']))
+            ->assertSessionHasErrors('plan');
+
+        $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_unknown_plan_slug_is_rejected(): void
+    {
+        $this->post('/register', $this->payload(['plan' => 'enterprise-plus']))
+            ->assertSessionHasErrors('plan');
+
+        $this->assertSame(0, Tenant::count());
     }
 
     public function test_email_conflicting_with_existing_tenant_is_rejected(): void
