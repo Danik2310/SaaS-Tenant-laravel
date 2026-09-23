@@ -50,19 +50,20 @@ describe('TenantRegister', () => {
         global.route.mockImplementation((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
     });
 
-    test('renders the plan selection table before the form', () => {
+    test('renders the plan card carousel before the form', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
-        expect(screen.getByTestId('plan-row-trial')).toBeInTheDocument();
-        expect(screen.getByTestId('plan-row-free')).toBeInTheDocument();
-        expect(screen.getByTestId('plan-row-growth')).toBeInTheDocument();
+        expect(screen.getByTestId('plan-carousel')).toBeInTheDocument();
+        expect(screen.getByTestId('plan-card-trial')).toBeInTheDocument();
+        expect(screen.getByTestId('plan-card-free')).toBeInTheDocument();
+        expect(screen.getByTestId('plan-card-growth')).toBeInTheDocument();
         expect(screen.queryByLabelText('Company name')).not.toBeInTheDocument();
     });
 
     test('shows the form after a plan is selected', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
-        fireEvent.click(within(screen.getByTestId('plan-row-trial')).getByRole('button', { name: /sign up/i }));
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
 
         expect(screen.getByLabelText('Company name')).toBeInTheDocument();
         expect(screen.getByLabelText('Full name')).toBeInTheDocument();
