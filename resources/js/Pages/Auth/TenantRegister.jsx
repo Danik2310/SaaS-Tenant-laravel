@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -53,22 +53,118 @@ function limitValue(value) {
     return value === null || value === undefined ? 'Unlimited' : String(value);
 }
 
-function PlanGrid({ plans, featureDefinitions, onSelect, processing }) {
+function PlanCarousel({ plans, featureDefinitions, onSelect, processing }) {
+    const viewportRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    useEffect(() => {
+        const viewport = viewportRef.current;
+
+        if (!viewport) {
+            return undefined;
+        }
+
+        const recompute = () => {
+            const card = viewport.querySelector('[data-testid^="plan-card-"]');
+
+            if (card) {
+                const index = Math.round(viewport.scrollLeft / card.offsetWidth);
+
+                setActiveIndex(Math.max(0, Math.min(index, plans.length - 1)));
+            }
+        };
+
+        viewport.addEventListener('scroll', recompute, { passive: true });
+        window.addEventListener('resize', recompute);
+
+        return () => {
+            viewport.removeEventListener('scroll', recompute);
+            window.removeEventListener('resize', recompute);
+        };
+    }, [plans.length]);
+
+    const scrollToIndex = (index) => {
+        const viewport = viewportRef.current;
+
+        if (!viewport) {
+            return;
+        }
+
+        const card = viewport.querySelector(`[data-testid="plan-card-${plans[index].slug}"]`);
+
+        if (card) {
+            viewport.scrollTo({ left: card.offsetLeft - viewport.offsetLeft, behavior: 'smooth' });
+        }
+    };
+
+    const handlePrev = () => scrollToIndex(Math.max(0, activeIndex - 1));
+
+    const handleNext = () => scrollToIndex(Math.min(plans.length - 1, activeIndex + 1));
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            handlePrev();
+        }
+
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            handleNext();
+        }
+    };
+
     return (
-        <section aria-label="Choose your plan" data-testid="plan-grid">
-            <div>
-                <h2 className="text-xl font-semibold text-gray-900">Choose your plan</h2>
-                <p className="mt-1 text-sm text-gray-600">
-                    Pick a plan to start your workspace. No credit card required.
-                </p>
+        <section aria-label="Choose your plan">
+            <div className="flex items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-900">Choose your plan</h2>
+                    <p className="mt-1 text-sm text-gray-600">
+                        Pick a plan to start your workspace. No credit card required.
+                    </p>
+                </div>
+
+                <div className="flex shrink-0 gap-2">
+                    <button
+                        type="button"
+                        onClick={handlePrev}
+                        data-testid="carousel-prev"
+                        aria-label="Previous plans"
+                        disabled={activeIndex === 0 || processing}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-40"
+                    >
+                        ←
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleNext}
+                        data-testid="carousel-next"
+                        aria-label="Next plans"
+                        disabled={activeIndex === plans.length - 1 || processing}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-40"
+                    >
+                        →
+                    </button>
+                </div>
             </div>
 
-            <div className="mt-6 gap-6 sm:columns-2 lg:columns-3">
-                {plans.map((plan) => (
+            <div
+                ref={viewportRef}
+                data-testid="plan-carousel"
+                role="region"
+                aria-roledescription="carousel"
+                aria-label="Plans"
+                tabIndex={0}
+                onKeyDown={handleKeyDown}
+                className="mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
+            >
+                {plans.map((plan, index) => (
                     <article
                         key={plan.slug}
                         data-testid={`plan-card-${plan.slug}`}
-                        className="mb-6 flex flex-col break-inside-avoid rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                        aria-roledescription="slide"
+                        aria-label={`${plan.name}, slide ${index + 1} of ${plans.length}`}
+                        className="w-[85%] shrink-0 snap-start flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.6667rem)]"
                     >
                         {plan.slug === 'trial' && (
                             <span className="inline-block self-start rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-700">
@@ -110,6 +206,22 @@ function PlanGrid({ plans, featureDefinitions, onSelect, processing }) {
                             {plan.can_signup ? 'Sign Up' : 'Buy'}
                         </button>
                     </article>
+                ))}
+            </div>
+
+            <div className="mt-4 flex justify-center gap-2">
+                {plans.map((plan, index) => (
+                    <button
+                        key={plan.slug}
+                        type="button"
+                        onClick={() => scrollToIndex(index)}
+                        data-testid={`carousel-dot-${plan.slug}`}
+                        aria-label={`Go to ${plan.name}`}
+                        aria-current={index === activeIndex ? 'true' : undefined}
+                        className={`h-2 w-2 rounded-full transition-colors ${
+                            index === activeIndex ? 'bg-gray-800' : 'bg-gray-300 hover:bg-gray-400'
+                        } focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2`}
+                    />
                 ))}
             </div>
 
@@ -164,7 +276,7 @@ export default function TenantRegister({ plans = [], selected_plan = null, tenan
             <Head title={showForm ? 'Create your workspace' : 'Choose your plan'} />
 
             {!showForm ? (
-                <PlanGrid
+                <PlanCarousel
                     plans={plans}
                     featureDefinitions={feature_definitions}
                     onSelect={handleSelect}
