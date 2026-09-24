@@ -17,6 +17,7 @@ use App\Shared\Http\Controllers\Admin\RolePermissionController;
 use App\Shared\Http\Controllers\Admin\SettingController;
 use App\Shared\Http\Controllers\Admin\StaffController;
 use App\Tenants\Http\Controllers\Admin\TenantController;
+use App\Tenants\Http\Controllers\Admin\TenantDomainController;
 use App\Tenants\Http\Controllers\Admin\TenantMetricsController;
 use App\Tenants\Http\Controllers\Public\TenantRegistrationController;
 use Illuminate\Support\Facades\Route;
@@ -98,6 +99,8 @@ Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:10
     Route::patch('/api/tenants/{id}/restore', [TenantController::class, 'restore'])->middleware(PermissionNames::middleware([PermissionNames::RESTORE_TENANTS], 'admin'));
     Route::post('/api/tenants/{id}/migrate', [TenantController::class, 'migrate'])->middleware(PermissionNames::middleware([PermissionNames::EDIT_TENANTS], 'admin'));
     Route::put('/api/tenants/{id}/plan', [TenantController::class, 'changePlan'])->middleware(PermissionNames::middleware([PermissionNames::EDIT_TENANTS], 'admin'));
+    Route::post('/api/tenants/{id}/domains', [TenantDomainController::class, 'store'])->middleware(PermissionNames::middleware([PermissionNames::EDIT_TENANTS], 'admin'));
+    Route::delete('/api/tenants/{id}/domains/{domainId}', [TenantDomainController::class, 'destroy'])->middleware(PermissionNames::middleware([PermissionNames::EDIT_TENANTS], 'admin'));
 
     // Lightweight dropdown endpoints - reference data used across permission boundaries
     Route::get('/api/tenants-list', [TenantController::class, 'tenants'])->middleware(PermissionNames::middleware([PermissionNames::VIEW_TENANTS], 'admin'));

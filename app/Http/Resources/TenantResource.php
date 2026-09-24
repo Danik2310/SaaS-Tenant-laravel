@@ -16,6 +16,7 @@ class TenantResource extends JsonResource
             'email' => $this->email ?? 'N/A',
             'domain' => $this->whenLoaded('domains', fn () => $this->domains->first()?->domain ?? 'N/A'),
             'all_domains' => $this->whenLoaded('domains', fn () => $this->domains->map(fn ($d) => [
+                'id' => $d->id,
                 'domain' => $d->domain,
                 'is_primary' => $d->domain === $this->domains->first()?->domain,
             ])->values()),
