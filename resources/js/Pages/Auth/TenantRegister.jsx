@@ -63,12 +63,12 @@ function PlanGrid({ plans, featureDefinitions, onSelect, processing }) {
                 </p>
             </div>
 
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 gap-6 sm:columns-2 lg:columns-3">
                 {plans.map((plan) => (
                     <article
                         key={plan.slug}
                         data-testid={`plan-card-${plan.slug}`}
-                        className="flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
+                        className="mb-6 flex flex-col break-inside-avoid rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
                     >
                         {plan.slug === 'trial' && (
                             <span className="inline-block self-start rounded bg-indigo-50 px-1.5 py-0.5 text-xs font-medium text-indigo-700">
@@ -160,7 +160,7 @@ export default function TenantRegister({ plans = [], selected_plan = null, tenan
     };
 
     return (
-        <GuestLayout>
+        <GuestLayout wide>
             <Head title={showForm ? 'Create your workspace' : 'Choose your plan'} />
 
             {!showForm ? (
