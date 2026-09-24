@@ -13,9 +13,12 @@ import Grid from '@mui/material/Grid';
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Tooltip from '@mui/material/Tooltip';
+import TextField from '@mui/material/TextField';
 import Divider from '@mui/material/Divider';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AddIcon from '@mui/icons-material/Add';
 import LaunchIcon from '@mui/icons-material/Launch';
 import PersonIcon from '@mui/icons-material/Person';
 import StorageIcon from '@mui/icons-material/Storage';
@@ -31,6 +34,7 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { useAuthContext } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import api from '@/services/api';
 
 const formatContactName = (tenant) => {
     const parts = [tenant.first_name, tenant.last_name].filter(Boolean);
@@ -48,10 +52,13 @@ const formatAddress = (tenant) => {
     return lines.length > 0 ? lines.join(', ') : '—';
 };
 
-export default function DomainModal({ tenant, onClose, onImpersonate, onViewDatabase, onRunMigrations, onRestore }) {
+export default function DomainModal({ tenant, onClose, onImpersonate, onViewDatabase, onRunMigrations, onRestore, onTenantUpdated }) {
     if (!tenant) return null;
 
     const [copiedIndex, setCopiedIndex] = useState(null);
+    const [newDomain, setNewDomain] = useState('');
+    const [addingDomain, setAddingDomain] = useState(false);
+    const [removingDomainId, setRemovingDomainId] = useState(null);
 
     const handleCopy = async (domain, index) => {
         try {
@@ -61,6 +68,42 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
             setTimeout(() => setCopiedIndex(null), 2000);
         } catch {
             toast.error('Failed to copy domain');
+        }
+    };
+
+    const handleAddDomain = async (e) => {
+        e.preventDefault();
+        const domain = newDomain.trim();
+        if (!domain || addingDomain) return;
+
+        setAddingDomain(true);
+        try {
+            const res = await api.post(`/admin/api/tenants/${tenant.id}/domains`, { domain });
+            toast.success('Domain added successfully');
+            setNewDomain('');
+            onTenantUpdated?.(res.data.tenant);
+        } catch (err) {
+            const message = err.response?.data?.errors?.domain?.[0]
+                || err.response?.data?.message
+                || 'Failed to add domain';
+            toast.error(message);
+        } finally {
+            setAddingDomain(false);
+        }
+    };
+
+    const handleRemoveDomain = async (domain) => {
+        if (removingDomainId) return;
+
+        setRemovingDomainId(domain.id);
+        try {
+            const res = await api.delete(`/admin/api/tenants/${tenant.id}/domains/${domain.id}`);
+            toast.success('Domain removed successfully');
+            onTenantUpdated?.(res.data.tenant);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to remove domain');
+        } finally {
+            setRemovingDomainId(null);
         }
     };
 
@@ -74,6 +117,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
     const canRunMigrations = permissions.includes('edit tenants');
     const canRestore = permissions.includes('restore tenants');
     const canViewDatabase = permissions.includes('view tenants');
+    const canEditTenants = permissions.includes('edit tenants');
 
     const showQuickActions = isDeleted
         ? canRestore
@@ -257,9 +301,56 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                             <LaunchIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
                                                     </Tooltip>
+                                                    {canEditTenants && !isDeleted && !d.is_primary && (
+                                                        <Tooltip title="Remove domain">
+                                                            <IconButton
+                                                                size="small"
+                                                                data-testid={`remove-domain-${d.domain}`}
+                                                                disabled={removingDomainId === d.id}
+                                                                onClick={() => handleRemoveDomain(d)}
+                                                                sx={{ color: '#ef4444', bgcolor: '#fef2f2', '&:hover': { bgcolor: '#fee2e2' } }}
+                                                            >
+                                                                <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                                                            </IconButton>
+                                                        </Tooltip>
+                                                    )}
                                                 </Box>
                                             </Box>
                                         ))}
+                                    </Box>
+                                )}
+
+                                {canEditTenants && !isDeleted && (
+                                    <Box
+                                        component="form"
+                                        onSubmit={handleAddDomain}
+                                        sx={{ display: 'flex', gap: 1, mt: 2, alignItems: 'center' }}
+                                    >
+                                        <TextField
+                                            size="small"
+                                            fullWidth
+                                            placeholder="Add a domain"
+                                            value={newDomain}
+                                            onChange={(e) => setNewDomain(e.target.value)}
+                                            inputProps={{ 'data-testid': 'add-domain-input' }}
+                                            sx={{
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 1.5,
+                                                    fontSize: 13,
+                                                    fontFamily: 'monospace',
+                                                },
+                                            }}
+                                        />
+                                        <Tooltip title="Add domain">
+                                            <IconButton
+                                                type="submit"
+                                                data-testid="add-domain-submit"
+                                                disabled={addingDomain || !newDomain.trim()}
+                                                sx={{ color: '#22c55e', bgcolor: '#f0fdf4', '&:hover': { bgcolor: '#dcfce7' } }}
+                                            >
+                                                <AddIcon />
+                                            </IconButton>
+                                        </Tooltip>
                                     </Box>
                                 )}
                             </CardContent>

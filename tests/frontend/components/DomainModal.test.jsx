@@ -2,11 +2,14 @@ import { vi } from 'vitest';
 import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
 import DomainModal from '@/modules/shared/modals/DomainModal';
+import api from '@/services/api';
+import { toast } from 'sonner';
 
 const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
 vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@/services/api', () => ({ default: { post: vi.fn(), delete: vi.fn() } }));
 
 const activeTenant = {
   id: 't-1',
@@ -19,8 +22,8 @@ const activeTenant = {
   is_on_trial: false,
   trial_has_expired: false,
   all_domains: [
-    { domain: 'acme.sasapp', is_primary: true },
-    { domain: 'acme-backup.sasapp', is_primary: false },
+    { id: 1, domain: 'acme.sasapp', is_primary: true },
+    { id: 2, domain: 'acme-backup.sasapp', is_primary: false },
   ],
 };
 
@@ -315,5 +318,86 @@ describe('DomainModal', () => {
 
     fireEvent.click(screen.getByText('Restore Tenant'));
     expect(onRestore).toHaveBeenCalledWith(deletedTenant.id);
+  });
+
+  test('adds a new domain on submit', async () => {
+    const onTenantUpdated = vi.fn();
+    const updatedTenant = {
+      ...activeTenant,
+      all_domains: [...activeTenant.all_domains, { id: 3, domain: 'new.sasapp', is_primary: false }],
+    };
+    api.post.mockResolvedValue({ data: { tenant: updatedTenant } });
+
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onTenantUpdated={onTenantUpdated} />
+    );
+
+    fireEvent.change(screen.getByTestId('add-domain-input'), { target: { value: 'new.sasapp' } });
+    fireEvent.click(screen.getByTestId('add-domain-submit'));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/admin/api/tenants/t-1/domains', { domain: 'new.sasapp' });
+    });
+    expect(toast.success).toHaveBeenCalledWith('Domain added successfully');
+    expect(onTenantUpdated).toHaveBeenCalledWith(updatedTenant);
+  });
+
+  test('shows validation error toast when adding an occupied domain', async () => {
+    api.post.mockRejectedValue({
+      response: { data: { errors: { domain: ["The domain 'new.sasapp' is already in use by 'Other Corp'."] } } },
+    });
+
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onTenantUpdated={vi.fn()} />
+    );
+
+    fireEvent.change(screen.getByTestId('add-domain-input'), { target: { value: 'new.sasapp' } });
+    fireEvent.click(screen.getByTestId('add-domain-submit'));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("The domain 'new.sasapp' is already in use by 'Other Corp'.");
+    });
+  });
+
+  test('removes a secondary domain', async () => {
+    const onTenantUpdated = vi.fn();
+    const updatedTenant = {
+      ...activeTenant,
+      all_domains: activeTenant.all_domains.filter(d => d.id !== 2),
+    };
+    api.delete.mockResolvedValue({ data: { tenant: updatedTenant } });
+
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onTenantUpdated={onTenantUpdated} />
+    );
+
+    fireEvent.click(screen.getByTestId('remove-domain-acme-backup.sasapp'));
+
+    await waitFor(() => {
+      expect(api.delete).toHaveBeenCalledWith('/admin/api/tenants/t-1/domains/2');
+    });
+    expect(toast.success).toHaveBeenCalledWith('Domain removed successfully');
+    expect(onTenantUpdated).toHaveBeenCalledWith(updatedTenant);
+  });
+
+  test('does not render a remove button on the primary domain', () => {
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onTenantUpdated={vi.fn()} />
+    );
+
+    expect(screen.queryByTestId('remove-domain-acme.sasapp')).not.toBeInTheDocument();
+    expect(screen.getByTestId('remove-domain-acme-backup.sasapp')).toBeInTheDocument();
+  });
+
+  test('hides add and remove controls without edit tenants permission', () => {
+    useAuthContextMock.mockReturnValue({ permissions: ['view tenants'] });
+
+    renderWithProviders(
+      <DomainModal tenant={activeTenant} onClose={vi.fn()} onTenantUpdated={vi.fn()} />
+    );
+
+    expect(screen.queryByTestId('add-domain-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('remove-domain-acme-backup.sasapp')).not.toBeInTheDocument();
+    expect(screen.getByText('acme.sasapp')).toBeInTheDocument();
   });
 });

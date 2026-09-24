@@ -339,6 +339,12 @@ export default function Dashboard() {
 
     const openModal = (type, tenant) => setActiveModal({ type, tenant });
 
+    const handleTenantUpdated = (tenant) => {
+        setActiveModal(prev => (prev ? { ...prev, tenant } : prev));
+        fetchTenants();
+        incrementRefreshTrigger();
+    };
+
     return (
         <Box sx={{ height: '100vh', overflow: 'hidden', bgcolor: 'background.default', display: 'flex' }}>
             <Navbar view={view} setView={handleSetView} />
@@ -580,6 +586,7 @@ export default function Dashboard() {
                             onViewDatabase={(tenant) => openModal('database', tenant)}
                             onRunMigrations={(tenant) => openModal('migration', tenant)}
                             onRestore={handleRestoreTenant}
+                            onTenantUpdated={handleTenantUpdated}
                             />
 
                         <ChangePlanModal
