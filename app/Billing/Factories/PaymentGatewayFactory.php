@@ -7,15 +7,16 @@ namespace App\Billing\Factories;
 use App\Billing\Adapters\MercadoPagoAdapter;
 use App\Billing\Adapters\StripePaymentAdapter;
 use App\Billing\Contracts\PaymentGatewayInterface;
+use Stripe\StripeClient;
 
 class PaymentGatewayFactory
 {
     public static function make(?string $gateway = null): PaymentGatewayInterface
     {
         return match ($gateway) {
-            'stripe' => new StripePaymentAdapter,
+            'stripe' => self::stripeAdapter(),
             'mercadopago' => new MercadoPagoAdapter,
-            default => new StripePaymentAdapter,
+            default => self::stripeAdapter(),
         };
     }
 
@@ -24,5 +25,12 @@ class PaymentGatewayFactory
         $gateway = $tenant->payment_gateway ?? config('billing.default_gateway', 'stripe');
 
         return self::make($gateway);
+    }
+
+    private static function stripeAdapter(): StripePaymentAdapter
+    {
+        return new StripePaymentAdapter(
+            new StripeClient((string) config('services.stripe.secret_key')),
+        );
     }
 }
