@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 use Stancl\Tenancy\Contracts\TenantWithDatabase;
-use Stancl\Tenancy\Database\Models\Domain;
 use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 use Stancl\Tenancy\DatabaseConfig;
 
@@ -137,7 +136,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     public function domains()
     {
-        return $this->hasMany(Domain::class);
+        return $this->hasMany(Domain::class, 'tenant_id', 'id');
     }
 
     public function database(): DatabaseConfig
