@@ -45,11 +45,20 @@ class TenantRegistrationController extends Controller
 
         try {
             $tenant = $this->tenantManager->provision([
-                'name' => $validated['company_name'],
+                'name' => $validated['name'],
                 'email' => $validated['email'],
                 'domain' => $domain,
                 'plan' => $planSlug,
+                'company_name' => $validated['company_name'],
+                'first_name' => $validated['first_name'] ?? null,
+                'last_name' => $validated['last_name'] ?? null,
                 'phone' => $validated['phone'] ?? null,
+                'address_line1' => $validated['address_line1'] ?? null,
+                'address_line2' => $validated['address_line2'] ?? null,
+                'city' => $validated['city'] ?? null,
+                'state' => $validated['state'] ?? null,
+                'postal_code' => $validated['postal_code'] ?? null,
+                'country' => $validated['country'] ?? null,
                 'public_signup' => true,
             ]);
         } catch (InvalidArgumentException $e) {
@@ -65,7 +74,7 @@ class TenantRegistrationController extends Controller
 
         dispatch(new CreateTenantAdminUser(
             $tenant,
-            $validated['name'],
+            $this->adminDisplayName($validated),
             $validated['email'],
             $validated['password'],
         ));
@@ -102,5 +111,15 @@ class TenantRegistrationController extends Controller
         }
 
         return null;
+    }
+
+    private function adminDisplayName(array $validated): string
+    {
+        $contactName = trim(implode(' ', array_filter([
+            $validated['first_name'] ?? null,
+            $validated['last_name'] ?? null,
+        ])));
+
+        return $contactName !== '' ? $contactName : $validated['company_name'];
     }
 }

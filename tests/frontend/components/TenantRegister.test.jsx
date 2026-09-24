@@ -1,6 +1,6 @@
 import { vi, describe, test, beforeEach, expect } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, within } from '../test-utils';
+import { render, screen, fireEvent } from '../test-utils';
 import TenantRegister from '@/Pages/Auth/TenantRegister';
 import TenantRegisterSuccess from '@/Pages/Auth/TenantRegisterSuccess';
 
@@ -37,11 +37,7 @@ vi.mock('@inertiajs/react', async () => {
     };
 });
 
-const plans = [
-    { slug: 'trial', name: 'Trial', price: 0, currency: 'USD', duration_months: 1, can_signup: true, features: [], limits: {} },
-    { slug: 'free', name: 'Free', price: 0, currency: 'USD', duration_months: null, can_signup: true, features: [], limits: {} },
-    { slug: 'growth', name: 'Growth', price: 15, currency: 'USD', duration_months: 1, can_signup: false, features: [], limits: {} },
-];
+const registerForm = () => render(<TenantRegister tenant_domain_suffix="sasapp" />);
 
 describe('TenantRegister', () => {
     beforeEach(() => {
@@ -50,60 +46,57 @@ describe('TenantRegister', () => {
         global.route.mockImplementation((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
     });
 
-    test('renders the plan card carousel before the form', () => {
-        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+    test('renders the full registration form directly without a plan carousel', () => {
+        registerForm();
 
-        expect(screen.getByTestId('plan-carousel')).toBeInTheDocument();
-        expect(screen.getByTestId('plan-card-trial')).toBeInTheDocument();
-        expect(screen.getByTestId('plan-card-free')).toBeInTheDocument();
-        expect(screen.getByTestId('plan-card-growth')).toBeInTheDocument();
-        expect(screen.queryByLabelText('Company name')).not.toBeInTheDocument();
-    });
-
-    test('shows the form after a plan is selected', () => {
-        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
-
-        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
-
-        expect(screen.getByLabelText('Company name')).toBeInTheDocument();
-        expect(screen.getByLabelText('Full name')).toBeInTheDocument();
-        expect(screen.getByLabelText('Work email')).toBeInTheDocument();
+        expect(screen.queryByTestId('plan-carousel')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Tenant Name')).toBeInTheDocument();
+        expect(screen.getByLabelText('Email')).toBeInTheDocument();
+        expect(screen.getByText('Business & Contact Information')).toBeInTheDocument();
+        expect(screen.getByLabelText('Company Name')).toBeInTheDocument();
+        expect(screen.getByLabelText('First Name')).toBeInTheDocument();
+        expect(screen.getByLabelText('Last Name')).toBeInTheDocument();
         expect(screen.getByLabelText('Phone (optional)')).toBeInTheDocument();
+        expect(screen.getByLabelText('Address Line 1')).toBeInTheDocument();
+        expect(screen.getByLabelText('Address Line 2')).toBeInTheDocument();
+        expect(screen.getByLabelText('City')).toBeInTheDocument();
+        expect(screen.getByLabelText('State / Province')).toBeInTheDocument();
+        expect(screen.getByLabelText('Postal Code')).toBeInTheDocument();
+        expect(screen.getByLabelText('Country')).toBeInTheDocument();
         expect(screen.getByLabelText('Password')).toBeInTheDocument();
         expect(screen.getByLabelText('Confirm Password')).toBeInTheDocument();
         expect(screen.getByRole('checkbox', { name: /terms of service/i })).toBeInTheDocument();
     });
 
-    test('shows the form immediately when a plan is preselected', () => {
-        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+    test('renders the form immediately when a plan is preselected', () => {
+        render(<TenantRegister selected_plan="trial" tenant_domain_suffix="sasapp" />);
 
-        expect(screen.getByLabelText('Company name')).toBeInTheDocument();
-        expect(screen.getByLabelText('Full name')).toBeInTheDocument();
-        expect(screen.getByLabelText('Work email')).toBeInTheDocument();
-        expect(screen.getByLabelText('Phone (optional)')).toBeInTheDocument();
-        expect(screen.getByLabelText('Password')).toBeInTheDocument();
-        expect(screen.getByLabelText('Confirm Password')).toBeInTheDocument();
-        expect(screen.getByRole('checkbox', { name: /terms of service/i })).toBeInTheDocument();
+        expect(screen.getByLabelText('Tenant Name')).toBeInTheDocument();
+        expect(screen.queryByTestId('plan-carousel')).not.toBeInTheDocument();
+        expect(lastForm().data.plan).toBe('trial');
     });
 
     test('shows the workspace address while typing the company name', () => {
-        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+        registerForm();
 
-        fireEvent.change(screen.getByLabelText('Company name'), {
+        fireEvent.change(screen.getByLabelText('Company Name'), {
             target: { value: 'Acme Corp' },
         });
 
         expect(screen.getByText('acme-corp.sasapp')).toBeInTheDocument();
     });
 
-    test('submits to the register.tenant route', () => {
-        const { container } = render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+    test('submits to the register.tenant route and preserves the preselected plan', () => {
+        const { container } = render(
+            <TenantRegister selected_plan="trial" tenant_domain_suffix="sasapp" />
+        );
 
         fireEvent.submit(container.querySelector('form'));
 
         const form = lastForm();
         expect(form).not.toBeNull();
         expect(form.post).toHaveBeenCalledWith('/register');
+        expect(form.data.plan).toBe('trial');
     });
 
     test('success page shows the workspace domain and login link', () => {

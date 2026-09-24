@@ -113,7 +113,8 @@ class TenantRegistrationTest extends TestCase
 
         $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
 
-        $this->assertSame('Acme Corp', $tenant->name);
+        $this->assertSame('Jane Doe', $tenant->name);
+        $this->assertSame('Acme Corp', $tenant->company_name);
         $this->assertSame('Trial', $tenant->status);
         $this->assertNotNull($tenant->trial_ends_at);
         $this->assertTrue($tenant->trial_ends_at->isFuture());
@@ -135,6 +136,47 @@ class TenantRegistrationTest extends TestCase
         $this->assertTrue($user->is_active);
         $this->assertTrue($user->hasRole('tenant-admin'));
         $this->assertTrue(Hash::check('StrongPass1!', $user->password));
+        $this->assertSame('Acme Corp', $user->name);
+
+        $this->forgetTenant();
+    }
+
+    public function test_guest_can_register_with_full_business_and_contact_details(): void
+    {
+        $this->post('/register', $this->payload([
+            'name' => 'Acme Corp LLC',
+            'company_name' => 'Acme Corp',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'phone' => '+1 555 0100',
+            'address_line1' => '123 Main St',
+            'address_line2' => 'Suite 400',
+            'city' => 'Springfield',
+            'state' => 'IL',
+            'postal_code' => '62701',
+            'country' => 'United States',
+        ]))->assertOk();
+
+        $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertSame('Acme Corp LLC', $tenant->name);
+        $this->assertSame('Acme Corp', $tenant->company_name);
+        $this->assertSame('+1 555 0100', $tenant->phone);
+        $this->assertSame('123 Main St', $tenant->address_line1);
+        $this->assertSame('Suite 400', $tenant->address_line2);
+        $this->assertSame('Springfield', $tenant->city);
+        $this->assertSame('IL', $tenant->state);
+        $this->assertSame('62701', $tenant->postal_code);
+        $this->assertSame('United States', $tenant->country);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'jane@acme.test')->first();
+
+        $this->assertNotNull($user);
+        $this->assertSame('Jane Doe', $user->name);
 
         $this->forgetTenant();
     }
