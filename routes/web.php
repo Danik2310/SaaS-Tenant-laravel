@@ -19,6 +19,7 @@ use App\Shared\Http\Controllers\Admin\StaffController;
 use App\Tenants\Http\Controllers\Admin\TenantController;
 use App\Tenants\Http\Controllers\Admin\TenantDomainController;
 use App\Tenants\Http\Controllers\Admin\TenantMetricsController;
+use App\Tenants\Http\Controllers\Public\RegistrationCheckoutController;
 use App\Tenants\Http\Controllers\Public\TenantRegistrationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -60,6 +61,13 @@ foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
     Route::domain($centralDomain)->middleware(['central.domain', 'guest'])->group(function () {
         Route::get('/register', [TenantRegistrationController::class, 'create'])->name('register.tenant');
         Route::post('/register', [TenantRegistrationController::class, 'store'])->middleware('throttle:3,1');
+
+        // Stripe-hosted checkout callbacks. Provisioning of a paid plan happens
+        // only in RegistrationCheckoutController::success(), never in store().
+        Route::get('/register/payment/success', [RegistrationCheckoutController::class, 'success'])
+            ->name('register.payment.success');
+        Route::get('/register/payment/cancel', [RegistrationCheckoutController::class, 'cancel'])
+            ->name('register.payment.cancel');
     });
 }
 

@@ -70,7 +70,7 @@ class TenantBuilder implements TenantBuilderInterface
         return $this;
     }
 
-    public function withPlan(?string $planSlug = null, bool $publicSignup = false): static
+    public function withPlan(?string $planSlug = null, bool $publicSignup = false, bool $confirmedPayment = false): static
     {
         if ($planSlug) {
             $plan = Plan::where('slug', $planSlug)->first();
@@ -86,9 +86,12 @@ class TenantBuilder implements TenantBuilderInterface
             }
 
             // Defense in depth for the public registration path: never assign
-            // an inactive or paid plan without payment. Admin provisioning
-            // (publicSignup = false) may still assign paid plans.
-            if ($publicSignup && ($plan->status !== 'active' || (float) $plan->price > 0)) {
+            // an inactive or paid plan without a confirmed payment. Admin
+            // provisioning (publicSignup = false) and post-payment signup
+            // (confirmedPayment = true) may still assign paid plans.
+            if ($publicSignup
+                && ($plan->status !== 'active'
+                    || ((float) $plan->price > 0 && ! $confirmedPayment))) {
                 throw new InvalidArgumentException(
                     "Plan '{$plan->name}' is not available for self-service signup."
                 );

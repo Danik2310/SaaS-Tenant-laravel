@@ -24,6 +24,36 @@ class StripePaymentAdapter implements PaymentGatewayInterface
         return $this->normalizePaymentIntent($paymentIntent);
     }
 
+    public function createCheckoutSession(array $params): array
+    {
+        $session = $this->stripe->checkout->sessions->create([
+            'mode' => 'payment',
+            'success_url' => $params['success_url'],
+            'cancel_url' => $params['cancel_url'],
+            'customer_email' => $params['customer_email'] ?? null,
+            'metadata' => $params['metadata'] ?? [],
+            'line_items' => [[
+                'quantity' => 1,
+                'price_data' => [
+                    'currency' => $params['currency'] ?? 'usd',
+                    'unit_amount' => $this->toMinorUnits((float) $params['amount']),
+                    'product_data' => [
+                        'name' => $params['name'] ?? 'Plan',
+                    ],
+                ],
+            ]],
+        ]);
+
+        return $this->normalizeCheckoutSession($session);
+    }
+
+    public function retrieveCheckoutSession(string $sessionId): array
+    {
+        $session = $this->stripe->checkout->sessions->retrieve($sessionId);
+
+        return $this->normalizeCheckoutSession($session);
+    }
+
     public function refund(string $transactionId, float $amount): array
     {
         $refund = $this->stripe->refunds->create([
@@ -54,6 +84,19 @@ class StripePaymentAdapter implements PaymentGatewayInterface
             'currency' => $paymentIntent->currency,
             'client_secret' => $paymentIntent->client_secret,
             'customer' => $paymentIntent->customer,
+        ];
+    }
+
+    private function normalizeCheckoutSession($session): array
+    {
+        return [
+            'id' => (string) $session->id,
+            'payment_status' => (string) $session->payment_status,
+            'customer_email' => (string) ($session->customer_details->email ?? ''),
+            'metadata' => $session->metadata ? $session->metadata->toArray() : [],
+            'url' => (string) ($session->url ?? ''),
+            'currency' => (string) ($session->currency ?? 'usd'),
+            'amount_total' => $session->amount_total ?? 0,
         ];
     }
 

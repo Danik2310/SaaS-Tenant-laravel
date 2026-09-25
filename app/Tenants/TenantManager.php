@@ -38,7 +38,11 @@ class TenantManager implements TenantManagerInterface
             $this->tenantBuilder
                 ->for($tenant)
                 ->withDomain($data['domain'])
-                ->withPlan($data['plan'] ?? null, (bool) ($data['public_signup'] ?? false));
+                ->withPlan(
+                    $data['plan'] ?? null,
+                    (bool) ($data['public_signup'] ?? false),
+                    (bool) ($data['confirmed_payment'] ?? false),
+                );
         } catch (\Throwable $e) {
             $tenant->forceDelete();
             throw $e;

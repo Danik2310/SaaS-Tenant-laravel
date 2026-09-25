@@ -14,7 +14,7 @@ interface TenantBuilderInterface
 
     public function withDomain(string $domain): static;
 
-    public function withPlan(?string $planSlug = null, bool $publicSignup = false): static;
+    public function withPlan(?string $planSlug = null, bool $publicSignup = false, bool $confirmedPayment = false): static;
 
     public function build(): Tenant;
 }

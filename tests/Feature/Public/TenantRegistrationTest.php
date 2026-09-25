@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Public;
 
+use App\Billing\Contracts\PaymentGatewayInterface;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
@@ -216,22 +217,143 @@ class TenantRegistrationTest extends TestCase
         $this->forgetTenant();
     }
 
-    public function test_paid_plan_selection_falls_back_to_trial(): void
+    public function test_paid_plan_selection_redirects_to_checkout(): void
     {
+        $this->mock(PaymentGatewayInterface::class, function ($mock) {
+            $mock->shouldReceive('createCheckoutSession')
+                ->once()
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'url' => 'https://checkout.stripe.com/c/pay/cs_test_123',
+                    'payment_status' => 'unpaid',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
         $response = $this->post('/register', $this->payload(['plan' => 'growth']));
 
-        $response->assertOk()
+        $response->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
+
+        $this->assertSame(0, Tenant::count());
+
+        $pending = session('pending_tenant_registration');
+        $this->assertNotFalse($pending);
+        $this->assertSame('growth', $pending['plan'] ?? null);
+        $this->assertSame('jane@acme.test', $pending['payload']['email'] ?? null);
+    }
+
+    public function test_checkout_success_provisions_paid_tenant(): void
+    {
+        $token = 'checkout-token';
+
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => $token,
+                'plan' => 'growth',
+                'payload' => $this->payload(['plan' => 'growth']),
+            ],
+        ]);
+
+        $this->mock(PaymentGatewayInterface::class, function ($mock) use ($token) {
+            $mock->shouldReceive('retrieveCheckoutSession')
+                ->once()
+                ->with('cs_test_123')
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'payment_status' => 'paid',
+                    'customer_email' => 'jane@acme.test',
+                    'metadata' => [
+                        'pending_token' => $token,
+                        'plan' => 'growth',
+                        'email' => 'jane@acme.test',
+                    ],
+                    'url' => '',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
+        $this->get('/register/payment/success?session_id=cs_test_123')
+            ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
-                ->where('plan', 'Trial'));
+                ->where('domain', 'acme-corp.sasapp')
+                ->where('plan', 'Growth'));
 
         $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
 
-        $this->assertSame('Trial', $tenant->status);
-        $this->assertSame('trial', $tenant->plan->slug);
+        $this->assertSame('Active', $tenant->status);
+        $this->assertNull($tenant->trial_ends_at);
+        $this->assertSame('growth', $tenant->plan->slug);
         $this->assertSame('active', $tenant->activeSubscription->status);
+        $this->assertNotNull($tenant->activeSubscription->ends_at);
+        $this->assertTrue($tenant->activeSubscription->ends_at->isFuture());
+
+        $this->assertDatabaseHas('domains', [
+            'tenant_id' => $tenant->id,
+            'domain' => 'acme-corp.sasapp',
+        ]);
+
+        $this->assertFalse(session()->has('pending_tenant_registration'));
 
         $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'jane@acme.test')->first();
+
+        $this->assertNotNull($user);
+        $this->assertTrue($user->hasRole('tenant-admin'));
+
+        $this->forgetTenant();
+    }
+
+    public function test_checkout_success_rejects_unpaid_session(): void
+    {
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => 'checkout-token',
+                'plan' => 'growth',
+                'payload' => $this->payload(['plan' => 'growth']),
+            ],
+        ]);
+
+        $this->mock(PaymentGatewayInterface::class, function ($mock) {
+            $mock->shouldReceive('retrieveCheckoutSession')
+                ->once()
+                ->with('cs_test_123')
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'payment_status' => 'unpaid',
+                    'customer_email' => '',
+                    'metadata' => [],
+                    'url' => '',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
+        $this->get('/register/payment/success?session_id=cs_test_123')->assertRedirect();
+
+        $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_checkout_cancel_clears_pending_and_returns_to_register(): void
+    {
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => 'checkout-token',
+                'plan' => 'growth',
+                'payload' => $this->payload(['plan' => 'growth']),
+            ],
+        ]);
+
+        $this->get('/register/payment/cancel?plan=growth')
+            ->assertRedirect(route('register.tenant', ['plan' => 'growth']));
+
+        $this->assertFalse(session()->has('pending_tenant_registration'));
+        $this->assertSame(0, Tenant::count());
     }
 
     public function test_inactive_plan_slug_is_rejected(): void

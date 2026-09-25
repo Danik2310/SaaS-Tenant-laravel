@@ -43,8 +43,18 @@ class PublicPlanCatalog implements PublicPlanCatalogInterface
 
     public function isEligibleForPublicSignup(Plan $plan): bool
     {
-        return $plan->status === 'active'
-            && ($plan->isTrial() || (float) $plan->price === 0.0);
+        return $plan->status === 'active';
+    }
+
+    public function activePlanBySlug(?string $requested): ?Plan
+    {
+        if ($requested === null || $requested === '') {
+            return null;
+        }
+
+        return $this->activePlans()
+            ->first(fn (Plan $candidate) => $candidate->slug === $requested)
+            ?? null;
     }
 
     public function resolveSignupPlanSlug(?string $requested): string
@@ -56,7 +66,11 @@ class PublicPlanCatalog implements PublicPlanCatalogInterface
         $plan = $this->activePlans()
             ->first(fn (Plan $candidate) => $candidate->slug === $requested);
 
-        if (! $plan || ! $this->isEligibleForPublicSignup($plan)) {
+        // The no-payment provisioning path must never assign a paid plan:
+        // paid-but-active choices go through checkout instead.
+        if (! $plan
+            || ! $this->isEligibleForPublicSignup($plan)
+            || (float) $plan->price > 0) {
             return self::FALLBACK_SLUG;
         }
 
