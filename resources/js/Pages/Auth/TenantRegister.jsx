@@ -270,6 +270,7 @@ function SectionHeading() {
 
 export default function TenantRegister({ plans = [], selected_plan = null, tenant_domain_suffix, feature_definitions = {} }) {
     const [showForm, setShowForm] = useState(Boolean(selected_plan));
+    const subdomainTouched = useRef(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         company_name: '',
@@ -284,6 +285,7 @@ export default function TenantRegister({ plans = [], selected_plan = null, tenan
         state: '',
         postal_code: '',
         country: '',
+        subdomain: '',
         password: '',
         password_confirmation: '',
         terms: false,
@@ -298,6 +300,12 @@ export default function TenantRegister({ plans = [], selected_plan = null, tenan
     }, []);
 
     const slug = useMemo(() => toSlug(data.company_name), [data.company_name]);
+
+    useEffect(() => {
+        if (!subdomainTouched.current && slug !== '') {
+            setData('subdomain', slug);
+        }
+    }, [slug]);
 
     const selectedPlan = useMemo(
         () => plans.find((plan) => plan.slug === data.plan) ?? null,
@@ -409,15 +417,34 @@ export default function TenantRegister({ plans = [], selected_plan = null, tenan
                             required
                         />
                         <InputError message={errors.company_name} className="mt-2" />
+                    </Field>
 
-                        {slug && (
-                            <p className="mt-1 text-xs text-gray-500">
-                                Your workspace address will be{' '}
-                                <span className="font-medium text-gray-700">
-                                    {slug}.{tenant_domain_suffix}
-                                </span>
-                            </p>
-                        )}
+                    <Field
+                        label="Workspace Address"
+                        htmlFor="subdomain"
+                        hint="Your subdomain plus the shared domain."
+                    >
+                        <TextInput
+                            id="subdomain"
+                            name="subdomain"
+                            value={data.subdomain}
+                            className="mt-1 block w-full"
+                            autoComplete="off"
+                            spellCheck={false}
+                            onChange={(e) => {
+                                subdomainTouched.current = true;
+                                setData('subdomain', e.target.value);
+                            }}
+                            placeholder="your-workspace"
+                        />
+                        <InputError message={errors.subdomain} className="mt-2" />
+
+                        <p className="mt-1 text-xs text-gray-500">
+                            Your workspace address will be{' '}
+                            <span className="font-medium text-gray-700">
+                                {data.subdomain || slug || 'your-workspace'}.{tenant_domain_suffix}
+                            </span>
+                        </p>
                     </Field>
 
                     <div className="grid gap-x-4 sm:grid-cols-2">

@@ -86,6 +86,7 @@ class TenantRegistrationTest extends TestCase
                     ->has('features')
                     ->has('limits'))
                 ->where('selected_plan', null)
+                ->where('tenant_domain_suffix', 'sasapp')
                 ->where('plans.0.slug', 'trial')
                 ->where('plans.1.slug', 'free')
                 ->where('plans.2.slug', 'growth'));
@@ -217,6 +218,58 @@ class TenantRegistrationTest extends TestCase
         $this->forgetTenant();
     }
 
+    public function test_guest_can_choose_a_custom_subdomain(): void
+    {
+        $response = $this->post('/register', $this->payload(['subdomain' => 'my-workspace']));
+
+        $response->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('domain', 'my-workspace.sasapp')
+                ->where('email', 'jane@acme.test'));
+
+        $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertSame('Trial', $tenant->status);
+        $this->assertSame('trial', $tenant->plan->slug);
+
+        $this->assertDatabaseHas('domains', [
+            'tenant_id' => $tenant->id,
+            'domain' => 'my-workspace.sasapp',
+        ]);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+    }
+
+    public function test_taken_subdomain_is_rejected(): void
+    {
+        $existing = Tenant::withoutEvents(fn () => Tenant::create([
+            'id' => 'TEN-000200',
+            'name' => 'Existing Workspace',
+            'email' => 'owner@acme.test',
+            'status' => 'Active',
+        ]));
+
+        $existing->domains()->create(['domain' => 'taken.sasapp']);
+
+        $this->post('/register', $this->payload(['subdomain' => 'taken']))
+            ->assertSessionHasErrors('subdomain');
+
+        $this->assertSame(1, Tenant::count());
+    }
+
+    public function test_invalid_subdomain_formats_are_rejected(): void
+    {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+
+        foreach (['Acme Corp', '-acme', 'acme-', 'ac__me', 'a'.str_repeat('x', 70)] as $subdomain) {
+            $this->post('/register', $this->payload(['subdomain' => $subdomain]))
+                ->assertSessionHasErrors('subdomain');
+        }
+
+        $this->assertSame(0, Tenant::count());
+    }
+
     public function test_paid_plan_selection_redirects_to_checkout(): void
     {
         $this->mock(PaymentGatewayInterface::class, function ($mock) {
@@ -231,7 +284,7 @@ class TenantRegistrationTest extends TestCase
                 ]);
         });
 
-        $response = $this->post('/register', $this->payload(['plan' => 'growth']));
+        $response = $this->post('/register', $this->payload(['plan' => 'growth', 'subdomain' => 'acme-corp']));
 
         $response->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
 
@@ -241,6 +294,7 @@ class TenantRegistrationTest extends TestCase
         $this->assertNotFalse($pending);
         $this->assertSame('growth', $pending['plan'] ?? null);
         $this->assertSame('jane@acme.test', $pending['payload']['email'] ?? null);
+        $this->assertSame('acme-corp', $pending['payload']['subdomain'] ?? null);
     }
 
     public function test_checkout_success_provisions_paid_tenant(): void
@@ -307,6 +361,56 @@ class TenantRegistrationTest extends TestCase
         $this->assertTrue($user->hasRole('tenant-admin'));
 
         $this->forgetTenant();
+    }
+
+    public function test_checkout_success_provisions_paid_tenant_with_chosen_subdomain(): void
+    {
+        $token = 'checkout-token';
+
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => $token,
+                'plan' => 'growth',
+                'payload' => $this->payload(['plan' => 'growth', 'subdomain' => 'my-workspace']),
+            ],
+        ]);
+
+        $this->mock(PaymentGatewayInterface::class, function ($mock) use ($token) {
+            $mock->shouldReceive('retrieveCheckoutSession')
+                ->once()
+                ->with('cs_test_123')
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'payment_status' => 'paid',
+                    'customer_email' => 'jane@acme.test',
+                    'metadata' => [
+                        'pending_token' => $token,
+                        'plan' => 'growth',
+                        'email' => 'jane@acme.test',
+                    ],
+                    'url' => '',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
+        $this->get('/register/payment/success?session_id=cs_test_123')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('domain', 'my-workspace.sasapp'));
+
+        $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertSame('Active', $tenant->status);
+        $this->assertSame('growth', $tenant->plan->slug);
+
+        $this->assertDatabaseHas('domains', [
+            'tenant_id' => $tenant->id,
+            'domain' => 'my-workspace.sasapp',
+        ]);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
     }
 
     public function test_checkout_success_rejects_unpaid_session(): void

@@ -70,6 +70,7 @@ describe('TenantRegister', () => {
         expect(screen.getByLabelText('Tenant Name')).toBeInTheDocument();
         expect(screen.getByLabelText('Email')).toBeInTheDocument();
         expect(screen.getByLabelText('Company Name')).toBeInTheDocument();
+        expect(screen.getByLabelText('Workspace Address')).toBeInTheDocument();
         expect(screen.getByText('Business & Contact Information')).toBeInTheDocument();
         expect(screen.getByLabelText('First Name')).toBeInTheDocument();
         expect(screen.getByLabelText('Last Name')).toBeInTheDocument();
@@ -103,14 +104,53 @@ describe('TenantRegister', () => {
         expect(lastForm().data.plan).toBe('trial');
     });
 
-    test('shows the workspace address while typing the company name', () => {
+    test('prefills the workspace address from the company name', () => {
         render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
 
         fireEvent.change(screen.getByLabelText('Company Name'), {
             target: { value: 'Acme Corp' },
         });
 
+        expect(screen.getByLabelText('Workspace Address')).toHaveValue('acme-corp');
         expect(screen.getByText('acme-corp.sasapp')).toBeInTheDocument();
+    });
+
+    test('respects a manually chosen workspace address', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        fireEvent.change(screen.getByLabelText('Company Name'), {
+            target: { value: 'Acme Corp' },
+        });
+
+        fireEvent.change(screen.getByLabelText('Workspace Address'), {
+            target: { value: 'acme-hq' },
+        });
+
+        expect(screen.getByText('acme-hq.sasapp')).toBeInTheDocument();
+
+        fireEvent.change(screen.getByLabelText('Company Name'), {
+            target: { value: 'Acme Corp LLC' },
+        });
+
+        expect(screen.getByLabelText('Workspace Address')).toHaveValue('acme-hq');
+    });
+
+    test('submits the chosen subdomain along the preserve preselected plan', () => {
+        const { container } = render(
+            <TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />
+        );
+
+        fireEvent.change(screen.getByLabelText('Company Name'), {
+            target: { value: 'Acme Corp' },
+        });
+
+        fireEvent.submit(container.querySelector('form'));
+
+        const form = lastForm();
+        expect(form).not.toBeNull();
+        expect(form.post).toHaveBeenCalledWith('/register');
+        expect(form.data.plan).toBe('trial');
+        expect(form.data.subdomain).toBe('acme-corp');
     });
 
     test('submits to the register.tenant route and preserves the preselected plan', () => {

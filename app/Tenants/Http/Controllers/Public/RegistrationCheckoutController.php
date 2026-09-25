@@ -72,7 +72,7 @@ class RegistrationCheckoutController extends Controller
             return redirect()->route('register.tenant');
         }
 
-        $domain = $this->subdomainGenerator->generate($validated['company_name']);
+        $domain = $this->subdomainGenerator->forRequest($validated);
 
         try {
             $tenant = $this->tenantManager->provision([

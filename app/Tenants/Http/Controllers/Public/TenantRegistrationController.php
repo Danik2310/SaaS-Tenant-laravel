@@ -39,6 +39,7 @@ class TenantRegistrationController extends Controller
         return Inertia::render('Auth/TenantRegister', [
             'plans' => $plans,
             'selected_plan' => $this->selectedPlan($plans),
+            'tenant_domain_suffix' => config('tenancy.tenant_domain_suffix', 'sasapp'),
         ]);
     }
 
@@ -54,7 +55,7 @@ class TenantRegistrationController extends Controller
             return $this->startPaidCheckout($request, $validated, $selectedPlan);
         }
 
-        $domain = $this->subdomainGenerator->generate($validated['company_name']);
+        $domain = $this->subdomainGenerator->forRequest($validated);
 
         // Single choke point for the no-payment path: paid, inactive or
         // unknown slugs are resolved down to 'trial' so a guest can never

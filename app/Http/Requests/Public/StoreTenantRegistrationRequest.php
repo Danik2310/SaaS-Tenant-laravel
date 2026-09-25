@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Public;
 
+use App\Models\Domain;
 use App\Models\Plan;
 use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
@@ -22,6 +23,13 @@ class StoreTenantRegistrationRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255',
             'password' => ['required', 'confirmed', Password::defaults()],
+            'subdomain' => [
+                'nullable',
+                'string',
+                'max:63',
+                'lowercase',
+                'regex:/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/',
+            ],
             'phone' => 'nullable|string|max:50',
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',
@@ -54,6 +62,22 @@ class StoreTenantRegistrationRequest extends FormRequest
 
                 if (! empty($data['plan'])) {
                     $this->checkPlan($data['plan'], $validator);
+                }
+            },
+            // Field-level duplicate guard: reject a taken workspace address
+            // before TenantBuilder::withDomain() would throw a generic error.
+            function (Validator $validator) {
+                $data = $validator->validated();
+
+                if (empty($data['subdomain'])) {
+                    return;
+                }
+
+                $domain = strtolower((string) $data['subdomain'])
+                    .'.'.config('tenancy.tenant_domain_suffix', 'sasapp');
+
+                if (Domain::where('domain', $domain)->exists()) {
+                    $validator->errors()->add('subdomain', 'That workspace address is already taken.');
                 }
             },
         ];

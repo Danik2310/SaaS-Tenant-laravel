@@ -9,6 +9,25 @@ use Illuminate\Support\Str;
 
 class SubdomainGenerator
 {
+    /**
+     * Resolve the full workspace domain for a public registration payload.
+     * An explicit, validated subdomain wins; otherwise the company name is
+     * slugified and de-duplicated as before.
+     */
+    public function forRequest(array $data): string
+    {
+        $suffix = (string) config('tenancy.tenant_domain_suffix', 'sasapp');
+
+        $subdomain = strtolower(trim((string) ($data['subdomain'] ?? '')));
+        $subdomain = (string) preg_replace('/\.'.preg_quote($suffix, '/').'$/', '', $subdomain);
+
+        if ($subdomain === '') {
+            return $this->generate($data['company_name'] ?? null);
+        }
+
+        return $subdomain.'.'.$suffix;
+    }
+
     public function generate(?string $companyName): string
     {
         $slug = trim(Str::slug((string) $companyName), '-');
