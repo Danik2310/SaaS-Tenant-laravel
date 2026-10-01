@@ -30,9 +30,14 @@ export default function Login({ status, canResetPassword }) {
         <GuestLayout>
             <Head title="Log in" />
 
+            <div>
+                <h1 className="font-display text-2xl leading-tight tracking-tight text-ink">Welcome back</h1>
+                <p className="mt-1 text-sm text-gray-600">Log in to your ShoppingLi workspace.</p>
+            </div>
+
             {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} className="mt-6">
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
 
@@ -81,7 +86,7 @@ export default function Login({ status, canResetPassword }) {
                     {canResetPassword && (
                         <Link
                             href={route('password.request')}
-                            className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className="underline text-sm text-brand-600 hover:text-brand-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
                         >
                             Forgot your password?
                         </Link>

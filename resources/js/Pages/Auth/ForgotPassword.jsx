@@ -19,14 +19,17 @@ export default function ForgotPassword({ status }) {
         <GuestLayout>
             <Head title="Forgot Password" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                Forgot your password? No problem. Just let us know your email address and we will email you a password
-                reset link that will allow you to choose a new one.
+            <div>
+                <h1 className="font-display text-2xl leading-tight tracking-tight text-ink">Forgot your password?</h1>
+                <p className="mt-1 text-sm text-gray-600">
+                    No problem. Just let us know your email address and we will email you a password
+                    reset link that will allow you to choose a new one.
+                </p>
             </div>
 
             {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
 
-            <form onSubmit={submit}>
+            <form onSubmit={submit} className="mt-6">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                 </label>
@@ -42,8 +45,8 @@ export default function ForgotPassword({ status }) {
 
                 <InputError message={errors.email} className="mt-2" />
 
-                <div className="flex items-center justify-end mt-4">
-                    <PrimaryButton className="ms-4" disabled={processing}>
+                <div className="mt-6">
+                    <PrimaryButton className="w-full" disabled={processing}>
                         Email Password Reset Link
                     </PrimaryButton>
                 </div>

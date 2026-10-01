@@ -30,7 +30,12 @@ export default function Register() {
         <GuestLayout>
             <Head title="Register" />
 
-            <form onSubmit={submit}>
+            <div>
+                <h1 className="font-display text-2xl leading-tight tracking-tight text-ink">Create your account</h1>
+                <p className="mt-1 text-sm text-gray-600">Create an account for this workspace.</p>
+            </div>
+
+            <form onSubmit={submit} className="mt-6">
                 <div>
                     <InputLabel htmlFor="name" value="Name" />
 
@@ -102,7 +107,7 @@ export default function Register() {
                 <div className="flex items-center justify-end mt-4">
                     <Link
                         href={route('login')}
-                        className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        className="underline text-sm text-brand-600 hover:text-brand-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
                     >
                         Already registered?
                     </Link>
