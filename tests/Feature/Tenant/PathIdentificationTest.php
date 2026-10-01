@@ -21,6 +21,7 @@ class PathIdentificationTest extends TestCase
     use RefreshDatabase;
 
     private Tenant $tenant;
+
     private string $dbName;
 
     protected function setUp(): void

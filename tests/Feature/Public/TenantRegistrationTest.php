@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Tenants\Contracts\TenantManagerInterface;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -260,7 +261,7 @@ class TenantRegistrationTest extends TestCase
 
     public function test_invalid_subdomain_formats_are_rejected(): void
     {
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        $this->withoutMiddleware(ThrottleRequests::class);
 
         foreach (['Acme Corp', '-acme', 'acme-', 'ac__me', 'a'.str_repeat('x', 70)] as $subdomain) {
             $this->post('/register', $this->payload(['subdomain' => $subdomain]))
