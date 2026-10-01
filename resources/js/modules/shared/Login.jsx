@@ -1,12 +1,40 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../services/api';
+import Wordmark from '../../Components/BrandLogo';
+
+const glowStyle = (size, color, opacity, position) => ({
+    position: 'absolute',
+    ...position,
+    width: size,
+    height: size,
+    borderRadius: '50%',
+    backgroundColor: color,
+    opacity,
+    filter: 'blur(96px)',
+    pointerEvents: 'none',
+});
+
+const fieldStyle = (focused) => ({
+    width: '100%',
+    padding: '12px 16px',
+    border: focused ? '1px solid #F97316' : '1px solid #E5E7EB',
+    borderRadius: '10px',
+    fontSize: '14px',
+    boxSizing: 'border-box',
+    fontFamily: 'inherit',
+    outline: 'none',
+    boxShadow: focused ? '0 0 0 3px rgba(249,115,22,0.18)' : 'none',
+    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+    backgroundColor: '#FFFFFF',
+});
 
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [focus, setFocus] = useState({ email: false, password: false });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -41,34 +69,55 @@ export default function Login() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                fontFamily: 'sans-serif',
+                position: 'relative',
+                overflow: 'hidden',
+                backgroundColor: '#0A0A0A',
+                fontFamily: "'DM Sans', sans-serif",
+                padding: '16px',
             }}
         >
+            <div aria-hidden="true" style={glowStyle('384px', '#F97316', 0.2, { top: '-96px', right: '-96px' })} />
+            <div aria-hidden="true" style={glowStyle('320px', '#EA580C', 0.12, { bottom: '-128px', left: '-96px' })} />
+
             <div
                 style={{
+                    position: 'relative',
                     background: 'white',
-                    padding: '40px',
-                    borderRadius: '10px',
-                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+                    padding: '40px 32px',
+                    borderRadius: '20px',
+                    boxShadow: '0 24px 80px rgba(0, 0, 0, 0.5)',
                     width: '100%',
                     maxWidth: '400px',
                 }}
             >
-                <h1 style={{ textAlign: 'center', marginBottom: '10px', color: '#333' }}>
-                    Admin Panel
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <Wordmark />
+                </div>
+
+                <h1
+                    style={{
+                        textAlign: 'center',
+                        margin: '20px 0 4px',
+                        color: '#0A0A0A',
+                        fontFamily: "'Archivo Black', sans-serif",
+                        fontWeight: 400,
+                        fontSize: '22px',
+                        letterSpacing: '-0.02em',
+                    }}
+                >
+                    Admin
                 </h1>
-                <p style={{ textAlign: 'center', color: '#999', marginBottom: '30px' }}>
-                    SaaS Platform Administration
+                <p style={{ textAlign: 'center', color: '#6B7280', marginBottom: '28px', fontSize: '14px' }}>
+                    Manage the ShoppingLi platform
                 </p>
 
                 {error && (
                     <div
                         style={{
-                            background: '#fee',
-                            color: '#c33',
+                            background: '#FEF2F2',
+                            color: '#B91C1C',
                             padding: '12px 15px',
-                            borderRadius: '5px',
+                            borderRadius: '10px',
                             marginBottom: '20px',
                             fontSize: '14px',
                         }}
@@ -78,46 +127,34 @@ export default function Login() {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#333', fontWeight: '500' }}>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#0A0A0A', fontWeight: '500', fontSize: '14px' }}>
                             Email
                         </label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            onFocus={() => setFocus((f) => ({ ...f, email: true }))}
+                            onBlur={() => setFocus((f) => ({ ...f, email: false }))}
                             placeholder="admin@example.com"
-                            style={{
-                                width: '100%',
-                                padding: '12px 15px',
-                                border: '1px solid #ddd',
-                                borderRadius: '5px',
-                                fontSize: '14px',
-                                boxSizing: 'border-box',
-                                fontFamily: 'inherit',
-                            }}
+                            style={fieldStyle(focus.email)}
                             required
                         />
                     </div>
 
-                    <div style={{ marginBottom: '30px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#333', fontWeight: '500' }}>
+                    <div style={{ marginBottom: '28px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', color: '#0A0A0A', fontWeight: '500', fontSize: '14px' }}>
                             Password
                         </label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
+                            onFocus={() => setFocus((f) => ({ ...f, password: true }))}
+                            onBlur={() => setFocus((f) => ({ ...f, password: false }))}
                             placeholder="Enter your password"
-                            style={{
-                                width: '100%',
-                                padding: '12px 15px',
-                                border: '1px solid #ddd',
-                                borderRadius: '5px',
-                                fontSize: '14px',
-                                boxSizing: 'border-box',
-                                fontFamily: 'inherit',
-                            }}
+                            style={fieldStyle(focus.password)}
                             required
                         />
                     </div>
@@ -128,27 +165,26 @@ export default function Login() {
                         style={{
                             width: '100%',
                             padding: '12px',
-                            background: loading ? '#ccc' : '#667eea',
+                            borderRadius: '999px',
+                            backgroundColor: '#F97316',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '5px',
-                            fontSize: '16px',
+                            fontSize: '15px',
                             fontWeight: '600',
                             cursor: loading ? 'not-allowed' : 'pointer',
-                            transition: 'background 0.3s',
+                            transition: 'background-color 0.15s ease',
+                            opacity: loading ? 0.7 : 1,
                         }}
                         onMouseEnter={(e) => {
-                            if (!loading) e.target.style.background = '#5568d3';
+                            if (!loading) e.target.style.backgroundColor = '#EA580C';
                         }}
                         onMouseLeave={(e) => {
-                            if (!loading) e.target.style.background = '#667eea';
+                            if (!loading) e.target.style.backgroundColor = '#F97316';
                         }}
                     >
                         {loading ? 'Logging in...' : 'Log In'}
                     </button>
                 </form>
-
-                
             </div>
         </div>
     );
