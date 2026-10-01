@@ -1,315 +1,980 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link, Head } from '@inertiajs/react';
+import Wordmark from '@/Components/BrandLogo';
 
-export default function Welcome({ auth, laravelVersion, phpVersion }) {
+/* --------------------------------------------------------------------------
+   Motion helpers
+-------------------------------------------------------------------------- */
+
+function usePrefersReducedMotion() {
+    const [reduced, setReduced] = useState(() =>
+        typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? true : false
+    );
+
+    useEffect(() => {
+        const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const onChange = (event) => setReduced(event.matches);
+        mq.addEventListener('change', onChange);
+
+        return () => mq.removeEventListener('change', onChange);
+    }, []);
+
+    return reduced;
+}
+
+function Reveal({ children, className = '', delay = 0, as: Tag = 'div' }) {
+    const ref = useRef(null);
+    const reduced = usePrefersReducedMotion();
+
+    useEffect(() => {
+        const el = ref.current;
+
+        if (!el || reduced) {
+            return undefined;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        el.classList.add('is-visible');
+                        observer.disconnect();
+                    }
+                });
+            },
+            { threshold: 0.15, rootMargin: '0px 0px -48px 0px' }
+        );
+
+        observer.observe(el);
+
+        return () => observer.disconnect();
+    }, [reduced]);
+
+    if (reduced) {
+        return <Tag className={className}>{children}</Tag>;
+    }
+
     return (
-        <>
-            <Head title="Welcome" />
-            <div className="relative sm:flex sm:justify-center sm:items-center min-h-screen bg-dots-darker bg-center bg-gray-100 dark:bg-dots-lighter dark:bg-gray-900 selection:bg-red-500 selection:text-white">
-                <div className="sm:fixed sm:top-0 sm:right-0 p-6 text-end">
+        <Tag
+            ref={ref}
+            className={`reveal ${className}`}
+            style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+        >
+            {children}
+        </Tag>
+    );
+}
+
+/* --------------------------------------------------------------------------
+   Icons (inline, stroke-based)
+-------------------------------------------------------------------------- */
+
+const iconProps = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.6,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+};
+
+function BoxIcon({ className = 'h-6 w-6' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M20 7.5 12 3 4 7.5v9L12 21l8-4.5v-9Z" />
+            <path d="M4.5 7.6 12 12l7.5-4.4" />
+            <path d="M12 12v9" />
+        </svg>
+    );
+}
+
+function TagIcon({ className = 'h-6 w-6' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+            <path d="M6 6h.008v.008H6V6Z" />
+        </svg>
+    );
+}
+
+function MapPinIcon({ className = 'h-6 w-6' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            <path d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+        </svg>
+    );
+}
+
+function ArrowsIcon({ className = 'h-6 w-6' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M8 7h12m0 0-3-3m3 3-3 3" />
+            <path d="M16 17H4m0 0 3 3m-3-3 3-3" />
+        </svg>
+    );
+}
+
+function ChartIcon({ className = 'h-6 w-6' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75C3 12.504 3.504 12 4.125 12Z" />
+            <path d="M9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625Z" />
+            <path d="M16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+        </svg>
+    );
+}
+
+function ShieldIcon({ className = 'h-6 w-6' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M12 3 5 6.5v5c0 4.2 2.9 7.6 7 9.5 4.1-1.9 7-5.3 7-9.5v-5L12 3Z" />
+            <path d="m9 11.5 2 2 4-4" />
+        </svg>
+    );
+}
+
+function TableIcon({ className = 'h-7 w-7' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M3 5.25A2.25 2.25 0 0 1 5.25 3h13.5A2.25 2.25 0 0 1 21 5.25v13.5A2.25 2.25 0 0 1 18.75 21H5.25A2.25 2.25 0 0 1 3 18.75V5.25Z" />
+            <path d="M3 9.5h18M9.5 9.5V21" />
+        </svg>
+    );
+}
+
+function PulseIcon({ className = 'h-7 w-7' }) {
+    return (
+        <svg viewBox="0 0 24 24" {...iconProps} className={className} aria-hidden="true">
+            <path d="M2 12h4l2.5-7 4.5 14 2.5-7h6.5" />
+        </svg>
+    );
+}
+
+/* --------------------------------------------------------------------------
+   Content data
+-------------------------------------------------------------------------- */
+
+const NAV_LINKS = [
+    { href: '#features', label: 'Features' },
+    { href: '#how-it-works', label: 'How it works' },
+    { href: '#pricing', label: 'Pricing' },
+    { href: '#faq', label: 'FAQ' },
+];
+
+const CAPABILITIES = ['Products', 'Categories', 'Warehouses', 'Stock movements', 'Orders', 'Payments'];
+
+const PAINS = [
+    {
+        icon: TableIcon,
+        title: 'Replace the spreadsheet',
+        body: 'Your catalog, warehouses and movements in one source of truth. No more duplicated sheets, no more “we’ll fix it later” rows.',
+    },
+    {
+        icon: PulseIcon,
+        title: 'Track stock in real time',
+        body: 'Every product, every location, always current. See what you actually have before you promise it to someone.',
+    },
+    {
+        icon: MapPinIcon,
+        title: 'Run multiple warehouses',
+        body: 'Spread inventory across locations and keep a single, honest view of everything — from one dashboard.',
+    },
+];
+
+const FEATURES = [
+    {
+        icon: BoxIcon,
+        title: 'One catalog, always up to date',
+        body: 'Products with categories and prices in a single place. Update once, and every shelf sees it.',
+    },
+    {
+        icon: TagIcon,
+        title: 'Your catalog, your way',
+        body: 'Structure categories the way your shop actually thinks, so the right product is always easy to find.',
+    },
+    {
+        icon: MapPinIcon,
+        title: 'Know what’s where',
+        body: 'Run multiple warehouses from one dashboard — quantities and locations at a glance.',
+    },
+    {
+        icon: ArrowsIcon,
+        title: 'Every movement, recorded',
+        body: 'Stock in, stock out — every movement leaves a trace you can follow. Available on Growth plans and up.',
+    },
+    {
+        icon: ChartIcon,
+        title: 'Numbers you can act on',
+        body: 'A dashboard that shows what you hold, what moved, and what’s selling — in real time.',
+    },
+    {
+        icon: ShieldIcon,
+        title: 'Private by design',
+        body: 'Each business runs in its own secured workspace. Your data stays yours, full stop.',
+    },
+];
+
+const STEPS = [
+    {
+        n: '01',
+        title: 'Create your workspace',
+        body: 'Pick a plan, choose your address, and you’re live in minutes. The trial needs no card.',
+    },
+    {
+        n: '02',
+        title: 'Add your catalog',
+        body: 'Bring in products, add categories, set up your warehouses. Start as simple as you like.',
+    },
+    {
+        n: '03',
+        title: 'Track and grow',
+        body: 'Record movements, watch your dashboard, and upgrade when the shop is ready.',
+    },
+];
+
+const PLANS = [
+    {
+        name: 'Free',
+        price: '$0',
+        period: 'free forever',
+        note: 'One shop, fully organized.',
+        features: ['Products & categories', '1 warehouse', 'Dashboard overview'],
+        highlight: false,
+        cta: 'Start free',
+    },
+    {
+        name: 'Growth',
+        price: '$15',
+        period: '/mo',
+        note: 'For shops that track movements.',
+        features: ['Everything in Free', 'Inventory movements', 'More users & warehouses'],
+        highlight: true,
+        cta: 'Start 14-day trial',
+    },
+    {
+        name: 'Pro',
+        price: '$29',
+        period: '/mo',
+        note: 'For growing, multi-location shops.',
+        features: ['Everything in Growth', 'Higher storage & limits', 'Multi-warehouse visibility'],
+        highlight: false,
+        cta: 'Start 14-day trial',
+    },
+    {
+        name: 'Enterprise',
+        price: '$99',
+        period: '/mo',
+        note: 'For teams at full scale.',
+        features: ['Everything in Pro', 'Top limits & storage', 'Priority support'],
+        highlight: false,
+        cta: 'Start 14-day trial',
+    },
+];
+
+const FAQS = [
+    {
+        q: 'Is it really free?',
+        a: 'Yes — the Free plan costs nothing, forever. Paid plans begin with a 14-day free trial, and nothing is charged during the trial.',
+    },
+    {
+        q: 'Can I try without a card?',
+        a: 'Absolutely. Trials and the Free plan have no charge; payment is only entered at checkout if you pick a paid plan.',
+    },
+    {
+        q: 'Can I run several warehouses?',
+        a: 'Yes. Warehouse support scales with your plan, from a single location on Free up to full multi-warehouse tracking.',
+    },
+    {
+        q: 'What happens if I hit a limit?',
+        a: 'Your workspace stays fully online. To grow beyond a plan’s users, products, warehouses or storage, simply upgrade.',
+    },
+    {
+        q: 'How is my data kept private?',
+        a: 'Every business runs in its own isolated workspace with its own database and access rules — built multi-tenant from the ground up.',
+    },
+];
+
+const STOCK_ROWS = [
+    { name: 'Wireless earbuds', category: 'Audio', qty: '342', delta: '+18 in', positive: true },
+    { name: 'Canvas tote', category: 'Bags', qty: '96', delta: '−12 out', positive: false },
+    { name: 'Linen throw', category: 'Home', qty: '204', delta: '+7 in', positive: true },
+];
+
+/* --------------------------------------------------------------------------
+   Sections
+-------------------------------------------------------------------------- */
+
+function Nav({ auth }) {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <header className="sticky top-0 z-50 border-b border-white/10 bg-ink/80 backdrop-blur-md">
+            <nav aria-label="Main" className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+                <a href="#top" className="rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+                    <Wordmark />
+                </a>
+
+                <div className="hidden items-center gap-8 md:flex">
+                    {NAV_LINKS.map((link) => (
+                        <a
+                            key={link.href}
+                            href={link.href}
+                            className="text-sm font-medium text-white/70 transition-colors duration-150 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-md"
+                        >
+                            {link.label}
+                        </a>
+                    ))}
+                </div>
+
+                <div className="hidden items-center gap-3 md:flex">
                     {auth.user ? (
                         <Link
                             href={route('dashboard')}
-                            className="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
+                            className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors duration-150 hover:bg-orange-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                         >
                             Dashboard
                         </Link>
                     ) : (
                         <>
                             <Link
-                                href={route('central.login')}
-                                className="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
+                                href={route('login')}
+                                className="text-sm font-medium text-white/70 transition-colors duration-150 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-md"
                             >
                                 Log in
                             </Link>
-
                             <Link
                                 href={route('register.tenant')}
-                                className="ms-4 font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
+                                className="rounded-full bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition-colors duration-150 hover:bg-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
                             >
-                                Register
+                                Get started
                             </Link>
                         </>
                     )}
                 </div>
 
-                <div className="max-w-7xl mx-auto p-6 lg:p-8">
-                    <div className="flex justify-center">
-                        <svg
-                            viewBox="0 0 62 65"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-16 w-auto bg-gray-100 dark:bg-gray-900"
-                        >
-                            <path
-                                d="M61.8548 14.6253C61.8778 14.7102 61.8895 14.7978 61.8897 14.8858V28.5615C61.8898 28.737 61.8434 28.9095 61.7554 29.0614C61.6675 29.2132 61.5409 29.3392 61.3887 29.4265L49.9104 36.0351V49.1337C49.9104 49.4902 49.7209 49.8192 49.4118 49.9987L25.4519 63.7916C25.3971 63.8227 25.3372 63.8427 25.2774 63.8639C25.255 63.8714 25.2338 63.8851 25.2101 63.8913C25.0426 63.9354 24.8666 63.9354 24.6991 63.8913C24.6716 63.8838 24.6467 63.8689 24.6205 63.8589C24.5657 63.8389 24.5084 63.8215 24.456 63.7916L0.501061 49.9987C0.348882 49.9113 0.222437 49.7853 0.134469 49.6334C0.0465019 49.4816 0.000120578 49.3092 0 49.1337L0 8.10652C0 8.01678 0.0124642 7.92953 0.0348998 7.84477C0.0423783 7.8161 0.0598282 7.78993 0.0697995 7.76126C0.0884958 7.70891 0.105946 7.65531 0.133367 7.6067C0.152063 7.5743 0.179485 7.54812 0.20192 7.51821C0.230588 7.47832 0.256763 7.43719 0.290416 7.40229C0.319084 7.37362 0.356476 7.35243 0.388883 7.32751C0.425029 7.29759 0.457436 7.26518 0.498568 7.2415L12.4779 0.345059C12.6296 0.257786 12.8015 0.211853 12.9765 0.211853C13.1515 0.211853 13.3234 0.257786 13.475 0.345059L25.4531 7.2415H25.4556C25.4955 7.26643 25.5292 7.29759 25.5653 7.32626C25.5977 7.35119 25.6339 7.37362 25.6625 7.40104C25.6974 7.43719 25.7224 7.47832 25.7523 7.51821C25.7735 7.54812 25.8021 7.5743 25.8196 7.6067C25.8483 7.65656 25.8645 7.70891 25.8844 7.76126C25.8944 7.78993 25.9118 7.8161 25.9193 7.84602C25.9423 7.93096 25.954 8.01853 25.9542 8.10652V33.7317L35.9355 27.9844V14.8846C35.9355 14.7973 35.948 14.7088 35.9704 14.6253C35.9792 14.5954 35.9954 14.5692 36.0053 14.5405C36.0253 14.4882 36.0427 14.4346 36.0702 14.386C36.0888 14.3536 36.1163 14.3274 36.1375 14.2975C36.1674 14.2576 36.1923 14.2165 36.2272 14.1816C36.2559 14.1529 36.292 14.1317 36.3244 14.1068C36.3618 14.0769 36.3942 14.0445 36.4341 14.0208L48.4147 7.12434C48.5663 7.03694 48.7383 6.99094 48.9133 6.99094C49.0883 6.99094 49.2602 7.03694 49.4118 7.12434L61.3899 14.0208C61.4323 14.0457 61.4647 14.0769 61.5021 14.1055C61.5333 14.1305 61.5694 14.1529 61.5981 14.1803C61.633 14.2165 61.6579 14.2576 61.6878 14.2975C61.7103 14.3274 61.7377 14.3536 61.7551 14.386C61.7838 14.4346 61.8 14.4882 61.8199 14.5405C61.8312 14.5692 61.8474 14.5954 61.8548 14.6253ZM59.893 27.9844V16.6121L55.7013 19.0252L49.9104 22.3593V33.7317L59.8942 27.9844H59.893ZM47.9149 48.5566V37.1768L42.2187 40.4299L25.953 49.7133V61.2003L47.9149 48.5566ZM1.99677 9.83281V48.5566L23.9562 61.199V49.7145L12.4841 43.2219L12.4804 43.2194L12.4754 43.2169C12.4368 43.1945 12.4044 43.1621 12.3682 43.1347C12.3371 43.1097 12.3009 43.0898 12.2735 43.0624L12.271 43.0586C12.2386 43.0275 12.2162 42.9888 12.1887 42.9539C12.1638 42.9203 12.1339 42.8916 12.114 42.8567L12.1127 42.853C12.0903 42.8156 12.0766 42.7707 12.0604 42.7283C12.0442 42.6909 12.023 42.656 12.013 42.6161C12.0005 42.5688 11.998 42.5177 11.9931 42.4691C11.9881 42.4317 11.9781 42.3943 11.9781 42.3569V15.5801L6.18848 12.2446L1.99677 9.83281ZM12.9777 2.36177L2.99764 8.10652L12.9752 13.8513L22.9541 8.10527L12.9752 2.36177H12.9777ZM18.1678 38.2138L23.9574 34.8809V9.83281L19.7657 12.2459L13.9749 15.5801V40.6281L18.1678 38.2138ZM48.9133 9.14105L38.9344 14.8858L48.9133 20.6305L58.8909 14.8846L48.9133 9.14105ZM47.9149 22.3593L42.124 19.0252L37.9323 16.6121V27.9844L43.7219 31.3174L47.9149 33.7317V22.3593ZM24.9533 47.987L39.59 39.631L46.9065 35.4555L36.9352 29.7145L25.4544 36.3242L14.9907 42.3482L24.9533 47.987Z"
-                                fill="#FF2D20"
-                            />
-                        </svg>
+                <div className="md:hidden">
+                    <button
+                        type="button"
+                        onClick={() => setOpen((value) => !value)}
+                        aria-expanded={open}
+                        aria-controls="mobile-menu"
+                        aria-label={open ? 'Close menu' : 'Open menu'}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-md text-white transition-colors duration-150 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    >
+                        {open ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-6 w-6" aria-hidden="true">
+                                <path d="M6 6l12 12M18 6 6 18" />
+                            </svg>
+                        ) : (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-6 w-6" aria-hidden="true">
+                                <path d="M4 7h16M4 12h16M4 17h16" />
+                            </svg>
+                        )}
+                    </button>
+                </div>
+            </nav>
+
+            {open && (
+                <div id="mobile-menu" className="border-t border-white/10 bg-ink px-4 pb-5 pt-3 md:hidden">
+                    <div className="flex flex-col gap-1">
+                        {NAV_LINKS.map((link) => (
+                            <a
+                                key={link.href}
+                                href={link.href}
+                                onClick={() => setOpen(false)}
+                                className="rounded-md px-2 py-2.5 text-sm font-medium text-white/80 transition-colors duration-150 hover:bg-white/10 hover:text-white"
+                            >
+                                {link.label}
+                            </a>
+                        ))}
                     </div>
-
-                    <div className="mt-16">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                            <a
-                                href="https://laravel.com/docs"
-                                className="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500"
+                    <div className="mt-4 flex items-center gap-3">
+                        {auth.user ? (
+                            <Link
+                                href={route('dashboard')}
+                                className="flex-1 rounded-full bg-white px-4 py-2.5 text-center text-sm font-semibold text-ink"
                             >
-                                <div>
-                                    <div className="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth="1.5"
-                                            className="w-7 h-7 stroke-red-500"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <h2 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
-                                        Documentation
-                                    </h2>
-
-                                    <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                        Laravel has wonderful documentation covering every aspect of the framework.
-                                        Whether you are a newcomer or have prior experience with Laravel, we recommend
-                                        reading our documentation from beginning to end.
-                                    </p>
-                                </div>
-
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth="1.5"
-                                    className="self-center shrink-0 stroke-red-500 w-6 h-6 mx-6"
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <>
+                                <Link
+                                    href={route('login')}
+                                    className="flex-1 rounded-full border border-white/20 px-4 py-2.5 text-center text-sm font-medium text-white"
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
-                                    />
-                                </svg>
-                            </a>
+                                    Log in
+                                </Link>
+                                <Link
+                                    href={route('register.tenant')}
+                                    className="flex-1 rounded-full bg-brand-500 px-4 py-2.5 text-center text-sm font-semibold text-white"
+                                >
+                                    Get started
+                                </Link>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
+        </header>
+    );
+}
 
-                            <a
-                                href="https://laracasts.com"
-                                className="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500"
+function Hero({ auth }) {
+    return (
+        <section id="top" className="relative overflow-hidden bg-ink text-white">
+            <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-500/20 blur-3xl" />
+            <div aria-hidden="true" className="pointer-events-none absolute -bottom-40 left-1/3 h-80 w-80 rounded-full bg-brand-600/10 blur-3xl" />
+
+            <div className="relative mx-auto grid max-w-7xl items-center gap-14 px-4 pb-24 pt-20 sm:px-6 lg:grid-cols-2 lg:px-8 lg:pb-32 lg:pt-28">
+                <div>
+                    <Reveal>
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-400">
+                            Inventory &amp; product management for your shop
+                        </p>
+                    </Reveal>
+
+                    <Reveal delay={80}>
+                        <h1 className="mt-5 font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+                            Inventory that keeps up with your business.
+                        </h1>
+                    </Reveal>
+
+                    <Reveal delay={160}>
+                        <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/70">
+                            ShoppingLi brings your products, warehouses and stock into one clean workspace — no
+                            spreadsheets, no guesswork.
+                        </p>
+                    </Reveal>
+
+                    <Reveal delay={240}>
+                        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <Link
+                                href={route('register.tenant')}
+                                className="rounded-full bg-brand-500 px-6 py-3 text-center text-sm font-semibold text-white transition-all duration-300 ease-out hover:scale-[1.02] hover:bg-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
                             >
-                                <div>
-                                    <div className="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth="1.5"
-                                            className="w-7 h-7 stroke-red-500"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <h2 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
-                                        Laracasts
-                                    </h2>
-
-                                    <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                        Laracasts offers thousands of video tutorials on Laravel, PHP, and JavaScript
-                                        development. Check them out, see for yourself, and massively level up your
-                                        development skills in the process.
-                                    </p>
-                                </div>
-
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth="1.5"
-                                    className="self-center shrink-0 stroke-red-500 w-6 h-6 mx-6"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
-                                    />
-                                </svg>
-                            </a>
-
+                                Start free — no card required
+                            </Link>
                             <a
-                                href="https://laravel-news.com"
-                                className="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500"
+                                href="#pricing"
+                                className="rounded-full border border-white/20 px-6 py-3 text-center text-sm font-semibold text-white transition-colors duration-300 ease-out hover:border-white/50 hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                             >
-                                <div>
-                                    <div className="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth="1.5"
-                                            className="w-7 h-7 stroke-red-500"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <h2 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
-                                        Laravel News
-                                    </h2>
-
-                                    <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                        Laravel News is a community driven portal and newsletter aggregating all of the
-                                        latest and most important news in the Laravel ecosystem, including new package
-                                        releases and tutorials.
-                                    </p>
-                                </div>
-
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth="1.5"
-                                    className="self-center shrink-0 stroke-red-500 w-6 h-6 mx-6"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
-                                    />
-                                </svg>
+                                See pricing
                             </a>
+                        </div>
+                    </Reveal>
 
-                            <div className="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500">
-                                <div>
-                                    <div className="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            strokeWidth="1.5"
-                                            className="w-7 h-7 stroke-red-500"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M6.115 5.19l.319 1.913A6 6 0 008.11 10.36L9.75 12l-.387.775c-.217.433-.132.956.21 1.298l1.348 1.348c.21.21.329.497.329.795v1.089c0 .426.24.815.622 1.006l.153.076c.433.217.956.132 1.298-.21l.723-.723a8.7 8.7 0 002.288-4.042 1.087 1.087 0 00-.358-1.099l-1.33-1.108c-.251-.21-.582-.299-.905-.245l-1.17.195a1.125 1.125 0 01-.98-.314l-.295-.295a1.125 1.125 0 010-1.591l.13-.132a1.125 1.125 0 011.3-.21l.603.302a.809.809 0 001.086-1.086L14.25 7.5l1.256-.837a4.5 4.5 0 001.528-1.732l.146-.292M6.115 5.19A9 9 0 1017.18 4.64M6.115 5.19A8.965 8.965 0 0112 3c1.929 0 3.716.607 5.18 1.64"
-                                            />
-                                        </svg>
+                    <Reveal delay={320}>
+                        <ul className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/50">
+                            <li className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+                                14-day free trial
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+                                Up in minutes
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-hidden="true" />
+                                One secure workspace per business
+                            </li>
+                        </ul>
+                    </Reveal>
+                </div>
+
+                <Reveal delay={200} className="relative">
+                    <div className="relative rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-2xl shadow-black/50 backdrop-blur-sm sm:p-6">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-white">North warehouse</p>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/15 px-2.5 py-1 text-xs font-medium text-brand-300">
+                                <span className="h-1.5 w-1.5 rounded-full bg-brand-400" aria-hidden="true" />
+                                Live
+                            </span>
+                        </div>
+
+                        <div className="mt-5 space-y-3">
+                            {STOCK_ROWS.map((row) => (
+                                <div
+                                    key={row.name}
+                                    className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.03] px-4 py-3"
+                                >
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-medium text-white">{row.name}</p>
+                                        <p className="text-xs text-white/40">{row.category}</p>
                                     </div>
-
-                                    <h2 className="mt-6 text-xl font-semibold text-gray-900 dark:text-white">
-                                        Vibrant Ecosystem
-                                    </h2>
-
-                                    <p className="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                        Laravel's robust library of first-party tools and libraries, such as{' '}
-                                        <a
-                                            href="https://forge.laravel.com"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
+                                    <div className="flex shrink-0 items-center gap-3">
+                                        <span className="font-display text-base text-white">{row.qty}</span>
+                                        <span
+                                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                                row.positive
+                                                    ? 'bg-white/10 text-white/70'
+                                                    : 'bg-brand-500/15 text-brand-300'
+                                            }`}
                                         >
-                                            Forge
-                                        </a>
-                                        ,{' '}
-                                        <a
-                                            href="https://vapor.laravel.com"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Vapor
-                                        </a>
-                                        ,{' '}
-                                        <a
-                                            href="https://nova.laravel.com"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Nova
-                                        </a>
-                                        , and{' '}
-                                        <a
-                                            href="https://envoyer.io"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Envoyer
-                                        </a>{' '}
-                                        help you take your projects to the next level. Pair them with powerful open
-                                        source libraries like{' '}
-                                        <a
-                                            href="https://laravel.com/docs/billing"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Cashier
-                                        </a>
-                                        ,{' '}
-                                        <a
-                                            href="https://laravel.com/docs/dusk"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Dusk
-                                        </a>
-                                        ,{' '}
-                                        <a
-                                            href="https://laravel.com/docs/broadcasting"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Echo
-                                        </a>
-                                        ,{' '}
-                                        <a
-                                            href="https://laravel.com/docs/horizon"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Horizon
-                                        </a>
-                                        ,{' '}
-                                        <a
-                                            href="https://laravel.com/docs/sanctum"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Sanctum
-                                        </a>
-                                        ,{' '}
-                                        <a
-                                            href="https://laravel.com/docs/telescope"
-                                            className="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500"
-                                        >
-                                            Telescope
-                                        </a>
-                                        , and more.
-                                    </p>
+                                            {row.delta}
+                                        </span>
+                                    </div>
                                 </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-5 border-t border-white/10 pt-4">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="text-white/40">Total SKUs</span>
+                                <span className="font-semibold text-white">1,284</span>
+                            </div>
+                            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+                                <div className="h-full w-2/3 rounded-full bg-brand-500" />
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex justify-center mt-16 px-6 sm:items-center sm:justify-between">
-                        <div className="text-center text-sm sm:text-start">&nbsp;</div>
+                    <div
+                        aria-hidden="true"
+                        className="absolute -left-6 -top-6 -z-10 h-28 w-28 rounded-2xl bg-brand-600/30 blur-2xl"
+                    />
+                </Reveal>
+            </div>
+        </section>
+    );
+}
 
-                        <div className="text-center text-sm text-gray-500 dark:text-gray-400 sm:text-end sm:ms-0">
-                            Laravel v{laravelVersion} (PHP v{phpVersion})
+function CapabilityStrip() {
+    return (
+        <section aria-label="What ShoppingLi manages" className="border-t border-white/5 bg-ink pb-14 text-white">
+            <Reveal>
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-white/40">
+                        Made for the way shops really run
+                    </p>
+                    <ul className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                        {CAPABILITIES.map((item) => (
+                            <li
+                                key={item}
+                                className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-medium text-white/80 transition-colors duration-300 ease-out hover:border-brand-500/50 hover:text-white"
+                            >
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </Reveal>
+        </section>
+    );
+}
+
+function ProblemSolution() {
+    return (
+        <section className="bg-white py-24 text-ink">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <Reveal>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600">Why ShoppingLi</p>
+                    <h2 className="mt-4 max-w-2xl font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+                        Spreadsheets were never built for inventory.
+                    </h2>
+                    <p className="mt-5 max-w-2xl text-lg leading-relaxed text-gray-600">
+                        When products live in a spreadsheet and stock lives somewhere else, nothing quite adds up.
+                        ShoppingLi brings it all into one place — so you can trust the numbers at a glance.
+                    </p>
+                </Reveal>
+
+                <div className="mt-14 grid gap-8 md:grid-cols-3">
+                    {PAINS.map((item, index) => (
+                        <Reveal key={item.title} delay={index * 100} className="h-full">
+                            <div className="h-full rounded-2xl border border-gray-200 bg-white p-7 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/10">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-ink text-brand-400">
+                                    <item.icon />
+                                </div>
+                                <h3 className="mt-5 text-lg font-bold">{item.title}</h3>
+                                <p className="mt-2 leading-relaxed text-gray-600">{item.body}</p>
+                            </div>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function Features() {
+    return (
+        <section id="features" className="scroll-mt-24 bg-gray-50 py-24 text-ink">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <Reveal>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600">Everything in one place</p>
+                    <div className="mt-4 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+                        <h2 className="max-w-xl font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+                            Built for the daily grind of running a shop.
+                        </h2>
+                        <p className="max-w-sm text-base leading-relaxed text-gray-600">
+                            Everything you already juggle — products, categories, warehouses, movements — in a
+                            workspace that behaves like one.
+                        </p>
+                    </div>
+                </Reveal>
+
+                <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {FEATURES.map((item, index) => (
+                        <Reveal key={item.title} delay={(index % 3) * 90} className="h-full">
+                            <article className="group h-full rounded-2xl border border-gray-200 bg-white p-7 transition-all duration-300 ease-out hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/10">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 transition-colors duration-300 ease-out group-hover:bg-brand-500 group-hover:text-white">
+                                    <item.icon />
+                                </div>
+                                <h3 className="mt-5 text-lg font-bold">{item.title}</h3>
+                                <p className="mt-2 leading-relaxed text-gray-600">{item.body}</p>
+                            </article>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function HowItWorks() {
+    return (
+        <section id="how-it-works" className="scroll-mt-24 bg-white py-24 text-ink">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <Reveal>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600">How it works</p>
+                    <h2 className="mt-4 max-w-2xl font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+                        From spreadsheet chaos to order — in three steps.
+                    </h2>
+                </Reveal>
+
+                <ol className="mt-14 grid gap-10 md:grid-cols-3">
+                    {STEPS.map((step, index) => (
+                        <Reveal key={step.n} as="li" delay={index * 120}>
+                            <div className="relative">
+                                <span className="font-display text-5xl text-brand-500">{step.n}</span>
+                                <h3 className="mt-4 text-lg font-bold">{step.title}</h3>
+                                <p className="mt-2 leading-relaxed text-gray-600">{step.body}</p>
+                                <div
+                                    aria-hidden="true"
+                                    className="mt-6 h-px w-full bg-gradient-to-r from-brand-500/60 to-transparent md:hidden"
+                                />
+                            </div>
+                        </Reveal>
+                    ))}
+                </ol>
+            </div>
+        </section>
+    );
+}
+
+function Pricing() {
+    return (
+        <section id="pricing" className="scroll-mt-24 bg-gray-50 py-24 text-ink">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <Reveal>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600">Pricing</p>
+                    <div className="mt-4 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+                        <div>
+                            <h2 className="max-w-2xl font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+                                Start free. Upgrade when the shop grows.
+                            </h2>
+                            <p className="mt-5 max-w-2xl text-base leading-relaxed text-gray-600">
+                                Every paid plan begins with a 14-day free trial. Inventory movements unlock on Growth and
+                                up.
+                            </p>
                         </div>
+                        <Link
+                            href={route('register.tenant')}
+                            className="shrink-0 rounded-full border border-ink px-6 py-3 text-center text-sm font-semibold text-ink transition-colors duration-300 ease-out hover:bg-ink hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                        >
+                            Compare details at signup
+                        </Link>
+                    </div>
+                </Reveal>
+
+                <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                    {PLANS.map((plan, index) => (
+                        <Reveal key={plan.name} delay={index * 80} className="h-full">
+                            <article
+                                className={`relative flex h-full flex-col rounded-2xl border p-7 transition-all duration-300 ease-out hover:-translate-y-1 ${
+                                    plan.highlight
+                                        ? 'border-brand-500 bg-ink text-white shadow-xl shadow-brand-500/20'
+                                        : 'border-gray-200 bg-white hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/10'
+                                }`}
+                            >
+                                {plan.highlight && (
+                                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-500 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white">
+                                        Most popular
+                                    </span>
+                                )}
+
+                                <h3 className={`text-sm font-bold uppercase tracking-wider ${plan.highlight ? 'text-brand-400' : 'text-gray-500'}`}>
+                                    {plan.name}
+                                </h3>
+
+                                <div className="mt-4 flex items-baseline gap-1">
+                                    <span className="font-display text-4xl">{plan.price}</span>
+                                    <span className={`text-sm ${plan.highlight ? 'text-white/60' : 'text-gray-500'}`}>
+                                        {plan.period}
+                                    </span>
+                                </div>
+
+                                <p className={`mt-1 text-sm ${plan.highlight ? 'text-white/60' : 'text-gray-500'}`}>
+                                    {plan.note}
+                                </p>
+
+                                <ul className={`mt-5 space-y-2.5 text-sm ${plan.highlight ? 'text-white/80' : 'text-gray-700'}`}>
+                                    {plan.features.map((feature) => (
+                                        <li key={feature} className="flex items-start gap-2.5">
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke={plan.highlight ? '#FB923C' : '#F97316'}
+                                                strokeWidth="2.4"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                className="mt-0.5 h-4 w-4 shrink-0"
+                                                aria-hidden="true"
+                                            >
+                                                <path d="m5 12.5 4.5 4.5L19 7" />
+                                            </svg>
+                                            {feature}
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                <div className="mt-auto pt-7">
+                                    <Link
+                                        href={route('register.tenant')}
+                                        className={`w-full rounded-full px-5 py-2.5 text-center text-sm font-semibold transition-colors duration-300 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+                                            plan.highlight
+                                                ? 'bg-brand-500 text-white hover:bg-brand-600 focus-visible:ring-brand-500 focus-visible:ring-offset-ink'
+                                                : 'border border-ink bg-transparent text-ink hover:bg-ink hover:text-white focus-visible:ring-brand-500'
+                                        }`}
+                                    >
+                                        {plan.cta}
+                                    </Link>
+                                </div>
+
+                                <p className={`mt-4 text-center text-xs ${plan.highlight ? 'text-white/50' : 'text-gray-400'}`}>
+                                    Plans differ in users, warehouses, products, categories and storage.
+                                </p>
+                            </article>
+                        </Reveal>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function Testimonial() {
+    return (
+        <section className="bg-ink py-24 text-white">
+            <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+                <Reveal>
+                    <blockquote className="text-center">
+                        <p aria-hidden="true" className="font-display text-6xl leading-none text-brand-500">
+                            “
+                        </p>
+                        <p className="-mt-6 text-2xl font-medium leading-relaxed sm:text-3xl sm:leading-snug">
+                            We stopped reconciling three spreadsheets every Friday. ShoppingLi just shows us the truth —
+                            what we have, where it is, and what moved.
+                        </p>
+                        <footer className="mt-8 text-sm font-semibold uppercase tracking-wider text-white/50">
+                            Store manager — small retail
+                        </footer>
+                    </blockquote>
+                </Reveal>
+            </div>
+        </section>
+    );
+}
+
+function Faq() {
+    const [openIndex, setOpenIndex] = useState(0);
+
+    return (
+        <section id="faq" className="scroll-mt-24 bg-white py-24 text-ink">
+            <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+                <Reveal>
+                    <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-brand-600">FAQ</p>
+                    <h2 className="mt-4 text-center font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+                        Questions, answered.
+                    </h2>
+                </Reveal>
+
+                <div className="mt-12 divide-y divide-gray-200">
+                    {FAQS.map((faq, index) => {
+                        const open = openIndex === index;
+
+                        return (
+                            <Reveal key={faq.q} delay={index * 60}>
+                                <div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setOpenIndex(open ? -1 : index)}
+                                        aria-expanded={open}
+                                        aria-controls={`faq-panel-${index}`}
+                                        className="flex w-full items-center justify-between gap-6 py-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-md"
+                                    >
+                                        <span className="text-base font-bold sm:text-lg">{faq.q}</span>
+                                        <span
+                                            aria-hidden="true"
+                                            className={`h-6 w-6 shrink-0 text-brand-500 transition-transform duration-300 ease-out ${
+                                                open ? 'rotate-45' : ''
+                                            }`}
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="h-6 w-6">
+                                                <path d="M12 5v14M5 12h14" />
+                                            </svg>
+                                        </span>
+                                    </button>
+                                    <div
+                                        id={`faq-panel-${index}`}
+                                        role="region"
+                                        hidden={!open}
+                                        className="pb-5 pr-10 leading-relaxed text-gray-600"
+                                    >
+                                        {faq.a}
+                                    </div>
+                                </div>
+                            </Reveal>
+                        );
+                    })}
+                </div>
+            </div>
+        </section>
+    );
+}
+
+function FinalCta() {
+    return (
+        <section className="relative overflow-hidden bg-ink py-24 text-white">
+            <div aria-hidden="true" className="pointer-events-none absolute -left-24 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-brand-500/20 blur-3xl" />
+            <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+                <Reveal>
+                    <h2 className="font-display text-3xl leading-tight tracking-tight sm:text-5xl">
+                        Ready to get organized?
+                    </h2>
+                    <p className="mt-5 text-lg text-white/70">
+                        Create your workspace — it takes minutes. No card until you choose a paid plan.
+                    </p>
+                    <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                        <Link
+                            href={route('register.tenant')}
+                            className="w-full rounded-full bg-brand-500 px-8 py-3.5 text-sm font-semibold text-white transition-all duration-300 ease-out hover:scale-[1.02] hover:bg-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink sm:w-auto"
+                        >
+                            Start free
+                        </Link>
+                        <Link
+                            href={route('login')}
+                            className="w-full rounded-full border border-white/20 px-8 py-3.5 text-sm font-semibold text-white transition-colors duration-300 ease-out hover:border-white/50 hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:w-auto"
+                        >
+                            Log in
+                        </Link>
+                    </div>
+                </Reveal>
+            </div>
+        </section>
+    );
+}
+
+function Footer() {
+    return (
+        <footer className="border-t border-white/10 bg-ink py-14 text-white">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div className="flex flex-col items-start justify-between gap-10 md:flex-row md:items-center">
+                    <div>
+                        <Wordmark />
+                        <p className="mt-3 text-sm text-white/50">Run your whole shop from one line.</p>
+                    </div>
+
+                    <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3">
+                        {NAV_LINKS.map((link) => (
+                            <a
+                                key={link.href}
+                                href={link.href}
+                                className="text-sm text-white/70 transition-colors duration-150 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded-md"
+                            >
+                                {link.label}
+                            </a>
+                        ))}
+                    </nav>
+                </div>
+
+                <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-8 text-sm text-white/40 md:flex-row md:items-center">
+                    <p>© {new Date().getFullYear()} ShoppingLi. All rights reserved.</p>
+                    <div className="flex gap-6">
+                        <span>Privacy</span>
+                        <span>Terms</span>
                     </div>
                 </div>
             </div>
+        </footer>
+    );
+}
 
-            <style>{`
-                .bg-dots-darker {
-                    background-image: url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.22676 0C1.91374 0 2.45351 0.539773 2.45351 1.22676C2.45351 1.91374 1.91374 2.45351 1.22676 2.45351C0.539773 2.45351 0 1.91374 0 1.22676C0 0.539773 0.539773 0 1.22676 0Z' fill='rgba(0,0,0,0.07)'/%3E%3C/svg%3E");
-                }
-                @media (prefers-color-scheme: dark) {
-                    .dark\\:bg-dots-lighter {
-                        background-image: url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.22676 0C1.91374 0 2.45351 0.539773 2.45351 1.22676C2.45351 1.91374 1.91374 2.45351 1.22676 2.45351C0.539773 2.45351 0 1.91374 0 1.22676C0 0.539773 0.539773 0 1.22676 0Z' fill='rgba(255,255,255,0.07)'/%3E%3C/svg%3E");
-                    }
-                }
-            `}</style>
+/* --------------------------------------------------------------------------
+   Page
+-------------------------------------------------------------------------- */
+
+export default function Welcome({ auth }) {
+    const canonicalUrl = typeof window !== 'undefined' ? window.location.href : 'https://shoppingli.example';
+
+    const structuredData = {
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'ShoppingLi',
+        url: 'https://shoppingli.example',
+        description: 'Inventory and product management for your shop — products, warehouses and stock in one clean workspace.',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Any',
+        offers: {
+            '@type': 'AggregateOffer',
+            lowPrice: '0',
+            highPrice: '99',
+            priceCurrency: 'USD',
+        },
+    };
+
+    return (
+        <>
+            <Head title="Inventory & Product Management for Your Shop">
+                <meta
+                    name="description"
+                    content="ShoppingLi brings your products, warehouses and stock into one clean workspace. Free plan, 14-day trial, secure per-business workspaces."
+                />
+                <meta property="og:type" content="website" />
+                <meta property="og:site_name" content="ShoppingLi" />
+                <meta property="og:title" content="ShoppingLi — Inventory & Product Management for Your Shop" />
+                <meta
+                    property="og:description"
+                    content="Products, warehouses and stock in one clean workspace — no spreadsheets, no guesswork."
+                />
+                <meta property="og:url" content={canonicalUrl} />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:title" content="ShoppingLi — Inventory & Product Management for Your Shop" />
+                <meta
+                    name="twitter:description"
+                    content="Products, warehouses and stock in one clean workspace — no spreadsheets, no guesswork."
+                />
+                <link rel="canonical" href={canonicalUrl} />
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+                />
+            </Head>
+
+            <div className="bg-white font-sans text-ink antialiased selection:bg-brand-500 selection:text-white">
+                <Nav auth={auth} />
+                <main>
+                    <Hero auth={auth} />
+                    <CapabilityStrip />
+                    <ProblemSolution />
+                    <Features />
+                    <HowItWorks />
+                    <Pricing />
+                    <Testimonial />
+                    <Faq />
+                    <FinalCta />
+                </main>
+                <Footer />
+            </div>
         </>
     );
 }
