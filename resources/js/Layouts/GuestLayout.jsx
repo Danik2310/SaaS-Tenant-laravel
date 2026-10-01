@@ -1,24 +1,37 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
+import Wordmark from '@/Components/BrandLogo';
 import { Link } from '@inertiajs/react';
 
 export default function Guest({ children, wide = false }) {
     return (
-        <div className="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <Link href="/">
-                    <ApplicationLogo className="w-20 h-20 fill-current text-gray-500" />
-                </Link>
-            </div>
+        <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-12 bg-ink">
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-500/20 blur-3xl"
+            />
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-40 -left-32 h-80 w-80 rounded-full bg-brand-600/10 blur-3xl"
+            />
 
-            {wide ? (
-                <div className="w-full mt-6 px-6 py-6 bg-white shadow-md overflow-hidden sm:rounded-lg">
+            <div className="relative flex w-full flex-col items-center">
+                <Link href="/" className="rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+                    <Wordmark />
+                </Link>
+
+                <div
+                    className={
+                        wide
+                            ? 'mt-8 w-full overflow-hidden rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-black/5 sm:p-8'
+                            : 'mt-8 w-full max-w-md overflow-hidden rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-black/5 sm:p-8'
+                    }
+                >
                     {children}
                 </div>
-            ) : (
-                <div className="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                    {children}
-                </div>
-            )}
+
+                <p className="mt-8 text-xs text-white/40">
+                    © {new Date().getFullYear()} ShoppingLi. All rights reserved.
+                </p>
+            </div>
         </div>
     );
 }
