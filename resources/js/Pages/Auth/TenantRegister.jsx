@@ -4,6 +4,13 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
+import usePrefersReducedMotion from '@/hooks/usePrefersReducedMotion';
+import ErrorSummary from './parts/ErrorSummary';
+import FormField from './parts/FormField';
+import OptionalDetails from './parts/OptionalDetails';
+import PlanGrid from './parts/PlanGrid';
+import PlanSummary from './parts/PlanSummary';
+import StepIndicator from './parts/StepIndicator';
 import { Head, useForm } from '@inertiajs/react';
 
 function toSlug(value) {
@@ -15,262 +22,60 @@ function toSlug(value) {
         .replace(/^-+|-+$/g, '');
 }
 
-const LIMIT_ROWS = [
-    { key: 'users', label: 'Users' },
-    { key: 'warehouses', label: 'Warehouses' },
-    { key: 'products', label: 'Products' },
-    { key: 'categories', label: 'Categories' },
-    { key: 'storage', label: 'Storage (MB)' },
+const OPTIONAL_FIELDS = [
+    'first_name',
+    'last_name',
+    'phone',
+    'address_line1',
+    'address_line2',
+    'city',
+    'state',
+    'postal_code',
+    'country',
 ];
-
-function formatPrice(plan) {
-    const amount = Number(plan.price);
-    const formatted = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: plan.currency || 'USD',
-    }).format(amount);
-
-    if (amount === 0) {
-        return 'Free';
-    }
-
-    if (!plan.duration_months) {
-        return formatted;
-    }
-
-    if (plan.duration_months === 1) {
-        return `${formatted}/mo`;
-    }
-
-    if (plan.duration_months === 12) {
-        return `${formatted}/yr`;
-    }
-
-    return `${formatted}/${plan.duration_months} mo`;
-}
-
-function limitValue(value) {
-    return value === null || value === undefined ? 'Unlimited' : String(value);
-}
-
-function PlanCarousel({ plans, featureDefinitions, onSelect, processing }) {
-    const viewportRef = useRef(null);
-    const [activeIndex, setActiveIndex] = useState(0);
-
-    useEffect(() => {
-        const viewport = viewportRef.current;
-
-        if (!viewport) {
-            return undefined;
-        }
-
-        const recompute = () => {
-            const card = viewport.querySelector('[data-testid^="plan-card-"]');
-
-            if (card) {
-                const index = Math.round(viewport.scrollLeft / card.offsetWidth);
-
-                setActiveIndex(Math.max(0, Math.min(index, plans.length - 1)));
-            }
-        };
-
-        viewport.addEventListener('scroll', recompute, { passive: true });
-        window.addEventListener('resize', recompute);
-
-        return () => {
-            viewport.removeEventListener('scroll', recompute);
-            window.removeEventListener('resize', recompute);
-        };
-    }, [plans.length]);
-
-    const scrollToIndex = (index) => {
-        const viewport = viewportRef.current;
-
-        if (!viewport) {
-            return;
-        }
-
-        const card = viewport.querySelector(`[data-testid="plan-card-${plans[index].slug}"]`);
-
-        if (card) {
-            viewport.scrollTo({ left: card.offsetLeft - viewport.offsetLeft, behavior: 'smooth' });
-        }
-    };
-
-    const handlePrev = () => scrollToIndex(Math.max(0, activeIndex - 1));
-
-    const handleNext = () => scrollToIndex(Math.min(plans.length - 1, activeIndex + 1));
-
-    const handleKeyDown = (e) => {
-        if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            handlePrev();
-        }
-
-        if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            handleNext();
-        }
-    };
-
-    return (
-        <section aria-label="Choose your plan">
-            <div className="flex items-end justify-between gap-4">
-                <div>
-                    <h2 className="font-display text-2xl leading-tight tracking-tight text-ink">Choose your plan</h2>
-                    <p className="mt-1 text-sm text-gray-600">
-                        Pick a plan to start your workspace. No credit card required until checkout.
-                    </p>
-                </div>
-
-                <div className="flex shrink-0 gap-2">
-                    <button
-                        type="button"
-                        onClick={handlePrev}
-                        data-testid="carousel-prev"
-                        aria-label="Previous plans"
-                        disabled={activeIndex === 0 || processing}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-40"
-                    >
-                        ←
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={handleNext}
-                        data-testid="carousel-next"
-                        aria-label="Next plans"
-                        disabled={activeIndex === plans.length - 1 || processing}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-40"
-                    >
-                        →
-                    </button>
-                </div>
-            </div>
-
-            <div
-                ref={viewportRef}
-                data-testid="plan-carousel"
-                role="region"
-                aria-roledescription="carousel"
-                aria-label="Plans"
-                tabIndex={0}
-                onKeyDown={handleKeyDown}
-                className="mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4"
-            >
-                {plans.map((plan, index) => (
-                    <article
-                        key={plan.slug}
-                        data-testid={`plan-card-${plan.slug}`}
-                        aria-roledescription="slide"
-                        aria-label={`${plan.name}, slide ${index + 1} of ${plans.length}`}
-                        className="w-[85%] shrink-0 snap-start flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-colors duration-150 hover:border-brand-300 sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.6667rem)]"
-                    >
-                        {plan.slug === 'trial' && (
-                            <span className="inline-block self-start rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-700">
-                                14-day free trial
-                            </span>
-                        )}
-
-                        <h3 className="mt-2 text-lg font-semibold text-gray-900">{plan.name}</h3>
-
-                        <p className="mt-1 font-bold text-gray-900">{formatPrice(plan)}</p>
-
-                        <ul className="mt-3 space-y-0.5 text-sm text-gray-600">
-                            {plan.features.length === 0 ? (
-                                <li className="text-gray-400">—</li>
-                            ) : (
-                                plan.features.map((key) => (
-                                    <li key={key}>{featureDefinitions?.[key]?.label ?? key}</li>
-                                ))
-                            )}
-                        </ul>
-
-                        <dl className="mt-3 space-y-0.5 border-t border-gray-100 pt-3 text-sm">
-                            {LIMIT_ROWS.map((row) => (
-                                <div key={row.key} className="flex justify-between gap-2">
-                                    <dt className="text-gray-500">{row.label}</dt>
-                                    <dd className="font-medium text-gray-700">
-                                        {limitValue(plan.limits?.[row.key])}
-                                    </dd>
-                                </div>
-                            ))}
-                        </dl>
-
-                        <button
-                            type="button"
-                            onClick={() => onSelect(plan.slug)}
-                            disabled={processing}
-                            className="mt-auto pt-4 w-full inline-flex items-center justify-center rounded-full border border-transparent bg-brand-500 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:opacity-50"
-                        >
-                            Sign Up
-                        </button>
-                    </article>
-                ))}
-            </div>
-
-            <div className="mt-4 flex justify-center gap-2">
-                {plans.map((plan, index) => (
-                    <button
-                        key={plan.slug}
-                        type="button"
-                        onClick={() => scrollToIndex(index)}
-                        data-testid={`carousel-dot-${plan.slug}`}
-                        aria-label={`Go to ${plan.name}`}
-                        aria-current={index === activeIndex ? 'true' : undefined}
-                        className={`h-2 w-2 rounded-full transition-colors ${
-                            index === activeIndex ? 'bg-brand-500' : 'bg-gray-300 hover:bg-brand-400'
-                        } focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2`}
-                    />
-                ))}
-            </div>
-
-            <p className="mt-6 text-center text-xs text-gray-500">
-                Paid plans are billed securely at checkout. Trials and free plans have no charge.
-            </p>
-        </section>
-    );
-}
 
 const FIELD_HINTS = {
     company_name: 'Legal or trading name of the company',
+    subdomain: 'Your subdomain plus the shared domain.',
     phone: 'Primary contact phone number',
     first_name: "Primary contact's first name",
     last_name: "Primary contact's last name",
     address_line1: 'Street address (e.g., 123 Main St)',
-    address_line2: 'Apartment, suite, unit, etc. (optional)',
+    address_line2: 'Apartment, suite, unit, etc.',
     city: 'City or locality',
     state: 'State, province, or region',
     postal_code: 'ZIP / postal code',
     country: 'Country of the registered address',
 };
 
-function Field({ label, htmlFor, hint, children }) {
+function Legend({ children }) {
     return (
-        <div className="mt-4">
-            <InputLabel htmlFor={htmlFor} value={label} />
-
+        <legend className="text-sm font-bold uppercase tracking-[0.14em] text-gray-900">
             {children}
-
-            {hint && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
-        </div>
+        </legend>
     );
 }
 
-function SectionHeading() {
-    return (
-        <div className="mt-6 rounded-md border border-brand-100 bg-brand-50/60 px-4 py-3">
-            <p className="text-sm font-semibold text-gray-700">Business & Contact Information</p>
-            <p className="text-xs text-gray-500">
-                Optional details about the tenant company and primary contact.
-            </p>
-        </div>
-    );
+function Fieldset({ children, className = '' }) {
+    return <fieldset className={`space-y-5 ${className}`}>{children}</fieldset>;
 }
 
-export default function TenantRegister({ plans = [], selected_plan = null, tenant_domain_suffix, feature_definitions = {} }) {
+export default function TenantRegister({
+    plans = [],
+    selected_plan = null,
+    tenant_domain_suffix,
+    feature_definitions = {},
+}) {
     const [showForm, setShowForm] = useState(Boolean(selected_plan));
+    const [optionalOpen, setOptionalOpen] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [focusPlansHeading, setFocusPlansHeading] = useState(false);
     const subdomainTouched = useRef(false);
+    const planHeadingRef = useRef(null);
+    const companyRef = useRef(null);
+    const pendingFocus = useRef(null);
+    const didInitialFocus = useRef(false);
+    const prefersReducedMotion = usePrefersReducedMotion();
 
     const { data, setData, post, processing, errors, reset } = useForm({
         company_name: '',
@@ -312,6 +117,61 @@ export default function TenantRegister({ plans = [], selected_plan = null, tenan
         [plans, data.plan]
     );
 
+    const focusField = (key) => {
+        if (!key) return;
+
+        if (OPTIONAL_FIELDS.includes(key)) {
+            pendingFocus.current = key;
+            setOptionalOpen(true);
+            return;
+        }
+
+        document.getElementById(key)?.focus();
+    };
+
+    useEffect(() => {
+        const key = pendingFocus.current;
+
+        if (!key) return;
+
+        const element = document.getElementById(key);
+
+        if (element && !element.closest('[hidden]')) {
+            element.focus();
+            pendingFocus.current = null;
+        }
+    }, [optionalOpen, errors]);
+
+    const firstErrorKey = useMemo(() => {
+        const keys = Object.keys(errors ?? {}).filter((key) => key !== 'website');
+
+        return keys.length > 0 ? keys[0] : null;
+    }, [errors]);
+
+    useEffect(() => {
+        if (firstErrorKey) {
+            focusField(firstErrorKey);
+        }
+    }, [firstErrorKey]);
+
+    useEffect(() => {
+        if (showForm && !didInitialFocus.current) {
+            didInitialFocus.current = true;
+
+            // Only claim focus when there is no validation error waiting for it.
+            if (!firstErrorKey) {
+                companyRef.current?.focus();
+            }
+        }
+    }, [showForm, firstErrorKey]);
+
+    useEffect(() => {
+        if (!showForm && focusPlansHeading) {
+            planHeadingRef.current?.focus();
+            setFocusPlansHeading(false);
+        }
+    }, [showForm, focusPlansHeading]);
+
     const submit = (e) => {
         e.preventDefault();
 
@@ -323,315 +183,478 @@ export default function TenantRegister({ plans = [], selected_plan = null, tenan
         setShowForm(true);
     };
 
+    const handleBackToPlans = () => {
+        setShowForm(false);
+        setOptionalOpen(false);
+        setFocusPlansHeading(true);
+        didInitialFocus.current = false;
+    };
+
+    const stepAnimation = prefersReducedMotion ? undefined : 'animate-sli-step-in';
+
     return (
         <GuestLayout wide>
             <Head title={showForm ? 'Create your workspace' : 'Choose your plan'} />
 
-            {!showForm ? (
-                <PlanCarousel
-                    plans={plans}
-                    featureDefinitions={feature_definitions}
-                    onSelect={handleSelect}
-                    processing={processing}
-                />
-            ) : (
-                <form onSubmit={submit}>
-                    <div className="hidden" aria-hidden="true">
-                        <input
-                            tabIndex="-1"
-                            autoComplete="off"
-                            type="text"
-                            name="website"
-                            value={data.website}
-                            onChange={(e) => setData('website', e.target.value)}
-                        />
-                    </div>
+            <p aria-live="polite" role="status" className="sr-only">
+                {showForm ? 'Step 2 of 2: workspace details' : 'Step 1 of 2: choose your plan'}
+            </p>
 
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <h2 className="font-display text-2xl leading-tight tracking-tight text-ink">Create New Tenant</h2>
-                            <p className="mt-1 text-sm text-gray-600">
-                                {selectedPlan
-                                    ? `Plan: ${selectedPlan.name} · ${
-                                          selectedPlan.slug === 'trial'
-                                              ? '14-day free trial, no credit card required.'
-                                              : Number(selectedPlan.price) === 0
-                                                  ? 'free to start.'
-                                                  : 'secure payment at checkout.'
-                                      }`
-                                    : 'Add a new tenant to the platform.'}
+            <div className={showForm ? stepAnimation : undefined}>
+                <StepIndicator current={showForm ? 'workspace' : 'plan'} />
+
+                {!showForm ? (
+                    <>
+                        <div className="mt-8">
+                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+                                Step 1
+                            </p>
+                            <h1
+                                id="plan-step-heading"
+                                ref={planHeadingRef}
+                                tabIndex={-1}
+                                className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink focus:outline-none"
+                            >
+                                Pick your workspace plan
+                            </h1>
+                            <p className="mt-2 max-w-prose text-sm text-gray-600">
+                                Every plan includes a 14-day trial of the paid features. Pick the one that fits
+                                how many people and locations you need to run.
                             </p>
                         </div>
-                        {plans.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => setShowForm(false)}
-                                className="shrink-0 text-sm text-brand-600 underline hover:text-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 rounded-md"
-                            >
-                                ← Plans
-                            </button>
-                        )}
-                    </div>
 
-                    <Field label="Tenant Name" htmlFor="name">
-                        <TextInput
-                            id="name"
-                            name="name"
-                            value={data.name}
-                            className="mt-1 block w-full"
-                            autoComplete="organization"
-                            isFocused={true}
-                            onChange={(e) => setData('name', e.target.value)}
-                            placeholder="e.g., Acme Corp"
-                            required
-                        />
-                        <InputError message={errors.name} className="mt-2" />
-                    </Field>
-
-                    <Field label="Email" htmlFor="email" hint="Primary contact email for this tenant">
-                        <TextInput
-                            id="email"
-                            type="email"
-                            name="email"
-                            value={data.email}
-                            className="mt-1 block w-full"
-                            autoComplete="username"
-                            onChange={(e) => setData('email', e.target.value)}
-                            placeholder="admin@tenant.com"
-                            required
-                        />
-                        <InputError message={errors.email} className="mt-2" />
-                    </Field>
-
-                    <SectionHeading />
-
-                    <Field label="Company Name" htmlFor="company_name" hint={FIELD_HINTS.company_name}>
-                        <TextInput
-                            id="company_name"
-                            name="company_name"
-                            value={data.company_name}
-                            className="mt-1 block w-full"
-                            autoComplete="organization"
-                            onChange={(e) => setData('company_name', e.target.value)}
-                            placeholder="e.g., Acme Corp LLC"
-                            required
-                        />
-                        <InputError message={errors.company_name} className="mt-2" />
-                    </Field>
-
-                    <Field
-                        label="Workspace Address"
-                        htmlFor="subdomain"
-                        hint="Your subdomain plus the shared domain."
-                    >
-                        <TextInput
-                            id="subdomain"
-                            name="subdomain"
-                            value={data.subdomain}
-                            className="mt-1 block w-full"
-                            autoComplete="off"
-                            spellCheck={false}
-                            onChange={(e) => {
-                                subdomainTouched.current = true;
-                                setData('subdomain', e.target.value);
-                            }}
-                            placeholder="your-workspace"
-                        />
-                        <InputError message={errors.subdomain} className="mt-2" />
-
-                        <p className="mt-1 text-xs text-gray-500">
-                            Your workspace address will be{' '}
-                            <span className="font-medium text-gray-700">
-                                {data.subdomain || slug || 'your-workspace'}.{tenant_domain_suffix}
-                            </span>
-                        </p>
-                    </Field>
-
-                    <div className="grid gap-x-4 sm:grid-cols-2">
-                        <Field label="First Name" htmlFor="first_name" hint={FIELD_HINTS.first_name}>
-                            <TextInput
-                                id="first_name"
-                                name="first_name"
-                                value={data.first_name}
-                                className="mt-1 block w-full"
-                                autoComplete="given-name"
-                                onChange={(e) => setData('first_name', e.target.value)}
-                                placeholder="Jane"
+                        <div className="mt-8">
+                            <PlanGrid
+                                plans={plans}
+                                featureDefinitions={feature_definitions}
+                                onSelect={handleSelect}
+                                processing={processing}
+                                headingId="plan-step-heading"
                             />
-                            <InputError message={errors.first_name} className="mt-2" />
-                        </Field>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="mt-8 flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+                                    Step 2
+                                </p>
+                                <h1 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">
+                                    Create your workspace
+                                </h1>
+                                <p className="mt-2 max-w-prose text-sm text-gray-600">
+                                    Fields marked <span className="font-semibold">*</span> are required. Everything
+                                    else is optional and can be filled in later.
+                                </p>
+                            </div>
 
-                        <Field label="Last Name" htmlFor="last_name" hint={FIELD_HINTS.last_name}>
-                            <TextInput
-                                id="last_name"
-                                name="last_name"
-                                value={data.last_name}
-                                className="mt-1 block w-full"
-                                autoComplete="family-name"
-                                onChange={(e) => setData('last_name', e.target.value)}
-                                placeholder="Doe"
-                            />
-                            <InputError message={errors.last_name} className="mt-2" />
-                        </Field>
-                    </div>
+                            {plans.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleBackToPlans}
+                                    data-testid="back-to-plans"
+                                    className="shrink-0 rounded-md text-sm text-brand-700 underline hover:text-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                                >
+                                    ← Plans
+                                </button>
+                            )}
+                        </div>
 
-                    <Field label="Phone (optional)" htmlFor="phone" hint={FIELD_HINTS.phone}>
-                        <TextInput
-                            id="phone"
-                            type="tel"
-                            name="phone"
-                            value={data.phone}
-                            className="mt-1 block w-full"
-                            autoComplete="tel"
-                            onChange={(e) => setData('phone', e.target.value)}
-                            placeholder="+1 555 123 4567"
-                        />
-                        <InputError message={errors.phone} className="mt-2" />
-                    </Field>
+                        <PlanSummary plan={selectedPlan} variant="bar" />
 
-                    <Field label="Address Line 1" htmlFor="address_line1" hint={FIELD_HINTS.address_line1}>
-                        <TextInput
-                            id="address_line1"
-                            name="address_line1"
-                            value={data.address_line1}
-                            className="mt-1 block w-full"
-                            autoComplete="address-line1"
-                            onChange={(e) => setData('address_line1', e.target.value)}
-                            placeholder="123 Main St"
-                        />
-                        <InputError message={errors.address_line1} className="mt-2" />
-                    </Field>
+                        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
+                            <form onSubmit={submit} className="mt-8">
+                                <div className="sl-honey" aria-hidden="true">
+                                    <label htmlFor="website">Website</label>
+                                    <input
+                                        id="website"
+                                        data-testid="honeypot-website"
+                                        tabIndex={-1}
+                                        autoComplete="off"
+                                        type="text"
+                                        name="website"
+                                        value={data.website}
+                                        onChange={(e) => setData('website', e.target.value)}
+                                    />
+                                </div>
 
-                    <Field label="Address Line 2" htmlFor="address_line2" hint={FIELD_HINTS.address_line2}>
-                        <TextInput
-                            id="address_line2"
-                            name="address_line2"
-                            value={data.address_line2}
-                            className="mt-1 block w-full"
-                            autoComplete="address-line2"
-                            onChange={(e) => setData('address_line2', e.target.value)}
-                            placeholder="Suite 400"
-                        />
-                        <InputError message={errors.address_line2} className="mt-2" />
-                    </Field>
+                                <ErrorSummary errors={errors} onFocusField={focusField} />
 
-                    <div className="grid gap-x-4 sm:grid-cols-3">
-                        <Field label="City" htmlFor="city" hint={FIELD_HINTS.city}>
-                            <TextInput
-                                id="city"
-                                name="city"
-                                value={data.city}
-                                className="mt-1 block w-full"
-                                autoComplete="address-level2"
-                                onChange={(e) => setData('city', e.target.value)}
-                                placeholder="Springfield"
-                            />
-                            <InputError message={errors.city} className="mt-2" />
-                        </Field>
+                                <Fieldset className="mt-8">
+                                    <Legend>Your workspace</Legend>
 
-                        <Field label="State / Province" htmlFor="state" hint={FIELD_HINTS.state}>
-                            <TextInput
-                                id="state"
-                                name="state"
-                                value={data.state}
-                                className="mt-1 block w-full"
-                                autoComplete="address-level1"
-                                onChange={(e) => setData('state', e.target.value)}
-                                placeholder="IL"
-                            />
-                            <InputError message={errors.state} className="mt-2" />
-                        </Field>
+                                    <FormField
+                                        label="Company Name"
+                                        htmlFor="company_name"
+                                        hint={FIELD_HINTS.company_name}
+                                        error={errors.company_name}
+                                        required
+                                    >
+                                        <TextInput
+                                            id="company_name"
+                                            ref={companyRef}
+                                            name="company_name"
+                                            value={data.company_name}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.company_name)}
+                                            autoComplete="organization"
+                                            onChange={(e) => setData('company_name', e.target.value)}
+                                            placeholder="e.g., Acme Corp LLC"
+                                            required
+                                        />
+                                    </FormField>
 
-                        <Field label="Postal Code" htmlFor="postal_code" hint={FIELD_HINTS.postal_code}>
-                            <TextInput
-                                id="postal_code"
-                                name="postal_code"
-                                value={data.postal_code}
-                                className="mt-1 block w-full"
-                                autoComplete="postal-code"
-                                onChange={(e) => setData('postal_code', e.target.value)}
-                                placeholder="62701"
-                            />
-                            <InputError message={errors.postal_code} className="mt-2" />
-                        </Field>
-                    </div>
+                                    <FormField
+                                        label="Workspace Address"
+                                        htmlFor="subdomain"
+                                        hint={FIELD_HINTS.subdomain}
+                                        error={errors.subdomain}
+                                    >
+                                        <TextInput
+                                            id="subdomain"
+                                            name="subdomain"
+                                            value={data.subdomain}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.subdomain)}
+                                            autoComplete="off"
+                                            spellCheck={false}
+                                            onChange={(e) => {
+                                                subdomainTouched.current = true;
+                                                setData('subdomain', e.target.value);
+                                            }}
+                                            placeholder="your-workspace"
+                                        />
 
-                    <Field label="Country" htmlFor="country" hint={FIELD_HINTS.country}>
-                        <TextInput
-                            id="country"
-                            name="country"
-                            value={data.country}
-                            className="mt-1 block w-full"
-                            autoComplete="country-name"
-                            onChange={(e) => setData('country', e.target.value)}
-                            placeholder="United States"
-                        />
-                        <InputError message={errors.country} className="mt-2" />
-                    </Field>
+                                        <p aria-live="polite" data-testid="subdomain-preview" className="text-xs text-gray-500">
+                                            Your workspace address will be{' '}
+                                            <span className="font-medium text-gray-700">
+                                                {data.subdomain || slug || 'your-workspace'}.{tenant_domain_suffix}
+                                            </span>
+                                        </p>
+                                    </FormField>
 
-                    <div className="mt-4">
-                        <InputLabel htmlFor="password" value="Password" />
+                                    <FormField
+                                        label="Workspace name"
+                                        htmlFor="name"
+                                        hint="Shown in the sidebar and on invoices"
+                                        error={errors.name}
+                                        required
+                                    >
+                                        <TextInput
+                                            id="name"
+                                            name="name"
+                                            value={data.name}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.name)}
+                                            autoComplete="name"
+                                            onChange={(e) => setData('name', e.target.value)}
+                                            placeholder="e.g., Acme Corp"
+                                            required
+                                        />
+                                    </FormField>
 
-                        <TextInput
-                            id="password"
-                            type="password"
-                            name="password"
-                            value={data.password}
-                            className="mt-1 block w-full"
-                            autoComplete="new-password"
-                            onChange={(e) => setData('password', e.target.value)}
-                            required
-                        />
+                                    <FormField
+                                        label="Email"
+                                        htmlFor="email"
+                                        hint="Primary contact email for this tenant"
+                                        error={errors.email}
+                                        required
+                                    >
+                                        <TextInput
+                                            id="email"
+                                            type="email"
+                                            name="email"
+                                            value={data.email}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.email)}
+                                            autoComplete="username"
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            placeholder="admin@tenant.com"
+                                            required
+                                        />
+                                    </FormField>
+                                </Fieldset>
 
-                        <InputError message={errors.password} className="mt-2" />
-                    </div>
+                                <Fieldset className="mt-8">
+                                    <Legend>Secure your account</Legend>
 
-                    <div className="mt-4">
-                        <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
+                                    <div>
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex items-baseline gap-1">
+                                                <InputLabel htmlFor="password" value="Password" />
+                                                <span aria-hidden="true" className="text-brand-700">
+                                                    *
+                                                </span>
+                                            </div>
 
-                        <TextInput
-                            id="password_confirmation"
-                            type="password"
-                            name="password_confirmation"
-                            value={data.password_confirmation}
-                            className="mt-1 block w-full"
-                            autoComplete="new-password"
-                            onChange={(e) => setData('password_confirmation', e.target.value)}
-                            required
-                        />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword((v) => !v)}
+                                                aria-pressed={showPassword}
+                                                data-testid="password-visibility-toggle"
+                                                className="shrink-0 rounded-md text-xs font-medium text-brand-700 underline underline-offset-2 hover:text-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                                            >
+                                                {showPassword ? 'Hide password' : 'Show password'}
+                                            </button>
+                                        </div>
 
-                        <InputError message={errors.password_confirmation} className="mt-2" />
-                    </div>
+                                        <TextInput
+                                            id="password"
+                                            type={showPassword ? 'text' : 'password'}
+                                            name="password"
+                                            value={data.password}
+                                            className="mt-1.5 block w-full"
+                                            invalid={Boolean(errors.password)}
+                                            aria-describedby="password-hint"
+                                            aria-invalid={errors.password ? 'true' : undefined}
+                                            autoComplete="new-password"
+                                            onChange={(e) => setData('password', e.target.value)}
+                                            required
+                                        />
 
-                    <div className="mt-4">
-                        <label htmlFor="terms" className="flex items-start text-sm text-gray-600">
-                            <input
-                                id="terms"
-                                type="checkbox"
-                                name="terms"
-                                checked={data.terms}
-                                onChange={(e) => setData('terms', e.target.checked)}
-                                className="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
-                                required
-                            />
-                            <span className="ms-2">
-                                I agree to the terms of service and privacy policy.
-                            </span>
-                        </label>
+                                        <p id="password-hint" className="mt-1 text-xs text-gray-500">
+                                            At least 8 characters.
+                                        </p>
 
-                        <InputError message={errors.terms} className="mt-2" />
-                    </div>
+                                        <InputError
+                                            id="password-error"
+                                            message={errors.password}
+                                            className="mt-1"
+                                        />
+                                    </div>
 
-                    <InputError message={errors.plan} className="mt-2" />
-                    <InputError message={errors.provisioning} className="mt-4" />
+                                    <FormField
+                                        label="Confirm Password"
+                                        htmlFor="password_confirmation"
+                                        error={errors.password_confirmation}
+                                        required
+                                    >
+                                        <TextInput
+                                            id="password_confirmation"
+                                            type={showPassword ? 'text' : 'password'}
+                                            name="password_confirmation"
+                                            value={data.password_confirmation}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.password_confirmation)}
+                                            autoComplete="new-password"
+                                            onChange={(e) => setData('password_confirmation', e.target.value)}
+                                            required
+                                        />
+                                    </FormField>
 
-                    <div className="mt-6">
-                        <PrimaryButton className="w-full" disabled={processing}>
-                            Create workspace
-                        </PrimaryButton>
-                    </div>
-                </form>
-            )}
+                                    <div>
+                                        <label htmlFor="terms" className="flex items-start text-sm text-gray-700">
+                                            <input
+                                                id="terms"
+                                                type="checkbox"
+                                                name="terms"
+                                                checked={data.terms}
+                                                onChange={(e) => setData('terms', e.target.checked)}
+                                                className="mt-0.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                                                required
+                                            />
+                                            <span className="ms-2">
+                                                I agree to the terms of service and privacy policy.
+                                            </span>
+                                        </label>
+
+                                        <InputError
+                                            id="terms-error"
+                                            message={errors.terms}
+                                            className="mt-2"
+                                        />
+                                    </div>
+                                </Fieldset>
+
+                                <OptionalDetails
+                                    open={optionalOpen}
+                                    onToggle={() => setOptionalOpen((v) => !v)}
+                                    label="Contact & billing"
+                                    hint="Optional — billing address and a named contact for invoices"
+                                >
+                                    <div className="grid gap-x-4 sm:grid-cols-2">
+                                        <FormField
+                                            label="First Name"
+                                            htmlFor="first_name"
+                                            hint={FIELD_HINTS.first_name}
+                                            error={errors.first_name}
+                                        >
+                                            <TextInput
+                                                id="first_name"
+                                                name="first_name"
+                                                value={data.first_name}
+                                                className="block w-full"
+                                                invalid={Boolean(errors.first_name)}
+                                                autoComplete="section-contact given-name"
+                                                onChange={(e) => setData('first_name', e.target.value)}
+                                                placeholder="Jane"
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="Last Name"
+                                            htmlFor="last_name"
+                                            hint={FIELD_HINTS.last_name}
+                                            error={errors.last_name}
+                                        >
+                                            <TextInput
+                                                id="last_name"
+                                                name="last_name"
+                                                value={data.last_name}
+                                                className="block w-full"
+                                                invalid={Boolean(errors.last_name)}
+                                                autoComplete="section-contact family-name"
+                                                onChange={(e) => setData('last_name', e.target.value)}
+                                                placeholder="Doe"
+                                            />
+                                        </FormField>
+                                    </div>
+
+                                    <FormField
+                                        label="Phone (optional)"
+                                        htmlFor="phone"
+                                        hint={FIELD_HINTS.phone}
+                                        error={errors.phone}
+                                    >
+                                        <TextInput
+                                            id="phone"
+                                            type="tel"
+                                            name="phone"
+                                            value={data.phone}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.phone)}
+                                            autoComplete="section-contact tel"
+                                            onChange={(e) => setData('phone', e.target.value)}
+                                            placeholder="+1 555 123 4567"
+                                        />
+                                    </FormField>
+
+                                    <FormField
+                                        label="Address Line 1"
+                                        htmlFor="address_line1"
+                                        hint={FIELD_HINTS.address_line1}
+                                        error={errors.address_line1}
+                                    >
+                                        <TextInput
+                                            id="address_line1"
+                                            name="address_line1"
+                                            value={data.address_line1}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.address_line1)}
+                                            autoComplete="section-billing address-line1"
+                                            onChange={(e) => setData('address_line1', e.target.value)}
+                                            placeholder="123 Main St"
+                                        />
+                                    </FormField>
+
+                                    <FormField
+                                        label="Address Line 2"
+                                        htmlFor="address_line2"
+                                        hint={FIELD_HINTS.address_line2}
+                                        error={errors.address_line2}
+                                    >
+                                        <TextInput
+                                            id="address_line2"
+                                            name="address_line2"
+                                            value={data.address_line2}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.address_line2)}
+                                            autoComplete="section-billing address-line2"
+                                            onChange={(e) => setData('address_line2', e.target.value)}
+                                            placeholder="Suite 400"
+                                        />
+                                    </FormField>
+
+                                    <div className="grid gap-x-4 sm:grid-cols-3">
+                                        <FormField label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
+                                            <TextInput
+                                                id="city"
+                                                name="city"
+                                                value={data.city}
+                                                className="block w-full"
+                                                invalid={Boolean(errors.city)}
+                                                autoComplete="section-billing address-level2"
+                                                onChange={(e) => setData('city', e.target.value)}
+                                                placeholder="Springfield"
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="State / Province"
+                                            htmlFor="state"
+                                            hint={FIELD_HINTS.state}
+                                            error={errors.state}
+                                        >
+                                            <TextInput
+                                                id="state"
+                                                name="state"
+                                                value={data.state}
+                                                className="block w-full"
+                                                invalid={Boolean(errors.state)}
+                                                autoComplete="section-billing address-level1"
+                                                onChange={(e) => setData('state', e.target.value)}
+                                                placeholder="IL"
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="Postal Code"
+                                            htmlFor="postal_code"
+                                            hint={FIELD_HINTS.postal_code}
+                                            error={errors.postal_code}
+                                        >
+                                            <TextInput
+                                                id="postal_code"
+                                                name="postal_code"
+                                                value={data.postal_code}
+                                                className="block w-full"
+                                                invalid={Boolean(errors.postal_code)}
+                                                autoComplete="section-billing postal-code"
+                                                onChange={(e) => setData('postal_code', e.target.value)}
+                                                placeholder="62701"
+                                            />
+                                        </FormField>
+                                    </div>
+
+                                    <FormField
+                                        label="Country"
+                                        htmlFor="country"
+                                        hint={FIELD_HINTS.country}
+                                        error={errors.country}
+                                    >
+                                        <TextInput
+                                            id="country"
+                                            name="country"
+                                            value={data.country}
+                                            className="block w-full"
+                                            invalid={Boolean(errors.country)}
+                                            autoComplete="section-billing country-name"
+                                            onChange={(e) => setData('country', e.target.value)}
+                                            placeholder="United States"
+                                        />
+                                    </FormField>
+                                </OptionalDetails>
+
+                                <div className="mt-8">
+                                    <PrimaryButton
+                                        type="submit"
+                                        className="w-full"
+                                        disabled={processing}
+                                        loading={processing}
+                                        loadingText="Creating your workspace…"
+                                        data-testid="submit-button"
+                                    >
+                                        Create workspace
+                                    </PrimaryButton>
+                                </div>
+                            </form>
+
+                            <PlanSummary plan={selectedPlan} variant="rail" />
+                        </div>
+                    </>
+                )}
+            </div>
         </GuestLayout>
     );
 }

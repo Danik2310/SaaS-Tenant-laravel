@@ -27,6 +27,7 @@
     --ease-entrance: cubic-bezier(0.22, 1, 0.36, 1);
     --dur-fast: 150ms;
     --dur-standard: 300ms;
+    --dur-step: 300ms;
     --dur-reveal: 600ms;
 }
 
@@ -59,12 +60,59 @@
     .animate-sli-fade-up {
         animation: sli-fade-up var(--dur-reveal) var(--ease-entrance) both;
     }
+
+    @keyframes sli-step-in {
+        from {
+            opacity: 0;
+            transform: translateX(8px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .animate-sli-step-in {
+        animation: sli-step-in var(--dur-step) var(--ease-entrance) both;
+    }
+
+    @keyframes sli-fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .animate-sli-fade-in {
+        animation: sli-fade-in var(--dur-fast) var(--ease-entrance) both;
+    }
+}
+
+/* Offscreen honeypot: keeps the field out of view and out of the tab order
+   without display:none, which bots detect and which breaks autofill parity. */
+@layer utilities {
+    .sl-honey {
+        position: absolute;
+        left: -9999px;
+        top: auto;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .reveal,
     .reveal.is-visible,
-    .animate-sli-fade-up {
+    .animate-sli-fade-up,
+    .animate-sli-step-in,
+    .animate-sli-fade-in {
         animation: none !important;
         transition: none !important;
         opacity: 1 !important;
