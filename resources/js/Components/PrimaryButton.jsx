@@ -1,15 +1,48 @@
-export default function PrimaryButton({ className = '', disabled, children, ...props }) {
+export default function PrimaryButton({
+    className = '',
+    disabled,
+    loading = false,
+    loadingText,
+    children,
+    ...props
+}) {
+    const isBusy = Boolean(loading || disabled);
+
     return (
         <button
             {...props}
             className={
-                `inline-flex items-center justify-center px-6 py-2.5 bg-brand-500 border border-transparent rounded-full font-semibold text-sm text-white hover:bg-brand-600 focus:bg-brand-600 active:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition ease-in-out duration-150 ${
-                    disabled && 'opacity-25'
+                `inline-flex items-center justify-center gap-2 rounded-full border border-transparent bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition ease-in-out duration-150 hover:bg-brand-800 active:bg-brand-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    isBusy && 'opacity-50'
                 } ` + className
             }
-            disabled={disabled}
+            disabled={isBusy}
+            aria-busy={loading ? 'true' : undefined}
         >
-            {children}
+            {loading && (
+                <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="h-4 w-4 animate-spin"
+                >
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        stroke="currentColor"
+                        strokeOpacity="0.3"
+                        strokeWidth="3"
+                    />
+                    <path
+                        d="M21 12a9 9 0 0 0-9-9"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                    />
+                </svg>
+            )}
+            {loading && loadingText ? loadingText : children}
         </button>
     );
 }
