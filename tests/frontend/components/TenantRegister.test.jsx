@@ -16,26 +16,29 @@ const { useFormMock, lastForm } = vi.hoisted(() => {
 vi.mock('@inertiajs/react', async () => {
     const ReactActual = await import('react');
 
-    useFormMock.mockImplementation((initial) => {
-        const [data, setData] = ReactActual.useState(initial);
-
-        return {
-            data,
-            setData: (key, value) => setData((prev) => ({ ...prev, [key]: value })),
-            post: vi.fn(),
-            processing: false,
-            errors: {},
-            reset: vi.fn(),
-        };
-    });
-
     return {
-        Head: () => null,
+        Head: ({ children }) => ReactActual.createElement(ReactActual.Fragment, null, children),
         Link: ({ href, children, ...rest }) =>
             ReactActual.createElement('a', { href, ...rest }, children),
         useForm: useFormMock,
     };
 });
+
+/** Installs the Inertia useForm stub. Overridden per-test to assert error states. */
+const mockForm = ({ errors = {}, processing = false } = {}) => {
+    useFormMock.mockImplementation((initial) => {
+        const [data, setData] = React.useState(initial);
+
+        return {
+            data,
+            setData: (key, value) => setData((prev) => ({ ...prev, [key]: value })),
+            post: vi.fn(),
+            processing,
+            errors,
+            reset: vi.fn(),
+        };
+    });
+};
 
 const plans = [
     { slug: 'trial', name: 'Trial', price: 0, currency: 'USD', duration_months: 1, can_signup: true, features: [], limits: {} },
@@ -43,21 +46,30 @@ const plans = [
     { slug: 'growth', name: 'Growth', price: 15, currency: 'USD', duration_months: 1, can_signup: true, features: [], limits: {} },
 ];
 
+const featureDefinitions = {
+    inventory: { label: 'Inventory management' },
+    reports: { label: 'Advanced reports' },
+    api: { label: 'API access' },
+    webhooks: { label: 'Webhooks' },
+    sso: { label: 'Single sign-on' },
+};
+
 describe('TenantRegister', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mockForm();
         global.route = vi.fn((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
         global.route.mockImplementation((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
     });
 
-    test('renders the plan carousel before the form', () => {
+    test('renders the plan grid before the form', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
-        expect(screen.getByTestId('plan-carousel')).toBeInTheDocument();
+        expect(screen.getByTestId('plan-grid')).toBeInTheDocument();
         expect(screen.getByTestId('plan-card-trial')).toBeInTheDocument();
         expect(screen.getByTestId('plan-card-free')).toBeInTheDocument();
         expect(screen.getByTestId('plan-card-growth')).toBeInTheDocument();
-        expect(screen.queryByLabelText('Tenant Name')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Workspace name')).not.toBeInTheDocument();
     });
 
     test('shows the full form after a plan is selected', () => {
@@ -65,13 +77,13 @@ describe('TenantRegister', () => {
 
         fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
 
-        expect(screen.queryByTestId('plan-carousel')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('plan-grid')).not.toBeInTheDocument();
         expect(lastForm().data.plan).toBe('trial');
-        expect(screen.getByLabelText('Tenant Name')).toBeInTheDocument();
+        expect(screen.getByLabelText('Workspace name')).toBeInTheDocument();
         expect(screen.getByLabelText('Email')).toBeInTheDocument();
         expect(screen.getByLabelText('Company Name')).toBeInTheDocument();
         expect(screen.getByLabelText('Workspace Address')).toBeInTheDocument();
-        expect(screen.getByText('Business & Contact Information')).toBeInTheDocument();
+        expect(screen.getByText('Contact & billing')).toBeInTheDocument();
         expect(screen.getByLabelText('First Name')).toBeInTheDocument();
         expect(screen.getByLabelText('Last Name')).toBeInTheDocument();
         expect(screen.getByLabelText('Phone (optional)')).toBeInTheDocument();
@@ -86,21 +98,21 @@ describe('TenantRegister', () => {
         expect(screen.getByRole('checkbox', { name: /terms of service/i })).toBeInTheDocument();
     });
 
-    test('back button returns to the plan carousel', () => {
+    test('back button returns to the plan grid', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
         fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
         fireEvent.click(screen.getByRole('button', { name: /← plans/i }));
 
-        expect(screen.getByTestId('plan-carousel')).toBeInTheDocument();
-        expect(screen.queryByLabelText('Tenant Name')).not.toBeInTheDocument();
+        expect(screen.getByTestId('plan-grid')).toBeInTheDocument();
+        expect(screen.queryByLabelText('Workspace name')).not.toBeInTheDocument();
     });
 
     test('shows the form immediately when a plan is preselected', () => {
         render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
 
-        expect(screen.queryByTestId('plan-carousel')).not.toBeInTheDocument();
-        expect(screen.getByLabelText('Tenant Name')).toBeInTheDocument();
+        expect(screen.queryByTestId('plan-grid')).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Workspace name')).toBeInTheDocument();
         expect(lastForm().data.plan).toBe('trial');
     });
 
@@ -184,5 +196,198 @@ describe('TenantRegister', () => {
             'href',
             'https://acme-corp.sasapp/login'
         );
+    });
+
+    test('renders a grid with no carousel controls', () => {
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+
+        expect(screen.queryByRole('button', { name: /next plans/i })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /previous plans/i })).not.toBeInTheDocument();
+        expect(screen.queryAllByTestId(/carousel-/)).toHaveLength(0);
+    });
+
+    test('marks the growth plan as most popular', () => {
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+
+        expect(screen.getByTestId('plan-card-growth')).toHaveAttribute('data-recommended', 'true');
+        expect(screen.getByTestId('plan-card-growth')).toHaveTextContent('Most popular');
+        expect(screen.getByTestId('plan-card-trial')).toHaveAttribute('data-recommended', 'false');
+    });
+
+    test('resolves feature labels from the feature definitions with a raw key fallback', () => {
+        const withFeatures = [
+            {
+                ...plans[2],
+                features: ['inventory', 'unknown_key', 'api', 'webhooks', 'sso'],
+            },
+        ];
+
+        render(
+            <TenantRegister
+                plans={withFeatures}
+                feature_definitions={featureDefinitions}
+                tenant_domain_suffix="sasapp"
+            />
+        );
+
+        const card = screen.getByTestId('plan-card-growth');
+
+        expect(card).toHaveTextContent('Inventory management');
+        expect(card).toHaveTextContent('API access');
+
+        // Unknown feature keys fall back to the raw key instead of rendering blank.
+        expect(card).toHaveTextContent('unknown_key');
+
+        // Features past the fourth are summarised rather than listed in full.
+        expect(card).not.toHaveTextContent('Single sign-on');
+        expect(card).toHaveTextContent('+1 more');
+    });
+
+    test('moves focus to the first required field after selecting a plan', () => {
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
+
+        expect(screen.getByLabelText('Company Name')).toHaveFocus();
+    });
+
+    test('moves focus back to the plan heading when returning to the plans', () => {
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
+        fireEvent.click(screen.getByRole('button', { name: /← plans/i }));
+
+        expect(screen.getByRole('heading', { level: 1, name: /pick your workspace plan/i })).toHaveFocus();
+    });
+
+    test('announces the current signup step', () => {
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+
+        expect(screen.getByTestId('step-indicator')).toBeInTheDocument();
+        expect(screen.getByTestId('step-1')).toHaveAttribute('aria-current', 'step');
+
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
+
+        expect(screen.getByTestId('step-2')).toHaveAttribute('aria-current', 'step');
+        expect(screen.getByText(/step 2 of 2: workspace details/i)).toBeInTheDocument();
+    });
+
+    test('keeps the optional details collapsed but mounted', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        const toggle = screen.getByTestId('optional-details-toggle');
+
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getByLabelText('First Name')).toBeInTheDocument();
+        expect(screen.queryByRole('textbox', { name: 'First Name' })).not.toBeInTheDocument();
+
+        fireEvent.click(toggle);
+
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByRole('textbox', { name: 'First Name' })).toBeInTheDocument();
+    });
+
+    test('links the password hint to the password input', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        expect(screen.getByLabelText('Password')).toHaveAttribute('aria-describedby', 'password-hint');
+        expect(screen.getByText('At least 8 characters.')).toBeInTheDocument();
+    });
+
+    test('toggles password visibility', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        const toggle = screen.getByTestId('password-visibility-toggle');
+
+        expect(toggle).toHaveAttribute('aria-pressed', 'false');
+        expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password');
+
+        fireEvent.click(toggle);
+
+        expect(toggle).toHaveAttribute('aria-pressed', 'true');
+        expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text');
+    });
+
+    test('announces the generated workspace address', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        expect(screen.getByTestId('subdomain-preview')).toHaveAttribute('aria-live', 'polite');
+    });
+
+    test('keeps the honeypot out of the tab order', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        const honeypot = screen.getByTestId('honeypot-website');
+
+        expect(honeypot).toHaveAttribute('tabindex', '-1');
+        expect(honeypot.closest('[aria-hidden="true"]')).not.toBeNull();
+        expect(honeypot).toHaveAttribute('autocomplete', 'off');
+    });
+
+    test('keeps the selected plan visible while the form is filled in', () => {
+        render(<TenantRegister plans={plans} selected_plan="growth" tenant_domain_suffix="sasapp" />);
+
+        expect(screen.getByTestId('plan-summary')).toBeInTheDocument();
+        expect(screen.getByTestId('plan-summary-name')).toHaveTextContent('Growth');
+    });
+
+    test('marks the invalid field, links its error and focuses it', () => {
+        mockForm({ errors: { email: 'This email address is already registered.' } });
+
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        const email = screen.getByLabelText('Email');
+
+        expect(email).toHaveAttribute('aria-invalid', 'true');
+        expect(email).toHaveAttribute('aria-describedby', 'email-hint email-error');
+        expect(email).toHaveFocus();
+
+        // Reported twice on purpose: inline on the field, and in the summary banner.
+        expect(screen.getAllByText('This email address is already registered.')).toHaveLength(2);
+        expect(screen.getByTestId('form-error-banner')).toHaveTextContent(
+            'This email address is already registered.'
+        );
+    });
+
+    test('summarises every server error and offers a jump link per field', () => {
+        mockForm({
+            errors: {
+                provisioning: 'We could not provision your workspace.',
+                plan: 'Please choose a plan.',
+                website: 'Invalid submission.',
+                email: 'This email address is already registered.',
+            },
+        });
+
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        const banner = screen.getByTestId('form-error-banner');
+
+        expect(banner).toHaveAttribute('role', 'alert');
+        expect(banner).toHaveTextContent('We could not provision your workspace.');
+        expect(banner).toHaveTextContent('Please choose a plan.');
+        expect(banner).toHaveTextContent('Invalid submission.');
+        expect(screen.getByRole('button', { name: /go to email/i })).toBeInTheDocument();
+    });
+
+    test('expands the optional details when a hidden field fails validation', () => {
+        mockForm({ errors: { first_name: 'The first name must be at least 2 characters.' } });
+
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        expect(screen.getByTestId('optional-details-toggle')).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByLabelText('First Name')).toHaveFocus();
+    });
+
+    test('shows a pending state on the submit button while posting', () => {
+        mockForm({ processing: true });
+
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        const submit = screen.getByTestId('submit-button');
+
+        expect(submit).toBeDisabled();
+        expect(submit).toHaveAttribute('aria-busy', 'true');
+        expect(submit).toHaveTextContent('Creating your workspace');
     });
 });
