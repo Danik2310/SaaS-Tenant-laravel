@@ -75,8 +75,6 @@ describe('TenantRegister', () => {
     test('shows the full form after a plan is selected', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
-        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
-
         expect(screen.queryByTestId('plan-grid')).not.toBeInTheDocument();
         expect(lastForm().data.plan).toBe('trial');
         expect(screen.getByLabelText('Workspace name')).toBeInTheDocument();
@@ -199,11 +197,18 @@ describe('TenantRegister', () => {
     });
 
     test('renders a grid with no carousel controls', () => {
-        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" trial_days={21} />);
 
         expect(screen.queryByRole('button', { name: /next plans/i })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /previous plans/i })).not.toBeInTheDocument();
         expect(screen.queryAllByTestId(/carousel-/)).toHaveLength(0);
+        expect(screen.getByTestId('plan-grid')).toBeInTheDocument();
+    });
+
+    test('forwards the trial length to the plan cards', () => {
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" trial_days={21} />);
+
+        expect(screen.getByTestId('plan-card-trial')).toHaveTextContent('for 21 days');
     });
 
     test('marks the growth plan as most popular', () => {
@@ -246,8 +251,6 @@ describe('TenantRegister', () => {
     test('moves focus to the first required field after selecting a plan', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
-        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
-
         expect(screen.getByLabelText('Company Name')).toHaveFocus();
     });
 
@@ -265,8 +268,6 @@ describe('TenantRegister', () => {
 
         expect(screen.getByTestId('step-indicator')).toBeInTheDocument();
         expect(screen.getByTestId('step-1')).toHaveAttribute('aria-current', 'step');
-
-        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
 
         expect(screen.getByTestId('step-2')).toHaveAttribute('aria-current', 'step');
         expect(screen.getByText(/step 2 of 2: workspace details/i)).toBeInTheDocument();
