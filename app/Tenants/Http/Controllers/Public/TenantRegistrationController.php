@@ -40,6 +40,7 @@ class TenantRegistrationController extends Controller
             'plans' => $plans,
             'selected_plan' => $this->selectedPlan($plans),
             'tenant_domain_suffix' => config('tenancy.tenant_domain_suffix', 'sasapp'),
+            'trial_days' => (int) config('tenancy.trial_days', 14),
         ]);
     }
 
