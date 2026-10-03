@@ -1,6 +1,7 @@
 @import '@fontsource/archivo-black';
 @import '@fontsource/dm-sans/400.css';
 @import '@fontsource/dm-sans/500.css';
+@import '@fontsource/dm-sans/600.css';
 @import '@fontsource/dm-sans/700.css';
 
 @tailwind base;
@@ -88,7 +89,7 @@
     }
 
     .animate-sli-fade-in {
-        animation: sli-fade-in var(--dur-fast) var(--ease-entrance) both;
+        animation: sli-fade-in var(--dur-standard) var(--ease-entrance) both;
     }
 }
 
@@ -104,6 +105,20 @@
         overflow: hidden;
         opacity: 0;
         pointer-events: none;
+    }
+}
+
+/* Plan cards on /register. app.css already neutralises .reveal and
+   .animate-* under prefers-reduced-motion, but not Tailwind's transition-*
+   utilities — and the card gains a transform-based disclosure transition.
+   Scoped to this subtree; 0.01ms rather than `none` keeps transitionend
+   listeners alive. */
+@media (prefers-reduced-motion: reduce) {
+    .sl-plan-card,
+    .sl-plan-card * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
     }
 }
 
