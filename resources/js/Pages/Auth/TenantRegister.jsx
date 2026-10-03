@@ -65,6 +65,7 @@ export default function TenantRegister({
     selected_plan = null,
     tenant_domain_suffix,
     feature_definitions = {},
+    trial_days = 14,
 }) {
     const [showForm, setShowForm] = useState(Boolean(selected_plan));
     const [optionalOpen, setOptionalOpen] = useState(false);
@@ -227,9 +228,9 @@ export default function TenantRegister({
                             <PlanGrid
                                 plans={plans}
                                 featureDefinitions={feature_definitions}
+                                trialDays={trial_days}
                                 onSelect={handleSelect}
                                 processing={processing}
-                                headingId="plan-step-heading"
                             />
                         </div>
                     </>
