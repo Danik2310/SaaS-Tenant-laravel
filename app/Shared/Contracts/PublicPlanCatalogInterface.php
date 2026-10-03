@@ -20,7 +20,9 @@ interface PublicPlanCatalogInterface
      *     duration_months: int|null,
      *     can_signup: bool,
      *     limits: array{users: int|null, storage: int|null, warehouses: int|null, categories: int|null, products: int|null},
-     *     features: array<int, string>
+     *     features: array<int, string>,
+     *     summary: string|null,
+     *     footnote: string|null
      * }>
      */
     public function allSignupPlans(): array;

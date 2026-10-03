@@ -18,25 +18,32 @@ class PublicPlanCatalog implements PublicPlanCatalogInterface
     public function allSignupPlans(): array
     {
         $currency = (string) config('currency.base_currency', 'USD');
+        $copy = (array) config('plan_copy', []);
 
         return $this->activePlans()
-            ->map(fn (Plan $plan) => [
-                'slug' => (string) $plan->slug,
-                'name' => (string) $plan->name,
-                'status' => (string) $plan->status,
-                'price' => (string) $plan->price,
-                'currency' => $currency,
-                'duration_months' => $plan->duration_months !== null ? (int) $plan->duration_months : null,
-                'can_signup' => $this->isEligibleForPublicSignup($plan),
-                'limits' => [
-                    'users' => $plan->max_users !== null ? (int) $plan->max_users : null,
-                    'storage' => $plan->max_storage !== null ? (int) $plan->max_storage : null,
-                    'warehouses' => $plan->max_warehouses !== null ? (int) $plan->max_warehouses : null,
-                    'categories' => $plan->max_categories !== null ? (int) $plan->max_categories : null,
-                    'products' => $plan->max_products !== null ? (int) $plan->max_products : null,
-                ],
-                'features' => $plan->features,
-            ])
+            ->map(function (Plan $plan) use ($currency, $copy) {
+                $planCopy = $copy[$plan->slug] ?? [];
+
+                return [
+                    'slug' => (string) $plan->slug,
+                    'name' => (string) $plan->name,
+                    'status' => (string) $plan->status,
+                    'price' => (string) $plan->price,
+                    'currency' => $currency,
+                    'duration_months' => $plan->duration_months !== null ? (int) $plan->duration_months : null,
+                    'can_signup' => $this->isEligibleForPublicSignup($plan),
+                    'limits' => [
+                        'users' => $plan->max_users,
+                        'storage' => $plan->max_storage,
+                        'warehouses' => $plan->max_warehouses,
+                        'categories' => $plan->max_categories,
+                        'products' => $plan->max_products,
+                    ],
+                    'features' => $plan->features,
+                    'summary' => $planCopy['summary'] ?? null,
+                    'footnote' => $planCopy['footnote'] ?? null,
+                ];
+            })
             ->values()
             ->all();
     }
