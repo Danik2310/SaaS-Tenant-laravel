@@ -30,6 +30,7 @@
     --dur-standard: 300ms;
     --dur-step: 300ms;
     --dur-reveal: 600ms;
+    --dur-stagger: 80ms;
 }
 
 @layer components {
@@ -91,6 +92,71 @@
     .animate-sli-fade-in {
         animation: sli-fade-in var(--dur-standard) var(--ease-entrance) both;
     }
+
+    /* ------------------------------------------------------------------------
+       Interaction primitives
+
+       Motion contract for the public site:
+         - colour-only hovers   -> --dur-fast      (150ms)
+         - transform/shadow     -> --dur-standard  (300ms)
+         - scroll reveals       -> --dur-reveal    (600ms)
+         - stagger step         -> --dur-stagger   (80ms)
+       One easing curve for all of it.
+       --------------------------------------------------------------------- */
+
+    /* Menu / disclosure entrances. */
+    @keyframes sli-menu-in {
+        from {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .sl-menu-in {
+        animation: sli-menu-in var(--dur-fast) var(--ease-entrance) both;
+    }
+
+    @keyframes sli-panel-in {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .sl-panel-in {
+        animation: sli-panel-in var(--dur-fast) var(--ease-entrance) both;
+    }
+}
+
+/* Transform-based hover is gated on fine pointers. On touch, :hover latches
+   after a tap and leaves cards visibly shifted until the next tap elsewhere.
+
+   These rules are deliberately unlayered: unlayered CSS outranks @layer
+   components, and .sl-press:active below must win over .sl-cta:hover on a
+   fine-pointer device, otherwise pressing a CTA never acknowledges the tap.
+   Declared without a `transition` shorthand so each element keeps its own
+   Tailwind transition-* utility — that utility must list `transform` for the
+   scale to animate rather than snap. */
+@media (hover: hover) and (pointer: fine) {
+    .sl-lift:hover {
+        transform: translateY(-4px);
+    }
+
+    .sl-cta:hover {
+        transform: scale(1.02);
+    }
+}
+
+.sl-press:active {
+    transform: scale(0.97);
 }
 
 /* Offscreen honeypot: keeps the field out of view and out of the tab order
@@ -127,11 +193,23 @@
     .reveal.is-visible,
     .animate-sli-fade-up,
     .animate-sli-step-in,
-    .animate-sli-fade-in {
+    .animate-sli-fade-in,
+    .sl-menu-in,
+    .sl-panel-in,
+    .sl-lift,
+    .sl-cta,
+    .sl-press {
         animation: none !important;
         transition: none !important;
         opacity: 1 !important;
         transform: none !important;
+    }
+
+    .sl-marketing,
+    .sl-marketing * {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
     }
 
     *,
