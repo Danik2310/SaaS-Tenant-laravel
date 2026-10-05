@@ -105,6 +105,24 @@
         animation: sli-step-in var(--dur-step) var(--ease-entrance) both;
     }
 
+    /* The same transition played in reverse, for stepping back to the plan grid.
+       Without a direction-aware variant the return journey reads as forward
+       motion, which tells the user the step order is reversed. */
+    @keyframes sli-step-back {
+        from {
+            opacity: 0;
+            transform: translateX(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .animate-sli-step-back {
+        animation: sli-step-back var(--dur-step) var(--ease-entrance) both;
+    }
+
     @keyframes sli-fade-in {
         from {
             opacity: 0;
@@ -356,6 +374,7 @@
     .reveal.is-visible,
     .animate-sli-fade-up,
     .animate-sli-step-in,
+    .animate-sli-step-back,
     .animate-sli-fade-in,
     .sl-menu-in,
     .sl-panel-in,

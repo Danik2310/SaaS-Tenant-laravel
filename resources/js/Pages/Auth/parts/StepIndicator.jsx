@@ -7,32 +7,27 @@ export default function StepIndicator({ current }) {
     const activeIndex = STEPS.findIndex((step) => step.key === current);
 
     return (
-        <ol
-            data-testid="step-indicator"
-            className="flex items-center gap-2 text-xs font-semibold"
-            aria-label="Signup progress"
-        >
+        <ol data-testid="step-indicator" className="flex items-center gap-3" aria-label="Signup progress">
             {STEPS.map((step, index) => {
                 const isDone = index < activeIndex;
                 const isCurrent = index === activeIndex;
 
                 return (
-                    <li key={step.key} className="flex items-center gap-2">
+                    <li key={step.key} className="flex items-center gap-3">
                         <span
                             data-testid={`step-${index + 1}`}
                             aria-current={isCurrent ? 'step' : undefined}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${
-                                isCurrent
-                                    ? 'bg-ink text-white'
-                                    : isDone
-                                      ? 'bg-brand-700 text-white'
-                                      : 'bg-gray-100 text-gray-500'
+                            className={`inline-flex items-center gap-2 rounded-sm py-1 text-xs font-bold uppercase tracking-[0.2em] ${
+                                isCurrent ? 'text-white' : isDone ? 'text-brand-400' : 'text-white/50'
                             }`}
                         >
+                            {/* The numeral is decorative: at text-white/50 it sits near 5:1, but
+                                it is the label beside it that names the step for assistive tech.
+                                The sr-only text at the bottom of the list carries the count. */}
                             <span
                                 aria-hidden="true"
-                                className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] ${
-                                    isCurrent ? 'bg-white/20' : 'bg-black/10'
+                                className={`inline-flex h-5 w-5 items-center justify-center rounded-sm font-display text-[0.7rem] leading-none ${
+                                    isCurrent ? 'bg-brand-500 text-white' : isDone ? 'bg-brand-500/20 text-brand-400' : 'bg-white/10 text-white/60'
                                 }`}
                             >
                                 {index + 1}
@@ -43,7 +38,7 @@ export default function StepIndicator({ current }) {
                         {index < STEPS.length - 1 && (
                             <span
                                 aria-hidden="true"
-                                className={`h-px w-6 ${isDone ? 'bg-brand-300' : 'bg-gray-200'}`}
+                                className={`h-px w-10 transition-colors duration-300 ease-out ${isDone ? 'bg-brand-500/50' : 'bg-white/15'}`}
                             />
                         )}
                     </li>

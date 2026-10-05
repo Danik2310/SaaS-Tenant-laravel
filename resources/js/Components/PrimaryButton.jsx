@@ -1,5 +1,6 @@
 export default function PrimaryButton({
     className = '',
+    variant = 'primary',
     disabled,
     loading = false,
     loadingText,
@@ -8,13 +9,23 @@ export default function PrimaryButton({
 }) {
     const isBusy = Boolean(loading || disabled);
 
+    // `primary` keeps the dashboard's pill on a light surface: its focus ring is
+    // ink, which is invisible on the dark register field — hence the ring swap and
+    // the square radius in `ledger`, not a restyle of the shared default.
+    const variants = {
+        primary:
+            'rounded-full border border-transparent transition ease-in-out duration-150 focus-visible:ring-ink focus-visible:ring-offset-2',
+        ledger:
+            'rounded-sm border border-transparent sl-press transition-colors duration-300 ease-out focus-visible:ring-brand-500 focus-visible:ring-offset-ink',
+    };
+
     return (
         <button
             {...props}
             className={
-                `inline-flex items-center justify-center gap-2 rounded-full border border-transparent bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white transition ease-in-out duration-150 hover:bg-brand-800 active:bg-brand-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    isBusy && 'opacity-50'
-                } ` + className
+                `inline-flex items-center justify-center gap-2 bg-brand-700 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-800 active:bg-brand-900 focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    variants[variant] ?? variants.primary
+                } ${isBusy ? 'opacity-50' : ''} ` + className
             }
             disabled={isBusy}
             aria-busy={loading ? 'true' : undefined}

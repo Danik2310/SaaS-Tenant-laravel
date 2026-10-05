@@ -34,7 +34,7 @@ export default function ErrorSummary({ errors, onFocusField }) {
         <div
             role="alert"
             data-testid="form-error-banner"
-            className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            className="rounded-sm border border-red-400/40 bg-red-400/10 p-4 text-sm !text-brand-200"
         >
             {globalEntries.length > 0 && (
                 <ul className="space-y-1">
@@ -52,7 +52,7 @@ export default function ErrorSummary({ errors, onFocusField }) {
                             <button
                                 type="button"
                                 onClick={() => onFocusField(entry.key)}
-                                className="font-semibold underline underline-offset-2 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                                className="rounded-sm font-semibold underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
                             >
                                 Go to {entry.label.toLowerCase()}
                             </button>

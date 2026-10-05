@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import GuestLayout from '@/Layouts/GuestLayout';
+import LedgerLayout from '@/Layouts/LedgerLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -50,7 +50,7 @@ const FIELD_HINTS = {
 
 function Legend({ children }) {
     return (
-        <legend className="text-sm font-bold uppercase tracking-[0.14em] text-gray-900">
+        <legend className="text-xs font-bold uppercase tracking-[0.2em] text-brand-400">
             {children}
         </legend>
     );
@@ -194,7 +194,7 @@ export default function TenantRegister({
     const stepAnimation = prefersReducedMotion ? undefined : 'animate-sli-step-in';
 
     return (
-        <GuestLayout wide>
+        <LedgerLayout>
             <Head title={showForm ? 'Create your workspace' : 'Choose your plan'} />
 
             <p aria-live="polite" role="status" className="sr-only">
@@ -207,18 +207,18 @@ export default function TenantRegister({
                 {!showForm ? (
                     <>
                         <div className="mt-8">
-                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-400">
                                 Step 1
                             </p>
                             <h1
                                 id="plan-step-heading"
                                 ref={planHeadingRef}
                                 tabIndex={-1}
-                                className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink focus:outline-none"
+                                className="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-tight text-balance text-white focus:outline-none"
                             >
-                                Pick your workspace plan
+                                Choose the plan your shop will grow into
                             </h1>
-                            <p className="mt-2 max-w-prose text-sm text-gray-600">
+                            <p className="mt-3 max-w-prose text-sm leading-relaxed text-white/60">
                                 Every plan includes a 14-day trial of the paid features. Pick the one that fits
                                 how many people and locations you need to run.
                             </p>
@@ -238,13 +238,13 @@ export default function TenantRegister({
                     <>
                         <div className="mt-8 flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+                                <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-400">
                                     Step 2
                                 </p>
-                                <h1 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">
+                                <h1 className="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-tight text-balance text-white">
                                     Create your workspace
                                 </h1>
-                                <p className="mt-2 max-w-prose text-sm text-gray-600">
+                                <p className="mt-3 max-w-prose text-sm leading-relaxed text-white/60">
                                     Fields marked <span className="font-semibold">*</span> are required. Everything
                                     else is optional and can be filled in later.
                                 </p>
@@ -255,7 +255,7 @@ export default function TenantRegister({
                                     type="button"
                                     onClick={handleBackToPlans}
                                     data-testid="back-to-plans"
-                                    className="shrink-0 rounded-md text-sm text-brand-700 underline hover:text-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                                    className="shrink-0 rounded-sm text-sm font-medium text-white/60 underline underline-offset-4 transition-colors duration-150 ease-out hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
                                 >
                                     ← Plans
                                 </button>
@@ -286,6 +286,7 @@ export default function TenantRegister({
                                     <Legend>Your workspace</Legend>
 
                                     <FormField
+                                            row
                                         label="Company Name"
                                         htmlFor="company_name"
                                         hint={FIELD_HINTS.company_name}
@@ -293,6 +294,7 @@ export default function TenantRegister({
                                         required
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="company_name"
                                             ref={companyRef}
                                             name="company_name"
@@ -307,12 +309,14 @@ export default function TenantRegister({
                                     </FormField>
 
                                     <FormField
+                                            row
                                         label="Workspace Address"
                                         htmlFor="subdomain"
                                         hint={FIELD_HINTS.subdomain}
                                         error={errors.subdomain}
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="subdomain"
                                             name="subdomain"
                                             value={data.subdomain}
@@ -336,6 +340,7 @@ export default function TenantRegister({
                                     </FormField>
 
                                     <FormField
+                                            row
                                         label="Workspace name"
                                         htmlFor="name"
                                         hint="Shown in the sidebar and on invoices"
@@ -343,6 +348,7 @@ export default function TenantRegister({
                                         required
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="name"
                                             name="name"
                                             value={data.name}
@@ -356,6 +362,7 @@ export default function TenantRegister({
                                     </FormField>
 
                                     <FormField
+                                            row
                                         label="Email"
                                         htmlFor="email"
                                         hint="Primary contact email for this tenant"
@@ -363,6 +370,7 @@ export default function TenantRegister({
                                         required
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="email"
                                             type="email"
                                             name="email"
@@ -401,6 +409,7 @@ export default function TenantRegister({
                                         </div>
 
                                         <TextInput
+                                                tone="dark"
                                             id="password"
                                             type={showPassword ? 'text' : 'password'}
                                             name="password"
@@ -426,12 +435,14 @@ export default function TenantRegister({
                                     </div>
 
                                     <FormField
+                                            row
                                         label="Confirm Password"
                                         htmlFor="password_confirmation"
                                         error={errors.password_confirmation}
                                         required
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="password_confirmation"
                                             type={showPassword ? 'text' : 'password'}
                                             name="password_confirmation"
@@ -476,12 +487,14 @@ export default function TenantRegister({
                                 >
                                     <div className="grid gap-x-4 sm:grid-cols-2">
                                         <FormField
+                                                row
                                             label="First Name"
                                             htmlFor="first_name"
                                             hint={FIELD_HINTS.first_name}
                                             error={errors.first_name}
                                         >
                                             <TextInput
+                                                    tone="dark"
                                                 id="first_name"
                                                 name="first_name"
                                                 value={data.first_name}
@@ -494,12 +507,14 @@ export default function TenantRegister({
                                         </FormField>
 
                                         <FormField
+                                                row
                                             label="Last Name"
                                             htmlFor="last_name"
                                             hint={FIELD_HINTS.last_name}
                                             error={errors.last_name}
                                         >
                                             <TextInput
+                                                    tone="dark"
                                                 id="last_name"
                                                 name="last_name"
                                                 value={data.last_name}
@@ -513,12 +528,14 @@ export default function TenantRegister({
                                     </div>
 
                                     <FormField
+                                            row
                                         label="Phone (optional)"
                                         htmlFor="phone"
                                         hint={FIELD_HINTS.phone}
                                         error={errors.phone}
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="phone"
                                             type="tel"
                                             name="phone"
@@ -532,12 +549,14 @@ export default function TenantRegister({
                                     </FormField>
 
                                     <FormField
+                                            row
                                         label="Address Line 1"
                                         htmlFor="address_line1"
                                         hint={FIELD_HINTS.address_line1}
                                         error={errors.address_line1}
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="address_line1"
                                             name="address_line1"
                                             value={data.address_line1}
@@ -550,12 +569,14 @@ export default function TenantRegister({
                                     </FormField>
 
                                     <FormField
+                                            row
                                         label="Address Line 2"
                                         htmlFor="address_line2"
                                         hint={FIELD_HINTS.address_line2}
                                         error={errors.address_line2}
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="address_line2"
                                             name="address_line2"
                                             value={data.address_line2}
@@ -568,8 +589,9 @@ export default function TenantRegister({
                                     </FormField>
 
                                     <div className="grid gap-x-4 sm:grid-cols-3">
-                                        <FormField label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
+                                        <FormField row label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
                                             <TextInput
+                                                    tone="dark"
                                                 id="city"
                                                 name="city"
                                                 value={data.city}
@@ -582,12 +604,14 @@ export default function TenantRegister({
                                         </FormField>
 
                                         <FormField
+                                                row
                                             label="State / Province"
                                             htmlFor="state"
                                             hint={FIELD_HINTS.state}
                                             error={errors.state}
                                         >
                                             <TextInput
+                                                    tone="dark"
                                                 id="state"
                                                 name="state"
                                                 value={data.state}
@@ -600,12 +624,14 @@ export default function TenantRegister({
                                         </FormField>
 
                                         <FormField
+                                                row
                                             label="Postal Code"
                                             htmlFor="postal_code"
                                             hint={FIELD_HINTS.postal_code}
                                             error={errors.postal_code}
                                         >
                                             <TextInput
+                                                    tone="dark"
                                                 id="postal_code"
                                                 name="postal_code"
                                                 value={data.postal_code}
@@ -619,12 +645,14 @@ export default function TenantRegister({
                                     </div>
 
                                     <FormField
+                                            row
                                         label="Country"
                                         htmlFor="country"
                                         hint={FIELD_HINTS.country}
                                         error={errors.country}
                                     >
                                         <TextInput
+                                                tone="dark"
                                             id="country"
                                             name="country"
                                             value={data.country}
@@ -656,6 +684,6 @@ export default function TenantRegister({
                     </>
                 )}
             </div>
-        </GuestLayout>
+        </LedgerLayout>
     );
 }

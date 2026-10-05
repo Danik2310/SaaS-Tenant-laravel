@@ -27,7 +27,7 @@ function CheckIcon({ tone }) {
  * never mounted, so the collapsed DOM — and therefore textContent — reflects
  * exactly what is on screen.
  */
-export default function PlanFeatures({ plan, featureDefinitions, tone = 'light' }) {
+export default function PlanFeatures({ plan, featureDefinitions, tone = 'plain' }) {
     const [expanded, setExpanded] = useState(false);
     const panelId = useId();
     const t = CARD_TONES[tone];
@@ -38,12 +38,14 @@ export default function PlanFeatures({ plan, featureDefinitions, tone = 'light' 
 
     return (
         <div className="mt-5">
-            <ul id={panelId} className={`space-y-2 leading-5 text-sm ${t.feature}`}>
+            {/* Ruled rows rather than a loose stack: the list reads as entries in
+                the same ledger as the limits below it, not as a bulleted feature blurb. */}
+            <ul id={panelId} className={`${t.hairlineDivide} divide-y leading-5 text-sm ${t.feature}`}>
                 {shown.length === 0 ? (
-                    <li className={`${t.summary} italic`}>Catalog, categories and a stock overview</li>
+                    <li className={`${t.summary} py-1.5 italic`}>Catalog, categories and a stock overview</li>
                 ) : (
                     shown.map((key) => (
-                        <li key={key} className="flex items-start gap-2.5">
+                        <li key={key} className="flex items-start gap-2.5 py-1.5">
                             <CheckIcon tone={tone} />
                             <span className="min-w-0 break-words">{featureLabel(featureDefinitions, key)}</span>
                         </li>
@@ -58,7 +60,7 @@ export default function PlanFeatures({ plan, featureDefinitions, tone = 'light' 
                     aria-expanded={expanded}
                     aria-controls={panelId}
                     data-testid={`plan-features-toggle-${plan.slug}`}
-                    className={`-my-1 mt-3 inline-flex min-h-6 items-center gap-1 rounded py-1 text-xs font-semibold underline underline-offset-4 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 ${t.focusRing}`}
+                    className={`-my-1 mt-3 inline-flex min-h-6 items-center gap-1 rounded-sm py-1 text-xs font-semibold underline underline-offset-4 transition-colors duration-150 ease-out focus:outline-none focus-visible:ring-2 ${t.focusRing}`}
                 >
                     +{hidden} more
                     <span className="sr-only"> features included in {plan.name}</span>

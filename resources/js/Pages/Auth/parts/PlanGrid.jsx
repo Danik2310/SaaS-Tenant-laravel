@@ -1,5 +1,5 @@
 import PlanCard from './PlanCard';
-import { isWideCard, planSpanClasses } from './planFormat';
+import { planSpanClasses } from './planFormat';
 
 export default function PlanGrid({
     plans,
@@ -14,10 +14,7 @@ export default function PlanGrid({
                 Available plans
             </h2>
 
-            <div
-                data-testid="plan-grid"
-                className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-5"
-            >
+            <div data-testid="plan-grid" className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 {plans.map((plan, index) => (
                     <PlanCard
                         key={plan.slug}
@@ -27,13 +24,12 @@ export default function PlanGrid({
                         index={index}
                         onSelect={onSelect}
                         processing={processing}
-                        wide={isWideCard(plans.length, index)}
                         className={planSpanClasses(plans.length, index)}
                     />
                 ))}
             </div>
 
-            <p className="mt-8 border-t border-gray-100 pt-6 text-center text-xs leading-relaxed text-gray-500 mx-auto max-w-prose">
+            <p className="mt-8 max-w-prose border-t border-white/10 pt-6 text-xs leading-relaxed text-white/50">
                 Paid plans are billed securely at checkout. Trials and free plans have no charge.
             </p>
         </section>

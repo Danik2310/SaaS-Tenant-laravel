@@ -16,16 +16,16 @@ export default function OptionalDetails({ open, onToggle, label, hint, children 
                 aria-expanded={open}
                 aria-controls={panelId}
                 data-testid="optional-details-toggle"
-                className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50/60 px-4 py-3 text-left text-sm font-semibold text-gray-700 transition-colors duration-150 hover:border-brand-300 hover:bg-brand-50/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                className="flex w-full items-center justify-between gap-3 rounded-sm border border-white/10 bg-white/[0.02] px-4 py-3 text-left text-sm font-semibold text-white transition-colors duration-150 ease-out hover:border-brand-500/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
             >
                 <span>
                     {label}
-                    {hint && <span className="mt-0.5 block text-xs font-normal text-gray-500">{hint}</span>}
+                    {hint && <span className="mt-0.5 block text-xs font-normal text-white/50">{hint}</span>}
                 </span>
 
                 <span
                     aria-hidden="true"
-                    className="shrink-0 text-lg leading-none text-gray-500"
+                    className="shrink-0 text-lg leading-none text-white/50"
                 >
                     {open ? '−' : '+'}
                 </span>

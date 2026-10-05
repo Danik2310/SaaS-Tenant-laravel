@@ -14,7 +14,7 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
     }
 
     const recommended = isRecommended(plan);
-    const tone = recommended ? 'ink' : 'light';
+    const tone = recommended ? 'featured' : 'plain';
     const t = CARD_TONES[tone];
 
     const body = (
@@ -29,19 +29,16 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
 
                 {recommended && (
                     <span
-                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] ${t.badge}`}
+                        className={`shrink-0 rounded-sm px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-[0.14em] ${t.badge}`}
                     >
-                        <span aria-hidden="true" className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-current align-middle" />
                         Most popular
                     </span>
                 )}
             </div>
 
-            <p className={`mt-4 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 font-display text-[2rem] leading-none tracking-tight tabular-nums ${t.amount}`}>
+            <p className={`mt-4 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-3xl font-bold leading-none tracking-tight tabular-nums ${t.amount}`}>
                 {formatAmount(plan)}
-                <span className={`font-sans text-sm font-medium leading-5 ${t.period}`}>
-                    {periodLabel(plan, trialDays)}
-                </span>
+                <span className={`text-sm font-medium leading-5 ${t.period}`}>{periodLabel(plan, trialDays)}</span>
             </p>
 
             {cadenceNote(plan) && (
@@ -63,7 +60,7 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
             <div
                 data-testid={variant === 'rail' ? 'plan-summary' : 'plan-summary-bar'}
                 data-variant="bar"
-                className="mb-8 rounded-2xl border border-brand-100 bg-brand-50/60 p-5 lg:hidden"
+                className="mb-8 rounded-sm border border-white/10 bg-white/[0.02] p-5 lg:hidden"
             >
                 {body}
             </div>
@@ -75,7 +72,7 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
             data-testid={variant === 'rail' ? 'plan-summary' : 'plan-summary-bar'}
             data-variant="rail"
             aria-label="Your selected plan"
-                className="hidden self-start rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-900/[0.07] lg:sticky lg:top-8 lg:block"
+            className="hidden self-start border-t border-white/10 pt-6 lg:sticky lg:top-24 lg:block"
             >
             {body}
         </aside>

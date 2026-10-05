@@ -6,14 +6,14 @@ import { LIMIT_ROWS, limitValue } from './planFormat';
  * same LIMIT_ROWS in the same order on different surfaces; only the tone and
  * the outer spacing differ.
  */
-export default function PlanLimits({ plan, tone = 'light', className = '' }) {
+export default function PlanLimits({ plan, tone = 'plain', className = '' }) {
     const t = CARD_TONES[tone];
 
     return (
         <dl
             data-testid={`plan-limits-${plan.slug}`}
             aria-label={`Included in ${plan.name}`}
-            className={`border-t ${t.hairline} divide-y divide-gray-100/80 pt-4 text-[13px] leading-5 ${className}`}
+            className={`border-t ${t.hairline} ${t.hairlineDivide} divide-y pt-4 text-[13px] leading-5 ${className}`}
         >
             {LIMIT_ROWS.map((row) => (
                 <div key={row.key} className="grid grid-cols-[1fr_auto] items-baseline gap-x-4 py-1.5">
