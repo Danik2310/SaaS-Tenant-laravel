@@ -97,15 +97,6 @@ export function planFootnote(plan) {
     return 'You will be taken to a secure checkout to finish.';
 }
 
-// The last card spans both columns when the catalog holds an odd number of
-// plans, so the grid never ends with a hole. Only the span is data-dependent
-// now: the card's internal layout is fixed, so activating a plan cannot
-// restyle the grid around it.
-export function planSpanClasses(count, index) {
-    if (count < 2 || index !== count - 1) return '';
-    return count % 2 === 1 ? 'md:col-span-2' : '';
-}
-
 export function ctaLabel(plan) {
     if (isTrial(plan)) return 'Sign up with Trial';
     if (isFree(plan)) return 'Sign up free';
