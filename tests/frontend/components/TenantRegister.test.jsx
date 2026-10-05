@@ -75,6 +75,8 @@ describe('TenantRegister', () => {
     test('shows the full form after a plan is selected', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
+
         expect(screen.queryByTestId('plan-grid')).not.toBeInTheDocument();
         expect(lastForm().data.plan).toBe('trial');
         expect(screen.getByLabelText('Workspace name')).toBeInTheDocument();
@@ -251,6 +253,8 @@ describe('TenantRegister', () => {
     test('moves focus to the first required field after selecting a plan', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
+
         expect(screen.getByLabelText('Company Name')).toHaveFocus();
     });
 
@@ -268,7 +272,13 @@ describe('TenantRegister', () => {
 
         expect(screen.getByTestId('step-indicator')).toBeInTheDocument();
         expect(screen.getByTestId('step-1')).toHaveAttribute('aria-current', 'step');
+        expect(screen.getByTestId('step-2')).not.toHaveAttribute('aria-current');
 
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
+
+        // Exactly one step is current at a time: finishing step 1 has to hand
+        // aria-current over to step 2 rather than leave both flagged.
+        expect(screen.getByTestId('step-1')).not.toHaveAttribute('aria-current');
         expect(screen.getByTestId('step-2')).toHaveAttribute('aria-current', 'step');
         expect(screen.getByText(/step 2 of 2: workspace details/i)).toBeInTheDocument();
     });
