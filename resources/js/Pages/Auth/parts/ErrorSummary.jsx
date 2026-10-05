@@ -31,10 +31,13 @@ export default function ErrorSummary({ errors, onFocusField }) {
     }
 
     return (
+        // Red, not brand. The banner tint and border were already red, and brand-200
+        // is a pale peach: red frame, red ground, brand-coloured words, which
+        // reads as a highlight rather than an error. red-200 is 11:1 here.
         <div
             role="alert"
             data-testid="form-error-banner"
-            className="rounded-sm border border-red-400/40 bg-red-400/10 p-4 text-sm !text-brand-200"
+            className="rounded-sm border border-red-400/60 bg-red-400/10 p-4 text-sm !text-red-200"
         >
             {globalEntries.length > 0 && (
                 <ul className="space-y-1">
