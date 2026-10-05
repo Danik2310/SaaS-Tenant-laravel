@@ -1,5 +1,4 @@
 import PlanCard from './PlanCard';
-import { planSpanClasses } from './planFormat';
 
 export default function PlanGrid({
     plans,
@@ -14,7 +13,11 @@ export default function PlanGrid({
                 Available plans
             </h2>
 
-            <div data-testid="plan-grid" className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {/* Three columns from lg. The catalog holds five plans, so 2-up ended
+                on a lone full-width card and an odd row rhythm; 3-up gives
+                3 + 2 with every card the same width and no span rule to
+                maintain. Cards stay equal height via h-full inside PlanCard. */}
+            <div data-testid="plan-grid" className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
                 {plans.map((plan, index) => (
                     <PlanCard
                         key={plan.slug}
@@ -24,7 +27,6 @@ export default function PlanGrid({
                         index={index}
                         onSelect={onSelect}
                         processing={processing}
-                        className={planSpanClasses(plans.length, index)}
                     />
                 ))}
             </div>

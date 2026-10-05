@@ -11,7 +11,6 @@ export default function PlanCard({
     onSelect,
     processing,
     index = 0,
-    className = '',
 }) {
     const recommended = isRecommended(plan);
     const tone = recommended ? 'featured' : 'plain';
@@ -24,7 +23,7 @@ export default function PlanCard({
     // CSS, so touch never latches it after a tap.
     const cardClasses = `sl-plan-card sl-spine animate-sli-fade-in rounded-sm p-5 sm:p-6 relative flex h-full flex-col ${
         recommended ? t.surface : `${t.surface} ${t.hoverShadow}`
-    } ${className}`;
+    }`;
 
     return (
         <article
