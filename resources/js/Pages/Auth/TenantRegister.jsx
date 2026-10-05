@@ -331,9 +331,9 @@ export default function TenantRegister({
                                             placeholder="your-workspace"
                                         />
 
-                                        <p aria-live="polite" data-testid="subdomain-preview" className="text-xs text-gray-500">
+                                        <p aria-live="polite" data-testid="subdomain-preview" className="text-xs text-white/60">
                                             Your workspace address will be{' '}
-                                            <span className="font-medium text-gray-700">
+                                            <span className="font-medium text-white">
                                                 {data.subdomain || slug || 'your-workspace'}.{tenant_domain_suffix}
                                             </span>
                                         </p>
@@ -423,7 +423,7 @@ export default function TenantRegister({
                                             required
                                         />
 
-                                        <p id="password-hint" className="mt-1 text-xs text-gray-500">
+                                        <p id="password-hint" className="mt-1 text-xs text-white/50">
                                             At least 8 characters.
                                         </p>
 
@@ -456,7 +456,7 @@ export default function TenantRegister({
                                     </FormField>
 
                                     <div>
-                                        <label htmlFor="terms" className="flex items-start text-sm text-gray-700">
+                                        <label htmlFor="terms" className="flex items-start text-sm text-white/70">
                                             <input
                                                 id="terms"
                                                 type="checkbox"

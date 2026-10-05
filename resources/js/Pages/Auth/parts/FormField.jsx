@@ -28,8 +28,11 @@ export default function FormField({ label, htmlFor, hint, error, required = fals
     const errorTone = row ? '!text-red-300' : '';
 
     if (row) {
-        return (
-            <div className="grid gap-x-6 gap-y-1 border-t border-white/10 pt-5 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
+// The rule between rows is a reading aid, not a component boundary, so it has
+    // no AA floor - but at white/10 it sat at 1.06:1 on ink and guided nothing
+    // across fourteen fields. white/20 is 1.72:1 and still clearly secondary.
+    return (
+        <div className="grid gap-x-6 gap-y-1 border-t border-white/20 pt-5 sm:grid-cols-[minmax(0,13rem)_minmax(0,1fr)]">
                 <div className="sm:pt-2.5">
                     <div className="flex items-baseline gap-1">
                         <InputLabel htmlFor={htmlFor} value={label} className={labelTone} />

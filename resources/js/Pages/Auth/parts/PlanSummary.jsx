@@ -13,9 +13,14 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
         return null;
     }
 
+    // The summary is furniture on the ink field, not a card: neither variant
+    // paints a surface of its own, so it always takes the ink palette. Picking
+    // a tone per plan used to hand the recommended plan featured's near-black
+    // text tokens, which are only legible on featured's white card - black on
+    // black. Selecting plain unconditionally means the tone can no longer drift
+    // out of sync with whatever surface a future variant does paint.
     const recommended = isRecommended(plan);
-    const tone = recommended ? 'featured' : 'plain';
-    const t = CARD_TONES[tone];
+    const t = CARD_TONES.plain;
 
     const body = (
         <>
@@ -49,7 +54,7 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
                 <p className={`mt-3 text-sm leading-relaxed ${t.summary}`}>{plan.summary}</p>
             )}
 
-            <PlanLimits plan={plan} tone={tone} className="mt-5" />
+            <PlanLimits plan={plan} tone="plain" className="mt-5" />
 
             <p className={`mt-4 text-xs leading-relaxed ${t.footnote}`}>{planFootnote(plan)}</p>
         </>
