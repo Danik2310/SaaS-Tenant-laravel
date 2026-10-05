@@ -24,12 +24,12 @@ export default function Footer() {
                     </nav>
                 </div>
 
-                <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-8 text-sm text-white/40 md:flex-row md:items-center">
+                <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-white/10 pt-8 text-sm text-white/50 md:flex-row md:items-center">
                     <p>© {new Date().getFullYear()} ShoppingLi. All rights reserved.</p>
-                    <div className="flex gap-6">
-                        <span>Privacy</span>
-                        <span>Terms</span>
-                    </div>
+                    {/* No routes exist for these yet, so they are presented as
+                        plain text rather than as links that go nowhere. The
+                        muted tone is inherited from the row above. */}
+                    <p>Privacy · Terms</p>
                 </div>
             </div>
         </footer>

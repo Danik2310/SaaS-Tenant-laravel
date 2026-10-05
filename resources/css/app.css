@@ -31,6 +31,10 @@
     --dur-step: 300ms;
     --dur-reveal: 600ms;
     --dur-stagger: 80ms;
+    /* One-shot explanatory fill (hero SKU bar). Sits above --dur-reveal on
+       purpose: it is a data animation, not an entrance, and reads as rushed
+       below ~650ms. Not used by scroll reveals. */
+    --dur-fill: 700ms;
 }
 
 @layer components {
@@ -40,12 +44,35 @@
         transition:
             opacity var(--dur-reveal) var(--ease-entrance),
             transform var(--dur-reveal) var(--ease-entrance);
+    }
+
+    /* Promote only while the entrance is actually pending. A permanent
+       will-change keeps every revealed element on its own compositor layer
+       for the life of the page — with ~40 reveals on the landing page that is
+       a lot of retained GPU memory for a transition that lasts 600ms. */
+    .reveal:not(.is-visible) {
         will-change: opacity, transform;
     }
 
     .reveal.is-visible {
         opacity: 1;
         transform: none;
+    }
+
+    /* Entrance direction variants. Driven by a data attribute so the React
+       wrapper can pick one without adding classes per direction. All of them
+       hand off to the same `transform: none` resting state above, and the
+       existing transition already covers `transform`. */
+    .reveal[data-from='left'] {
+        transform: translateX(-24px);
+    }
+
+    .reveal[data-from='right'] {
+        transform: translateX(24px);
+    }
+
+    .reveal[data-from='scale'] {
+        transform: scale(0.96);
     }
 
     @keyframes sli-fade-up {
@@ -134,6 +161,140 @@
     .sl-panel-in {
         animation: sli-panel-in var(--dur-fast) var(--ease-entrance) both;
     }
+
+    /* Hero: the SKU bar fills once, from the left. Transform-only, so the bar
+       stays inside its fixed-height track and costs no layout. */
+    @keyframes sli-fill-x {
+        from {
+            transform: scaleX(0);
+        }
+        to {
+            transform: scaleX(1);
+        }
+    }
+
+    .sl-fill-x {
+        transform-origin: left center;
+        animation: sli-fill-x var(--dur-fill) var(--ease-entrance) both;
+    }
+
+    /* Hero: stock rows arrive after the card lands, so the panel reads as data
+       loading rather than a block switching on. */
+    @keyframes sli-row-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .sl-row {
+        animation: sli-row-in var(--dur-standard) var(--ease-entrance) both;
+    }
+
+    /* Hero: the Live indicator breathes. The only looping animation on the
+       page — it carries meaning (this view is current) that a static dot
+       cannot. Neutralised by the reduced-motion guard below. */
+    @keyframes sli-pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.35;
+        }
+    }
+
+    .sl-pulse {
+        animation: sli-pulse 2s ease-in-out infinite;
+    }
+
+    /* Mobile menu: links cascade behind the panel so the list arrives as a
+       list. Step is tighter than --dur-stagger because it is a short,
+       above-interaction sequence rather than a scroll reveal. */
+    @keyframes sli-menu-item {
+        from {
+            opacity: 0;
+            transform: translateX(-8px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .sl-menu-item {
+        animation: sli-menu-item var(--dur-fast) var(--ease-entrance) both;
+    }
+
+    /* ------------------------------------------------------------------------
+       "Precision Ledger" surface primitives
+
+       Structure is carried by hairlines and index numerals instead of by
+       tinted icon tiles and elevation shadows. Three devices recur across the
+       page so it reads as one drawn system rather than a stack of sections:
+       the ruled grid on dark surfaces, the left spine on interactive rows,
+       and the tabular index numeral.
+       --------------------------------------------------------------------- */
+
+    /* A ruled grid replaces the blurred radial blobs the dark sections used to
+       carry. Masked so it dissolves at the edges instead of stopping on a
+       hard rectangle. Paint-only, so no layout is involved. */
+    .sl-ledger-grid {
+        background-image:
+            linear-gradient(to right, rgb(255 255 255 / 0.055) 1px, transparent 1px),
+            linear-gradient(to bottom, rgb(255 255 255 / 0.055) 1px, transparent 1px);
+        background-size: 64px 64px;
+        -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 78%);
+        mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 20%, transparent 78%);
+    }
+
+    /* Left spine: a 2px rule that draws down the leading edge on hover. It
+       replaces the elevation glow, which latched on touch and read as a stuck
+       state after a tap. Transform-only, so hover costs no layout. */
+    .sl-spine {
+        position: relative;
+    }
+
+    .sl-spine::before {
+        content: '';
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        width: 2px;
+        background-color: #f97316;
+        transform: scaleY(0);
+        transform-origin: top center;
+        transition: transform var(--dur-standard) var(--ease-entrance);
+    }
+
+    /* Index numerals. Tabular figures keep two-digit numbers on the same
+       baseline and columns aligned — the point of the whole ledger language. */
+    .sl-index {
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+    }
+
+    /* Demo rows cross-fade when the filter changes. The animation is replayed
+       by remounting the tbody against a key derived from the filter state, so
+       rows are never reordered by an animated layout — only by a 150ms opacity
+       dip, which is what the transform/opacity contract allows. */
+    @keyframes sli-demo-swap {
+        from {
+            opacity: 0.3;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    .sl-demo-swap {
+        animation: sli-demo-swap var(--dur-fast) ease-out both;
+    }
 }
 
 /* Transform-based hover is gated on fine pointers. On touch, :hover latches
@@ -146,12 +307,14 @@
    Tailwind transition-* utility — that utility must list `transform` for the
    scale to animate rather than snap. */
 @media (hover: hover) and (pointer: fine) {
-    .sl-lift:hover {
-        transform: translateY(-4px);
-    }
-
     .sl-cta:hover {
         transform: scale(1.02);
+    }
+
+    /* The spine draws itself rather than fading in, so the hover reads as a
+       pen stroke down the margin instead of a generic shadow bloom. */
+    .sl-spine:hover::before {
+        transform: scaleY(1);
     }
 }
 
@@ -196,13 +359,24 @@
     .animate-sli-fade-in,
     .sl-menu-in,
     .sl-panel-in,
-    .sl-lift,
+    .sl-menu-item,
     .sl-cta,
-    .sl-press {
+    .sl-press,
+    .sl-demo-swap,
+    .sl-fill-x,
+    .sl-row,
+    .sl-pulse {
         animation: none !important;
         transition: none !important;
         opacity: 1 !important;
         transform: none !important;
+    }
+
+    /* The spine is a pseudo-element, so the `.sl-marketing *` reset below does
+       not reach it. It keeps the hover behaviour but loses the draw — the rule
+       still appears, it just does not animate down the edge. */
+    .sl-spine::before {
+        transition: none !important;
     }
 
     .sl-marketing,

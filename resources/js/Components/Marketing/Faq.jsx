@@ -6,16 +6,18 @@ export default function Faq() {
     const [openIndex, setOpenIndex] = useState(0);
 
     return (
-        <section id="faq" className="scroll-mt-24 bg-white py-24 text-ink">
+        <section id="faq" className="scroll-mt-24 bg-white py-20 text-ink lg:py-28">
             <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
                 <Reveal>
-                    <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-brand-600">FAQ</p>
-                    <h2 className="mt-4 text-center font-display text-3xl leading-tight tracking-tight sm:text-4xl">
+                    {/* Left-aligned like every other section. This one was centred,
+                        which read as a different template dropped into the page. */}
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-700">FAQ</p>
+                    <h2 className="mt-4 text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-tight text-balance">
                         Questions, answered.
                     </h2>
                 </Reveal>
 
-                <div className="mt-12 divide-y divide-gray-200">
+                <div className="mt-12 divide-y divide-ink/10">
                     {FAQS.map((faq, index) => {
                         const open = openIndex === index;
 
@@ -32,7 +34,7 @@ export default function Faq() {
                                         <span className="text-base font-bold sm:text-lg">{faq.q}</span>
                                         <span
                                             aria-hidden="true"
-                                            className={`h-6 w-6 shrink-0 text-brand-500 transition-transform duration-150 ease-out ${
+                                            className={`h-6 w-6 shrink-0 text-brand-600 transition-transform duration-150 ease-out ${
                                                 open ? 'rotate-45' : ''
                                             }`}
                                         >
@@ -45,7 +47,7 @@ export default function Faq() {
                                         id={`faq-panel-${index}`}
                                         role="region"
                                         hidden={!open}
-                                        className={`pb-5 pr-10 leading-relaxed text-gray-600 ${open ? 'sl-panel-in' : ''}`}
+                                        className={`pb-5 pr-10 text-pretty leading-relaxed text-ink/60 ${open ? 'sl-panel-in' : ''}`}
                                     >
                                         {faq.a}
                                     </div>

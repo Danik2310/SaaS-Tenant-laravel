@@ -16,7 +16,7 @@ export function usePrefersReducedMotion() {
     return reduced;
 }
 
-export default function Reveal({ children, className = '', delay = 0, as: Tag = 'div' }) {
+export default function Reveal({ children, className = '', delay = 0, from, as: Tag = 'div' }) {
     const ref = useRef(null);
     const reduced = usePrefersReducedMotion();
 
@@ -52,6 +52,7 @@ export default function Reveal({ children, className = '', delay = 0, as: Tag = 
         <Tag
             ref={ref}
             className={`reveal ${className}`}
+            data-from={from}
             style={delay ? { transitionDelay: `${delay}ms` } : undefined}
         >
             {children}
