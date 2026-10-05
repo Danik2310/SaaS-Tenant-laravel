@@ -62,6 +62,28 @@ describe('TenantRegister', () => {
         global.route.mockImplementation((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
     });
 
+    test('drops the step transition when the visitor prefers reduced motion', () => {
+        // The only motion assertion that can mean anything here: jsdom does not
+        // evaluate CSS animations, so the classes themselves are the contract.
+        vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+            matches: query.includes('prefers-reduced-motion'),
+            media: query,
+            onchange: null,
+            addEventListener() {},
+            removeEventListener() {},
+            addListener() {},
+            removeListener() {},
+            dispatchEvent: () => false,
+        }));
+
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+
+        fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
+
+        expect(screen.queryByTestId('plan-grid')).not.toBeInTheDocument();
+        expect(document.querySelector('.animate-sli-step-in')).toBeNull();
+    });
+
     test('renders the plan grid before the form', () => {
         render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
 
@@ -264,7 +286,9 @@ describe('TenantRegister', () => {
         fireEvent.click(within(screen.getByTestId('plan-card-trial')).getByRole('button', { name: /sign up/i }));
         fireEvent.click(screen.getByRole('button', { name: /← plans/i }));
 
-        expect(screen.getByRole('heading', { level: 1, name: /pick your workspace plan/i })).toHaveFocus();
+        expect(
+            screen.getByRole('heading', { level: 1, name: /choose the plan your shop will grow into/i })
+        ).toHaveFocus();
     });
 
     test('announces the current signup step', () => {
