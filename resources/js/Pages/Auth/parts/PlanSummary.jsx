@@ -60,7 +60,7 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
             <div
                 data-testid={variant === 'rail' ? 'plan-summary' : 'plan-summary-bar'}
                 data-variant="bar"
-                className="mb-8 rounded-sm border border-white/10 bg-white/[0.02] p-5 lg:hidden"
+                className="mb-8 rounded-sm border border-white/35 bg-white/[0.05] p-5 lg:hidden"
             >
                 {body}
             </div>
@@ -72,7 +72,7 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
             data-testid={variant === 'rail' ? 'plan-summary' : 'plan-summary-bar'}
             data-variant="rail"
             aria-label="Your selected plan"
-            className="hidden self-start border-t border-white/10 pt-6 lg:sticky lg:top-24 lg:block"
+            className="hidden self-start border-t border-white/35 pt-6 lg:sticky lg:top-24 lg:block"
             >
             {body}
         </aside>
