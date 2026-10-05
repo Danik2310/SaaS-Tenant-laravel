@@ -4,12 +4,23 @@ import Hero from '@/Components/Marketing/Hero';
 import CapabilityStrip from '@/Components/Marketing/CapabilityStrip';
 import ProblemSolution from '@/Components/Marketing/ProblemSolution';
 import Features from '@/Components/Marketing/Features';
+import InventoryDemo from '@/Components/Marketing/InventoryDemo';
 import HowItWorks from '@/Components/Marketing/HowItWorks';
 import Pricing from '@/Components/Marketing/Pricing';
 import Testimonial from '@/Components/Marketing/Testimonial';
 import Faq from '@/Components/Marketing/Faq';
 import FinalCta from '@/Components/Marketing/FinalCta';
 import Footer from '@/Components/Marketing/Footer';
+
+// InventoryDemo is imported statically rather than with React.lazy. A lazy
+// boundary inside the initial tree starts its fetch during the first render
+// anyway, so the split deferred nothing — it only bought a skeleton that has to
+// guess the height of a 13-row table. Guessing wrong costs ~950px of layout
+// shift on mobile, pushing six sections down when the chunk resolves. At ~3kB
+// gzip the inlined cost is cheaper than that.
+//
+// To revisit: split it only if the component ever grows past ~15kB gzip or the
+// page gains several more below-the-fold widgets.
 
 export default function Welcome({ auth }) {
     const canonicalUrl = typeof window !== 'undefined' ? window.location.href : 'https://shoppingli.example';
@@ -65,6 +76,7 @@ export default function Welcome({ auth }) {
                     <CapabilityStrip />
                     <ProblemSolution />
                     <Features />
+                    <InventoryDemo />
                     <HowItWorks />
                     <Pricing />
                     <Testimonial />
