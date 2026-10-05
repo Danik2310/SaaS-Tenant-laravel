@@ -366,6 +366,30 @@ describe('TenantRegister', () => {
         expect(screen.getByTestId('plan-summary-name')).toHaveTextContent('Growth');
     });
 
+    // Growth is RECOMMENDED_SLUG, so it used to take the `featured` tone here -
+    // near-black text tokens that are only legible on featured's white card.
+    // The summary sits on the ink field and paints no surface of its own, so
+    // that rendered as black on black. No assertion in this file reads colour,
+    // which is why the whole suite stayed green while the panel was unreadable.
+    test('keeps the summary on the ink palette even for the recommended plan', () => {
+        render(<TenantRegister plans={plans} selected_plan="growth" tenant_domain_suffix="sasapp" />);
+
+        const name = screen.getByTestId('plan-summary-name');
+
+        expect(name).toHaveClass('text-brand-400');
+        expect(name).not.toHaveClass('text-ink');
+
+        // Nothing here may claim to be the light featured surface.
+        expect(screen.getByTestId('plan-summary')).not.toHaveClass('bg-white');
+
+        // Scoped to the summary: the grid also renders a PlanLimits for Growth,
+        // and both share the plan-limits-<slug> testid.
+        const limits = within(screen.getByTestId('plan-summary')).getByTestId('plan-limits-growth');
+
+        expect(limits).toHaveClass('border-white/20');
+        expect(limits).not.toHaveClass('border-ink/10');
+    });
+
     test('marks the invalid field, links its error and focuses it', () => {
         mockForm({ errors: { email: 'This email address is already registered.' } });
 
