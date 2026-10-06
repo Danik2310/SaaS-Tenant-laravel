@@ -1,6 +1,7 @@
 const STEPS = [
     { key: 'plan', label: 'Plan' },
     { key: 'workspace', label: 'Workspace' },
+    { key: 'payment', label: 'Payment' },
 ];
 
 export default function StepIndicator({ current }) {

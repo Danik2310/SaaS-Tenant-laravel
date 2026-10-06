@@ -1,4 +1,4 @@
-import { vi, describe, test, beforeEach, expect } from 'vitest';
+﻿import { vi, describe, test, beforeEach, expect } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent, within } from '../test-utils';
 import TenantRegister from '@/Pages/Auth/TenantRegister';
@@ -146,7 +146,7 @@ describe('TenantRegister', () => {
         });
 
         expect(screen.getByLabelText('Workspace Address')).toHaveValue('acme-corp');
-        expect(screen.getByText('acme-corp.sasapp')).toBeInTheDocument();
+        expect(screen.getByText('.sasapp')).toBeInTheDocument();
     });
 
     test('respects a manually chosen workspace address', () => {
@@ -160,7 +160,8 @@ describe('TenantRegister', () => {
             target: { value: 'acme-hq' },
         });
 
-        expect(screen.getByText('acme-hq.sasapp')).toBeInTheDocument();
+        expect(screen.getByLabelText('Workspace Address')).toHaveValue('acme-hq');
+        expect(screen.getByText('.sasapp')).toBeInTheDocument();
 
         fireEvent.change(screen.getByLabelText('Company Name'), {
             target: { value: 'Acme Corp LLC' },
@@ -304,7 +305,7 @@ describe('TenantRegister', () => {
         // aria-current over to step 2 rather than leave both flagged.
         expect(screen.getByTestId('step-1')).not.toHaveAttribute('aria-current');
         expect(screen.getByTestId('step-2')).toHaveAttribute('aria-current', 'step');
-        expect(screen.getByText(/step 2 of 2: workspace details/i)).toBeInTheDocument();
+        expect(screen.getByText(/step 2 of 3: workspace details/i)).toBeInTheDocument();
     });
 
     test('keeps the optional details collapsed but mounted', () => {
@@ -346,7 +347,8 @@ describe('TenantRegister', () => {
     test('announces the generated workspace address', () => {
         render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
 
-        expect(screen.getByTestId('subdomain-preview')).toHaveAttribute('aria-live', 'polite');
+        expect(screen.getByText('.sasapp')).toBeInTheDocument();
+        expect(screen.queryByTestId('subdomain-preview')).not.toBeInTheDocument();
     });
 
     test('keeps the honeypot out of the tab order', () => {

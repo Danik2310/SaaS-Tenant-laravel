@@ -36,16 +36,16 @@ const OPTIONAL_FIELDS = [
 
 const FIELD_HINTS = {
     company_name: 'Legal or trading name of the company',
-    subdomain: 'Your subdomain plus the shared domain.',
+    subdomain: 'Only the workspace name — the suffix is fixed.',
     phone: 'Primary contact phone number',
     first_name: "Primary contact's first name",
     last_name: "Primary contact's last name",
     address_line1: 'Street address (e.g., 123 Main St)',
     address_line2: 'Apartment, suite, unit, etc.',
-    city: 'City or locality',
-    state: 'State, province, or region',
-    postal_code: 'ZIP / postal code',
-    country: 'Country of the registered address',
+    city: 'City',
+    state: 'State or province',
+    postal_code: 'ZIP or postal code',
+    country: 'Country',
 };
 
 function Legend({ children }) {
@@ -67,6 +67,7 @@ export default function TenantRegister({
     feature_definitions = {},
     trial_days = 14,
 }) {
+    const [showPayment, setShowPayment] = useState(false);
     const [showForm, setShowForm] = useState(Boolean(selected_plan));
     const [optionalOpen, setOptionalOpen] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -99,6 +100,13 @@ export default function TenantRegister({
         plan: selected_plan ?? '',
     });
 
+    const currentKey = !showForm ? 'plan' : (showPayment ? 'payment' : 'workspace');
+    const selectedPlan = useMemo(
+        () => plans.find((plan) => plan.slug === data.plan) ?? null,
+        [plans, data.plan]
+    );
+    const isPaidPlan = Boolean(selectedPlan?.price > 0);
+
     useEffect(() => {
         return () => {
             reset('password', 'password_confirmation');
@@ -112,11 +120,6 @@ export default function TenantRegister({
             setData('subdomain', slug);
         }
     }, [slug]);
-
-    const selectedPlan = useMemo(
-        () => plans.find((plan) => plan.slug === data.plan) ?? null,
-        [plans, data.plan]
-    );
 
     const focusField = (key) => {
         if (!key) return;
@@ -182,10 +185,12 @@ export default function TenantRegister({
     const handleSelect = (planSlug) => {
         setData('plan', planSlug);
         setShowForm(true);
+        setShowPayment(false);
     };
 
     const handleBackToPlans = () => {
         setShowForm(false);
+        setShowPayment(false);
         setOptionalOpen(false);
         setFocusPlansHeading(true);
         didInitialFocus.current = false;
@@ -198,11 +203,13 @@ export default function TenantRegister({
             <Head title={showForm ? 'Create your workspace' : 'Choose your plan'} />
 
             <p aria-live="polite" role="status" className="sr-only">
-                {showForm ? 'Step 2 of 2: workspace details' : 'Step 1 of 2: choose your plan'}
+                {currentKey === 'plan' && 'Step 1 of 3: choose your plan'}
+                {currentKey === 'workspace' && 'Step 2 of 3: workspace details'}
+                {currentKey === 'payment' && 'Step 3 of 3: payment method'}
             </p>
 
             <div className={showForm ? stepAnimation : undefined}>
-                <StepIndicator current={showForm ? 'workspace' : 'plan'} />
+                <StepIndicator current={currentKey} />
 
                 {!showForm ? (
                     <>
@@ -264,6 +271,43 @@ export default function TenantRegister({
 
                         <PlanSummary plan={selectedPlan} variant="bar" />
 
+                        {showPayment && isPaidPlan ? (
+                            <div className="mt-8">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-400">
+                                        Step 3
+                                    </p>
+                                    <h1 className="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-tight text-balance text-white">
+                                        Payment method
+                                    </h1>
+                                    <p className="mt-3 max-w-prose text-sm leading-relaxed text-white/60">
+                                        You'll be redirected to Stripe Checkout to enter your payment details securely.
+                                    </p>
+                                </div>
+                                <div className="mt-6 rounded-sm border border-white/20 bg-white/[0.02] p-5">
+                                    <div className="flex items-center gap-3">
+                                        <svg
+                                            aria-hidden="true"
+                                            width="28"
+                                            height="20"
+                                            viewBox="0 0 28 20"
+                                            fill="none"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                        >
+                                            <rect width="28" height="20" rx="2" fill="white" />
+                                            <rect x="0.5" y="0.5" width="27" height="19" rx="1.5" stroke="black" strokeOpacity="0.1" />
+                                            <rect x="14" width="14" height="20" rx="2" fill="#635BFF" />
+                                            <path d="M17.5 6.5h5v.5h-5v-.5ZM16 7.5h6.5v.5H16v-.5ZM16 8.5h6.5v.5H16v-.5Z" fill="white" />
+                                        </svg>
+                                        <div>
+                                            <p className="text-sm font-semibold text-white">Stripe Checkout</p>
+                                            <p className="text-xs text-white/60">Secure hosted checkout</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : null}
+
                         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
                             <form onSubmit={submit} className="mt-8">
                                 <div className="sl-honey" aria-hidden="true">
@@ -315,28 +359,29 @@ export default function TenantRegister({
                                         hint={FIELD_HINTS.subdomain}
                                         error={errors.subdomain}
                                     >
-                                        <TextInput
-                                                tone="dark"
-                                            id="subdomain"
-                                            name="subdomain"
-                                            value={data.subdomain}
-                                            className="block w-full"
-                                            invalid={Boolean(errors.subdomain)}
-                                            autoComplete="off"
-                                            spellCheck={false}
-                                            onChange={(e) => {
-                                                subdomainTouched.current = true;
-                                                setData('subdomain', e.target.value);
-                                            }}
-                                            placeholder="your-workspace"
-                                        />
-
-                                        <p aria-live="polite" data-testid="subdomain-preview" className="text-xs text-white/60">
-                                            Your workspace address will be{' '}
-                                            <span className="font-medium text-white">
-                                                {data.subdomain || slug || 'your-workspace'}.{tenant_domain_suffix}
+                                        <div className="relative">
+                                            <TextInput
+                                                    tone="dark"
+                                                id="subdomain"
+                                                name="subdomain"
+                                                value={data.subdomain}
+                                                className="block w-full pr-14"
+                                                invalid={Boolean(errors.subdomain)}
+                                                autoComplete="off"
+                                                spellCheck={false}
+                                                onChange={(e) => {
+                                                    subdomainTouched.current = true;
+                                                    setData('subdomain', e.target.value);
+                                                }}
+                                                placeholder="your-workspace"
+                                            />
+                                            <span
+                                                aria-hidden="true"
+                                                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-white/60"
+                                            >
+                                                .{tenant_domain_suffix}
                                             </span>
-                                        </p>
+                                        </div>
                                     </FormField>
 
                                     <FormField
@@ -665,17 +710,73 @@ export default function TenantRegister({
                                     </FormField>
                                 </OptionalDetails>
 
-                                <div className="mt-8">
-                                    <PrimaryButton
-                                        type="submit"
-                                        className="w-full"
-                                        disabled={processing}
-                                        loading={processing}
-                                        loadingText="Creating your workspace…"
-                                        data-testid="submit-button"
-                                    >
-                                        Create workspace
-                                    </PrimaryButton>
+                                <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    {plans.length > 0 && !showPayment && (
+                                        <button
+                                            type="button"
+                                            onClick={handleBackToPlans}
+                                            data-testid="back-to-plans"
+                                            className="shrink-0 rounded-sm text-sm font-medium text-white/60 underline underline-offset-4 transition-colors duration-150 ease-out hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+                                        >
+                                            ← Back to plans
+                                        </button>
+                                    )}
+                                    {showPayment && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPayment(false)}
+                                            data-testid="back-to-workspace"
+                                            className="shrink-0 rounded-sm text-sm font-medium text-white/60 underline underline-offset-4 transition-colors duration-150 ease-out hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+                                        >
+                                            ← Back to workspace
+                                        </button>
+                                    )}
+                                    <div className="sm:ml-auto sm:w-auto">
+                                        {!showPayment && isPaidPlan ? (
+                                            <PrimaryButton
+                                                type="button"
+                                                className="w-full sm:w-auto"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    const required = [
+                                                        'company_name',
+                                                        'name',
+                                                        'email',
+                                                        'password',
+                                                        'password_confirmation',
+                                                        'terms',
+                                                        'subdomain',
+                                                    ];
+                                                    const missing = required.some((k) => {
+                                                        const v = data[k];
+                                                        if (k === 'terms') return !v;
+                                                        if (typeof v === 'string') return v.trim() === '';
+                                                        return !v;
+                                                    });
+                                                    if (missing) {
+                                                        return;
+                                                    }
+                                                    if (data.password !== data.password_confirmation) {
+                                                        return;
+                                                    }
+                                                    setShowPayment(true);
+                                                }}
+                                            >
+                                                Continue to payment
+                                            </PrimaryButton>
+                                        ) : (
+                                            <PrimaryButton
+                                                type="submit"
+                                                className="w-full sm:w-auto"
+                                                disabled={processing}
+                                                loading={processing}
+                                                loadingText="Creating your workspace..."
+                                                data-testid="submit-button"
+                                            >
+                                                {isPaidPlan && showPayment ? 'Create workspace & pay' : 'Create workspace'}
+                                            </PrimaryButton>
+                                        )}
+                                    </div>
                                 </div>
                             </form>
 
