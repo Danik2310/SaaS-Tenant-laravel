@@ -66,6 +66,8 @@ class TenantBuilder implements TenantBuilderInterface
         }
 
         $this->tenant->domains()->create(['domain' => $domain]);
+        $this->tenant->domain = $domain;
+        $this->tenant->saveQuietly();
 
         return $this;
     }

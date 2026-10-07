@@ -139,6 +139,23 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         return $this->hasMany(Domain::class, 'tenant_id', 'id');
     }
 
+    public function getDomainAttribute($value)
+    {
+        if (! empty($value)) {
+            return $value;
+        }
+
+        $primary = $this->domains()
+            ->where('is_primary', true)
+            ->value('domain');
+
+        if ($primary) {
+            return $primary;
+        }
+
+        return $this->domains()->latest('id')->value('domain');
+    }
+
     public function database(): DatabaseConfig
     {
         return new DatabaseConfig($this);
