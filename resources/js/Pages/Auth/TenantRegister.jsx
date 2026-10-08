@@ -75,6 +75,7 @@ export default function TenantRegister({
     const subdomainTouched = useRef(false);
     const planHeadingRef = useRef(null);
     const companyRef = useRef(null);
+    const paymentHeadingRef = useRef(null);
     const pendingFocus = useRef(null);
     const didInitialFocus = useRef(false);
     const prefersReducedMotion = usePrefersReducedMotion();
@@ -168,6 +169,12 @@ export default function TenantRegister({
             }
         }
     }, [showForm, firstErrorKey]);
+
+    useEffect(() => {
+        if (showPayment && isPaidPlan) {
+            paymentHeadingRef.current?.focus();
+        }
+    }, [showPayment, isPaidPlan]);
 
     useEffect(() => {
         if (!showForm && focusPlansHeading) {
@@ -271,20 +278,43 @@ export default function TenantRegister({
 
                         <PlanSummary plan={selectedPlan} variant="bar" />
 
-                        {showPayment && isPaidPlan ? (
-                            <div className="mt-8">
+                        {showPayment && isPaidPlan && (
+                            <div className={`mt-8 space-y-6 ${prefersReducedMotion ? "" : "animate-sli-step-in"}`}>
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-400">
-                                        Step 3
-                                    </p>
-                                    <h1 className="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-tight text-balance text-white">
+                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-400">Step 3</p>
+                                    <h1
+                                        ref={paymentHeadingRef}
+                                        tabIndex={-1}
+                                        className="mt-3 text-[clamp(1.75rem,4vw,2.25rem)] font-bold leading-tight tracking-tight text-balance text-white focus:outline-none"
+                                    >
                                         Payment method
                                     </h1>
                                     <p className="mt-3 max-w-prose text-sm leading-relaxed text-white/60">
                                         You'll be redirected to Stripe Checkout to enter your payment details securely.
                                     </p>
                                 </div>
-                                <div className="mt-6 rounded-sm border border-white/20 bg-white/[0.02] p-5">
+
+                                <div className="rounded-sm border border-amber-400/40 bg-amber-500/10 p-4">
+                                    <p className="text-sm font-medium text-amber-100">
+                                        Test mode — <span className="font-semibold">do not use real card details</span>.
+                                    </p>
+                                    <p className="mt-1 text-sm text-amber-200/90">
+                                        Use only Stripe test card numbers.{' '}
+                                        <a
+                                            href="https://docs.stripe.com/testing#cards"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="underline underline-offset-4 hover:text-amber-50"
+                                        >
+                                            View Stripe test cards
+                                        </a>
+                                    </p>
+                                    <p className="mt-2 text-xs text-amber-200/80">
+                                        Example: Visa <code className="px-1 py-0.5 rounded bg-black/30">4242 4242 4242 4242</code> — any future expiry, any 3-digit CVC.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-sm border border-white/20 bg-white/[0.02] p-5">
                                     <div className="flex items-center gap-3">
                                         <svg
                                             aria-hidden="true"
@@ -300,13 +330,15 @@ export default function TenantRegister({
                                             <path d="M17.5 6.5h5v.5h-5v-.5ZM16 7.5h6.5v.5H16v-.5ZM16 8.5h6.5v.5H16v-.5Z" fill="white" />
                                         </svg>
                                         <div>
-                                            <p className="text-sm font-semibold text-white">Stripe Checkout</p>
-                                            <p className="text-xs text-white/60">Secure hosted checkout</p>
+                                            <p className="text-sm font-semibold text-white">Stripe Checkout (hosted)</p>
+                                            <p className="text-xs text-white/60">Secure, PCI-compliant checkout</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        ) : null}
+                        )}
+
+                        
 
                         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-10">
                             <form onSubmit={submit} className="mt-8">
@@ -326,7 +358,9 @@ export default function TenantRegister({
 
                                 <ErrorSummary errors={errors} onFocusField={focusField} />
 
-                                <Fieldset className="mt-8">
+                                {!showPayment && (
+                                    <div className={prefersReducedMotion ? undefined : "animate-sli-step-in"}>
+                                        <Fieldset className="mt-8">
                                     <Legend>Your workspace</Legend>
 
                                     <FormField
@@ -524,7 +558,9 @@ export default function TenantRegister({
                                     </div>
                                 </Fieldset>
 
-                                <OptionalDetails
+                                
+
+                                        <OptionalDetails
                                     open={optionalOpen}
                                     onToggle={() => setOptionalOpen((v) => !v)}
                                     label="Contact & billing"
@@ -709,6 +745,8 @@ export default function TenantRegister({
                                         />
                                     </FormField>
                                 </OptionalDetails>
+                                    </div>
+                                )}
 
                                 <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     {plans.length > 0 && !showPayment && (
