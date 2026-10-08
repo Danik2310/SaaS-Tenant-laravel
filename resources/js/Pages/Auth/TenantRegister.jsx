@@ -80,7 +80,7 @@ export default function TenantRegister({
     const didInitialFocus = useRef(false);
     const prefersReducedMotion = usePrefersReducedMotion();
 
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset, setError, clearErrors } = useForm({
         company_name: '',
         name: '',
         email: '',
@@ -776,6 +776,7 @@ export default function TenantRegister({
                                                 className="w-full sm:w-auto"
                                                 onClick={(e) => {
                                                     e.preventDefault();
+                                                    clearErrors();
                                                     const required = [
                                                         'company_name',
                                                         'name',
@@ -785,16 +786,32 @@ export default function TenantRegister({
                                                         'terms',
                                                         'subdomain',
                                                     ];
-                                                    const missing = required.some((k) => {
+                                                    const firstMissing = required.find((k) => {
                                                         const v = data[k];
                                                         if (k === 'terms') return !v;
                                                         if (typeof v === 'string') return v.trim() === '';
                                                         return !v;
                                                     });
-                                                    if (missing) {
+                                                    if (firstMissing) {
+                                                        setError(firstMissing, 'This field is required');
+                                                        focusField(firstMissing);
+                                                        return;
+                                                    }
+                                                    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                                    if (!emailRe.test(data.email.trim())) {
+                                                        setError('email', 'Please enter a valid email address');
+                                                        focusField('email');
+                                                        return;
+                                                    }
+                                                    const subRe = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+                                                    if (!subRe.test(data.subdomain.trim())) {
+                                                        setError('subdomain', 'Enter a valid workspace address');
+                                                        focusField('subdomain');
                                                         return;
                                                     }
                                                     if (data.password !== data.password_confirmation) {
+                                                        setError('password_confirmation', 'Passwords do not match');
+                                                        focusField('password_confirmation');
                                                         return;
                                                     }
                                                     setShowPayment(true);
