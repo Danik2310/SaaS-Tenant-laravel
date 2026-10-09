@@ -66,6 +66,8 @@ export default function TenantRegister({
     tenant_domain_suffix,
     feature_definitions = {},
     trial_days = 14,
+    cancelled = false,
+    prefill = null,
 }) {
     const [showPayment, setShowPayment] = useState(false);
     const [showForm, setShowForm] = useState(Boolean(selected_plan));
@@ -182,6 +184,22 @@ export default function TenantRegister({
             setFocusPlansHeading(false);
         }
     }, [showForm, focusPlansHeading]);
+
+    useEffect(() => {
+        if (cancelled) {
+            if (prefill && typeof prefill === 'object') {
+                const allowed = ['company_name','name','email','phone','first_name','last_name','address_line1','address_line2','city','state','postal_code','country','subdomain','plan'];
+                allowed.forEach((k) => {
+                    if (prefill[k] !== undefined && prefill[k] !== null) {
+                        setData(k, prefill[k]);
+                    }
+                });
+                subdomainTouched.current = true;
+            }
+            setShowForm(true);
+            setShowPayment(true);
+        }
+    }, [cancelled, prefill]);
 
     const submit = (e) => {
         e.preventDefault();

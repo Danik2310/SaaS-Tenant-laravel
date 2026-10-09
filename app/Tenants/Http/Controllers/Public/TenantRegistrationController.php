@@ -36,11 +36,20 @@ class TenantRegistrationController extends Controller
     {
         $plans = $this->publicPlans->allSignupPlans();
 
+        $cancelled = request()->boolean('cancelled');
+        $prefill = null;
+        $pending = session()->get(self::PENDING_REGISTRATION_KEY);
+        if ($cancelled && is_array($pending) && isset($pending['payload']) && is_array($pending['payload'])) {
+            $prefill = $pending['payload'];
+        }
+
         return Inertia::render('Auth/TenantRegister', [
             'plans' => $plans,
             'selected_plan' => $this->selectedPlan($plans),
             'tenant_domain_suffix' => config('tenancy.tenant_domain_suffix', 'sasapp'),
             'trial_days' => (int) config('tenancy.trial_days', 14),
+            'cancelled' => $cancelled,
+            'prefill' => $prefill,
         ]);
     }
 

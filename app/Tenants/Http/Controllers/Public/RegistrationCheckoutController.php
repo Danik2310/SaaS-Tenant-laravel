@@ -114,11 +114,21 @@ class RegistrationCheckoutController extends Controller
 
     public function cancel(Request $request)
     {
-        $request->session()->forget(self::PENDING_REGISTRATION_KEY);
+        $pending = $request->session()->get(self::PENDING_REGISTRATION_KEY);
 
         $plan = (string) $request->query('plan', '');
 
-        return redirect()->route('register.tenant', $plan !== '' ? ['plan' => $plan] : []);
+        if ($plan === '' && is_array($pending) && isset($pending['plan'])) {
+            $plan = (string) $pending['plan'];
+        }
+
+        $params = [];
+        if ($plan !== '') {
+            $params['plan'] = $plan;
+        }
+        $params['cancelled'] = 1;
+
+        return redirect()->route('register.tenant', $params);
     }
 
     private function successResponse(string $domain, array $validated, Tenant $tenant): Response
