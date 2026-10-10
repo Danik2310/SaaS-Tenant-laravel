@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Billing\Http\Controllers\Tenant\BillingController;
+use App\Billing\Http\Controllers\Tenant\SubscriptionPaymentController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
@@ -130,6 +131,9 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             // Billing / Plan upgrade
             Route::get('/billing/upgrade', [BillingController::class, 'upgrade'])
                 ->name('billing.upgrade');
+
+            Route::get('/billing/payments', [SubscriptionPaymentController::class, 'index'])
+                ->name('billing.payments.index');
 
             // Products
             Route::prefix('products')->name('tenant.products.')->middleware([PermissionNames::middleware([PermissionNames::MANAGE_PRODUCTS], 'web')])->group(function () {
