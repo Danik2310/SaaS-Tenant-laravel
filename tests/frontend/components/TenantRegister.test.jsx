@@ -1,6 +1,6 @@
 ﻿import { vi, describe, test, beforeEach, expect } from 'vitest';
 import React from 'react';
-import { render, screen, fireEvent, within } from '../test-utils';
+import { render, screen, fireEvent, waitFor, within } from '../test-utils';
 import TenantRegister from '@/Pages/Auth/TenantRegister';
 import TenantRegisterSuccess from '@/Pages/Auth/TenantRegisterSuccess';
 
@@ -28,13 +28,30 @@ vi.mock('@inertiajs/react', async () => {
 const mockForm = ({ errors = {}, processing = false } = {}) => {
     useFormMock.mockImplementation((initial) => {
         const [data, setData] = React.useState(initial);
+        const [formErrors, setFormErrors] = React.useState(errors);
 
         return {
             data,
             setData: (key, value) => setData((prev) => ({ ...prev, [key]: value })),
             post: vi.fn(),
             processing,
-            errors,
+            errors: formErrors,
+            setError: (key, value) =>
+                setFormErrors((prev) =>
+                    value == null
+                        ? (() => {
+                              const next = { ...prev };
+                              delete next[key];
+                              return next;
+                          })()
+                        : { ...prev, [key]: value }
+                ),
+            clearErrors: (keys = []) =>
+                setFormErrors((prev) =>
+                    keys.length
+                        ? Object.fromEntries(Object.entries(prev).filter(([k]) => !keys.includes(k)))
+                        : {}
+                ),
             reset: vi.fn(),
         };
     });
@@ -450,5 +467,91 @@ describe('TenantRegister', () => {
         expect(submit).toBeDisabled();
         expect(submit).toHaveAttribute('aria-busy', 'true');
         expect(submit).toHaveTextContent('Creating your workspace');
+    });
+
+    test('cascades country, state and city from the curated lists', async () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+        fireEvent.click(screen.getByTestId('optional-details-toggle'));
+
+        const country = screen.getByLabelText('Country');
+        const state = screen.getByLabelText('State / Province');
+        const city = screen.getByLabelText('City');
+
+        expect(country).toHaveValue('');
+        expect(state).toBeDisabled();
+        expect(city).toBeDisabled();
+
+        fireEvent.change(country, { target: { value: 'United States' } });
+
+        expect(lastForm().data.country).toBe('United States');
+        expect(state).not.toBeDisabled();
+        expect(state).toHaveValue('');
+
+        fireEvent.change(state, { target: { value: 'Illinois' } });
+
+        expect(lastForm().data.state).toBe('Illinois');
+        expect(city).not.toBeDisabled();
+        expect(city).toHaveValue('');
+
+        // The ~2MB city table is a lazy chunk; give the first parse headroom.
+        await waitFor(() => expect(city.options.length).toBeGreaterThan(1), { timeout: 15000 });
+
+        fireEvent.change(city, { target: { value: 'Chicago' } });
+
+        expect(lastForm().data.country).toBe('United States');
+        expect(lastForm().data.state).toBe('Illinois');
+        expect(lastForm().data.city).toBe('Chicago');
+    });
+
+    test('resets dependent location fields when the country changes', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+        fireEvent.click(screen.getByTestId('optional-details-toggle'));
+
+        const country = screen.getByLabelText('Country');
+
+        fireEvent.change(country, { target: { value: 'Italy' } });
+
+        expect(lastForm().data.country).toBe('Italy');
+
+        fireEvent.change(country, { target: { value: 'Canada' } });
+
+        expect(lastForm().data.country).toBe('Canada');
+        expect(lastForm().data.state).toBe('');
+        expect(lastForm().data.city).toBe('');
+    });
+
+    test('blocks submission when the postal code is malformed', () => {
+        const { container } = render(
+            <TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />
+        );
+        fireEvent.click(screen.getByTestId('optional-details-toggle'));
+
+        fireEvent.change(screen.getByLabelText('Postal Code'), { target: { value: '6270!' } });
+        fireEvent.submit(container.querySelector('form'));
+
+        expect(lastForm().post).not.toHaveBeenCalled();
+        expect(screen.getAllByText('Postal code may only contain letters, numbers, spaces and hyphens.')).toHaveLength(2);
+        expect(screen.getByLabelText('Postal Code')).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    test('blocks submission when a state is picked without a country', () => {
+        const { container } = render(
+            <TenantRegister
+                plans={plans}
+                selected_plan="trial"
+                tenant_domain_suffix="sasapp"
+                cancelled
+                prefill={{ plan: 'trial', state: 'Illinois', city: 'Chicago' }}
+            />
+        );
+
+        fireEvent.submit(container.querySelector('form'));
+
+        expect(lastForm().post).not.toHaveBeenCalled();
+        expect(screen.getByTestId('form-error-banner')).toHaveTextContent(
+            'Select the country before filling in the state or city.'
+        );
+        expect(screen.getByLabelText('Country')).toHaveAttribute('aria-invalid', 'true');
+        expect(screen.getByLabelText('Country')).toHaveFocus();
     });
 });

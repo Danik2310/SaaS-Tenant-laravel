@@ -6,6 +6,7 @@ use App\Models\Domain;
 use App\Models\Plan;
 use App\Models\Tenant;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\Validator;
 
@@ -35,10 +36,25 @@ class StoreTenantRegistrationRequest extends FormRequest
             'last_name' => 'nullable|string|max:255',
             'address_line1' => 'nullable|string|max:255',
             'address_line2' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:100',
+            'city' => [
+                'nullable',
+                'string',
+                'max:100',
+                "regex:/^[\p{L}][\p{L}\p{M}'\-. ]*$/u",
+            ],
             'state' => 'nullable|string|max:100',
-            'postal_code' => 'nullable|string|max:20',
-            'country' => 'nullable|string|max:100',
+            'postal_code' => [
+                'nullable',
+                'string',
+                'max:20',
+                'regex:/^[A-Za-z0-9][A-Za-z0-9 -]*$/',
+            ],
+            'country' => [
+                'nullable',
+                'string',
+                'max:100',
+                Rule::in(config('locations.countries')),
+            ],
             'plan' => 'nullable|string|max:64',
             'terms' => 'required|accepted',
             'website' => 'nullable|string|prohibited',
@@ -80,6 +96,10 @@ class StoreTenantRegistrationRequest extends FormRequest
                     $validator->errors()->add('subdomain', 'That workspace address is already taken.');
                 }
             },
+            // Location integrity: a State must belong to the chosen Country and
+            // a City must be tied to both, so a partially-filled address never
+            // lands in the database.
+            fn (Validator $validator) => $this->checkLocation($validator),
         ];
     }
 
@@ -105,6 +125,43 @@ class StoreTenantRegistrationRequest extends FormRequest
 
         if (! $plan || $plan->status !== 'active') {
             $validator->errors()->add('plan', 'That plan is not available for signup.');
+        }
+    }
+
+    private function checkLocation(Validator $validator): void
+    {
+        $data = $validator->validated();
+        $country = $data['country'] ?? null;
+        $state = $data['state'] ?? null;
+        $city = $data['city'] ?? null;
+
+        if (empty($state) && empty($city)) {
+            return;
+        }
+
+        if (empty($country)) {
+            $validator->errors()->add(
+                'country',
+                'Select the country before filling in the state or city.'
+            );
+
+            return;
+        }
+
+        $states = config("locations.states.{$country}", []);
+
+        if (! empty($state) && ! in_array($state, $states, true)) {
+            $validator->errors()->add(
+                'state',
+                'That is not a recognized state or province for the selected country.'
+            );
+        }
+
+        if (! empty($city) && empty($state)) {
+            $validator->errors()->add(
+                'state',
+                'Select the state or province before filling in the city.'
+            );
         }
     }
 }

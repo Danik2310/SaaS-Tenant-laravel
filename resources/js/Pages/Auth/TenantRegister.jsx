@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import LedgerLayout from '@/Layouts/LedgerLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import usePrefersReducedMotion from '@/hooks/usePrefersReducedMotion';
+import countries from '@/data/countries.json';
+import statesByCode from '@/data/states.json';
+import DarkSelect from './parts/DarkSelect';
 import ErrorSummary from './parts/ErrorSummary';
 import FormField from './parts/FormField';
 import OptionalDetails from './parts/OptionalDetails';
@@ -12,6 +15,8 @@ import PlanGrid from './parts/PlanGrid';
 import PlanSummary from './parts/PlanSummary';
 import StepIndicator from './parts/StepIndicator';
 import { Head, useForm } from '@inertiajs/react';
+
+const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9 -]*$/;
 
 function toSlug(value) {
     return value
@@ -204,7 +209,128 @@ export default function TenantRegister({
     const submit = (e) => {
         e.preventDefault();
 
+        // Avoid a pointless re-render when there is nothing stale to clear.
+        if (['country', 'state', 'city', 'postal_code'].some((k) => errors?.[k])) {
+            clearErrors(['country', 'state', 'city', 'postal_code']);
+        }
+
+        const missing = validateLocation();
+        if (missing) {
+            // On Step 3 (payment) the workspace fields are hidden, so send the
+            // visitor back to Step 2 where the offending field can be seen.
+            if (showPayment) {
+                setShowPayment(false);
+            }
+            focusField(missing);
+            return;
+        }
+
         post(route('register.tenant'));
+    };
+
+    const selectedCountry = useMemo(
+        () => countries.find((c) => c.name === data.country) ?? null,
+        [data.country]
+    );
+
+    const stateOptions = useMemo(
+        () => (selectedCountry ? statesByCode[selectedCountry.code] ?? [] : []),
+        [selectedCountry]
+    );
+
+    const selectedState = useMemo(
+        () => stateOptions.find((s) => s.name === data.state) ?? null,
+        [stateOptions, data.state]
+    );
+
+    const cityRequestId = useRef(0);
+    const [cityOptions, setCityOptions] = useState([]);
+
+    const loadCities = useCallback(async (countryCode, stateCode) => {
+        const requestId = ++cityRequestId.current;
+        setCityOptions([]);
+
+        if (!countryCode || !stateCode) {
+            return;
+        }
+
+        try {
+            // The full city table (~140k names) is code-split so it never
+            // touches the initial bundle. Only loaded once a state is chosen.
+            const mod = await import('@/data/cities.json');
+            if (requestId !== cityRequestId.current) {
+                return;
+            }
+            setCityOptions(mod.default[`${countryCode}-${stateCode}`] ?? []);
+        } catch {
+            if (requestId === cityRequestId.current) {
+                setCityOptions([]);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (selectedCountry && selectedState) {
+            loadCities(selectedCountry.code, selectedState.code);
+        } else {
+            cityRequestId.current += 1;
+            setCityOptions([]);
+        }
+    }, [selectedCountry, selectedState, loadCities]);
+
+    const handleCountryChange = (e) => {
+        setData('country', e.target.value);
+        setData('state', '');
+        setData('city', '');
+    };
+
+    const handleStateChange = (e) => {
+        setData('state', e.target.value);
+        setData('city', '');
+    };
+
+    /**
+     * Mirrors the server-side location checks so optional address fields are
+     * validated the moment Step 2 is submitted. Returns the first failing
+     * field key (for focus) or null when everything is consistent.
+     */
+    const validateLocation = () => {
+        if (data.country && !countries.some((c) => c.name === data.country)) {
+            setError('country', 'Select a country from the list.');
+            return 'country';
+        }
+
+        if (data.state) {
+            if (!data.country) {
+                setError('country', 'Select the country before filling in the state or city.');
+                return 'country';
+            }
+            if (!stateOptions.some((s) => s.name === data.state)) {
+                setError('state', 'That is not a recognized state or province for the selected country.');
+                return 'state';
+            }
+        }
+
+        if (data.city) {
+            if (!data.state) {
+                setError('state', 'Select the state or province before filling in the city.');
+                return 'state';
+            }
+            if (!cityOptions.includes(data.city)) {
+                setError('city', 'Select a city from the list.');
+                return 'city';
+            }
+        }
+
+        if (data.postal_code && !POSTAL_CODE_RE.test(data.postal_code)) {
+            setError(
+                'postal_code',
+                'Postal code may only contain letters, numbers, spaces and hyphens.'
+            );
+            return 'postal_code';
+        }
+
+        return null;
     };
 
     const handleSelect = (planSlug) => {
@@ -687,50 +813,48 @@ export default function TenantRegister({
                                         />
                                     </FormField>
 
-                                    <div className="grid gap-x-4 sm:grid-cols-3">
-                                        <FormField row label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
-                                            <TextInput
-                                                    tone="dark"
+                                    <div className="grid gap-x-4 gap-y-6 sm:grid-cols-3">
+                                        <FormField label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
+                                            <DarkSelect
                                                 id="city"
                                                 name="city"
                                                 value={data.city}
-                                                className="block w-full"
                                                 invalid={Boolean(errors.city)}
                                                 autoComplete="section-billing address-level2"
                                                 onChange={(e) => setData('city', e.target.value)}
-                                                placeholder="Springfield"
+                                                options={cityOptions.map((name) => ({ value: name, label: name }))}
+                                                placeholder="Select a city"
+                                                disabled={!selectedState}
                                             />
                                         </FormField>
 
                                         <FormField
-                                                row
                                             label="State / Province"
                                             htmlFor="state"
                                             hint={FIELD_HINTS.state}
                                             error={errors.state}
                                         >
-                                            <TextInput
-                                                    tone="dark"
+                                            <DarkSelect
                                                 id="state"
                                                 name="state"
                                                 value={data.state}
-                                                className="block w-full"
                                                 invalid={Boolean(errors.state)}
                                                 autoComplete="section-billing address-level1"
-                                                onChange={(e) => setData('state', e.target.value)}
-                                                placeholder="IL"
+                                                onChange={handleStateChange}
+                                                options={stateOptions.map((state) => ({ value: state.name, label: state.name }))}
+                                                placeholder="Select a state"
+                                                disabled={!selectedCountry}
                                             />
                                         </FormField>
 
                                         <FormField
-                                                row
                                             label="Postal Code"
                                             htmlFor="postal_code"
                                             hint={FIELD_HINTS.postal_code}
                                             error={errors.postal_code}
                                         >
                                             <TextInput
-                                                    tone="dark"
+                                                tone="dark"
                                                 id="postal_code"
                                                 name="postal_code"
                                                 value={data.postal_code}
@@ -739,27 +863,26 @@ export default function TenantRegister({
                                                 autoComplete="section-billing postal-code"
                                                 onChange={(e) => setData('postal_code', e.target.value)}
                                                 placeholder="62701"
+                                                maxLength={20}
                                             />
                                         </FormField>
                                     </div>
 
                                     <FormField
-                                            row
                                         label="Country"
                                         htmlFor="country"
                                         hint={FIELD_HINTS.country}
                                         error={errors.country}
                                     >
-                                        <TextInput
-                                                tone="dark"
+                                        <DarkSelect
                                             id="country"
                                             name="country"
                                             value={data.country}
-                                            className="block w-full"
                                             invalid={Boolean(errors.country)}
                                             autoComplete="section-billing country-name"
-                                            onChange={(e) => setData('country', e.target.value)}
-                                            placeholder="United States"
+                                            onChange={handleCountryChange}
+                                            options={countries.map((country) => ({ value: country.name, label: country.name }))}
+                                            placeholder="Select a country"
                                         />
                                     </FormField>
                                 </OptionalDetails>

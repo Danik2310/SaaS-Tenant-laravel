@@ -6,6 +6,15 @@ const FIELD_ERROR_LABELS = {
     password: 'Password',
     password_confirmation: 'Password confirmation',
     terms: 'Terms acceptance',
+    first_name: 'First name',
+    last_name: 'Last name',
+    phone: 'Phone',
+    address_line1: 'Address line 1',
+    address_line2: 'Address line 2',
+    city: 'City',
+    state: 'State / Province',
+    postal_code: 'Postal code',
+    country: 'Country',
 };
 
 const GLOBAL_ERROR_KEYS = ['provisioning', 'plan', 'website'];
