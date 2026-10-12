@@ -9,11 +9,13 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Tenants\Contracts\TenantManagerInterface;
+use App\Tenants\Jobs\CreateTenantAdminUser;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 use InvalidArgumentException;
 use Tests\TestCase;
@@ -59,6 +61,19 @@ class TenantRegistrationTest extends TestCase
             'plan' => 'trial',
             'terms' => true,
         ], $overrides);
+    }
+
+    /**
+     * Payload shaped as it exists in the pending session after store(): the
+     * password is already a bcrypt hash, never the plaintext.
+     */
+    private function hashedPayload(array $overrides = []): array
+    {
+        $data = $this->payload($overrides);
+        $data['password'] = Hash::make($data['password']);
+        $data['password_confirmation'] = $data['password'];
+
+        return $data;
     }
 
     public function test_register_page_renders_active_plans(): void
@@ -298,6 +313,15 @@ class TenantRegistrationTest extends TestCase
         $this->assertSame('growth', $pending['plan'] ?? null);
         $this->assertSame('jane@acme.test', $pending['payload']['email'] ?? null);
         $this->assertSame('acme-corp', $pending['payload']['subdomain'] ?? null);
+
+        // C1: only the hash is stored; the raw password never touches the session.
+        $this->assertNotSame('StrongPass1!', $pending['payload']['password'] ?? null);
+        $this->assertTrue(Hash::check('StrongPass1!', $pending['payload']['password'] ?? ''));
+        $this->assertStringNotContainsString('StrongPass1!', serialize(session()->all()));
+
+        // H1: a pending signup carries an expiry and is fresh right after store().
+        $this->assertIsInt($pending['expires_at'] ?? null);
+        $this->assertGreaterThan(time(), $pending['expires_at']);
     }
 
     public function test_checkout_success_provisions_paid_tenant(): void
@@ -308,7 +332,8 @@ class TenantRegistrationTest extends TestCase
             'pending_tenant_registration' => [
                 'token' => $token,
                 'plan' => 'growth',
-                'payload' => $this->payload(['plan' => 'growth']),
+                'payload' => $this->hashedPayload(['plan' => 'growth']),
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
             ],
         ]);
 
@@ -322,8 +347,6 @@ class TenantRegistrationTest extends TestCase
                     'customer_email' => 'jane@acme.test',
                     'metadata' => [
                         'pending_token' => $token,
-                        'plan' => 'growth',
-                        'email' => 'jane@acme.test',
                     ],
                     'url' => '',
                     'currency' => 'usd',
@@ -362,8 +385,12 @@ class TenantRegistrationTest extends TestCase
 
         $this->assertNotNull($user);
         $this->assertTrue($user->hasRole('tenant-admin'));
+        $this->assertTrue(Hash::check('StrongPass1!', $user->password));
 
         $this->forgetTenant();
+
+        // C1: neither the session nor the persisted user ever held plaintext.
+        $this->assertStringNotContainsString('StrongPass1!', serialize(session()->all()));
     }
 
     public function test_checkout_success_provisions_paid_tenant_with_chosen_subdomain(): void
@@ -374,7 +401,8 @@ class TenantRegistrationTest extends TestCase
             'pending_tenant_registration' => [
                 'token' => $token,
                 'plan' => 'growth',
-                'payload' => $this->payload(['plan' => 'growth', 'subdomain' => 'my-workspace']),
+                'payload' => $this->hashedPayload(['plan' => 'growth', 'subdomain' => 'my-workspace']),
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
             ],
         ]);
 
@@ -388,8 +416,6 @@ class TenantRegistrationTest extends TestCase
                     'customer_email' => 'jane@acme.test',
                     'metadata' => [
                         'pending_token' => $token,
-                        'plan' => 'growth',
-                        'email' => 'jane@acme.test',
                     ],
                     'url' => '',
                     'currency' => 'usd',
@@ -422,7 +448,8 @@ class TenantRegistrationTest extends TestCase
             'pending_tenant_registration' => [
                 'token' => 'checkout-token',
                 'plan' => 'growth',
-                'payload' => $this->payload(['plan' => 'growth']),
+                'payload' => $this->hashedPayload(['plan' => 'growth']),
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
             ],
         ]);
 
@@ -452,13 +479,15 @@ class TenantRegistrationTest extends TestCase
             'pending_tenant_registration' => [
                 'token' => 'checkout-token',
                 'plan' => 'growth',
-                'payload' => $this->payload(['plan' => 'growth']),
+                'payload' => $this->hashedPayload(['plan' => 'growth']),
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
             ],
         ]);
 
         $this->get('/register/payment/cancel?plan=growth')
-            ->assertRedirect(route('register.tenant', ['plan' => 'growth']));
+            ->assertRedirect(route('register.tenant', ['plan' => 'growth', 'cancelled' => 1]));
 
+        // H1: the pending signup (PII + hashed credential) is purged on cancel.
         $this->assertFalse(session()->has('pending_tenant_registration'));
         $this->assertSame(0, Tenant::count());
     }
@@ -499,7 +528,42 @@ class TenantRegistrationTest extends TestCase
         $this->post('/register', $this->payload())
             ->assertSessionHasErrors('email');
 
+        // H2: the conflict message is generic and never echoes the submitted
+        // address, so a guest cannot use it to probe registered emails.
+        $message = session('errors')->get('email')[0] ?? '';
+        $this->assertSame('An account already exists for that email.', $message);
+        $this->assertStringNotContainsString('jane@acme.test', $message);
+
         $this->assertSame(1, Tenant::count());
+    }
+
+    public function test_soft_deleted_tenant_email_can_be_reused(): void
+    {
+        $old = Tenant::withoutEvents(fn () => Tenant::create([
+            'id' => 'TEN-000100',
+            'name' => 'Former Workspace',
+            'email' => 'jane@acme.test',
+            'status' => 'Inactive',
+        ]));
+
+        $old->delete();
+
+        $this->post('/register', $this->payload())
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('domain', 'acme-corp.sasapp'));
+
+        // The trashed row is invisible to the conflict check, so the address
+        // can be claimed again. The DB only enforces uniqueness on domains;
+        // the two rows (trashed + active) may share an email.
+        $this->assertSame(1, Tenant::count());
+        $this->assertSame(2, Tenant::withTrashed()->count());
+
+        $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
+        $this->assertNull($tenant->deleted_at);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
     }
 
     public function test_honeypot_field_rejects_bots(): void
@@ -519,5 +583,166 @@ class TenantRegistrationTest extends TestCase
         $this->post('/register', $this->payload())
             ->assertSessionHasErrors('provisioning')
             ->assertSessionDoesntHaveErrors('email');
+    }
+
+    public function test_password_is_hashed_before_session_or_queue(): void
+    {
+        // C1 on the no-payment path: the queued job must never serialize the
+        // plaintext password — only the already-computed hash. Faking the
+        // whole queue would also swallow the tenant DB-creation jobs inside
+        // provisioning, so only the admin-user job is intercepted.
+        Queue::fake([CreateTenantAdminUser::class]);
+
+        $this->post('/register', $this->payload(['plan' => 'trial']))
+            ->assertOk();
+
+        Queue::assertPushed(CreateTenantAdminUser::class, function (CreateTenantAdminUser $job) {
+            return ! str_contains(serialize($job), 'StrongPass1!');
+        });
+
+        $this->assertStringNotContainsString('StrongPass1!', serialize(session()->all()));
+    }
+
+    public function test_checkout_success_rejects_expired_pending_signup(): void
+    {
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => 'old-token',
+                'plan' => 'growth',
+                'payload' => $this->hashedPayload(['plan' => 'growth']),
+                'expires_at' => now()->subMinutes(5)->getTimestamp(),
+            ],
+        ]);
+
+        $this->mock(PaymentGatewayInterface::class, function ($mock) {
+            $mock->shouldReceive('retrieveCheckoutSession')
+                ->once()
+                ->with('cs_test_123')
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'payment_status' => 'paid',
+                    'customer_email' => 'jane@acme.test',
+                    'metadata' => ['pending_token' => 'old-token'],
+                    'url' => '',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
+        $this->get('/register/payment/success?session_id=cs_test_123')
+            ->assertRedirect(route('register.tenant'));
+
+        $this->assertSame(0, Tenant::count());
+        $this->assertFalse(session()->has('pending_tenant_registration'));
+    }
+
+    public function test_checkout_success_rejects_amount_mismatch(): void
+    {
+        // L2: a completed $15 Growth checkout reporting a different charged
+        // total must not provision the tenant.
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => 'checkout-token',
+                'plan' => 'growth',
+                'payload' => $this->hashedPayload(['plan' => 'growth']),
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
+            ],
+        ]);
+
+        $this->mock(PaymentGatewayInterface::class, function ($mock) {
+            $mock->shouldReceive('retrieveCheckoutSession')
+                ->once()
+                ->with('cs_test_123')
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'payment_status' => 'paid',
+                    'customer_email' => 'jane@acme.test',
+                    'metadata' => ['pending_token' => 'checkout-token'],
+                    'url' => '',
+                    'currency' => 'usd',
+                    'amount_total' => 1499,
+                ]);
+        });
+
+        $this->get('/register/payment/success?session_id=cs_test_123')
+            ->assertRedirect(route('register.tenant'));
+
+        $this->assertSame(0, Tenant::count());
+        $this->assertFalse(session()->has('pending_tenant_registration'));
+    }
+
+    public function test_canceled_signup_prefill_excludes_credentials(): void
+    {
+        // C2/M3: revisiting the form with a live pending signup restores only
+        // the non-sensitive fields — never the hashed credential or the full
+        // business payload.
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => 'checkout-token',
+                'plan' => 'growth',
+                'payload' => $this->hashedPayload([
+                    'plan' => 'growth',
+                    'subdomain' => 'acme-corp',
+                    'company_name' => 'Acme Corp',
+                    'address_line1' => '123 Main St',
+                ]),
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
+            ],
+        ]);
+
+        $this->get('/register?cancelled=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->where('cancelled', true)
+                ->has('prefill', 4)
+                ->where('prefill.plan', 'growth')
+                ->where('prefill.email', 'jane@acme.test')
+                ->where('prefill.name', 'Jane Doe')
+                ->where('prefill.subdomain', 'acme-corp')
+                ->missing('prefill.password')
+                ->missing('prefill.password_confirmation')
+                ->missing('prefill.company_name')
+                ->missing('prefill.address_line1'));
+    }
+
+    public function test_expired_pending_signup_is_not_prefilled(): void
+    {
+        // H1: a stale pending signup yields no prefill at all.
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => 'old-token',
+                'plan' => 'growth',
+                'payload' => $this->hashedPayload(['plan' => 'growth']),
+                'expires_at' => now()->subMinutes(5)->getTimestamp(),
+            ],
+        ]);
+
+        $this->get('/register?cancelled=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->where('cancelled', true)
+                ->where('prefill', null));
+    }
+
+    public function test_registration_throttled_per_email_across_ips(): void
+    {
+        // H3/M4: rotating IP addresses cannot bypass the per-address cap, because
+        // the registration limiter is keyed on the hashed submission email. Each
+        // request fails validation cheaply but still consumes the email budget.
+        // Throttling stays enabled on purpose; withThrottling is the default.
+        $response = null;
+
+        foreach (range(1, 6) as $i) {
+            $response = $this->withServerVariables(['REMOTE_ADDR' => "10.0.0.$i"])
+                ->post('/register', $this->payload([
+                    'email' => 'probe@acme.test',
+                    'password' => 'short',
+                ]));
+        }
+
+        $response->assertStatus(429);
+        $this->assertSame(0, Tenant::count());
     }
 }

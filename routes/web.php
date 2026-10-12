@@ -60,13 +60,16 @@ Route::middleware(['central.domain'])->group(function () {
 foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
     Route::domain($centralDomain)->middleware(['central.domain', 'guest'])->group(function () {
         Route::get('/register', [TenantRegistrationController::class, 'create'])->name('register.tenant');
-        Route::post('/register', [TenantRegistrationController::class, 'store'])->middleware('throttle:3,1');
+        Route::post('/register', [TenantRegistrationController::class, 'store'])
+            ->middleware(['throttle:3,1', 'throttle:registration']);
 
         // Stripe-hosted checkout callbacks. Provisioning of a paid plan happens
         // only in RegistrationCheckoutController::success(), never in store().
         Route::get('/register/payment/success', [RegistrationCheckoutController::class, 'success'])
+            ->middleware('throttle:10,1')
             ->name('register.payment.success');
         Route::get('/register/payment/cancel', [RegistrationCheckoutController::class, 'cancel'])
+            ->middleware('throttle:10,1')
             ->name('register.payment.cancel');
     });
 }

@@ -12,6 +12,7 @@ use App\Shared\Contracts\PublicPlanCatalogInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
 use App\Tenants\Support\SubdomainGenerator;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -26,6 +27,11 @@ class TenantRegistrationController extends Controller
      */
     private const PENDING_REGISTRATION_KEY = 'pending_tenant_registration';
 
+    /**
+     * A pending signup older than this is discarded instead of being honoured.
+     */
+    private const PENDING_SIGNUP_TTL_MINUTES = 60;
+
     public function __construct(
         private TenantManagerInterface $tenantManager,
         private SubdomainGenerator $subdomainGenerator,
@@ -39,8 +45,9 @@ class TenantRegistrationController extends Controller
         $cancelled = request()->boolean('cancelled');
         $prefill = null;
         $pending = session()->get(self::PENDING_REGISTRATION_KEY);
-        if ($cancelled && is_array($pending) && isset($pending['payload']) && is_array($pending['payload'])) {
-            $prefill = $pending['payload'];
+
+        if ($cancelled && is_array($pending) && $this->isPendingFresh($pending)) {
+            $prefill = $this->prefill($pending);
         }
 
         return Inertia::render('Auth/TenantRegister', [
@@ -56,6 +63,11 @@ class TenantRegistrationController extends Controller
     public function store(StoreTenantRegistrationRequest $request)
     {
         $validated = $request->validated();
+
+        // Hash at the boundary so the plaintext password is never written to
+        // the session or serialized into a queued job.
+        $validated['password'] = Hash::make($validated['password']);
+        unset($validated['password_confirmation']);
 
         $selectedPlan = $this->publicPlans->activePlanBySlug($validated['plan'] ?? null);
 
@@ -119,6 +131,7 @@ class TenantRegistrationController extends Controller
             'token' => $token,
             'plan' => (string) $plan->slug,
             'payload' => $validated,
+            'expires_at' => now()->addMinutes(self::PENDING_SIGNUP_TTL_MINUTES)->getTimestamp(),
         ]);
 
         $checkout = app(PaymentGatewayInterface::class)->createCheckoutSession([
@@ -130,12 +143,39 @@ class TenantRegistrationController extends Controller
             'customer_email' => $validated['email'],
             'metadata' => [
                 'pending_token' => $token,
-                'plan' => (string) $plan->slug,
-                'email' => $validated['email'],
             ],
         ]);
 
         return Inertia::location((string) $checkout['url']);
+    }
+
+    /**
+     * Keep the refill data minimal and credential-free: the pending payload is
+     * never sent back to the client wholesale.
+     *
+     * @param  array{plan?: string, payload?: array<string, mixed>}  $pending
+     * @return array<string, string|null>
+     */
+    private function prefill(array $pending): array
+    {
+        $payload = is_array($pending['payload'] ?? null) ? $pending['payload'] : [];
+
+        return array_filter([
+            'plan' => isset($pending['plan']) ? (string) $pending['plan'] : null,
+            'name' => isset($payload['name']) ? (string) $payload['name'] : null,
+            'email' => isset($payload['email']) ? (string) $payload['email'] : null,
+            'subdomain' => isset($payload['subdomain']) ? (string) $payload['subdomain'] : null,
+        ], fn ($value) => $value !== null);
+    }
+
+    /**
+     * @param  array<string, mixed>  $pending
+     */
+    private function isPendingFresh(array $pending): bool
+    {
+        $expiresAt = $pending['expires_at'] ?? null;
+
+        return ! is_int($expiresAt) || $expiresAt > now()->getTimestamp();
     }
 
     private function successResponse(string $domain, array $validated, $tenant): Response

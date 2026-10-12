@@ -24,6 +24,11 @@ class RegistrationCheckoutController extends Controller
 {
     private const PENDING_REGISTRATION_KEY = 'pending_tenant_registration';
 
+    /**
+     * A pending signup older than this is discarded instead of being honoured.
+     */
+    private const PENDING_SIGNUP_TTL_MINUTES = 60;
+
     public function __construct(
         private TenantManagerInterface $tenantManager,
         private SubdomainGenerator $subdomainGenerator,
@@ -47,7 +52,8 @@ class RegistrationCheckoutController extends Controller
         $pending = $request->session()->pull(self::PENDING_REGISTRATION_KEY);
 
         if (! is_array($pending)
-            || ($pending['token'] ?? null) !== ($session['metadata']['pending_token'] ?? null)) {
+            || ($pending['token'] ?? null) !== ($session['metadata']['pending_token'] ?? null)
+            || ! $this->isPendingFresh($pending)) {
             return redirect()->route('register.tenant');
         }
 
@@ -69,6 +75,22 @@ class RegistrationCheckoutController extends Controller
         $selectedPlan = $this->publicPlans->activePlanBySlug($planSlug);
 
         if ($selectedPlan === null || (float) $selectedPlan->price <= 0) {
+            return redirect()->route('register.tenant');
+        }
+
+        // Defense-in-depth: the plan price on file must match what Stripe
+        // actually charged, so a race or a tampered session can never
+        // provision a workspace below the listed price.
+        $expectedTotal = (int) round(((float) $selectedPlan->price) * 100);
+        $actualTotal = (int) ($session['amount_total'] ?? -1);
+
+        if ($actualTotal !== $expectedTotal) {
+            Log::warning('Checkout amount did not match the plan price', [
+                'email' => $validated['email'],
+                'expected' => $expectedTotal,
+                'actual' => $actualTotal,
+            ]);
+
             return redirect()->route('register.tenant');
         }
 
@@ -122,6 +144,10 @@ class RegistrationCheckoutController extends Controller
             $plan = (string) $pending['plan'];
         }
 
+        // Never leave the pending payload (PII, hashed credential) sitting in
+        // the session once the guest abandons the checkout.
+        $request->session()->forget(self::PENDING_REGISTRATION_KEY);
+
         $params = [];
         if ($plan !== '') {
             $params['plan'] = $plan;
@@ -129,6 +155,16 @@ class RegistrationCheckoutController extends Controller
         $params['cancelled'] = 1;
 
         return redirect()->route('register.tenant', $params);
+    }
+
+    /**
+     * @param  array<string, mixed>  $pending
+     */
+    private function isPendingFresh(array $pending): bool
+    {
+        $expiresAt = $pending['expires_at'] ?? null;
+
+        return ! is_int($expiresAt) || $expiresAt > now()->getTimestamp();
     }
 
     private function successResponse(string $domain, array $validated, Tenant $tenant): Response

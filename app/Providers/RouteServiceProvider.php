@@ -41,6 +41,23 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($key);
         });
 
+        // Per-email cap on public registration, keyed by the submission email
+        // so an attacker rotating IPs cannot hammer the email-conflict check
+        // for one address. The key is hashed so raw emails never hit the cache
+        // store. Composed with the per-IP `throttle:3,1` on the POST route.
+        RateLimiter::for('registration', function (Request $request) {
+            $email = strtolower((string) $request->input('email', ''));
+
+            $byEmail = $email !== ''
+                ? Limit::perMinutes(60, 5)->by('registration_'.hash('sha256', $email))
+                : null;
+
+            return collect([$byEmail, Limit::perMinutes(60, 5)->by('registration_ip_'.$request->ip())])
+                ->filter()
+                ->values()
+                ->all();
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api/v1')

@@ -105,13 +105,13 @@ class StoreTenantRegistrationRequest extends FormRequest
 
     private function checkEmail(string $email, Validator $validator): void
     {
-        $existing = Tenant::withTrashed()->where('email', $email)->first();
+        // A generic, non-echoing message so a guest cannot probe which emails
+        // have accounts (or enumerate previously registered workspaces).
+        $exists = Tenant::where('email', $email)->exists();
 
-        if (! $existing) {
-            return;
+        if ($exists) {
+            $validator->errors()->add('email', 'An account already exists for that email.');
         }
-
-        $validator->errors()->add('email', "A tenant with the email '{$email}' already exists.");
     }
 
     /**

@@ -29,13 +29,14 @@ class TenantBuilder implements TenantBuilderInterface
 
     public function withData(array $data): static
     {
-        $status = $data['status'] ?? (isset($data['trial_ends_at']) ? 'Trial' : 'Active');
-
+        // Explicit allowlist: the builder never honors caller-provided
+        // status/id/trial_ends_at so crafted input cannot privilege-escalate a
+        // tenant (status, plan, identity) during provisioning. Trial state is
+        // applied later by withPlan().
         $attributes = [
             'name' => $data['name'],
             'email' => $data['email'],
-            'status' => $status,
-            'trial_ends_at' => $data['trial_ends_at'] ?? null,
+            'status' => 'Active',
             'company_name' => $data['company_name'] ?? null,
             'first_name' => $data['first_name'] ?? null,
             'last_name' => $data['last_name'] ?? null,
@@ -47,10 +48,6 @@ class TenantBuilder implements TenantBuilderInterface
             'postal_code' => $data['postal_code'] ?? null,
             'country' => $data['country'] ?? null,
         ];
-
-        if (isset($data['id'])) {
-            $attributes['id'] = $data['id'];
-        }
 
         $this->tenant = Tenant::create($attributes);
 
