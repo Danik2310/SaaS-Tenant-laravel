@@ -1,8 +1,13 @@
 ﻿import { vi, describe, test, beforeEach, expect } from 'vitest';
 import React from 'react';
+import axios from 'axios';
 import { render, screen, fireEvent, waitFor, within } from '../test-utils';
 import TenantRegister from '@/Pages/Auth/TenantRegister';
 import TenantRegisterSuccess from '@/Pages/Auth/TenantRegisterSuccess';
+
+vi.mock('axios', () => ({
+    default: { get: vi.fn() },
+}));
 
 const { useFormMock, lastForm } = vi.hoisted(() => {
     const useFormMock = vi.fn();
@@ -71,12 +76,29 @@ const featureDefinitions = {
     sso: { label: 'Single sign-on' },
 };
 
+const countries = [
+    { code: 'US', name: 'United States' },
+    { code: 'IT', name: 'Italy' },
+    { code: 'CA', name: 'Canada' },
+];
+
+const states = {
+    US: ['Illinois', 'California'],
+    IT: ['Latina'],
+    CA: ['Ontario'],
+};
+
+const cityNames = ['Chicago', 'New Chicago', 'Springfield'];
+
+const locationProps = { countries, states };
+
 describe('TenantRegister', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockForm();
         global.route = vi.fn((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
         global.route.mockImplementation((name) => (name === 'register.tenant' ? '/register' : `/${name}`));
+        axios.get.mockResolvedValue({ data: { data: cityNames } });
     });
 
     test('drops the step transition when the visitor prefers reduced motion', () => {
@@ -469,8 +491,8 @@ describe('TenantRegister', () => {
         expect(submit).toHaveTextContent('Creating your workspace');
     });
 
-    test('cascades country, state and city from the curated lists', async () => {
-        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+    test('cascades country, state and city from the curated props', async () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" {...locationProps} />);
         fireEvent.click(screen.getByTestId('optional-details-toggle'));
 
         const country = screen.getByLabelText('Country');
@@ -486,25 +508,56 @@ describe('TenantRegister', () => {
         expect(lastForm().data.country).toBe('United States');
         expect(state).not.toBeDisabled();
         expect(state).toHaveValue('');
+        expect(city).not.toBeDisabled();
 
         fireEvent.change(state, { target: { value: 'Illinois' } });
 
         expect(lastForm().data.state).toBe('Illinois');
-        expect(city).not.toBeDisabled();
-        expect(city).toHaveValue('');
+        expect(lastForm().data.city).toBe('');
 
-        // The ~2MB city table is a lazy chunk; give the first parse headroom.
-        await waitFor(() => expect(city.options.length).toBeGreaterThan(1), { timeout: 15000 });
+        // The city list comes from the throttled endpoint, keyed on the
+        // selected country and the optional state filter. MUI only opens its
+        // popup while the combobox has focus, so focus before typing.
+        fireEvent.focus(city);
+        fireEvent.change(city, { target: { value: 'Chi' } });
 
-        fireEvent.change(city, { target: { value: 'Chicago' } });
+        await waitFor(() =>
+            expect(axios.get).toHaveBeenCalledWith(
+                expect.stringContaining('register.locations.cities'),
+                expect.objectContaining({
+                    params: expect.objectContaining({ country: 'US', state: 'Illinois' }),
+                })
+            )
+        );
+
+        const option = await screen.findByRole('option', { name: 'Chicago' });
+        fireEvent.click(option);
 
         expect(lastForm().data.country).toBe('United States');
         expect(lastForm().data.state).toBe('Illinois');
         expect(lastForm().data.city).toBe('Chicago');
     });
 
+    test('allows a city with just a country — state stays optional', async () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" {...locationProps} />);
+        fireEvent.click(screen.getByTestId('optional-details-toggle'));
+
+        const country = screen.getByLabelText('Country');
+        const city = screen.getByLabelText('City');
+
+        fireEvent.change(country, { target: { value: 'United States' } });
+        fireEvent.focus(city);
+        fireEvent.change(city, { target: { value: 'Spring' } });
+
+        const option = await screen.findByRole('option', { name: 'Springfield' });
+        fireEvent.click(option);
+
+        expect(lastForm().data.city).toBe('Springfield');
+        expect(lastForm().data.state).toBe('');
+    });
+
     test('resets dependent location fields when the country changes', () => {
-        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" {...locationProps} />);
         fireEvent.click(screen.getByTestId('optional-details-toggle'));
 
         const country = screen.getByLabelText('Country');
@@ -542,6 +595,7 @@ describe('TenantRegister', () => {
                 tenant_domain_suffix="sasapp"
                 cancelled
                 prefill={{ plan: 'trial', state: 'Illinois', city: 'Chicago' }}
+                {...locationProps}
             />
         );
 

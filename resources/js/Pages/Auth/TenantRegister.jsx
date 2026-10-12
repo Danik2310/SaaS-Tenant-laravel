@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import axios from 'axios';
+import Autocomplete from '@mui/material/Autocomplete';
 import LedgerLayout from '@/Layouts/LedgerLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import usePrefersReducedMotion from '@/hooks/usePrefersReducedMotion';
-import countries from '@/data/countries.json';
-import statesByCode from '@/data/states.json';
 import DarkSelect from './parts/DarkSelect';
 import ErrorSummary from './parts/ErrorSummary';
 import FormField from './parts/FormField';
@@ -73,6 +73,8 @@ export default function TenantRegister({
     trial_days = 14,
     cancelled = false,
     prefill = null,
+    countries = [],
+    states = {},
 }) {
     const [showPayment, setShowPayment] = useState(false);
     const [showForm, setShowForm] = useState(Boolean(selected_plan));
@@ -230,69 +232,95 @@ export default function TenantRegister({
 
     const selectedCountry = useMemo(
         () => countries.find((c) => c.name === data.country) ?? null,
-        [data.country]
+        [countries, data.country]
     );
 
     const stateOptions = useMemo(
-        () => (selectedCountry ? statesByCode[selectedCountry.code] ?? [] : []),
-        [selectedCountry]
-    );
-
-    const selectedState = useMemo(
-        () => stateOptions.find((s) => s.name === data.state) ?? null,
-        [stateOptions, data.state]
+        () => (selectedCountry ? states[selectedCountry.code] ?? [] : []),
+        [selectedCountry, states]
     );
 
     const cityRequestId = useRef(0);
     const [cityOptions, setCityOptions] = useState([]);
+    const [cityQuery, setCityQuery] = useState('');
 
-    const loadCities = useCallback(async (countryCode, stateCode) => {
+    const loadCities = useCallback(async (countryCode, stateName, term) => {
         const requestId = ++cityRequestId.current;
         setCityOptions([]);
 
-        if (!countryCode || !stateCode) {
+        if (!countryCode) {
             return;
         }
 
         try {
-            // The full city table (~140k names) is code-split so it never
-            // touches the initial bundle. Only loaded once a state is chosen.
-            const mod = await import('@/data/cities.json');
+            // The city catalogue lives server-side (~150k rows); each keystroke
+            // hits a throttled endpoint instead of shipping the table to the
+            // client. Options only become selectable values via the picker.
+            const { data: payload } = await axios.get(route('register.locations.cities'), {
+                params: {
+                    country: countryCode,
+                    state: stateName || undefined,
+                    term: term?.trim() || undefined,
+                    limit: 50,
+                },
+            });
             if (requestId !== cityRequestId.current) {
                 return;
             }
-            setCityOptions(mod.default[`${countryCode}-${stateCode}`] ?? []);
-        } catch {
-            if (requestId === cityRequestId.current) {
+            setCityOptions(payload?.data ?? []);
+        } catch (error) {
+            // Aborted by a newer request is normal; a dropped request id keeps
+            // the stale response from clobbering fresher options.
+            if (requestId === cityRequestId.current && !axios.isCancel(error)) {
                 setCityOptions([]);
             }
         }
     }, []);
 
     useEffect(() => {
-        if (selectedCountry && selectedState) {
-            loadCities(selectedCountry.code, selectedState.code);
-        } else {
+        if (!selectedCountry) {
             cityRequestId.current += 1;
             setCityOptions([]);
+            return undefined;
         }
-    }, [selectedCountry, selectedState, loadCities]);
+
+        const timer = setTimeout(() => {
+            loadCities(selectedCountry.code, data.state || null, cityQuery);
+        }, 250);
+
+        return () => clearTimeout(timer);
+    }, [selectedCountry, data.state, cityQuery, loadCities]);
+
+    const selectedState = useMemo(
+        () => (data.state && stateOptions.includes(data.state) ? data.state : null),
+        [stateOptions, data.state]
+    );
 
     const handleCountryChange = (e) => {
         setData('country', e.target.value);
         setData('state', '');
         setData('city', '');
+        setCityQuery('');
     };
 
     const handleStateChange = (e) => {
         setData('state', e.target.value);
         setData('city', '');
+        setCityQuery('');
+    };
+
+    const handleCitySelect = (value) => {
+        const city = value ?? '';
+        setData('city', city);
+        setCityQuery(city);
     };
 
     /**
      * Mirrors the server-side location checks so optional address fields are
      * validated the moment Step 2 is submitted. Returns the first failing
-     * field key (for focus) or null when everything is consistent.
+     * field key (for focus) or null when everything is consistent. The state
+     * is an optional narrowing filter: a city may be chosen with just a
+     * country, and the server validates it against the whole country.
      */
     const validateLocation = () => {
         if (data.country && !countries.some((c) => c.name === data.country)) {
@@ -305,21 +333,20 @@ export default function TenantRegister({
                 setError('country', 'Select the country before filling in the state or city.');
                 return 'country';
             }
-            if (!stateOptions.some((s) => s.name === data.state)) {
+            if (!stateOptions.includes(data.state)) {
                 setError('state', 'That is not a recognized state or province for the selected country.');
                 return 'state';
             }
         }
 
-        if (data.city) {
-            if (!data.state) {
-                setError('state', 'Select the state or province before filling in the city.');
-                return 'state';
-            }
-            if (!cityOptions.includes(data.city)) {
+        if (data.country && data.city) {
+            if (cityOptions.length > 0 && !cityOptions.includes(data.city)) {
                 setError('city', 'Select a city from the list.');
                 return 'city';
             }
+        } else if (data.city) {
+            setError('country', 'Select the country before filling in the state or city.');
+            return 'country';
         }
 
         if (data.postal_code && !POSTAL_CODE_RE.test(data.postal_code)) {
@@ -815,16 +842,72 @@ export default function TenantRegister({
 
                                     <div className="grid gap-x-4 gap-y-6 sm:grid-cols-3">
                                         <FormField label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
-                                            <DarkSelect
+                                            <Autocomplete
                                                 id="city"
-                                                name="city"
-                                                value={data.city}
-                                                invalid={Boolean(errors.city)}
-                                                autoComplete="section-billing address-level2"
-                                                onChange={(e) => setData('city', e.target.value)}
-                                                options={cityOptions.map((name) => ({ value: name, label: name }))}
-                                                placeholder="Select a city"
-                                                disabled={!selectedState}
+                                                options={cityOptions}
+                                                getOptionLabel={(option) => option}
+                                                isOptionEqualToValue={(option, value) => option === value}
+                                                value={cityOptions.includes(data.city) ? data.city : null}
+                                                inputValue={cityQuery}
+                                                onChange={(_, value) => handleCitySelect(value)}
+                                                onInputChange={(_, value) => setCityQuery(value)}
+                                                disabled={!selectedCountry}
+                                                disableClearable
+                                                noOptionsText="No matching cities"
+                                                sx={{
+                                                    '& .MuiAutocomplete-paper': {
+                                                        bgcolor: '#171717',
+                                                        color: '#ffffff',
+                                                    },
+                                                    '& .MuiAutocomplete-listbox': { bgcolor: '#171717' },
+                                                    '& .MuiAutocomplete-option': {
+                                                        color: '#ffffff',
+                                                        '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' },
+                                                    },
+                                                    '& .MuiAutocomplete-option[aria-selected="true"]': {
+                                                        bgcolor: 'rgba(94, 234, 212, 0.12)',
+                                                    },
+                                                }}
+                                                renderInput={(params) => {
+                                                    const { InputProps, inputProps } = params;
+                                                    const {
+                                                        startAdornment,
+                                                        endAdornment,
+                                                        ref: inputRootRef,
+                                                        ...inputRootProps
+                                                    } = InputProps;
+                                                    const { ref: inputRefProp, ...restInputProps } = inputProps;
+                                                    const mergeRefs = useCallback(
+                                                        (element) => {
+                                                            if (typeof inputRootRef === 'function') {
+                                                                inputRootRef(element);
+                                                            } else if (inputRootRef) {
+                                                                inputRootRef.current = element;
+                                                            }
+                                                            if (typeof inputRefProp === 'function') {
+                                                                inputRefProp(element);
+                                                            } else if (inputRefProp) {
+                                                                inputRefProp.current = element;
+                                                            }
+                                                        },
+                                                        [inputRootRef, inputRefProp]
+                                                    );
+                                                    return (
+                                                        <TextInput
+                                                            tone="dark"
+                                                            invalid={Boolean(errors.city)}
+                                                            className="w-full pr-9 [color-scheme:dark]"
+                                                            aria-invalid={errors.city ? 'true' : undefined}
+                                                            aria-describedby={errors.city ? 'city-error' : undefined}
+                                                            placeholder="Type to search cities"
+                                                            ref={mergeRefs}
+                                                            {...inputRootProps}
+                                                            {...restInputProps}
+                                                            name="city"
+                                                            autoComplete="section-billing address-level2"
+                                                        />
+                                                    );
+                                                }}
                                             />
                                         </FormField>
 
@@ -841,7 +924,7 @@ export default function TenantRegister({
                                                 invalid={Boolean(errors.state)}
                                                 autoComplete="section-billing address-level1"
                                                 onChange={handleStateChange}
-                                                options={stateOptions.map((state) => ({ value: state.name, label: state.name }))}
+                                                options={stateOptions.map((name) => ({ value: name, label: name }))}
                                                 placeholder="Select a state"
                                                 disabled={!selectedCountry}
                                             />

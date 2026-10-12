@@ -4,7 +4,9 @@
  * `color-scheme: dark` tells the browser to render the OS dropdown and its
  * scrollbar with a dark palette, so the white options stay readable once the
  * popup opens (the `bg-transparent` control would otherwise leak white text
- * onto a light popup in some engines).
+ * onto a light popup in some engines). The `select-dark` class pairs with the
+ * `.select-dark option` rules in app.css as a belt-and-braces fix for engines
+ * that ignore `color-scheme` when painting the native popup.
  */
 export default function DarkSelect({
     options = [],
@@ -16,7 +18,7 @@ export default function DarkSelect({
 }) {
     const styles = {
         light: 'rounded-xl px-3.5 py-2.5 shadow-sm ring-1 ring-inset',
-        dark: `rounded-sm border px-3.5 py-2.5 text-white [color-scheme:dark] focus:border-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:cursor-not-allowed disabled:opacity-60 ${
+        dark: `select-dark rounded-sm border px-3.5 py-2.5 text-white [color-scheme:dark] focus:border-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink disabled:cursor-not-allowed disabled:opacity-60 ${
             invalid ? 'border-red-400' : 'border-white/35'
         }`,
     };

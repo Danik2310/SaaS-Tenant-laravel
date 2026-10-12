@@ -355,6 +355,19 @@
     }
 }
 
+/* Native select popup (register form). Some engines ignore `color-scheme` when
+   painting the dropdown, which leaks white `text-white` options onto a light
+   popup. Foreground the ink surface explicitly so the options stay legible. */
+.select-dark option {
+    background-color: #171717;
+    color: #ffffff;
+}
+
+.select-dark option:disabled,
+.select-dark option[value=''] {
+    color: rgb(255 255 255 / 0.5);
+}
+
 /* Plan cards on /register. app.css already neutralises .reveal and
    .animate-* under prefers-reduced-motion, but not Tailwind's transition-*
    utilities — and the card gains a transform-based disclosure transition.
