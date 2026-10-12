@@ -20,6 +20,7 @@ use App\Tenants\Http\Controllers\Admin\TenantController;
 use App\Tenants\Http\Controllers\Admin\TenantDomainController;
 use App\Tenants\Http\Controllers\Admin\TenantMetricsController;
 use App\Tenants\Http\Controllers\Public\RegistrationCheckoutController;
+use App\Tenants\Http\Controllers\Public\RegistrationLocationController;
 use App\Tenants\Http\Controllers\Public\TenantRegistrationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -62,6 +63,12 @@ foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
         Route::get('/register', [TenantRegistrationController::class, 'create'])->name('register.tenant');
         Route::post('/register', [TenantRegistrationController::class, 'store'])
             ->middleware(['throttle:3,1', 'throttle:registration']);
+
+        // Country-aware city lookup for the registration form. Bounded so a
+        // guest cannot use it as a bulk-query or scraping endpoint.
+        Route::get('/register/locations/cities', [RegistrationLocationController::class, 'cities'])
+            ->middleware('throttle:60,1')
+            ->name('register.locations.cities');
 
         // Stripe-hosted checkout callbacks. Provisioning of a paid plan happens
         // only in RegistrationCheckoutController::success(), never in store().

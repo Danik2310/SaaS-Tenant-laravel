@@ -5,6 +5,7 @@ namespace App\Http\Requests\Public;
 use App\Models\Domain;
 use App\Models\Plan;
 use App\Models\Tenant;
+use App\Shared\Contracts\LocationCatalog;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -12,6 +13,12 @@ use Illuminate\Validation\Validator;
 
 class StoreTenantRegistrationRequest extends FormRequest
 {
+    public function __construct(
+        private LocationCatalog $locations,
+    ) {
+        parent::__construct();
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -53,7 +60,7 @@ class StoreTenantRegistrationRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:100',
-                Rule::in(config('locations.countries')),
+                Rule::in($this->countryNames()),
             ],
             'plan' => 'nullable|string|max:64',
             'terms' => 'required|accepted',
@@ -148,20 +155,25 @@ class StoreTenantRegistrationRequest extends FormRequest
             return;
         }
 
-        $states = config("locations.states.{$country}", []);
-
-        if (! empty($state) && ! in_array($state, $states, true)) {
+        if (! empty($state) && ! $this->locations->stateBelongsToCountry($country, $state)) {
             $validator->errors()->add(
                 'state',
                 'That is not a recognized state or province for the selected country.'
             );
         }
 
-        if (! empty($city) && empty($state)) {
+        if (! empty($city) && ! $this->locations->cityMatches($country, $state ?: null, $city)) {
             $validator->errors()->add(
-                'state',
-                'Select the state or province before filling in the city.'
+                'city',
+                empty($state)
+                    ? 'That city is not recognized for the selected country.'
+                    : 'That city is not recognized for the selected state.'
             );
         }
+    }
+
+    private function countryNames(): array
+    {
+        return array_column($this->locations->countries(), 'name');
     }
 }

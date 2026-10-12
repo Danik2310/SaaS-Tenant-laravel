@@ -18,11 +18,13 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 use InvalidArgumentException;
+use Tests\Support\SeedsWorldFixture;
 use Tests\TestCase;
 
 class TenantRegistrationTest extends TestCase
 {
     use RefreshDatabase;
+    use SeedsWorldFixture;
 
     protected array $createdTenantDbNames = [];
 
@@ -30,6 +32,7 @@ class TenantRegistrationTest extends TestCase
     {
         parent::setUp();
         $this->seed(PlanSeeder::class);
+        $this->seedWorldFixture();
     }
 
     protected function tearDown(): void
@@ -172,7 +175,7 @@ class TenantRegistrationTest extends TestCase
             'address_line1' => '123 Main St',
             'address_line2' => 'Suite 400',
             'city' => 'Springfield',
-            'state' => 'IL',
+            'state' => 'Illinois',
             'postal_code' => '62701',
             'country' => 'United States',
         ]))->assertOk();
@@ -185,7 +188,7 @@ class TenantRegistrationTest extends TestCase
         $this->assertSame('123 Main St', $tenant->address_line1);
         $this->assertSame('Suite 400', $tenant->address_line2);
         $this->assertSame('Springfield', $tenant->city);
-        $this->assertSame('IL', $tenant->state);
+        $this->assertSame('Illinois', $tenant->state);
         $this->assertSame('62701', $tenant->postal_code);
         $this->assertSame('United States', $tenant->country);
 
@@ -199,6 +202,73 @@ class TenantRegistrationTest extends TestCase
         $this->assertSame('Jane Doe', $user->name);
 
         $this->forgetTenant();
+    }
+
+    public function test_guest_can_register_with_a_city_but_no_state(): void
+    {
+        // State is an optional filter: a city may be chosen against the whole
+        // country, and the server resolves it country-wide.
+        $this->post('/register', $this->payload([
+            'city' => 'Springfield',
+            'country' => 'United States',
+        ]))->assertOk();
+
+        $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertSame('Springfield', $tenant->city);
+        $this->assertSame('United States', $tenant->country);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+    }
+
+    public function test_city_outside_the_chosen_state_is_rejected(): void
+    {
+        $this->post('/register', $this->payload([
+            'city' => 'Toronto',
+            'state' => 'Illinois',
+            'country' => 'United States',
+        ]))
+            ->assertSessionHasErrors('city')
+            ->assertSessionDoesntHaveErrors('state');
+
+        $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_city_from_another_country_is_rejected(): void
+    {
+        $this->post('/register', $this->payload([
+            'city' => 'Springfield',
+            'state' => 'Ontario',
+            'country' => 'Canada',
+        ]))
+            ->assertSessionHasErrors('city')
+            ->assertSessionDoesntHaveErrors('state');
+
+        $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_unknown_state_is_rejected(): void
+    {
+        $this->post('/register', $this->payload([
+            'state' => 'West Dakota',
+            'country' => 'United States',
+        ]))
+            ->assertSessionHasErrors('state');
+
+        $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_unknown_country_is_rejected(): void
+    {
+        $this->post('/register', $this->payload([
+            'state' => 'Illinois',
+            'city' => 'Springfield',
+            'country' => 'Atlantis',
+        ]))
+            ->assertSessionHasErrors('country')
+            ->assertSessionDoesntHaveErrors(['state', 'city']);
+
+        $this->assertSame(0, Tenant::count());
     }
 
     public function test_guest_can_register_a_workspace_with_free_plan(): void

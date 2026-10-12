@@ -8,6 +8,7 @@ use App\Billing\Contracts\PaymentGatewayInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreTenantRegistrationRequest;
 use App\Models\Plan;
+use App\Shared\Contracts\LocationCatalog;
 use App\Shared\Contracts\PublicPlanCatalogInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
@@ -36,6 +37,7 @@ class TenantRegistrationController extends Controller
         private TenantManagerInterface $tenantManager,
         private SubdomainGenerator $subdomainGenerator,
         private PublicPlanCatalogInterface $publicPlans,
+        private LocationCatalog $locations,
     ) {}
 
     public function create(): Response
@@ -50,6 +52,8 @@ class TenantRegistrationController extends Controller
             $prefill = $this->prefill($pending);
         }
 
+        $states = $this->locations->statesByCountry();
+
         return Inertia::render('Auth/TenantRegister', [
             'plans' => $plans,
             'selected_plan' => $this->selectedPlan($plans),
@@ -57,6 +61,8 @@ class TenantRegistrationController extends Controller
             'trial_days' => (int) config('tenancy.trial_days', 14),
             'cancelled' => $cancelled,
             'prefill' => $prefill,
+            'countries' => $this->locations->countries(),
+            'states' => $states,
         ]);
     }
 
