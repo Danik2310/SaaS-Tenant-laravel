@@ -840,7 +840,44 @@ export default function TenantRegister({
                                         />
                                     </FormField>
 
-                                    <div className="grid gap-x-4 gap-y-6 sm:grid-cols-3">
+                                    <div className="grid gap-x-4 gap-y-6 sm:grid-cols-2">
+                                        <FormField
+                                            label="Country"
+                                            htmlFor="country"
+                                            hint={FIELD_HINTS.country}
+                                            error={errors.country}
+                                        >
+                                            <DarkSelect
+                                                id="country"
+                                                name="country"
+                                                value={data.country}
+                                                invalid={Boolean(errors.country)}
+                                                autoComplete="section-billing country-name"
+                                                onChange={handleCountryChange}
+                                                options={countries.map((country) => ({ value: country.name, label: country.name }))}
+                                                placeholder="Select a country"
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="State / Province"
+                                            htmlFor="state"
+                                            hint={FIELD_HINTS.state}
+                                            error={errors.state}
+                                        >
+                                            <DarkSelect
+                                                id="state"
+                                                name="state"
+                                                value={data.state}
+                                                invalid={Boolean(errors.state)}
+                                                autoComplete="section-billing address-level1"
+                                                onChange={handleStateChange}
+                                                options={stateOptions.map((name) => ({ value: name, label: name }))}
+                                                placeholder="Select a state"
+                                                disabled={!selectedCountry}
+                                            />
+                                        </FormField>
+
                                         <FormField label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
                                             <Autocomplete
                                                 id="city"
@@ -912,25 +949,6 @@ export default function TenantRegister({
                                         </FormField>
 
                                         <FormField
-                                            label="State / Province"
-                                            htmlFor="state"
-                                            hint={FIELD_HINTS.state}
-                                            error={errors.state}
-                                        >
-                                            <DarkSelect
-                                                id="state"
-                                                name="state"
-                                                value={data.state}
-                                                invalid={Boolean(errors.state)}
-                                                autoComplete="section-billing address-level1"
-                                                onChange={handleStateChange}
-                                                options={stateOptions.map((name) => ({ value: name, label: name }))}
-                                                placeholder="Select a state"
-                                                disabled={!selectedCountry}
-                                            />
-                                        </FormField>
-
-                                        <FormField
                                             label="Postal Code"
                                             htmlFor="postal_code"
                                             hint={FIELD_HINTS.postal_code}
@@ -950,24 +968,6 @@ export default function TenantRegister({
                                             />
                                         </FormField>
                                     </div>
-
-                                    <FormField
-                                        label="Country"
-                                        htmlFor="country"
-                                        hint={FIELD_HINTS.country}
-                                        error={errors.country}
-                                    >
-                                        <DarkSelect
-                                            id="country"
-                                            name="country"
-                                            value={data.country}
-                                            invalid={Boolean(errors.country)}
-                                            autoComplete="section-billing country-name"
-                                            onChange={handleCountryChange}
-                                            options={countries.map((country) => ({ value: country.name, label: country.name }))}
-                                            placeholder="Select a country"
-                                        />
-                                    </FormField>
                                 </OptionalDetails>
                                     </div>
                                 )}
