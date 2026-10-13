@@ -23,32 +23,55 @@ use InvalidArgumentException;
 class TenantManager implements TenantManagerInterface
 {
     public function __construct(
-        private TenantBuilderInterface $tenantBuilder,
         private DatabaseServiceInterface $databaseService,
     ) {}
 
     public function provision(array $data): Tenant
     {
-        $nextId = SequentialIdGenerator::predictNext();
-        $this->ensureDatabaseAvailable($nextId);
+        // Resolved per call: the builder is stateful, so a shared instance
+        // captured by this singleton could leak a previous tenant across calls.
+        $builder = app(TenantBuilderInterface::class);
 
-        $tenant = $this->tenantBuilder->withData($data)->build();
+        // Serialize sequential-ID allocation across concurrent provisions. The
+        // lock is held only across the tenant row insert — the point at which
+        // the ID is assigned — not the queued database-creation pipeline.
+        $lock = Cache::lock('tenancy:provision', 60);
 
-        try {
-            $this->tenantBuilder
-                ->for($tenant)
-                ->withDomain($data['domain'])
-                ->withPlan(
-                    $data['plan'] ?? null,
-                    (bool) ($data['public_signup'] ?? false),
-                    (bool) ($data['confirmed_payment'] ?? false),
-                );
-        } catch (\Throwable $e) {
-            $tenant->forceDelete();
-            throw $e;
-        }
+        return $lock->block(30, function () use ($builder, $data) {
+            $nextId = SequentialIdGenerator::predictNext();
+            $this->ensureDatabaseAvailable($nextId);
 
-        return $tenant->fresh();
+            // Validate domain and plan BEFORE any tenant row (and its queued
+            // provisioning pipeline) exists, so a rejected signup cannot leave
+            // an orphaned tenant or database behind.
+            $builder->assertDomainAvailable($data['domain']);
+            $builder->resolveAssignablePlan(
+                $data['plan'] ?? null,
+                (bool) ($data['public_signup'] ?? false),
+                (bool) ($data['confirmed_payment'] ?? false),
+            );
+
+            try {
+                $tenant = $builder->withData($data)->build();
+
+                $builder
+                    ->for($tenant)
+                    ->withDomain($data['domain'])
+                    ->withPlan(
+                        $data['plan'] ?? null,
+                        (bool) ($data['public_signup'] ?? false),
+                        (bool) ($data['confirmed_payment'] ?? false),
+                    );
+            } catch (\Throwable $e) {
+                if (isset($tenant) && $tenant->exists) {
+                    $tenant->forceDelete();
+                }
+
+                throw $e;
+            }
+
+            return $tenant->fresh();
+        });
     }
 
     protected function ensureDatabaseAvailable(string $tenantId): void

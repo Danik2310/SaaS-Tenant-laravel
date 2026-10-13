@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tenants\Contracts;
 
+use App\Models\Plan;
 use App\Models\Tenant;
 
 interface TenantBuilderInterface
@@ -15,6 +16,10 @@ interface TenantBuilderInterface
     public function withDomain(string $domain): static;
 
     public function withPlan(?string $planSlug = null, bool $publicSignup = false, bool $confirmedPayment = false): static;
+
+    public function assertDomainAvailable(string $domain): void;
+
+    public function resolveAssignablePlan(?string $planSlug = null, bool $publicSignup = false, bool $confirmedPayment = false): ?Plan;
 
     public function build(): Tenant;
 }

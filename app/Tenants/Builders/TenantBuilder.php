@@ -56,11 +56,7 @@ class TenantBuilder implements TenantBuilderInterface
 
     public function withDomain(string $domain): static
     {
-        $existing = Domain::where('domain', $domain)->exists();
-
-        if ($existing) {
-            throw new InvalidArgumentException("Domain '{$domain}' is already in use by another tenant.");
-        }
+        $this->assertDomainAvailable($domain);
 
         $this->tenant->domains()->create(['domain' => $domain]);
         $this->tenant->domain = $domain;
@@ -69,33 +65,22 @@ class TenantBuilder implements TenantBuilderInterface
         return $this;
     }
 
+    /**
+     * Validation-only counterpart to withDomain(), callable before the tenant
+     * row exists so a rejected signup never leaves a database behind.
+     */
+    public function assertDomainAvailable(string $domain): void
+    {
+        if (Domain::where('domain', $domain)->exists()) {
+            throw new InvalidArgumentException("Domain '{$domain}' is already in use by another tenant.");
+        }
+    }
+
     public function withPlan(?string $planSlug = null, bool $publicSignup = false, bool $confirmedPayment = false): static
     {
-        if ($planSlug) {
-            $plan = Plan::where('slug', $planSlug)->first();
-            if (! $plan) {
-                throw new InvalidArgumentException(
-                    "Plan '{$planSlug}' not found. Available plans: "
-                    .Plan::pluck('slug')->implode(', ')
-                );
-            }
+        $plan = $this->resolveAssignablePlan($planSlug, $publicSignup, $confirmedPayment);
 
-            if ($plan->max_users === 0) {
-                throw new InvalidArgumentException("Plan '{$plan->name}' does not support any users.");
-            }
-
-            // Defense in depth for the public registration path: never assign
-            // an inactive or paid plan without a confirmed payment. Admin
-            // provisioning (publicSignup = false) and post-payment signup
-            // (confirmedPayment = true) may still assign paid plans.
-            if ($publicSignup
-                && ($plan->status !== 'active'
-                    || ((float) $plan->price > 0 && ! $confirmedPayment))) {
-                throw new InvalidArgumentException(
-                    "Plan '{$plan->name}' is not available for self-service signup."
-                );
-            }
-
+        if ($plan) {
             if ($plan->isTrial()) {
                 $this->tenant->status = 'Trial';
                 $this->tenant->trial_ends_at ??= now()->addDays((int) config('tenancy.trial_days', 14));
@@ -111,6 +96,43 @@ class TenantBuilder implements TenantBuilderInterface
         }
 
         return $this;
+    }
+
+    /**
+     * Resolve (and validate) the plan a signup may be assigned, without
+     * mutating the tenant. Returns null for a null slug.
+     */
+    public function resolveAssignablePlan(?string $planSlug = null, bool $publicSignup = false, bool $confirmedPayment = false): ?Plan
+    {
+        if (! $planSlug) {
+            return null;
+        }
+
+        $plan = Plan::where('slug', $planSlug)->first();
+        if (! $plan) {
+            throw new InvalidArgumentException(
+                "Plan '{$planSlug}' not found. Available plans: "
+                .Plan::pluck('slug')->implode(', ')
+            );
+        }
+
+        if ($plan->max_users === 0) {
+            throw new InvalidArgumentException("Plan '{$plan->name}' does not support any users.");
+        }
+
+        // Defense in depth for the public registration path: never assign
+        // an inactive or paid plan without a confirmed payment. Admin
+        // provisioning (publicSignup = false) and post-payment signup
+        // (confirmedPayment = true) may still assign paid plans.
+        if ($publicSignup
+            && ($plan->status !== 'active'
+                || ((float) $plan->price > 0 && ! $confirmedPayment))) {
+            throw new InvalidArgumentException(
+                "Plan '{$plan->name}' is not available for self-service signup."
+            );
+        }
+
+        return $plan;
     }
 
     public function build(): Tenant
