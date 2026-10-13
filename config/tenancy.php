@@ -109,7 +109,7 @@ return [
      * You can clear cache selectively by specifying the tag.
      */
     'cache' => [
-        'tag_base' => 'tenant', // This tag_base, followed by the tenant_id, will form a tag that will be applied on each cache call.
+        'tag_base' => 'tenant_', // This tag_base, followed by the tenant_id, will form a tag that will be applied on each cache call. Keep the trailing underscore in sync with the literal 'tenant_'.$id tags used across the app (TenantStateManager::flushTenantCache, listeners, billing controllers); otherwise tenant-context writes are never flushed.
     ],
 
     /**
