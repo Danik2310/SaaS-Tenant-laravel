@@ -2,6 +2,7 @@
 
 namespace App\Shared\Support;
 
+use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
 use InvalidArgumentException;
 
 /**
@@ -9,6 +10,9 @@ use InvalidArgumentException;
  * tenant in god mode. The token is HMAC'd with the shared application key, so
  * only the same application can produce and validate it (central and tenant
  * run on the same codebase and share APP_KEY).
+ *
+ * Each token carries a unique `jti` so the entry controller can consume it
+ * exactly once (see {@see ImpersonationEntryController}).
  */
 class ImpersonationToken
 {
@@ -21,6 +25,7 @@ class ImpersonationToken
     {
         $payload['iat'] = time();
         $payload['exp'] = time() + $ttlSeconds;
+        $payload['jti'] = $payload['jti'] ?? bin2hex(random_bytes(16));
 
         $encoded = self::base64UrlEncode(json_encode($payload));
 

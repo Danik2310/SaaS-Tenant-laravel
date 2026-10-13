@@ -86,6 +86,20 @@ class EntryTest extends TestCase
         $this->get($this->entryUrl(null, $token))->assertForbidden();
     }
 
+    public function test_token_cannot_be_replayed_after_first_use(): void
+    {
+        $url = $this->entryUrl();
+
+        $this->get($url)->assertRedirect();
+        $this->assertNotNull(session('impersonation'));
+
+        // Simulate a different actor replaying the captured URL with a fresh
+        // session — the one-time token must already be consumed.
+        $this->flushSession();
+
+        $this->get($url)->assertForbidden();
+    }
+
     public function test_stop_exits_god_mode_and_redirects_to_central(): void
     {
         $this->withSession(['impersonation' => [

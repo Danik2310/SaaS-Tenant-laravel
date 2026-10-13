@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Shared\Support\ImpersonationState;
 use App\Shared\Support\ImpersonationToken;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * @group Tenant Impersonation (God Mode)
@@ -42,6 +43,15 @@ class ImpersonationEntryController extends Controller
 
         if (time() - (int) ($payload['iat'] ?? 0) > $tokenTtl) {
             abort(403, 'Impersonation link has expired.');
+        }
+
+        // Single-use: consume the handoff token so a captured URL cannot be
+        // replayed during its TTL. Uses the untagged `global` store because the
+        // token is validated inside tenant context but issued centrally.
+        $jti = (string) ($payload['jti'] ?? '');
+
+        if ($jti === '' || ! Cache::store('global')->add('impersonate:used:'.$jti, true, $tokenTtl)) {
+            abort(403, 'Impersonation link has already been used.');
         }
 
         session([
