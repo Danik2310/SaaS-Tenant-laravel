@@ -36,9 +36,16 @@ use Inertia\Inertia;
 |
 */
 
-Route::get('/', function () {
-    return Inertia::render('Welcome');
-});
+// Public marketing homepage — central domains only. Each central domain gets an
+// explicit domain-constrained route because the tenant root route
+// (routes/tenant.php) shares the same URI with no domain constraint; an
+// unconstrained duplicate would be silently overwritten by Laravel's
+// method+domain+URI route keying.
+foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
+    Route::domain($centralDomain)->middleware(['central.domain'])->get('/', function () {
+        return Inertia::render('Welcome');
+    });
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -82,17 +89,17 @@ foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
 }
 
 // Unauthorized page (accessible to authenticated admin users on central domain only)
-Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'central.domain'])->get('/admin/unauthorized', function () {
+Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:admin'])->get('/admin/unauthorized', function () {
     return Inertia::render('Unauthorized', [
         'message' => request()->query('message'),
     ]);
 })->name('admin.unauthorized');
 
 // Auth-state probe — returns 200 {user:null} when logged out (AdminAuthController handles the null case)
-Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry', 'central.domain'])->get('/admin/user', [AdminAuthController::class, 'user']);
+Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry'])->get('/admin/user', [AdminAuthController::class, 'user']);
 
 // Protected admin routes — only accessible on central domains
-Route::middleware(['jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry', 'central.domain'])->prefix('admin')->group(function () {
+Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Dashboard statistics - requires read-level tenant access

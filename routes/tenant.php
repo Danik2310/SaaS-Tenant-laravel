@@ -42,6 +42,13 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 $tenancyMiddleware = [InitializeTenancyByDomain::class, PreventAccessFromCentralDomains::class];
 
 Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->group(function () {
+    // Tenant root — send authenticated users to the dashboard, guests to login.
+    Route::get('/', function () {
+        return auth()->check()
+            ? redirect()->route('tenant.dashboard')
+            : redirect()->route('login');
+    })->name('tenant.home');
+
     // Public routes (no auth required)
 
     // Tenant user auth (end-user of the tenant)
@@ -76,6 +83,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
     // God mode entry — public so the central admin can be landed here before
     // any tenant session exists. Auth is established via the signed token.
     Route::get('/god-mode/enter', [ImpersonationEntryController::class, 'enter'])
+        ->middleware('throttle:6,1')
         ->name('god-mode.enter');
 
     // Authenticated tenant routes
