@@ -80,7 +80,9 @@ return [
         'assets_directory' => null,
 
         // Middleware to attach to the docs endpoint (if `add_routes` is true).
-        'middleware' => [],
+        // Docs describe the privileged admin API, so they are restricted to
+        // authenticated administrators on central domains.
+        'middleware' => ['central.domain', 'auth:admin'],
     ],
 
     'external' => [
