@@ -14,9 +14,14 @@ use Illuminate\Support\Str;
 
 class CreateTenantAdminUser extends TenantAwareJob
 {
-    public int $tries = 3;
+    // The job is dispatched right after provisioning, but the tenant database
+    // itself is created by a separate queued pipeline (CreateDatabase ->
+    // MigrateDatabase -> SeedDatabase). On multi-worker queues this job can be
+    // picked up before that pipeline finishes, so it retries with backoff until
+    // the tenant database exists and is migrated.
+    public int $tries = 6;
 
-    public int $backoff = 5;
+    public int $backoff = 20;
 
     public function __construct(
         Tenant $tenant,
