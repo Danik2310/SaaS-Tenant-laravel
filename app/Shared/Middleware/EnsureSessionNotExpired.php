@@ -27,7 +27,7 @@ class EnsureSessionNotExpired
                 return response()->json(['message' => 'Session expired.'], 401);
             }
 
-            return redirect()->route('login');
+            return redirect()->route($guardName === 'admin' ? 'central.login' : 'login');
         }
 
         session(['last_activity' => now()->timestamp]);
