@@ -26,12 +26,13 @@ interface LocationCatalog
     public function statesByCountry(): array;
 
     /**
-     * City names in a country, optionally narrowed to a single state, filtered
-     * by a search term.
+     * Every active city name in a country, narrowed to a single state when one
+     * is given. Ordered alphabetically so the registration form can render the
+     * whole scope as a dropdown.
      *
      * @return array<int, string>
      */
-    public function cityNames(string $countryCode, ?string $stateName, string $term, int $limit): array;
+    public function cityNamesForScope(string $countryCode, ?string $stateName): array;
 
     /**
      * Whether the submitted country name matches a known, active country.

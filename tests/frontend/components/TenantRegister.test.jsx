@@ -508,19 +508,18 @@ describe('TenantRegister', () => {
         expect(lastForm().data.country).toBe('United States');
         expect(state).not.toBeDisabled();
         expect(state).toHaveValue('');
-        expect(city).not.toBeDisabled();
+        // The city dropdown stays disabled until a state is chosen, keeping the
+        // option set bounded.
+        expect(city).toBeDisabled();
 
         fireEvent.change(state, { target: { value: 'Illinois' } });
 
         expect(lastForm().data.state).toBe('Illinois');
         expect(lastForm().data.city).toBe('');
+        expect(city).not.toBeDisabled();
 
-        // The city list comes from the throttled endpoint, keyed on the
-        // selected country and the optional state filter. MUI only opens its
-        // popup while the combobox has focus, so focus before typing.
-        fireEvent.focus(city);
-        fireEvent.change(city, { target: { value: 'Chi' } });
-
+        // The city options load from the throttled endpoint, keyed on the
+        // selected country and state, and populate the dropdown.
         await waitFor(() =>
             expect(axios.get).toHaveBeenCalledWith(
                 expect.stringContaining('register.locations.cities'),
@@ -530,30 +529,35 @@ describe('TenantRegister', () => {
             )
         );
 
-        const option = await screen.findByRole('option', { name: 'Chicago' });
-        fireEvent.click(option);
+        await screen.findByRole('option', { name: 'Chicago' });
+        fireEvent.change(city, { target: { value: 'Chicago' } });
 
         expect(lastForm().data.country).toBe('United States');
         expect(lastForm().data.state).toBe('Illinois');
         expect(lastForm().data.city).toBe('Chicago');
     });
 
-    test('allows a city with just a country — state stays optional', async () => {
+    test('keeps the city dropdown disabled until a state is chosen', async () => {
         render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" {...locationProps} />);
         fireEvent.click(screen.getByTestId('optional-details-toggle'));
 
         const country = screen.getByLabelText('Country');
+        const state = screen.getByLabelText('State / Province');
         const city = screen.getByLabelText('City');
 
         fireEvent.change(country, { target: { value: 'United States' } });
-        fireEvent.focus(city);
-        fireEvent.change(city, { target: { value: 'Spring' } });
 
-        const option = await screen.findByRole('option', { name: 'Springfield' });
-        fireEvent.click(option);
+        expect(city).toBeDisabled();
+
+        fireEvent.change(state, { target: { value: 'Illinois' } });
+
+        expect(city).not.toBeDisabled();
+
+        await screen.findByRole('option', { name: 'Springfield' });
+        fireEvent.change(city, { target: { value: 'Springfield' } });
 
         expect(lastForm().data.city).toBe('Springfield');
-        expect(lastForm().data.state).toBe('');
+        expect(lastForm().data.state).toBe('Illinois');
     });
 
     test('resets dependent location fields when the country changes', () => {

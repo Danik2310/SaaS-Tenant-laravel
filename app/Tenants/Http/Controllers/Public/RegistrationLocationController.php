@@ -20,15 +20,11 @@ class RegistrationLocationController extends Controller
         $validated = $request->validate([
             'country' => 'required|string|max:2',
             'state' => 'nullable|string|max:100',
-            'term' => 'nullable|string|max:100',
-            'limit' => 'nullable|integer|min:1|max:100',
         ]);
 
-        $names = $this->locations->cityNames(
+        $names = $this->locations->cityNamesForScope(
             $validated['country'],
             $validated['state'] ?? null,
-            $validated['term'] ?? '',
-            (int) ($validated['limit'] ?? 20),
         );
 
         return response()->json(['data' => $names]);

@@ -19,34 +19,29 @@ class RegistrationLocationTest extends TestCase
         $this->seedWorldFixture();
     }
 
-    public function test_cities_endpoint_returns_matching_names(): void
+    public function test_cities_endpoint_returns_the_full_country_scope(): void
     {
-        $this->getJson('/register/locations/cities?country=US&term=Spring')
+        $this->getJson('/register/locations/cities?country=US')
             ->assertOk()
-            ->assertJsonPath('data', ['Springfield']);
+            ->assertJsonPath('data', ['Chicago', 'Los Angeles', 'New Chicago', 'Springfield']);
     }
 
-    public function test_cities_endpoint_filters_by_state(): void
+    public function test_cities_endpoint_narrows_to_a_state(): void
     {
-        $this->getJson('/register/locations/cities?country=US&state=Illinois&term=Los')
+        $this->getJson('/register/locations/cities?country=US&state=Illinois')
             ->assertOk()
-            ->assertJsonPath('data', []);
+            ->assertJsonPath('data', ['Chicago', 'New Chicago', 'Springfield']);
 
-        $this->getJson('/register/locations/cities?country=US&state=California&term=Los')
+        $this->getJson('/register/locations/cities?country=US&state=California')
             ->assertOk()
             ->assertJsonPath('data', ['Los Angeles']);
     }
 
-    public function test_cities_endpoint_orders_exact_then_prefix_then_alphabetical(): void
+    public function test_cities_endpoint_returns_empty_for_an_unknown_state(): void
     {
-        $this->getJson('/register/locations/cities?country=US&state=Illinois&term=Chicago')
+        $this->getJson('/register/locations/cities?country=US&state=Atlantis')
             ->assertOk()
-            ->assertJsonPath('data', ['Chicago', 'New Chicago']);
-
-        // Both contain "Ch"; the exact match still leads the prefix match.
-        $this->getJson('/register/locations/cities?country=US&state=Illinois&term=Ch')
-            ->assertOk()
-            ->assertJsonPath('data', ['Chicago', 'New Chicago']);
+            ->assertJsonPath('data', []);
     }
 
     public function test_cities_endpoint_requires_a_country(): void
@@ -56,16 +51,9 @@ class RegistrationLocationTest extends TestCase
             ->assertJsonValidationErrors('country');
     }
 
-    public function test_cities_endpoint_clamps_the_limit(): void
-    {
-        $this->getJson('/register/locations/cities?country=US&limit=1000')
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('limit');
-    }
-
     public function test_cities_endpoint_returns_empty_for_unknown_country(): void
     {
-        $this->getJson('/register/locations/cities?country=ZZ&term=Spring')
+        $this->getJson('/register/locations/cities?country=ZZ')
             ->assertOk()
             ->assertJsonPath('data', []);
     }

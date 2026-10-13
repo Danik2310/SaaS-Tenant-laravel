@@ -46,7 +46,7 @@ class DatabaseLocationCatalog implements LocationCatalog
         });
     }
 
-    public function cityNames(string $countryCode, ?string $stateName, string $term, int $limit): array
+    public function cityNamesForScope(string $countryCode, ?string $stateName): array
     {
         $countryId = $this->countryIdByCode($countryCode);
 
@@ -54,10 +54,7 @@ class DatabaseLocationCatalog implements LocationCatalog
             return [];
         }
 
-        $query = DB::table('cities')
-            ->where('country_id', $countryId)
-            ->where('is_active', 1)
-            ->whereNull('deleted_at');
+        $stateId = null;
 
         if ($stateName !== null && $stateName !== '') {
             $stateId = $this->stateIdInCountry($countryId, $stateName);
@@ -65,21 +62,24 @@ class DatabaseLocationCatalog implements LocationCatalog
             if ($stateId === null) {
                 return [];
             }
-
-            $query->where('state_id', $stateId);
         }
 
-        if ($term !== '') {
-            $query->where('name', 'like', '%'.$term.'%');
-        }
+        // Central reference data: cache by ids (not names) so encoding or
+        // duplicate names can't collide, and reuse across tenants since the
+        // world catalogue is tenant-agnostic.
+        $cacheKey = sprintf('world.cities.%d.%s', $countryId, $stateId ?? 'all');
 
-        return $query
-            ->orderByRaw('name = ? desc', [$term])
-            ->orderByRaw('name like ? desc', [$term.'%'])
-            ->orderBy('name')
-            ->limit(max(1, min(100, $limit)))
-            ->pluck('name')
-            ->all();
+        return Cache::remember($cacheKey, 86400, function () use ($countryId, $stateId) {
+            return DB::table('cities')
+                ->where('country_id', $countryId)
+                ->where('is_active', 1)
+                ->whereNull('deleted_at')
+                ->when($stateId !== null, fn ($query) => $query->where('state_id', $stateId))
+                ->orderBy('name')
+                ->limit(5000)
+                ->pluck('name')
+                ->all();
+        });
     }
 
     public function countryExistsByName(string $countryName): bool

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
-import Autocomplete from '@mui/material/Autocomplete';
 import LedgerLayout from '@/Layouts/LedgerLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -242,26 +241,24 @@ export default function TenantRegister({
 
     const cityRequestId = useRef(0);
     const [cityOptions, setCityOptions] = useState([]);
-    const [cityQuery, setCityQuery] = useState('');
 
-    const loadCities = useCallback(async (countryCode, stateName, term) => {
+    const loadCities = useCallback(async (countryCode, stateName) => {
         const requestId = ++cityRequestId.current;
-        setCityOptions([]);
 
-        if (!countryCode) {
+        if (!countryCode || !stateName) {
+            setCityOptions([]);
             return;
         }
 
         try {
-            // The city catalogue lives server-side (~150k rows); each keystroke
-            // hits a throttled endpoint instead of shipping the table to the
-            // client. Options only become selectable values via the picker.
+            // The city catalogue lives server-side (~150k rows). The dropdown
+            // loads the full list for the selected state rather than shipping
+            // the table to the client; requesting without a state is avoided so
+            // the option set stays bounded.
             const { data: payload } = await axios.get(route('register.locations.cities'), {
                 params: {
                     country: countryCode,
                     state: stateName || undefined,
-                    term: term?.trim() || undefined,
-                    limit: 50,
                 },
             });
             if (requestId !== cityRequestId.current) {
@@ -278,18 +275,16 @@ export default function TenantRegister({
     }, []);
 
     useEffect(() => {
-        if (!selectedCountry) {
+        if (!selectedCountry || !data.state) {
             cityRequestId.current += 1;
             setCityOptions([]);
             return undefined;
         }
 
-        const timer = setTimeout(() => {
-            loadCities(selectedCountry.code, data.state || null, cityQuery);
-        }, 250);
+        loadCities(selectedCountry.code, data.state);
 
-        return () => clearTimeout(timer);
-    }, [selectedCountry, data.state, cityQuery, loadCities]);
+        return undefined;
+    }, [selectedCountry, data.state, loadCities]);
 
     const selectedState = useMemo(
         () => (data.state && stateOptions.includes(data.state) ? data.state : null),
@@ -300,19 +295,11 @@ export default function TenantRegister({
         setData('country', e.target.value);
         setData('state', '');
         setData('city', '');
-        setCityQuery('');
     };
 
     const handleStateChange = (e) => {
         setData('state', e.target.value);
         setData('city', '');
-        setCityQuery('');
-    };
-
-    const handleCitySelect = (value) => {
-        const city = value ?? '';
-        setData('city', city);
-        setCityQuery(city);
     };
 
     /**
@@ -879,72 +866,16 @@ export default function TenantRegister({
                                         </FormField>
 
                                         <FormField label="City" htmlFor="city" hint={FIELD_HINTS.city} error={errors.city}>
-                                            <Autocomplete
+                                            <DarkSelect
                                                 id="city"
-                                                options={cityOptions}
-                                                getOptionLabel={(option) => option}
-                                                isOptionEqualToValue={(option, value) => option === value}
-                                                value={cityOptions.includes(data.city) ? data.city : null}
-                                                inputValue={cityQuery}
-                                                onChange={(_, value) => handleCitySelect(value)}
-                                                onInputChange={(_, value) => setCityQuery(value)}
-                                                disabled={!selectedCountry}
-                                                disableClearable
-                                                noOptionsText="No matching cities"
-                                                sx={{
-                                                    '& .MuiAutocomplete-paper': {
-                                                        bgcolor: '#171717',
-                                                        color: '#ffffff',
-                                                    },
-                                                    '& .MuiAutocomplete-listbox': { bgcolor: '#171717' },
-                                                    '& .MuiAutocomplete-option': {
-                                                        color: '#ffffff',
-                                                        '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)' },
-                                                    },
-                                                    '& .MuiAutocomplete-option[aria-selected="true"]': {
-                                                        bgcolor: 'rgba(94, 234, 212, 0.12)',
-                                                    },
-                                                }}
-                                                renderInput={(params) => {
-                                                    const { InputProps, inputProps } = params;
-                                                    const {
-                                                        startAdornment,
-                                                        endAdornment,
-                                                        ref: inputRootRef,
-                                                        ...inputRootProps
-                                                    } = InputProps;
-                                                    const { ref: inputRefProp, ...restInputProps } = inputProps;
-                                                    const mergeRefs = useCallback(
-                                                        (element) => {
-                                                            if (typeof inputRootRef === 'function') {
-                                                                inputRootRef(element);
-                                                            } else if (inputRootRef) {
-                                                                inputRootRef.current = element;
-                                                            }
-                                                            if (typeof inputRefProp === 'function') {
-                                                                inputRefProp(element);
-                                                            } else if (inputRefProp) {
-                                                                inputRefProp.current = element;
-                                                            }
-                                                        },
-                                                        [inputRootRef, inputRefProp]
-                                                    );
-                                                    return (
-                                                        <TextInput
-                                                            tone="dark"
-                                                            invalid={Boolean(errors.city)}
-                                                            className="w-full pr-9 [color-scheme:dark]"
-                                                            aria-invalid={errors.city ? 'true' : undefined}
-                                                            aria-describedby={errors.city ? 'city-error' : undefined}
-                                                            placeholder="Type to search cities"
-                                                            ref={mergeRefs}
-                                                            {...inputRootProps}
-                                                            {...restInputProps}
-                                                            name="city"
-                                                            autoComplete="section-billing address-level2"
-                                                        />
-                                                    );
-                                                }}
+                                                name="city"
+                                                value={data.city}
+                                                invalid={Boolean(errors.city)}
+                                                autoComplete="section-billing address-level2"
+                                                onChange={(e) => setData('city', e.target.value)}
+                                                options={cityOptions.map((name) => ({ value: name, label: name }))}
+                                                placeholder="Select a city"
+                                                disabled={!selectedState}
                                             />
                                         </FormField>
 
