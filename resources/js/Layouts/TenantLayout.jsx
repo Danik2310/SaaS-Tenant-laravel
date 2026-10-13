@@ -137,7 +137,7 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
                     </>
                 )}
                 <button
-                    onClick={() => router.post(route('admin.logout'))}
+                    onClick={() => router.post(route('logout'))}
                     aria-label="Logout"
                     style={{
                         display: 'flex', alignItems: 'center', gap: 8, width: '100%',

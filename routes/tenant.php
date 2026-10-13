@@ -19,7 +19,6 @@ use App\Products\Http\Controllers\Tenant\InventoryMovementController;
 use App\Products\Http\Controllers\Tenant\ProductController;
 use App\Products\Http\Controllers\Tenant\WarehouseController;
 use App\Shared\Constants\PermissionNames;
-use App\Shared\Http\Controllers\Admin\AuthController;
 use App\Shared\Http\Controllers\Tenant\DashboardController;
 use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
 use Illuminate\Support\Facades\DB;
@@ -74,12 +73,6 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             ->name('password.store');
     });
 
-    // Tenant admin login (staff of the tenant)
-    Route::get('/admin/login', [AuthController::class, 'showLogin'])
-        ->name('admin.login');
-    Route::post('/admin/login', [AuthController::class, 'login'])
-        ->middleware('throttle:5,1');
-
     // God mode entry — public so the central admin can be landed here before
     // any tenant session exists. Auth is established via the signed token.
     Route::get('/god-mode/enter', [ImpersonationEntryController::class, 'enter'])
@@ -115,10 +108,6 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
             Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
             Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-            // Tenant admin auth
-            Route::post('/admin/logout', [AuthController::class, 'logout'])
-                ->name('admin.logout');
 
             // God mode exit
             Route::post('/god-mode/stop', [ImpersonationEntryController::class, 'stop'])
@@ -187,12 +176,14 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
 | production until that isolation is resolved.
 |
 */
-Route::middleware(['web', InitializeTenancyByPath::class])->prefix('p/{tenant}')->group(function () {
-    Route::get('/hello', function () {
-        return response()->json([
-            'tenant_id' => tenant('id'),
-            'tenant_name' => tenant('name'),
-            'connection' => DB::connection()->getDatabaseName(),
-        ]);
-    })->name('tenant.path.hello');
-});
+if (app()->environment('local', 'testing')) {
+    Route::middleware(['web', InitializeTenancyByPath::class])->prefix('p/{tenant}')->group(function () {
+        Route::get('/hello', function () {
+            return response()->json([
+                'tenant_id' => tenant('id'),
+                'tenant_name' => tenant('name'),
+                'connection' => DB::connection()->getDatabaseName(),
+            ]);
+        })->name('tenant.path.hello');
+    });
+}

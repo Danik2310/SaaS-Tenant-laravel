@@ -39,7 +39,7 @@ class EnsureImpersonationValid
                 return response()->json(['message' => 'Impersonation session expired.'], 401);
             }
 
-            return redirect(route('admin.login'));
+            return redirect(route('login'));
         }
 
         if ((string) ($impersonation['tenant_id'] ?? '') !== (string) tenant('id')) {
