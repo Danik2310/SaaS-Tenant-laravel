@@ -77,7 +77,9 @@ class ActivityLogObserver
             ->performedOn($model)
             ->withProperties($properties);
 
-        $causer = auth('admin')->user() ?? auth()->user();
+        // Only resolve the central admin guard outside tenant context — inside a
+        // tenant request `admin_users` does not exist on the tenant connection.
+        $causer = (! tenancy()->initialized ? auth('admin')->user() : null) ?? auth()->user();
 
         if ($causer) {
             $log->causedBy($causer);
