@@ -103,11 +103,8 @@ class HandlePlanChange
 
     private function countInTenantDb($tenant, string $table): int
     {
-        $initialized = false;
-
         try {
             tenancy()->initialize($tenant);
-            $initialized = true;
 
             return DB::table($table)->count();
         } catch (\Throwable $e) {
@@ -119,7 +116,7 @@ class HandlePlanChange
 
             return 0;
         } finally {
-            if ($initialized) {
+            if (tenancy()->initialized) {
                 tenancy()->end();
             }
         }

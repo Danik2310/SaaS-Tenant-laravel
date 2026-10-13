@@ -44,12 +44,9 @@ class RunExportJob implements ShouldQueue
 
     public function handle(ExportServiceInterface $exportService): void
     {
-        $initialized = false;
-
         try {
             if ($this->tenantId) {
                 tenancy()->initialize($this->tenantId);
-                $initialized = true;
             }
 
             $prefix = $this->tenantId ? "tenant:{$this->tenantId}:export" : 'export';
@@ -78,7 +75,7 @@ class RunExportJob implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
         } finally {
-            if ($initialized) {
+            if (tenancy()->initialized) {
                 tenancy()->end();
             }
         }

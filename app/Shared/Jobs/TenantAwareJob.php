@@ -24,15 +24,16 @@ abstract class TenantAwareJob implements ShouldQueue
 
     public function handle(): void
     {
-        $initialized = false;
-
         try {
             tenancy()->initialize($this->tenant);
-            $initialized = true;
 
             $this->execute();
         } finally {
-            if ($initialized) {
+            // Key cleanup on the package flag, not a local one: tenancy marks
+            // itself initialized *before* bootstrappers run, so a bootstrapper
+            // failure would otherwise skip end() and leak tenant context into
+            // the next job on a long-lived worker.
+            if (tenancy()->initialized) {
                 tenancy()->end();
             }
         }
