@@ -4,6 +4,12 @@ namespace App\Plans\Support;
 
 use App\Models\FeatureFlag;
 
+/**
+ * Reads the feature-flag catalog from the database.
+ *
+ * The table is tiny and read on every request (including tenant Inertia pages)
+ * so admin edits show up immediately — no caching layer.
+ */
 class FeatureFlagCatalog
 {
     /**

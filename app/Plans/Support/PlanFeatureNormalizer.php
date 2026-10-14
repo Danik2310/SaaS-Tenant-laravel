@@ -4,6 +4,13 @@ namespace App\Plans\Support;
 
 use Illuminate\Support\Facades\DB;
 
+/**
+ * One-off normalizer that migrates legacy `plan_features` rows onto the canonical
+ * feature-flag registry (`config('plan_features')`).
+ *
+ * Expands the `all` sentinel into every registered key, renames `basic` →
+ * `basic_reports`, and deletes rows whose key is no longer registered.
+ */
 class PlanFeatureNormalizer
 {
     /**
