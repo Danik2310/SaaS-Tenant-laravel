@@ -168,6 +168,11 @@ return [
     |
     */
 
+    // Application providers are listed in dependency order: cross-cutting
+    // providers (Shared, JWT) load before the module providers that consume their
+    // bindings, and TenancyServiceProvider loads last so tenant routes and tenancy
+    // events are registered once the app is fully wired. See
+    // docs/architecture/02-providers-and-container.md.
     'providers' => ServiceProvider::defaultProviders()->merge([
         /*
          * Package Service Providers...

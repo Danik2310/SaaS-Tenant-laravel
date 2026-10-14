@@ -11,6 +11,8 @@ use App\Http\Middleware\TrustHosts;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\ValidateSignature;
 use App\Http\Middleware\VerifyCsrfToken;
+use App\Providers\RouteServiceProvider;
+use App\Providers\TenancyServiceProvider;
 use App\Shared\Middleware\AuthenticateJwtFromCookie;
 use App\Shared\Middleware\CheckImpersonationExpiry;
 use App\Shared\Middleware\CheckStorageLimit;
@@ -44,6 +46,30 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
+/**
+ * HTTP kernel — assembles the middleware pipeline for every request.
+ *
+ * Middleware runs in three concentric layers (outermost → innermost) before the
+ * route is dispatched, then unwinds so the response passes back out through each
+ * layer again.
+ *
+ * Flow:
+ *  1. Global `$middleware` — trust hosts/proxies, CORS, maintenance mode,
+ *     request-size guard, trim + null-convert input. Runs on every request.
+ *  2. Route middleware group (`web` or `api`) — cookies, session, CSRF and route
+ *     bindings; for `web` also CSP nonce, security headers, Inertia prop
+ *     sharing, and asset preload links.
+ *  3. Route middleware (aliases below + inline middleware) — auth, tenancy,
+ *     permissions, plan features, throttling, impersonation, session expiry.
+ *  4. Dispatch to the controller or route closure.
+ *
+ * Tenancy middleware is prepended to the priority list by
+ * {@see TenancyServiceProvider::makeTenancyMiddlewareHighestPriority()}
+ * so tenant identification resolves before anything that reads tenant data.
+ *
+ * @see RouteServiceProvider  Loads the `web`/`api` route files.
+ * @see HandleInertiaRequests  Shares Inertia props.
+ */
 class Kernel extends HttpKernel
 {
     /**

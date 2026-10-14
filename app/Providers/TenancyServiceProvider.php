@@ -9,6 +9,7 @@ use App\Tenants\Events\TenantSuspended;
 use App\Tenants\Listeners\CreateTenantStorageSkeleton;
 use App\Tenants\Listeners\HandleTenantReactivation;
 use App\Tenants\Listeners\HandleTenantSuspension;
+use App\Tenants\TenantManager;
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
@@ -23,11 +24,41 @@ use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
 use Stancl\Tenancy\Middleware;
 
+/**
+ * Multi-tenancy wiring — the backbone of the central/tenant split.
+ *
+ * Flow (all registered in `boot()`):
+ *  1. `bootEvents()` attaches the stancl tenancy lifecycle listeners and the
+ *     provisioning pipeline defined in `events()`. `TenantCreated` queues
+ *     `CreateDatabase → MigrateDatabase → SeedDatabase`; `TenantDeleted` drops
+ *     the database on force-delete only.
+ *  2. `mapRoutes()` loads `routes/tenant.php` (no namespace, callable syntax).
+ *  3. `makeTenancyMiddlewareHighestPriority()` prepends tenancy identification
+ *     middleware so it runs before middleware that reads tenant data.
+ *  4. `registerTenantJobFailureHandler()` logs failures of stancl's provisioning
+ *     jobs.
+ *
+ * @see TenantManager  Application entry point for provisioning and lifecycle.
+ * @see docs/architecture/03-multi-tenancy.md
+ */
 class TenancyServiceProvider extends ServiceProvider
 {
     // By default, no namespace is used to support the callable array syntax.
     public static string $controllerNamespace = '';
 
+    /**
+     * Event → listener map consumed by {@see self::bootEvents()}.
+     *
+     * Highlights:
+     *  - `TenantCreated` → storage skeleton + a queued provisioning JobPipeline.
+     *  - `TenantDeleted` → drop the database only when force-deleting.
+     *  - `TenantSuspended` / `TenantReactivated` → module listeners.
+     *  - `TenancyInitialized` / `TenancyEnded` → stancl's bootstrap/revert
+     *    listeners, plus clearing Spatie's cached permission collection when
+     *    tenant context changes.
+     *
+     * @return array<class-string, array<int, mixed>>
+     */
     public function events()
     {
         return [
@@ -129,6 +160,11 @@ class TenancyServiceProvider extends ServiceProvider
         //
     }
 
+    /**
+     * Boot the tenancy integration: register events, map tenant routes, raise
+     * the priority of tenancy middleware, and attach a provisioning job-failure
+     * logger.
+     */
     public function boot()
     {
         $this->bootEvents();
@@ -138,6 +174,10 @@ class TenancyServiceProvider extends ServiceProvider
         $this->registerTenantJobFailureHandler();
     }
 
+    /**
+     * Register every entry of {@see self::events()}, unwrapping JobPipeline
+     * instances into their listener form first.
+     */
     protected function bootEvents()
     {
         foreach ($this->events() as $event => $listeners) {
@@ -151,6 +191,10 @@ class TenancyServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Load tenant routes from `routes/tenant.php` with no controller namespace,
+     * so the closure/array callable syntax used there keeps working.
+     */
     protected function mapRoutes()
     {
         if (file_exists(base_path('routes/tenant.php'))) {
@@ -159,6 +203,11 @@ class TenancyServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Give tenancy middleware the highest priority so tenant identification runs
+     * before any middleware that reads tenant data. Prepended in reverse so the
+     * list ends up in the intended order.
+     */
     protected function makeTenancyMiddlewareHighestPriority()
     {
         $tenancyMiddleware = [
@@ -177,6 +226,11 @@ class TenancyServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Log failures of stancl's own tenancy provisioning jobs (CreateDatabase,
+     * MigrateDatabase, SeedDatabase) so a broken tenant provision is visible in
+     * the logs rather than silently stuck.
+     */
     protected function registerTenantJobFailureHandler(): void
     {
         Queue::failing(function (JobFailed $event) {

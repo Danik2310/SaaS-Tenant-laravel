@@ -1,5 +1,25 @@
 <?php
 
+/**
+ * Application bootstrap.
+ *
+ * Creates the Laravel application instance and binds the three kernels that
+ * drive it. Everything else — providers, middleware, routes — is wired up later
+ * by those kernels.
+ *
+ * Flow:
+ *  1. Instantiate the Application with the project base path.
+ *  2. Bind the HTTP kernel (App\Http\Kernel) — serves web/API requests.
+ *  3. Bind the Console kernel (App\Console\Kernel) — serves artisan/CLI.
+ *  4. Bind the exception handler (App\Shared\Exceptions\Handler).
+ *  5. Return the instance to the entry script (public/index.php or artisan),
+ *     which then handles the incoming request or command.
+ *
+ * @see Kernel
+ * @see App\Console\Kernel
+ * @see Handler
+ */
+
 use App\Http\Kernel;
 use App\Shared\Exceptions\Handler;
 use Illuminate\Contracts\Debug\ExceptionHandler;

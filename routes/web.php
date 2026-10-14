@@ -27,12 +27,24 @@ use Inertia\Inertia;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Web Routes — central domains only
 |--------------------------------------------------------------------------
 |
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
+| Loaded by RouteServiceProvider under the `web` middleware group.
+|
+| Flow:
+|  1. Public marketing homepage (`/`) — registered once per central domain and
+|     domain-constrained, so it does not clash with the tenant root route
+|     (routes/tenant.php) that shares the same URI.
+|  2. Public tenant self-service registration + Stripe checkout callbacks —
+|     central-domain constrained, `guest`, and throttled.
+|  3. Admin authentication (`/central/login`, `/central/logout`).
+|  4. Protected admin API (`/admin/*`) — behind `central.domain`, JWT-cookie
+|     auth, `auth:admin`, throttling, session/impersonation expiry, and Spatie
+|     permission middleware.
+|
+| Every admin route carries an explicit permission via the
+| PermissionNames::middleware() helper — see docs/architecture/05-*.
 |
 */
 

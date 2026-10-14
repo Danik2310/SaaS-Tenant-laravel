@@ -13,6 +13,14 @@ use Stancl\Tenancy\TenantDatabaseManagers\MySQLDatabaseManager;
 use Stancl\Tenancy\TenantDatabaseManagers\PostgreSQLDatabaseManager;
 use Stancl\Tenancy\TenantDatabaseManagers\SQLiteDatabaseManager;
 
+/**
+ * Multi-tenancy configuration (stancl/tenancy v3).
+ *
+ * Database-per-tenant with domain identification. Central/admin data lives on
+ * the `mysql` connection; each tenant gets its own `tenant<id>` database. In
+ * local dev both connections point at the same database (see config/database.php),
+ * so connection switching is effectively a no-op locally.
+ */
 return [
     'tenant_model' => App\Models\Tenant::class,
     'id_generator' => SequentialIdGenerator::class,

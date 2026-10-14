@@ -29,13 +29,24 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 /*
 |--------------------------------------------------------------------------
-| Tenant Routes
+| Tenant Routes — tenant domains only
 |--------------------------------------------------------------------------
 |
-| Here you can register the tenant routes for your application.
-| These routes are loaded by the TenantRouteServiceProvider.
+| Loaded by App\Providers\TenancyServiceProvider::mapRoutes(). Every request is
+| identified by domain (`InitializeTenancyByDomain`) and blocked from central
+| hosts (`PreventAccessFromCentralDomains`); `tenant.state` then gates the whole
+| group on the tenant's lifecycle state.
 |
-| Feel free to customize them however you want. Good luck!
+| Flow:
+|  1. Tenant root (`/`) — authenticated → dashboard, guest → login.
+|  2. Public guest auth (register, login, password reset) — throttled.
+|  3. God-mode entry (`/god-mode/enter`) — public; identity comes from a signed
+|     handoff token, throttled to 6/min.
+|  4. Authenticated application routes — JWT-cookie + session auth, impersonation
+|     validity, `auth`, tenant-token validation, session expiry and throttling,
+|     then `verified` + permission/feature middleware per route group.
+|
+| The dev-only path-based tenancy block at the bottom runs in local/testing only.
 |
 */
 

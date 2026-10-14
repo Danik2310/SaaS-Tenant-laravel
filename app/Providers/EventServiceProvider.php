@@ -33,6 +33,24 @@ use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Stancl\Tenancy\Database\Models\Domain;
 
+/**
+ * Central event and model-observer registration.
+ *
+ * Flow:
+ *  1. `$listen` binds the framework's `Registered` event to the email
+ *     verification listener.
+ *  2. `boot()` attaches observers:
+ *     - every central model and tenant model → {@see ActivityLogObserver}, which
+ *       is tenant-context aware and records create/update/delete to the activity
+ *       log.
+ *     - tenant resource models → the `App\Observers\Tenant\*` observers that keep
+ *       incremental resource-usage counters in sync.
+ *
+ * Tenancy lifecycle events (provisioning, suspend, reactivate) are wired
+ * separately in {@see TenancyServiceProvider}.
+ *
+ * @see docs/architecture/07-jobs-events-observers.md
+ */
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [

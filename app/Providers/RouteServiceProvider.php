@@ -10,6 +10,19 @@ use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
+/**
+ * Route and rate-limiter registration.
+ *
+ * Flow:
+ *  1. Alias Spatie's `permission` and `role` middleware.
+ *  2. Define named rate limiters:
+ *     - `api` — 60/min, keyed per tenant+user (or tenant+IP centrally);
+ *     - `registration` — 5/hour per hashed email **and** per IP, so an attacker
+ *       rotating IPs cannot hammer the email-conflict check for one address.
+ *  3. Load the route files: `routes/api.php` under `api` + the `api/v1` prefix,
+ *     and `routes/web.php` under `web`. Tenant routes are mapped separately by
+ *     {@see TenancyServiceProvider::mapRoutes()}.
+ */
 class RouteServiceProvider extends ServiceProvider
 {
     /**

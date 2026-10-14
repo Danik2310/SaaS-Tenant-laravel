@@ -10,9 +10,14 @@ use Illuminate\Support\Facades\Route;
 | API Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
+| Loaded by RouteServiceProvider under the `api` group and the `api/v1`
+| prefix. This is a thin surface: the SPA talks to Inertia routes, so the only
+| endpoint here is the Sanctum-authenticated identity check.
+|
+| Flow:
+|  1. `GET /api/v1/user` — requires a Sanctum token and is rate-limited per
+|     tenant+user. Returns the authenticated admin, or 401 if the resolved
+|     principal is not an AdminUser.
 |
 */
 
