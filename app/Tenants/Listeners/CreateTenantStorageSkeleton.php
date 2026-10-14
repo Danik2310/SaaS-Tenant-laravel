@@ -7,6 +7,7 @@ namespace App\Tenants\Listeners;
 use Illuminate\Support\Facades\Log;
 use Stancl\Tenancy\Events\TenantCreated;
 
+/** Creates the tenant's storage directories (base, `app`, `app/public`) on `TenantCreated`. */
 class CreateTenantStorageSkeleton
 {
     public function handle(TenantCreated $event): void

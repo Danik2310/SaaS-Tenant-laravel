@@ -7,6 +7,7 @@ namespace App\Observers\Tenant;
 use App\Models\Product;
 use App\Models\TenantResourceUsage;
 
+/** Keeps `products_count` in sync; special-cases soft-delete + force-delete to avoid double counting. */
 class ProductObserver
 {
     /**

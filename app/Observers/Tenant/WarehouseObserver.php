@@ -7,6 +7,7 @@ namespace App\Observers\Tenant;
 use App\Models\TenantResourceUsage;
 use App\Models\Warehouse;
 
+/** Keeps `warehouses_count` in sync on create/delete/restore. */
 class WarehouseObserver
 {
     public function created(Warehouse $warehouse): void

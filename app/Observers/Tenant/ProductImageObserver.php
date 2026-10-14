@@ -7,6 +7,7 @@ namespace App\Observers\Tenant;
 use App\Models\ProductImage;
 use App\Models\TenantResourceUsage;
 
+/** Adjusts `storage_kb` by the image size on create/delete and removes the file on delete. */
 class ProductImageObserver
 {
     public function created(ProductImage $image): void

@@ -8,6 +8,12 @@ use App\Models\Tenant;
 use App\Tenants\Jobs\CollectTenantMetrics;
 use Illuminate\Console\Command;
 
+/**
+ * `tenants:collect-metrics` — dispatches resource-usage collection per tenant.
+ *
+ * Flow: selects the given `--tenant` IDs or all `Active` tenants and dispatches
+ * {@see CollectTenantMetrics} for each.
+ */
 class CollectTenantMetricsCommand extends Command
 {
     protected $signature = 'tenants:collect-metrics {--tenant=* : Specific tenant IDs to collect metrics for}';

@@ -20,12 +20,43 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
+/**
+ * Façade for tenant lifecycle operations.
+ *
+ * The single entry point used by controllers, commands and provisioning flows to
+ * create, suspend, restore and re-plan tenants. It delegates the state machine to
+ * {@see TenantStateManager} and database work to {@see DatabaseServiceInterface}.
+ *
+ * Boundary rules it enforces:
+ *  - `provision()` validates domain/plan *before* any row exists, and allocates
+ *    sequential ids under a cache lock.
+ *  - `delete()` drops the database *after* the transaction commits (MySQL DDL
+ *    implicitly commits, so a DROP inside the transaction would break `commit()`).
+ *  - `restore()` validates the transition *before* the transaction to avoid
+ *    savepoint corruption when nested under `RefreshDatabase`.
+ *  - Events (`PlanChanged`, `TenantReactivated`, `TenantSuspended`) fire after
+ *    the transaction commits; their handlers flush tenant-scoped caches.
+ */
 class TenantManager implements TenantManagerInterface
 {
     public function __construct(
         private DatabaseServiceInterface $databaseService,
     ) {}
 
+    /**
+     * Provision a new tenant: validate, create the row, attach its domain and
+     * plan, then hand database creation to the queued pipeline.
+     *
+     * Flow:
+     *  1. Take the `tenancy:provision` cache lock (serialises id allocation).
+     *  2. Predict the next sequential id; drop/reject any orphan database.
+     *  3. Assert the domain is free and the plan is assignable (before any row).
+     *  4. Create tenant → domain → plan; on failure force-delete the row.
+     *
+     * @param  array<string, mixed>  $data  allowlisted provisioning attributes
+     *
+     * @throws InvalidArgumentException when the domain or plan is unavailable
+     */
     public function provision(array $data): Tenant
     {
         // Resolved per call: the builder is stateful, so a shared instance
@@ -98,6 +129,11 @@ class TenantManager implements TenantManagerInterface
         );
     }
 
+    /**
+     * Suspend a tenant: cancel its active subscription and transition the state.
+     *
+     * @see TenantStateManager::transitionTo()  fires TenantSuspended
+     */
     public function suspend(Tenant $tenant): void
     {
         DB::transaction(function () use ($tenant) {
@@ -113,6 +149,12 @@ class TenantManager implements TenantManagerInterface
         Cache::forget('admin_dashboard_stats_trashed');
     }
 
+    /**
+     * Reactivate a tenant: restore its most recent cancelled subscription and
+     * transition the state to Active.
+     *
+     * @see TenantStateManager::transitionTo()  fires TenantReactivated
+     */
     public function activate(Tenant $tenant): void
     {
         DB::transaction(function () use ($tenant) {
@@ -132,6 +174,13 @@ class TenantManager implements TenantManagerInterface
         Cache::forget('admin_dashboard_stats_trashed');
     }
 
+    /**
+     * Soft-delete a tenant and drop its database.
+     *
+     * The `$tenant->delete()` call must run *after* the transaction: it fires
+     * TenantDeleted → DeleteDatabase (a MySQL DROP, i.e. DDL), which implicitly
+     * commits any open transaction and would break `commit()`.
+     */
     public function delete(Tenant $tenant): void
     {
         DB::transaction(function () use ($tenant) {
@@ -154,6 +203,17 @@ class TenantManager implements TenantManagerInterface
         Cache::forget('admin_dashboard_stats_trashed');
     }
 
+    /**
+     * Restore a soft-deleted tenant to Active.
+     *
+     * Flow:
+     *  1. Validate the transition *before* opening the transaction (a throw
+     *     inside a nested transaction under `RefreshDatabase` corrupts savepoints).
+     *  2. Reactivate the matching cancelled subscription, or create a fresh one.
+     *  3. Recreate a primary domain if none exists.
+     *  4. Clear `deleted_at` and set status in memory, then a single `save()`.
+     *  5. Fire {@see TenantReactivated} after the transaction commits.
+     */
     public function restore(Tenant $tenant): void
     {
         // Validate state BEFORE transaction to avoid savepoint corruption.
@@ -227,6 +287,13 @@ class TenantManager implements TenantManagerInterface
         Cache::forget('admin_dashboard_stats_trashed');
     }
 
+    /**
+     * Switch a tenant to a different plan, cancelling the current subscription
+     * and creating a new one (entering/leaving trial as required).
+     *
+     * @throws InvalidArgumentException unless the tenant is Active/Trial, or if
+     *                                  it is already on the target plan
+     */
     public function changePlan(Tenant $tenant, Plan $newPlan): void
     {
         if (! in_array($tenant->status, ['Active', 'Trial'], true)) {
@@ -284,6 +351,10 @@ class TenantManager implements TenantManagerInterface
         TenantStateManager::flushTenantCache($tenant);
     }
 
+    /**
+     * Create a subscription for a tenant, superseding any active one, and move
+     * the tenant onto the plan. Fires {@see PlanChanged} when the plan changes.
+     */
     public function createSubscription(Tenant $tenant, Plan $plan, string $status, ?Carbon $endsAt = null, ?Carbon $startsAt = null): Subscription
     {
         $oldPlan = null;
@@ -320,6 +391,11 @@ class TenantManager implements TenantManagerInterface
         return $subscription;
     }
 
+    /**
+     * Transition a tenant to an arbitrary status, routing through the specialised
+     * method where one exists (activate/suspend/delete) and the state machine
+     * otherwise.
+     */
     public function setStatus(Tenant $tenant, string $status): void
     {
         match ($status) {
@@ -330,6 +406,12 @@ class TenantManager implements TenantManagerInterface
         };
     }
 
+    /**
+     * Push a trial's end date out by `$days`, counted from its current end (or
+     * now when unset).
+     *
+     * @throws InvalidArgumentException when the tenant is not in Trial status
+     */
     public function extendTrial(Tenant $tenant, int $days): void
     {
         if ($tenant->status !== 'Trial') {
@@ -343,6 +425,11 @@ class TenantManager implements TenantManagerInterface
         TenantStateManager::flushTenantCache($tenant);
     }
 
+    /**
+     * Run `tenants:migrate` for a single tenant and capture the output.
+     *
+     * @return array{exit_code: int, output: string}
+     */
     public function migrateTenant(Tenant $tenant): array
     {
         $exitCode = \Artisan::call('tenants:migrate', [

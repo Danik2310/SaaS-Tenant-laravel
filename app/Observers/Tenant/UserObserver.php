@@ -7,6 +7,7 @@ namespace App\Observers\Tenant;
 use App\Models\TenantResourceUsage;
 use App\Models\User;
 
+/** Keeps the tenant's `users_count` usage counter in sync on create/delete/restore. No-ops outside tenant context. */
 class UserObserver
 {
     /**

@@ -7,6 +7,7 @@ namespace App\Observers\Tenant;
 use App\Models\Category;
 use App\Models\TenantResourceUsage;
 
+/** Keeps `categories_count` in sync on create/delete/restore. */
 class CategoryObserver
 {
     public function created(Category $category): void

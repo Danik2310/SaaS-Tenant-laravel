@@ -9,8 +9,20 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Tenants\Contracts\TenantBuilderInterface;
+use App\Tenants\TenantManager;
 use InvalidArgumentException;
 
+/**
+ * Fluent builder for tenant provisioning.
+ *
+ * Stateful by design — bound (not singleton) so each provision call gets a fresh
+ * instance. Used directly for admin-driven flows, or through
+ * {@see TenantManager::provision()} which layers validation and id
+ * allocation on top.
+ *
+ * Typical call order:
+ *   `withData()->for()->withDomain()->withPlan()->build()`.
+ */
 class TenantBuilder implements TenantBuilderInterface
 {
     private Tenant $tenant;
@@ -20,6 +32,7 @@ class TenantBuilder implements TenantBuilderInterface
         $this->tenant = new Tenant;
     }
 
+    /** Point the builder at an existing tenant instance. */
     public function for(Tenant $tenant): static
     {
         $this->tenant = $tenant;
@@ -27,6 +40,13 @@ class TenantBuilder implements TenantBuilderInterface
         return $this;
     }
 
+    /**
+     * Create the tenant row from an allowlisted attribute set. Never honours a
+     * caller-supplied status/id/trial_ends_at — trial state is applied later by
+     * {@see withPlan()}.
+     *
+     * @param  array<string, mixed>  $data
+     */
     public function withData(array $data): static
     {
         // Explicit allowlist: the builder never honors caller-provided
@@ -54,6 +74,11 @@ class TenantBuilder implements TenantBuilderInterface
         return $this;
     }
 
+    /**
+     * Attach a domain to the tenant and mirror it onto the tenant row.
+     *
+     * @throws InvalidArgumentException when the domain is already in use
+     */
     public function withDomain(string $domain): static
     {
         $this->assertDomainAvailable($domain);
@@ -76,6 +101,12 @@ class TenantBuilder implements TenantBuilderInterface
         }
     }
 
+    /**
+     * Assign a plan: enter Trial when the plan is a trial plan, set `plan_id`
+     * and create a subscription if the tenant has none.
+     *
+     * @throws InvalidArgumentException when the plan is not assignable
+     */
     public function withPlan(?string $planSlug = null, bool $publicSignup = false, bool $confirmedPayment = false): static
     {
         $plan = $this->resolveAssignablePlan($planSlug, $publicSignup, $confirmedPayment);
@@ -135,6 +166,12 @@ class TenantBuilder implements TenantBuilderInterface
         return $plan;
     }
 
+    /**
+     * Finalise and return a fresh copy of the built tenant.
+     *
+     * @throws InvalidArgumentException when withData() was not called or the row
+     *                                  was not persisted
+     */
     public function build(): Tenant
     {
         if (! $this->tenant->exists) {

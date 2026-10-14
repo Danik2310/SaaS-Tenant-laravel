@@ -8,6 +8,7 @@ use App\Tenants\Events\TenantReactivated;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
+/** Flushes the tenant's cache tags when a tenant is reactivated. */
 class HandleTenantReactivation
 {
     public function handle(TenantReactivated $event): void

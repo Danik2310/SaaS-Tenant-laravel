@@ -8,6 +8,7 @@ use App\Tenants\Events\TenantSuspended;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
+/** Flushes the tenant's cache tags when a tenant is suspended. */
 class HandleTenantSuspension
 {
     public function handle(TenantSuspended $event): void

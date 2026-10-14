@@ -7,6 +7,7 @@ namespace App\Observers\Tenant;
 use App\Models\Order;
 use App\Models\TenantResourceUsage;
 
+/** Keeps `orders_count` in sync on create/delete/restore. */
 class OrderObserver
 {
     /**

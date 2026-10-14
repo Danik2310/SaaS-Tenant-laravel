@@ -11,8 +11,23 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
+/**
+ * Tenant lifecycle state machine.
+ *
+ * Every status maps to a {@see TenantState} subclass that declares its allowed
+ * transitions. All changes go through {@see transitionTo()}, which fires
+ * {@see TenantSuspended} / {@see TenantReactivated} as side effects.
+ *
+ * Transition table:
+ *   Active    → Suspended, Deleted
+ *   Trial     → Active, Suspended, Cancelled, Deleted
+ *   Suspended → Active, Deleted
+ *   Cancelled → Active, Deleted
+ *   Deleted   → Active
+ */
 class TenantStateManager
 {
+    /** @return list<string> the statuses reachable from `$fromStatus` (empty when unknown) */
     public static function allowedTransitions(string $fromStatus): array
     {
         return match ($fromStatus) {
@@ -25,6 +40,12 @@ class TenantStateManager
         };
     }
 
+    /**
+     * Move a tenant to `$targetStatus`, firing {@see TenantSuspended} and
+     * {@see TenantReactivated} as side effects.
+     *
+     * @throws InvalidArgumentException when the transition is not allowed
+     */
     public static function transitionTo(Tenant $tenant, string $targetStatus): void
     {
         $allowed = self::allowedTransitions($tenant->status);
@@ -53,6 +74,11 @@ class TenantStateManager
         }
     }
 
+    /**
+     * Flush the tenant's cache tags **without** initialising tenancy (see the
+     * inline note: re-initialising after the database is dropped corrupts the
+     * cache manager). Never touches global cache, even on untaggable stores.
+     */
     public static function flushTenantCache(Tenant $tenant): void
     {
         // IMPORTANT: Do NOT call tenancy()->initialize() here. When this is called after

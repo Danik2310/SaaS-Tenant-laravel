@@ -9,6 +9,15 @@ use App\Tenants\States\TenantStateManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * `tenants:expire-trials` — suspends tenants whose trial has ended.
+ *
+ * Flow: queries `Trial` tenants past `trial_ends_at` (or null), lazily streams
+ * them, and transitions each to `Suspended` via {@see TenantStateManager}.
+ * `--dry-run` lists without changes; per-tenant failures are logged, not fatal.
+ *
+ * @see docs/architecture/03-multi-tenancy.md
+ */
 class ExpireTrialsCommand extends Command
 {
     protected $signature = 'tenants:expire-trials
