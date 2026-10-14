@@ -4,6 +4,13 @@ namespace App\Shared\Traits;
 
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Dedicated `payment_methods` log-channel helpers for payment-method controllers.
+ *
+ * Writes structured entries (actor, IP, user-agent, changes) to the
+ * `payment_methods` channel — never to stderr — and deliberately records API
+ * key/secret changes as `[ENCRYPTED]` rather than their values.
+ */
 trait AuditablePaymentMethods
 {
     /**

@@ -14,6 +14,17 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
+/**
+ * Queued export job.
+ *
+ * Flow (`handle()`):
+ *  1. If a tenant id was supplied, initialise tenancy for the run.
+ *  2. Mark the job `processing` in the untagged `global` cache store (readable
+ *     from both central and tenant contexts).
+ *  3. Delegate to {@see ExportServiceInterface::export()}.
+ *  4. Store the result + `completed` status (or `failed` + error message).
+ *  5. Always `tenancy()->end()` in a `finally`.
+ */
 class RunExportJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;

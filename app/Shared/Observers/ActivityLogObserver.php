@@ -6,6 +6,17 @@ namespace App\Shared\Observers;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Records create/update/delete/restore on every registered model to the Spatie
+ * activity log.
+ *
+ * Flow:
+ *  - Maps the model to a log channel (`resolveLogName()`).
+ *  - Skips noisy updates (Category/Warehouse) and Order status-only no-ops.
+ *  - Strips sensitive fields (passwords, keys) from the diff.
+ *  - Resolves the causer from the `admin` guard only outside tenant context —
+ *    the `admin_users` table does not exist on a tenant connection.
+ */
 class ActivityLogObserver
 {
     private const array SENSITIVE_FIELDS = [

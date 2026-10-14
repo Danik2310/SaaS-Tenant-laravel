@@ -11,6 +11,17 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 
+/**
+ * Base class for jobs that must run inside a tenant's context.
+ *
+ * Flow (`handle()`):
+ *  1. `tenancy()->initialize($tenant)` switches the database, cache, filesystem
+ *     and queue to the tenant.
+ *  2. Run the concrete {@see execute()} implementation.
+ *  3. Always `tenancy()->end()` in a `finally`, keyed on the package's
+ *     `initialized` flag so a bootstrapper failure cannot leak tenant context
+ *     into the next job on a long-lived worker.
+ */
 abstract class TenantAwareJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -39,5 +50,6 @@ abstract class TenantAwareJob implements ShouldQueue
         }
     }
 
+    /** Tenant-scoped work to run inside {@see handle()}'s tenancy context. */
     abstract protected function execute(): void;
 }
