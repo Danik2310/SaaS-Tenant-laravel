@@ -9,6 +9,19 @@ use Illuminate\Http\Request;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
 
+/**
+ * Alias: `jwt.refresh`.
+ *
+ * Sliding-window JWT renewal for the admin (and tenant) guards.
+ *
+ * Flow:
+ *  1. No Authorization header → continue.
+ *  2. Token expired → refresh and re-issue the cookie.
+ *  3. Token valid but past half its TTL → refresh and re-issue the cookie.
+ *  4. Otherwise continue untouched.
+ *
+ * @see JwtCookie
+ */
 class RefreshJwtToken
 {
     public function __construct(protected AuthManager $auth) {}

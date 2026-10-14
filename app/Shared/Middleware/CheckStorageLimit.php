@@ -11,6 +11,18 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Alias: `storage.limit`.
+ *
+ * Rejects a write that would push the tenant past its plan's storage limit.
+ *
+ * Flow:
+ *  1. Resolve the tenant's storage limit in MB via
+ *     {@see ResourceEnforcementFactory}.
+ *  2. Unlimited (`PHP_INT_MAX`) → pass through.
+ *  3. Add the requested size (route parameter, default 1 KB) to current usage.
+ *  4. Over the limit → throw {@see PlanLimitExceededException}.
+ */
 class CheckStorageLimit
 {
     public function handle(Request $request, Closure $next, ?string $requiredKb = null): Response

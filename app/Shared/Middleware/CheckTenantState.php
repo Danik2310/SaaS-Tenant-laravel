@@ -12,6 +12,20 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Alias: `tenant.state`.
+ *
+ * Gates the whole tenant route group on the tenant's lifecycle state.
+ *
+ * Flow:
+ *  1. Deleted / trashed → 403 JSON, or the tenant-state page (the upgrade route
+ *     redirects to login instead).
+ *  2. Trial that has expired → allow only the upgrade route; otherwise redirect
+ *     to upgrade (or 403 JSON).
+ *  3. Any state other than Active/Trial → suspended response (upgrade route
+ *     exempt).
+ *  4. Active/Trial → continue.
+ */
 class CheckTenantState
 {
     public function handle(Request $request, Closure $next): Response

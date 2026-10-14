@@ -8,6 +8,21 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Alias: `impersonation.session`.
+ *
+ * Validates a god-mode (impersonation) session on the tenant side. A no-op when
+ * no impersonation is active.
+ *
+ * Flow:
+ *  1. No impersonation in the session → continue.
+ *  2. Expired (past `ttl`) → clear it and 401 / redirect to login.
+ *  3. Tenant mismatch → clear it and 403.
+ *  4. Read-only enforcement (config `impersonation.read_only`): non-safe methods
+ *     are rejected with 403 unless they are an explicit stop route.
+ *  5. Inject a synthetic admin identity ({@see ImpersonatedAdmin}) as the tenant
+ *     user so permission-gated UI renders.
+ */
 class EnsureImpersonationValid
 {
     /**

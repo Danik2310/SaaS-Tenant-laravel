@@ -10,6 +10,16 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Generates a per-request Content-Security-Policy nonce.
+ *
+ * Flow:
+ *  1. Generate a random nonce.
+ *  2. Register it with Vite so emitted script/style tags carry `nonce="…"`.
+ *  3. Share it as `csp_nonce` for the root view.
+ *
+ * Pairs with {@see SecurityHeaders}, which emits the matching CSP header.
+ */
 class CspNonce
 {
     public function handle(Request $request, Closure $next): Response

@@ -6,6 +6,18 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Alias: `session.expiry`.
+ *
+ * Enforces an absolute session lifetime on top of Laravel's idle timeout.
+ *
+ * Flow:
+ *  1. No authenticated user on the guard → continue.
+ *  2. If `now − last_activity` exceeds `session.absolute_lifetime` (minutes),
+ *     log the guard out and return a guard-aware response — 401 JSON, or a
+ *     redirect to `central.login` for the admin guard and `login` otherwise.
+ *  3. Otherwise refresh `last_activity` and continue.
+ */
 class EnsureSessionNotExpired
 {
     public function handle(Request $request, Closure $next, ?string $guard = null)

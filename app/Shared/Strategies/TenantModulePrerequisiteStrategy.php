@@ -5,6 +5,10 @@ namespace App\Shared\Strategies;
 use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\PermissionPrerequisiteStrategyInterface;
 
+/**
+ * Requires "view tenants" for permissions that operate on a selected tenant
+ * (impersonation, restoring, managing subscription payments).
+ */
 class TenantModulePrerequisiteStrategy implements PermissionPrerequisiteStrategyInterface
 {
     private const PREREQUISITES = [PermissionNames::VIEW_TENANTS];

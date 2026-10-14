@@ -6,6 +6,11 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Admin guard gate — returns 401 JSON unless the request is authenticated on the
+ * `admin` guard. Registered for explicit use; the `auth:admin` alias covers most
+ * routes.
+ */
 class IsAdmin
 {
     /**

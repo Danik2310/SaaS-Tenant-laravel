@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Providers;
 
+use App\Shared\Support\JwtCookie;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use PHPOpenSourceSaver\JWTAuth\JWT;
@@ -11,6 +12,22 @@ use PHPOpenSourceSaver\JWTAuth\JWTGuard;
 use PHPOpenSourceSaver\JWTAuth\Manager;
 use PHPOpenSourceSaver\JWTAuth\Providers\JWT\Lcobucci;
 
+/**
+ * JWT guard driver.
+ *
+ * Extends Laravel's auth system with a `jwt` driver used by the `admin` guard.
+ * The signing secret is resolved per guard from `jwt.guard_secrets.{guard}`,
+ * falling back to the shared `jwt.secret`.
+ *
+ * Flow (per guard resolution):
+ *  1. Resolve the secret for the guard name.
+ *  2. Build a token manager (algorithm, keys, blacklist, refresh-iat, claims).
+ *  3. Build a JWT that locks the subject, with the guard's user provider.
+ *  4. Apply the guard TTL and keep the guard's request reference refreshed.
+ *
+ * @see config/jwt.php
+ * @see JwtCookie
+ */
 class JwtServiceProvider extends ServiceProvider
 {
     public function boot(): void

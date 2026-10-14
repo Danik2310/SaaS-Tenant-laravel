@@ -5,6 +5,12 @@ namespace App\Shared\Services;
 use App\Shared\Factories\PermissionPrerequisiteStrategyFactory;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Validates that a set of permission names satisfies the prerequisites of the
+ * managed permissions (see {@see PermissionPrerequisiteStrategyFactory}).
+ *
+ * Only permissions present in the input are checked; unrelated ones are ignored.
+ */
 class PermissionPrerequisiteValidator
 {
     public function validateAll(array $permissionNames): array

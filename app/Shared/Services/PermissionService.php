@@ -7,6 +7,15 @@ use App\Models\Role;
 use App\Shared\Contracts\PermissionServiceInterface;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Permission assignment service.
+ *
+ * Guards role/direct-permission writes with two rules before persisting:
+ *  1. **Privilege hierarchy** — an admin may only grant permissions they
+ *     themselves hold.
+ *  2. **Prerequisites** — dependent permissions must come with their
+ *     prerequisites (delegated to {@see PermissionPrerequisiteValidator}).
+ */
 class PermissionService implements PermissionServiceInterface
 {
     public function syncPermissions(Role $role, array $permissionIds): void

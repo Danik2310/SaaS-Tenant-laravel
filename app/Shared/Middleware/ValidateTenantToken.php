@@ -7,6 +7,17 @@ use Illuminate\Auth\AuthManager;
 use Illuminate\Http\Request;
 use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
 
+/**
+ * Alias: `jwt.tenant`.
+ *
+ * Ensures the JWT was minted for the tenant currently being served, so a token
+ * issued for one tenant cannot be replayed against another.
+ *
+ * Flow:
+ *  1. Impersonation sessions carry no tenant JWT → skip the check.
+ *  2. Read the token's `ten` (tenant) claim; a JWT error → 401.
+ *  3. The claim must equal the current tenant id, otherwise 401.
+ */
 class ValidateTenantToken
 {
     public function __construct(protected AuthManager $auth) {}

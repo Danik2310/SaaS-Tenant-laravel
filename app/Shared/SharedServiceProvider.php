@@ -26,6 +26,26 @@ use App\Shared\Services\TenantAwarePermissionRegistrar;
 use Illuminate\Support\ServiceProvider;
 use Spatie\Permission\PermissionRegistrar;
 
+/**
+ * Shared module provider — container bindings and cross-cutting registration.
+ *
+ * Flow (`register()`):
+ *  1. Bind the shared contracts to their implementations (Role, Permission,
+ *     Export, ExchangeRate services, plus the location catalog).
+ *  2. Bind {@see ServerDiskInfo} to a local or S3 driver selected from the
+ *     `SERVER_DISK_DRIVER` env value.
+ *
+ * Flow (`boot()`):
+ *  1. Register the shared console commands.
+ *  2. Replace Spatie's PermissionRegistrar with
+ *     {@see TenantAwarePermissionRegistrar} so the permission cache is scoped per
+ *     tenant/central context.
+ *
+ * Interfaces live in `App\Shared\Contracts`; implementations in
+ * `App\Shared\Services` / `App\Shared\Locations`.
+ *
+ * @see docs/architecture/05-permissions-and-plan-gating.md
+ */
 class SharedServiceProvider extends ServiceProvider
 {
     public function register(): void

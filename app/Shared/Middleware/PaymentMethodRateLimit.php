@@ -7,6 +7,18 @@ use Illuminate\Cache\RateLimiter;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Alias: `payment.rate.limit`.
+ *
+ * Layered throttling for payment-method routes, keyed on admin + IP + route.
+ *
+ * Flow:
+ *  1. Apply a base 100/hour limit plus an operation-specific limit — create 10,
+ *     update 50, toggle 100, delete 5, read 200 — and a stricter 20/hour cap on
+ *     sensitive write operations.
+ *  2. Over any limit → 429 with `Retry-After` and `X-RateLimit-*` headers.
+ *  3. On success → attach `X-RateLimit-Limit` / `X-RateLimit-Remaining` headers.
+ */
 class PaymentMethodRateLimit
 {
     /**

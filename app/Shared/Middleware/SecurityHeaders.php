@@ -10,6 +10,18 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Adds security headers to every `web` response (runs on the way out, so it
+ * sees the finished response).
+ *
+ * Flow:
+ *  1. Set `nosniff`, frame-deny, XSS protection, referrer-policy and HSTS
+ *     headers.
+ *  2. Emit a Content-Security-Policy — a permissive dev CSP in local/testing,
+ *     otherwise a nonce-based production CSP using Vite's nonce.
+ *
+ * @see CspNonce
+ */
 class SecurityHeaders
 {
     public function handle(Request $request, Closure $next): Response

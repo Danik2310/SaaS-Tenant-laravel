@@ -8,10 +8,24 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
+/**
+ * Shares app-wide props with every Inertia response.
+ *
+ * Flow (`share()`):
+ *  1. Resolve the current tenant and, when present, its plan data — plan, feature
+ *     list, resource limits and trial flags — cached per tenant with a fallback
+ *     for non-taggable cache stores.
+ *  2. Expose the authenticated user, or a synthetic identity while impersonating.
+ *  3. Expose impersonation state, feature definitions and the tenant domain
+ *     suffix.
+ */
 class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
 
+    /**
+     * Asset version string used by Inertia for cache-busting.
+     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
@@ -51,6 +65,11 @@ class HandleInertiaRequests extends Middleware
         }
     }
 
+    /**
+     * Build the shared prop set for the current request.
+     *
+     * @return array<string, mixed>
+     */
     public function share(Request $request): array
     {
         $currentTenant = tenant();

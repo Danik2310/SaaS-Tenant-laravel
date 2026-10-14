@@ -17,6 +17,18 @@ use OpenSpout\Writer\CSV\Writer as CsvWriter;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
 use Spatie\Activitylog\Models\Activity;
 
+/**
+ * Builds CSV/XLSX exports for the admin app.
+ *
+ * Flow (`export()`):
+ *  1. Stream each entity with `lazy(500)`, capped per entity by
+ *     {@see self::MAX_RECORDS}.
+ *  2. Map rows to headers + values, honouring the requested column subset.
+ *  3. Write via OpenSpout (CSV or XLSX) to `exports/<uuid>.<format>`.
+ *  4. Return filename/path/record_count/expiry (24h).
+ *
+ * `cleanupExpired()` deletes export files past the expiry window.
+ */
 class ExportService implements ExportServiceInterface
 {
     private const EXPIRY_HOURS = 24;
