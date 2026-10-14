@@ -65,9 +65,17 @@ Route::middleware(['central.domain'])->group(function () {
 // tenant `/register` route (routes/tenant.php) shares the same URI and Laravel's
 // route collection keys routes by method+domain+URI — an unconstrained
 // duplicate would be silently overwritten.
-foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
-    Route::domain($centralDomain)->middleware(['central.domain', 'guest'])->group(function () {
-        Route::get('/register', [TenantRegistrationController::class, 'create'])->name('register.tenant');
+foreach ((array) config('tenancy.central_domains', []) as $index => $centralDomain) {
+    Route::domain($centralDomain)->middleware(['central.domain', 'guest'])->group(function () use ($index) {
+        // Route names must be unique for route:cache, so only the first central
+        // domain claims the canonical names. Every other central domain still
+        // registers the same (domain-constrained) routes unnamed, so all central
+        // hosts resolve them without a duplicate-name serialization error.
+        $isPrimary = $index === 0;
+
+        Route::get('/register', [TenantRegistrationController::class, 'create'])
+            ->when($isPrimary, fn ($route) => $route->name('register.tenant'));
+
         Route::post('/register', [TenantRegistrationController::class, 'store'])
             ->middleware(['throttle:3,1', 'throttle:registration']);
 
@@ -75,16 +83,16 @@ foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
         // guest cannot use it as a bulk-query or scraping endpoint.
         Route::get('/register/locations/cities', [RegistrationLocationController::class, 'cities'])
             ->middleware('throttle:60,1')
-            ->name('register.locations.cities');
+            ->when($isPrimary, fn ($route) => $route->name('register.locations.cities'));
 
         // Stripe-hosted checkout callbacks. Provisioning of a paid plan happens
         // only in RegistrationCheckoutController::success(), never in store().
         Route::get('/register/payment/success', [RegistrationCheckoutController::class, 'success'])
             ->middleware('throttle:10,1')
-            ->name('register.payment.success');
+            ->when($isPrimary, fn ($route) => $route->name('register.payment.success'));
         Route::get('/register/payment/cancel', [RegistrationCheckoutController::class, 'cancel'])
             ->middleware('throttle:10,1')
-            ->name('register.payment.cancel');
+            ->when($isPrimary, fn ($route) => $route->name('register.payment.cancel'));
     });
 }
 
