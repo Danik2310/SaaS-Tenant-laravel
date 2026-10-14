@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Providers\AuthServiceProvider;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\Rule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,6 +11,14 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Tenant login form request.
+ *
+ * Validates credentials, throttles to 5 attempts per email+IP, and authenticates
+ * against the `web` (JWT) guard requiring `is_active = true`.
+ *
+ * @see AuthServiceProvider
+ */
 class LoginRequest extends FormRequest
 {
     /**

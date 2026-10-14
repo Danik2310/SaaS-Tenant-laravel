@@ -8,6 +8,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Bounces already-authenticated users away from guest pages.
+ *
+ * Checks each named guard (or the default when none is given) and redirects to
+ * {@see RouteServiceProvider::HOME} on a hit.
+ */
 class RedirectIfAuthenticated
 {
     /**

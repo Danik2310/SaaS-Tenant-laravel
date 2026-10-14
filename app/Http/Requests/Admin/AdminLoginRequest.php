@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Http\Requests\Auth\LoginRequest;
 use App\Models\AdminUser;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,6 +11,13 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Admin login form request.
+ *
+ * Same shape as the tenant {@see LoginRequest}, but
+ * authenticates the `admin` guard and distinguishes a **blocked** account from
+ * bad credentials in its error message.
+ */
 class AdminLoginRequest extends FormRequest
 {
     public function authorize(): bool

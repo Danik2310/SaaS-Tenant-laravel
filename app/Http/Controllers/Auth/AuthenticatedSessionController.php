@@ -13,6 +13,16 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
 
+/**
+ * Tenant login / logout.
+ *
+ * Login is session-scoped but the credential is a **JWT cookie**:
+ *  - `create()` renders the Inertia `Auth/Login` page.
+ *  - `store()` authenticates via {@see LoginRequest} (rate-limited), regenerates
+ *    the session and attaches the JWT cookie.
+ *  - `destroy()` logs out the `web` guard, invalidates the session and clears the
+ *    JWT cookie.
+ */
 class AuthenticatedSessionController extends Controller
 {
     /**
