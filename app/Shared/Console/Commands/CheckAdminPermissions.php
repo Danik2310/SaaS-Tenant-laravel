@@ -6,6 +6,11 @@ use App\Models\AdminUser;
 use App\Shared\Constants\PermissionNames;
 use Illuminate\Console\Command;
 
+/**
+ * `check:admin-permissions` — prints the first admin's roles and key permissions.
+ *
+ * Diagnostic only; makes no changes.
+ */
 class CheckAdminPermissions extends Command
 {
     /**

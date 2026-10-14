@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Cache;
  * @group Global Settings
  *
  * APIs for managing global application settings.
+ *
+ * Flow: `index()`/`get()` read through the forever `global_settings` cache;
+ * `update()` persists each key, forgets the cache, and writes an activity entry.
  */
 class SettingController extends Controller
 {

@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Auth;
  * @group Admin Authentication
  *
  * APIs for admin login, logout, and session management.
+ *
+ * Flow: `login()` authenticates via {@see AdminLoginRequest}, regenerates the
+ * session, and sets the HttpOnly JWT cookie; `logout()` blacklists it; `user()`
+ * returns the admin with flattened role + direct permissions.
+ *
+ * @see docs/architecture/04-authentication.md
  */
 class AdminAuthController extends Controller
 {

@@ -12,6 +12,12 @@ use App\Shared\Support\ImpersonationToken;
  * @group Tenant Impersonation
  *
  * APIs for impersonating tenants (god mode).
+ *
+ * Flow: `start()` mints a short-lived signed handoff token bound to the target
+ * tenant's domain (clearing any stale session first); `stop()` clears local
+ * impersonation state.
+ *
+ * @see docs/architecture/06-impersonation-god-mode.md
  */
 class ImpersonationController extends Controller
 {

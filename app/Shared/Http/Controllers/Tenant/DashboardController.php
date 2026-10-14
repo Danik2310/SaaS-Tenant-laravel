@@ -9,6 +9,15 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
+/**
+ * Tenant dashboard.
+ *
+ * Flow: `index()` computes KPI counts (cached 5m; month-over-month trends) and
+ * lazily streams recent orders/movements. `recentMovements` is gated behind the
+ * `advanced` feature.
+ *
+ * @see docs/architecture/05-permissions-and-plan-gating.md
+ */
 class DashboardController extends Controller
 {
     private function cachedWithFallback(string $tag, string $key, int $ttl, callable $callback): mixed

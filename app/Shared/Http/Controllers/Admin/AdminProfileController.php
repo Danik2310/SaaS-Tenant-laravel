@@ -16,6 +16,11 @@ use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
  * @group Admin Profile
  *
  * APIs for managing the authenticated admin user's own profile.
+ *
+ * Flow: `show()`/`updateProfile()` read and update basic fields;
+ * `updatePassword()` verifies the current password, rehashes, then invalidates
+ * the JWT (forcing re-login); `deleteAccount()` guards the main admin and the
+ * last-active-admin rule.
  */
 class AdminProfileController extends Controller
 {

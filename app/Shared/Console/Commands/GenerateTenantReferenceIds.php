@@ -7,6 +7,12 @@ namespace App\Shared\Console\Commands;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
 
+/**
+ * `tenants:generate-reference-ids` — backfills `reference_id` on tenants.
+ *
+ * Flow: selects tenants (including trashed) with a null `reference_id` and
+ * assigns one via {@see Tenant::generateReferenceId()}. `--dry-run` reports only.
+ */
 class GenerateTenantReferenceIds extends Command
 {
     protected $signature = 'tenants:generate-reference-ids

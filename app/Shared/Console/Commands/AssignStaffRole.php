@@ -7,6 +7,13 @@ use App\Shared\Constants\PermissionNames;
 use Illuminate\Console\Command;
 use Spatie\Permission\Models\Role;
 
+/**
+ * `admin:assign-staff` — grants the staff role to an admin user.
+ *
+ * Flow: resolves the user by email (prompting if omitted), looks up the `staff`
+ * role on the `admin` guard, and assigns it. Requires the central
+ * role/permission seeder to have run first.
+ */
 class AssignStaffRole extends Command
 {
     /**

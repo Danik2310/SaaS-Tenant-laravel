@@ -9,6 +9,9 @@ use App\Shared\Contracts\ExchangeRateServiceInterface;
  * @group Global Settings
  *
  * APIs for managing global application settings.
+ *
+ * Flow: `index()` returns cached USD-based rates plus the admin display currency
+ * from the global settings.
  */
 class ExchangeRateController extends Controller
 {

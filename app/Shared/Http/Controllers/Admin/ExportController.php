@@ -16,6 +16,12 @@ use Illuminate\Support\Facades\Storage;
  * @group Data Export
  *
  * APIs for exporting data entities (sync and async).
+ *
+ * Flow: `export()` runs {@see ExportServiceInterface} inline or queues
+ * {@see RunExportJob}; `status()` reads job progress from the untagged `global`
+ * cache; `download()` streams the file after extension/path validation.
+ *
+ * @see docs/architecture/07-jobs-events-observers.md
  */
 class ExportController extends Controller
 {

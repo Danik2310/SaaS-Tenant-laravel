@@ -6,6 +6,11 @@ use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Console\Command;
 
+/**
+ * `check:permissions-data` — prints all permissions and roles with metadata.
+ *
+ * Diagnostic only; makes no changes.
+ */
 class CheckPermissionsData extends Command
 {
     /**

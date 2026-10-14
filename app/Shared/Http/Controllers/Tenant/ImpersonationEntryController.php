@@ -13,6 +13,12 @@ use Illuminate\Support\Facades\Cache;
  * @group Tenant Impersonation (God Mode)
  *
  * Tenant-side entry and exit for impersonated administrator sessions.
+ *
+ * Flow: `enter()` verifies the central-signed handoff token, enforces tenant
+ * match + TTL, consumes the single-use `jti`, then seeds the `impersonation`
+ * session. `stop()` clears state and returns the admin to the central domain.
+ *
+ * @see docs/architecture/06-impersonation-god-mode.md
  */
 class ImpersonationEntryController extends Controller
 {

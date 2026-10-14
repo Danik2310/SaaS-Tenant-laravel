@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Cache;
  * @group Admin Dashboard
  *
  * APIs for admin dashboard statistics and overview.
+ *
+ * Flow: `index()` renders the SPA shell; `stats()` aggregates tenant/staff/plan
+ * counts and trends behind a 5-minute cache (bypassed with `?refresh=1`).
  */
 class DashboardController extends Controller
 {

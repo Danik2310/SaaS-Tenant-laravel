@@ -12,6 +12,10 @@ use Spatie\Activitylog\Models\Activity;
  * @group Activity Logs
  *
  * APIs for viewing and filtering activity logs.
+ *
+ * Flow: `index()` filters + paginates the Spatie activity table; `show()`
+ * returns one entry; `logNames()` caches the distinct log names; `causers()`
+ * paginates the admin users.
  */
 class ActivityLogController extends Controller
 {
