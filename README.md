@@ -21,14 +21,14 @@ Multi-tenant SaaS platform built with Laravel 12 and React 18, using a **modular
 - PHP 8.2+
 - Node.js 18+
 - MySQL 8.0+
-- Composer, npm
+- Composer, pnpm
 
 ## Setup
 
 ```bash
 # Install dependencies
 composer install
-npm install
+pnpm install
 
 # Environment
 cp .env.example .env
@@ -55,7 +55,7 @@ php artisan db:seed
 
 ```bash
 # Start Vite dev server (port 5174)
-npm run dev
+pnpm run dev
 
 # In another terminal — Laravel via Laragon/Nginx/Valet
 # No separate artisan serve needed when using Laragon
@@ -64,10 +64,10 @@ npm run dev
 ## Commands
 
 ```bash
-npm run dev              # Vite dev server
-npm run build            # Production build
-npm run test             # Vitest (JS)
-npm run test:ui          # Vitest with UI
+pnpm run dev             # Vite dev server
+pnpm run build           # Production build
+pnpm run test            # Vitest (JS)
+pnpm run test:ui         # Vitest with UI
 
 php artisan test                 # PHPUnit (all tests)
 php artisan test --filter=Name   # Single test
@@ -241,10 +241,10 @@ php artisan test
 php artisan test --filter=SubscriptionPaymentTest
 
 # JS — all tests
-npm run test
+pnpm run test
 
 # JS — single test file
-npx vitest run tests/frontend/components/Subscriptions.test.jsx
+pnpm exec vitest run tests/frontend/components/Subscriptions.test.jsx
 ```
 
 ### Test Configuration
@@ -288,5 +288,5 @@ php artisan migrate --force
 php artisan db:seed
 
 # Build frontend assets
-npm run build
+pnpm run build
 ```

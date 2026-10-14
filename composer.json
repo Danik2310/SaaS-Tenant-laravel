@@ -61,7 +61,7 @@
         ],
         "dev": [
         "@php artisan serve",
-        "npm run dev"
+        "pnpm run dev"
         ]
     },
     "extra": {
