@@ -1,0 +1,7 @@
+# pnpm settings home (pnpm 11+). See https://pnpm.io/settings
+# esbuild needs its postinstall build script.
+allowBuilds:
+  esbuild: true
+
+# Opt out of the default 1-day release cooldown (pnpm 11+ default: 1440).
+minimumReleaseAge: 0
