@@ -12,6 +12,12 @@ use App\Billing\Strategies\StarterResourceStrategy;
 use App\Models\Plan;
 use App\Models\Tenant;
 
+/**
+ * Factory for the per-plan resource-enforcement strategy (Strategy pattern).
+ *
+ * Selects a {@see ResourceEnforcementInterface} implementation from the tenant's
+ * plan slug so callers ask for limits without branching on the plan themselves.
+ */
 class ResourceEnforcementFactory
 {
     public static function make(Tenant $tenant): ResourceEnforcementInterface

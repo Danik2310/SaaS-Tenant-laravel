@@ -5,6 +5,12 @@ namespace App\Billing\Console\Commands;
 use App\Models\PaymentMethod;
 use Illuminate\Console\Command;
 
+/**
+ * `payment-method:update` — updates a stored payment method from the CLI.
+ *
+ * Flow: finds the method by id, validates the `provider`/`mode` enums, then
+ * updates the record (API/secret keys are encrypted by the model cast).
+ */
 class UpdatePaymentMethod extends Command
 {
     /**

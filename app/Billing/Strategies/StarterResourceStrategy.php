@@ -7,6 +7,10 @@ namespace App\Billing\Strategies;
 use App\Billing\Contracts\ResourceEnforcementInterface;
 use App\Models\Plan;
 
+/**
+ * Resource-enforcement strategy for the default (starter) plan; every limit is
+ * read from the bound {@see Plan} (null → unlimited).
+ */
 class StarterResourceStrategy implements ResourceEnforcementInterface
 {
     public function __construct(

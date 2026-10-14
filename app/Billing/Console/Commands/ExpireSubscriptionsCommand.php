@@ -9,6 +9,15 @@ use App\Tenants\States\TenantStateManager;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * `tenants:expire-subscriptions` — expires subscriptions and suspends tenants.
+ *
+ * Flow: loads `expired()` subscriptions, marks each `expired`, and transitions
+ * its tenant to `Suspended` via {@see TenantStateManager}. `--dry-run` reports
+ * only; per-subscription failures are logged.
+ *
+ * @see docs/architecture/03-multi-tenancy.md
+ */
 class ExpireSubscriptionsCommand extends Command
 {
     protected $signature = 'tenants:expire-subscriptions

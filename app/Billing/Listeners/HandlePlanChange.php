@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 
+/**
+ * Reacts to a {@see PlanChanged} event.
+ *
+ * Logs the change direction, and on a **downgrade** detects limits the tenant now
+ * exceeds and any lost features, then notifies the tenant via
+ * {@see PlanDowngradeWarning}.
+ */
 class HandlePlanChange
 {
     public function handle(PlanChanged $event): void

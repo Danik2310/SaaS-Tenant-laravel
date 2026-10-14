@@ -8,6 +8,15 @@ use App\Billing\Commands\SyncTenantSubscriptionsCommand;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
 
+/**
+ * `tenants:sync-subscriptions` — backfills subscriptions for plan-holding tenants.
+ *
+ * Flow: selects tenants with a `plan_id` (optionally one via `--tenant`), skips
+ * those with an active subscription, and creates one via
+ * {@see SyncTenantSubscriptionsCommand}. `--dry-run` reports only.
+ *
+ * @see docs/architecture/05-permissions-and-plan-gating.md
+ */
 class SyncTenantSubscriptions extends Command
 {
     protected $signature = 'tenants:sync-subscriptions

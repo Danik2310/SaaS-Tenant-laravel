@@ -16,6 +16,20 @@ use App\Models\SubscriptionPayment;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
+/**
+ * Billing module provider.
+ *
+ * Flow:
+ *  1. `register()` binds {@see PaymentGatewayInterface} to a gateway resolved at
+ *     build time by {@see PaymentGatewayFactory::fromTenant()} using the current
+ *     tenant's configuration (falling back safely when there is no tenant
+ *     context).
+ *  2. `boot()` listens for {@see PlanChanged} (→ {@see HandlePlanChange}),
+ *     attaches the payment-cache observer, and registers the module's console
+ *     commands.
+ *
+ * @see docs/architecture/02-providers-and-container.md
+ */
 class BillingServiceProvider extends ServiceProvider
 {
     public function register(): void
