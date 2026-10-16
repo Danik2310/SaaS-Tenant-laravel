@@ -8,6 +8,13 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * NOTE: The timestamp suffix is `000002` (not `000001`) so this tenant
+     * migration has a distinct ledger key from the central
+     * `2019_12_14_000001_create_personal_access_tokens_table`. In the local
+     * dual-connection dev shortcut both connections share one `migrations`
+     * ledger, so identical names would cause one copy to be silently skipped.
+     * The `hasTable` guard keeps this safe if it re-runs on an existing schema.
      */
     public function up(): void
     {
