@@ -23,7 +23,6 @@ class SubscriptionPaymentResource extends JsonResource
             'paid_at' => $this->paid_at?->format('Y-m-d H:i'),
             'plan_name' => $this->plan_name,
             'plan_price' => $this->plan_price,
-            'notes' => $this->notes,
         ];
     }
 }
