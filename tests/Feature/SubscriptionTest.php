@@ -502,19 +502,17 @@ class SubscriptionTest extends TestCase
             '--env' => 'testing',
         ]);
 
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => 'empresa-abc',
-            'status' => 'active',
-        ]);
+        foreach ([
+            'contacto@empresaabc.com',
+            'admin@tiendaxyz.com',
+            'info@consultoria123.com',
+        ] as $email) {
+            $tenant = Tenant::where('email', $email)->firstOrFail();
 
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => 'tienda-xyz',
-            'status' => 'active',
-        ]);
-
-        $this->assertDatabaseHas('subscriptions', [
-            'tenant_id' => 'consultoria-123',
-            'status' => 'active',
-        ]);
+            $this->assertDatabaseHas('subscriptions', [
+                'tenant_id' => $tenant->id,
+                'status' => 'active',
+            ]);
+        }
     }
 }
