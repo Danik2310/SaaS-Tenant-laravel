@@ -210,6 +210,17 @@ return [
     'routes' => true,
 
     /**
+     * Enable the experimental path-based tenancy identification routes.
+     *
+     * These resolve the tenant from a URL path segment (`/p/{tenant}/...`)
+     * instead of a domain and are unauthenticated, so they must never be
+     * exposed outside local experiments. They are registered only when this
+     * flag is true AND the app is running in `local`/`testing`, so a
+     * misconfigured APP_ENV alone cannot expose them. Off by default.
+     */
+    'path_identification' => env('TENANCY_PATH_IDENTIFICATION', false),
+
+    /**
      * Parameters used by the tenants:migrate command.
      */
     'migration_parameters' => [

@@ -195,7 +195,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
 | production until that isolation is resolved.
 |
 */
-if (app()->environment('local', 'testing')) {
+if (app()->environment('local', 'testing') && config('tenancy.path_identification')) {
     Route::middleware(['web', InitializeTenancyByPath::class])->prefix('p/{tenant}')->group(function () {
         Route::get('/hello', function () {
             return response()->json([
