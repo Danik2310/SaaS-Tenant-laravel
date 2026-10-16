@@ -31,6 +31,8 @@ use Illuminate\Auth\Middleware\AuthenticateWithBasicAuth;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Auth\Middleware\RequirePassword;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Contracts\Session\Middleware\AuthenticatesSessions;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
@@ -41,6 +43,7 @@ use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Middleware\SetCacheHeaders;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
@@ -113,6 +116,39 @@ class Kernel extends HttpKernel
             ThrottleRequests::class.':api',
             SubstituteBindings::class,
         ],
+    ];
+
+    /**
+     * The application's middleware priority list.
+     *
+     * Middleware listed here is sorted ahead of unlisted middleware. The custom
+     * JWT-cookie, impersonation and refresh middleware must run before
+     * `Authenticate` (which joins this list via the AuthenticatesRequests
+     * interface) so the bearer token is promoted out of the cookie and the
+     * impersonated identity is injected before the auth guard is evaluated.
+     * Without this the `auth` middleware runs first and tenant JWT auth,
+     * god-mode impersonation and token refresh all fail.
+     *
+     * Tenancy middleware is prepended ahead of this list by
+     * {@see TenancyServiceProvider::makeTenancyMiddlewareHighestPriority()}.
+     *
+     * @var array<int, class-string>
+     */
+    protected $middlewarePriority = [
+        HandlePrecognitiveRequests::class,
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        AddQueuedCookiesToResponse::class,
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        AuthenticateJwtFromCookie::class,
+        EnsureImpersonationValid::class,
+        RefreshJwtToken::class,
+        AuthenticatesRequests::class,
+        ThrottleRequests::class,
+        ThrottleRequestsWithRedis::class,
+        AuthenticatesSessions::class,
+        SubstituteBindings::class,
+        Authorize::class,
     ];
 
     /**
