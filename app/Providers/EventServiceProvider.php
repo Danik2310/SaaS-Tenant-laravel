@@ -28,9 +28,13 @@ use App\Observers\Tenant\ProductObserver;
 use App\Observers\Tenant\UserObserver;
 use App\Observers\Tenant\WarehouseObserver;
 use App\Shared\Observers\ActivityLogObserver;
+use App\Shared\Support\ImpersonatedAdmin;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Auth;
+use Spatie\Activitylog\CauserResolver;
 use Stancl\Tenancy\Database\Models\Domain;
 
 /**
@@ -88,6 +92,33 @@ class EventServiceProvider extends ServiceProvider
         ProductImage::observe(ProductImageObserver::class);
         Category::observe(CategoryObserver::class);
         Warehouse::observe(WarehouseObserver::class);
+
+        $this->registerActivityCauserResolver();
+    }
+
+    /**
+     * God-mode (impersonation) installs a non-persisted {@see ImpersonatedAdmin}
+     * into the `web` guard. The activity log's default causer resolver expects
+     * an Eloquent model and its `resolve()` signature is typed `Model|int|string|null`,
+     * so any `activity()` call made while impersonating would throw a TypeError.
+     * Fall back to `null` (no causer) whenever the authenticated user is not a
+     * persisted model; real model causers are passed through untouched.
+     */
+    private function registerActivityCauserResolver(): void
+    {
+        app(CauserResolver::class)->resolveUsing(function ($subject) {
+            if ($subject instanceof Model) {
+                return $subject;
+            }
+
+            if ($subject === null) {
+                $user = Auth::user();
+
+                return $user instanceof Model ? $user : null;
+            }
+
+            return null;
+        });
     }
 
     public function shouldDiscoverEvents(): bool

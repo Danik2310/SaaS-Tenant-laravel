@@ -90,9 +90,11 @@ class ActivityLogObserver
 
         // Only resolve the central admin guard outside tenant context — inside a
         // tenant request `admin_users` does not exist on the tenant connection.
+        // God mode installs a non-persisted ImpersonatedAdmin into the web guard;
+        // it is not an Eloquent model and cannot be associated as a causer.
         $causer = (! tenancy()->initialized ? auth('admin')->user() : null) ?? auth()->user();
 
-        if ($causer) {
+        if ($causer instanceof Model) {
             $log->causedBy($causer);
         }
 
