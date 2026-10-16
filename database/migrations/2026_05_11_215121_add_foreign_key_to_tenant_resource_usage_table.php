@@ -19,9 +19,13 @@ return new class extends Migration
     public function down(): void
     {
         if ($this->foreignKeyExists('tenant_resource_usage', 'tenant_resource_usage_tenant_id_foreign')) {
-            Schema::table('tenant_resource_usage', function (Blueprint $table) {
-                $table->dropForeign(['tenant_id']);
-            });
+            try {
+                Schema::table('tenant_resource_usage', function (Blueprint $table) {
+                    $table->dropForeign(['tenant_id']);
+                });
+            } catch (Throwable) {
+                // FK already dropped by another rollback step — idempotent
+            }
         }
     }
 
@@ -29,7 +33,7 @@ return new class extends Migration
     {
         $constraints = DB::select(
             "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
-             WHERE TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND CONSTRAINT_NAME = ? AND CONSTRAINT_TYPE = 'FOREIGN KEY'",
             [$table, $foreignKeyName]
         );
 

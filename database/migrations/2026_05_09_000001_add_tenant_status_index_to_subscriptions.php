@@ -54,18 +54,28 @@ return new class extends Migration
             // FK may have already been dropped — that's fine
         }
 
-        Schema::table('subscriptions', function (Blueprint $table) {
-            $table->dropIndex(['tenant_id', 'status']);
-        });
+        try {
+            Schema::table('subscriptions', function (Blueprint $table) {
+                $table->dropIndex(['tenant_id', 'status']);
+            });
+        } catch (Throwable) {
+            // Index may have already been dropped — that's fine
+        }
 
         // Always re-add the FK regardless — if it was already dropped by
         // a later migration, we need to restore it for the next earlier
-        // migration's down() that may expect it to exist.
-        Schema::table('subscriptions', function (Blueprint $table) {
-            $table->foreign('tenant_id')
-                ->references('id')
-                ->on('tenants')
-                ->cascadeOnDelete();
-        });
+        // migration's down() that may expect it to exist. Guarded so a full
+        // rollback (where the FK still exists) does not fail with a duplicate
+        // constraint error.
+        try {
+            Schema::table('subscriptions', function (Blueprint $table) {
+                $table->foreign('tenant_id')
+                    ->references('id')
+                    ->on('tenants')
+                    ->cascadeOnDelete();
+            });
+        } catch (Throwable) {
+            // FK already present (or cannot be re-created) — idempotent
+        }
     }
 };

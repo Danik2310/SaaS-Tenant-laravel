@@ -21,15 +21,49 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('subscription_payments', function (Blueprint $table) {
-            $table->dropForeign(['subscription_id']);
-            $table->dropForeign(['tenant_id']);
+        // Each step is guarded independently: a later/earlier rollback step may
+        // have already dropped the FK or index, and a single failure must not
+        // block the remaining steps (which is what previously aborted a full
+        // rollback). MySQL may also raise a metadata-lock error under load.
+        try {
+            Schema::table('subscription_payments', function (Blueprint $table) {
+                $table->dropForeign(['subscription_id']);
+            });
+        } catch (Throwable) {
+            // FK already dropped — idempotent
+        }
 
-            $table->dropIndex(['tenant_id', 'paid_at']);
-            $table->dropIndex(['subscription_id', 'paid_at']);
+        try {
+            Schema::table('subscription_payments', function (Blueprint $table) {
+                $table->dropForeign(['tenant_id']);
+            });
+        } catch (Throwable) {
+            // FK already dropped — idempotent
+        }
 
-            $table->foreign('subscription_id')->references('id')->on('subscriptions')->cascadeOnDelete();
-            $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-        });
+        try {
+            Schema::table('subscription_payments', function (Blueprint $table) {
+                $table->dropIndex(['tenant_id', 'paid_at']);
+            });
+        } catch (Throwable) {
+            // Index already dropped — idempotent
+        }
+
+        try {
+            Schema::table('subscription_payments', function (Blueprint $table) {
+                $table->dropIndex(['subscription_id', 'paid_at']);
+            });
+        } catch (Throwable) {
+            // Index already dropped — idempotent
+        }
+
+        try {
+            Schema::table('subscription_payments', function (Blueprint $table) {
+                $table->foreign('subscription_id')->references('id')->on('subscriptions')->cascadeOnDelete();
+                $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
+            });
+        } catch (Throwable) {
+            // FKs already restored — idempotent
+        }
     }
 };

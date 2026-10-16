@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -126,14 +127,19 @@ class MigrationUpDownTest extends TestCase
             return;
         }
 
-        // Roll back 10 steps
-        $rollbackExitCode = Artisan::call('migrate:rollback', [
-            '--env' => 'testing',
-            '--step' => 10,
-            '--path' => 'database/migrations',
-        ]);
+        try {
+            // Roll back 10 steps
+            $rollbackExitCode = Artisan::call('migrate:rollback', [
+                '--env' => 'testing',
+                '--step' => 10,
+                '--path' => 'database/migrations',
+            ]);
 
-        $this->assertSame(0, $rollbackExitCode, 'migrate:rollback --step=10 should exit with code 0');
+            $this->assertSame(0, $rollbackExitCode, 'migrate:rollback --step=10 should exit with code 0');
+        } finally {
+            // Do not leave the shared central schema rolled back for later tests.
+            $this->restoreSchemaAfterRollback();
+        }
     }
 
     /**
@@ -183,88 +189,69 @@ class MigrationUpDownTest extends TestCase
     }
 
     /**
-     * ✅ Test: rolling back all migrations then re-running migrate:fresh works.
+     * ✅ Test: rolling back every migration (in batches) then re-migrating works.
      *
-     * KNOWN LIMITATION: Rolling back all migrations (--step=99) may encounter
-     * MySQL errors from interdependent FK/index ordering issues. After a full
-     * rollback, some FK constraints may be dropped out of order, leaving the
-     * database in a state that requires a fresh wipe to recover.
+     * Rather than one `--step=99` call (which tripped MySQL metadata locks and
+     * left the schema half-rolled-back), the entire ledger is rolled back in
+     * small batches so each batch commits and locks are released between them.
+     * The schema is then asserted absent and re-migrated cleanly.
      *
-     * This does NOT affect `migrate:fresh` (used by RefreshDatabase), which uses
-     * `db:wipe` with `SET FOREIGN_KEY_CHECKS=0` to cleanly drop all tables.
-     *
-     * IMPORTANT: On every path (success, incomplete, exception) the schema is
-     * restored with migrate:fresh so this class never leaves the shared central
-     * database partially rolled back for the tests that follow.
+     * On every path the schema is restored with migrate:fresh so this class
+     * never leaves the shared central database partially rolled back.
      */
     public function test_migrate_rollback_entire_then_fresh(): void
     {
         // Start from a known state
         $exitCode = $this->runFresh();
-        if ($exitCode !== 0) {
-            $this->markTestSkipped('migrate:fresh failed - database may be in an inconsistent state');
+        $this->assertSame(0, $exitCode, 'migrate:fresh should exit with code 0');
 
-            return;
-        }
-
-        // Roll back a high number of steps
         try {
-            $rollbackExitCode = Artisan::call('migrate:rollback', [
-                '--env' => 'testing',
-                '--step' => 99,
-                '--path' => 'database/migrations',
-            ]);
-        } catch (\Throwable $e) {
-            $this->restoreSchemaAfterRollback();
+            $total = DB::table('migrations')->count();
+            $this->assertGreaterThan(0, $total, 'There should be applied migrations to roll back');
 
-            $this->markTestIncomplete(
-                'Full rollback skipped: MySQL deadlock/metadata lock error. '.
-                'Rolling back 99 interdependent FK migrations at once triggers '.
-                'MySQL internal metadata locks (error 1213). '.
-                'This is a MySQL engine limitation, not a code defect. '.
-                'Error: '.$e->getMessage()
-            );
+            $remaining = $total;
+            $batch = 5;
 
-            return;
-        }
+            while ($remaining > 0) {
+                $step = min($batch, $remaining);
 
-        if ($rollbackExitCode !== 0) {
-            // This is a KNOWN limitation with MySQL FK + index interactions
-            // when rolling back many interdependent migrations at once.
-            // The specific issue is that down() methods may try to drop FKs
-            // that were already dropped by earlier migrations in the rollback
-            // chain, or create FKs on tables that no longer exist.
-            $this->restoreSchemaAfterRollback();
+                $rollbackExitCode = Artisan::call('migrate:rollback', [
+                    '--env' => 'testing',
+                    '--step' => $step,
+                    '--path' => 'database/migrations',
+                ]);
 
-            $this->markTestIncomplete(
-                'Full rollback skipped: MySQL FK metadata limitation. '.
-                'Rolling back 99 interdependent FK migrations at once may '.
-                'encounter MySQL error 1091 (FK already dropped) or 1553 '.
-                '(index needed by FK constraint). '.
-                'This does NOT affect RefreshDatabase (which uses migrate:fresh).'
-            );
+                $this->assertSame(
+                    0,
+                    $rollbackExitCode,
+                    "migrate:rollback --step={$step} failed ({$remaining} applied migrations remaining). Output: ".Artisan::output()
+                );
 
-            return;
-        }
+                $remaining -= $step;
 
-        $this->assertSame(0, $rollbackExitCode, 'Rolling back 99 steps should exit with code 0');
+                // Let residual MySQL metadata locks clear before the next batch.
+                usleep(100000);
+            }
 
-        // Run migrate:fresh after rollback
-        try {
-            $freshExitCode = Artisan::call('migrate:fresh', [
+            // Everything should be rolled back and the core table dropped.
+            $this->assertSame(0, DB::table('migrations')->count(),
+                'All migrations should be rolled back');
+            $this->assertFalse(Schema::hasTable('tenants'),
+                'tenants table should be dropped after a full rollback');
+
+            // Re-run migrations from scratch.
+            $migrateExitCode = Artisan::call('migrate', [
                 '--env' => 'testing',
                 '--path' => 'database/migrations',
             ]);
-        } catch (\Throwable $e) {
+            $this->assertSame(0, $migrateExitCode,
+                'migrate after a full rollback should exit with code 0. Output: '.Artisan::output());
+            $this->assertTrue(Schema::hasTable('tenants'),
+                'tenants table should exist again after re-migrating');
+        } finally {
+            // Guarantee the shared central schema is fully migrated afterwards.
             $this->restoreSchemaAfterRollback();
-
-            $this->markTestIncomplete(
-                'migrate:fresh after full rollback failed: '.$e->getMessage()
-            );
-
-            return;
         }
-        $this->assertSame(0, $freshExitCode, 'migrate:fresh after full rollback should exit with code 0');
     }
 
     /**

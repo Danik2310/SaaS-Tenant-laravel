@@ -57,12 +57,17 @@ return new class extends Migration
             }
         }
 
-        // Re-add the original FK
-        Schema::table('subscriptions', function (Blueprint $table) {
-            $table->foreign('plan_id')
-                ->references('id')
-                ->on('plans')
-                ->cascadeOnDelete();
-        });
+        // Re-add the original FK. Guarded so a batched/full rollback where the
+        // FK still exists does not fail with a duplicate-constraint error.
+        try {
+            Schema::table('subscriptions', function (Blueprint $table) {
+                $table->foreign('plan_id')
+                    ->references('id')
+                    ->on('plans')
+                    ->cascadeOnDelete();
+            });
+        } catch (Throwable) {
+            // FK already present (or cannot be re-created) — idempotent
+        }
     }
 };
