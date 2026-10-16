@@ -5,10 +5,10 @@ namespace Database\Seeders;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Tenants\Contracts\TenantManagerInterface;
+use App\Tenants\Contracts\TenantRepositoryInterface;
 use Database\Seeders\Tenant\TenantDataSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 
 class TenantSeeder extends Seeder
 {
@@ -45,7 +45,7 @@ class TenantSeeder extends Seeder
         $configs = $this->buildAllConfigs($plans);
 
         foreach ($configs as $config) {
-            $existing = Tenant::withTrashed()->find($config['id']);
+            $existing = $this->resolveExisting($config);
 
             if ($existing) {
                 $this->handleExisting($existing, $config, $tenantManager);
@@ -55,6 +55,22 @@ class TenantSeeder extends Seeder
 
             $this->createFresh($config, $tenantManager);
         }
+    }
+
+    /**
+     * Resolve an already-provisioned tenant for a seed config.
+     *
+     * The seed configs are keyed by a human-readable slug, but real tenants get
+     * sequential ids (`TEN-######`) from TenantManager::provision(). Looking the
+     * tenant up by that slug therefore never matches and re-seeding would try to
+     * provision a duplicate (failing on "domain already in use"). Instead we
+     * resolve through stable, unique keys: the primary domain first, then the
+     * billing email as a fallback.
+     */
+    private function resolveExisting(array $config): ?Tenant
+    {
+        return app(TenantRepositoryInterface::class)->findByDomain($config['domain'])
+            ?? Tenant::withTrashed()->where('email', $config['email'])->first();
     }
 
     private function buildAllConfigs(array $plans): array
@@ -126,9 +142,13 @@ class TenantSeeder extends Seeder
 
     private function handleExisting(Tenant $tenant, array $config, TenantManagerInterface $tenantManager): void
     {
-        $tenant->update(['status' => 'Active']);
+        // Normalise the tenant back to a usable state through the lifecycle
+        // facade so the StateManager transitions (and their events/cache flushes)
+        // run consistently instead of poking the status column directly.
         if ($tenant->trashed()) {
-            $tenant->restore();
+            $tenantManager->restore($tenant);
+        } elseif ($tenant->status !== 'Active') {
+            $tenantManager->setStatus($tenant, 'Active');
         }
 
         // Domains are hard-deleted when TenantManager::delete() is called.
@@ -138,6 +158,7 @@ class TenantSeeder extends Seeder
                 'domain' => $config['domain'],
                 'is_primary' => true,
             ]);
+            $tenant->forceFill(['domain' => $config['domain']])->saveQuietly();
         }
 
         $tenant->load('plan');
@@ -156,11 +177,12 @@ class TenantSeeder extends Seeder
 
     private function createFresh(array $config, TenantManagerInterface $tenantManager): void
     {
-        $databaseName = config('tenancy.database.prefix').$config['id'].config('tenancy.database.suffix');
-        DB::statement("DROP DATABASE IF EXISTS `{$databaseName}`");
-
+        // Id and database name are allocated by TenantManager::provision() (and
+        // any orphan database from a previous failed run is dropped there by
+        // ensureDatabaseAvailable()). We must NOT force the slug as the tenant id
+        // or guess a database name here — doing so produced an unusable id and a
+        // DROP against a database name that never matched.
         $data = [
-            'id' => $config['id'],
             'name' => $config['name'],
             'email' => $config['email'],
             'status' => $config['status'] === 'Trial' ? 'Trial' : 'Active',

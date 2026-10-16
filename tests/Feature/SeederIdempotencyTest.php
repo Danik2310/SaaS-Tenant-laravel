@@ -13,6 +13,7 @@ use App\Models\Plan;
 use App\Models\PlanFeature;
 use App\Models\Product;
 use App\Models\Setting;
+use App\Models\Tenant;
 use App\Models\Warehouse;
 use Database\Seeders\Tenant\TenantDataSeeder;
 use Illuminate\Support\Facades\Artisan;
@@ -150,59 +151,35 @@ class SeederIdempotencyTest extends TestCase
      * ✅ Test: Running the full db:seed twice produces the same row counts in key tables.
      *
      * This tests that all seeders combined are idempotent — no duplicate rows
-     * should be created on subsequent runs.
-     *
-     * NOTE: The full DatabaseSeeder calls TenantSeeder which requires tenant
-     * database infrastructure (tenant databases, migrations, etc.). In the test
-     * environment, this infrastructure may not be available. If the first seed
-     * fails, the test is skipped rather than failed.
+     * should be created on subsequent runs. It also asserts the provisioned
+     * tenants are reused (same ids) rather than re-created.
      */
     public function test_full_db_seed_is_idempotent(): void
     {
-        // First full seed run — may fail if TenantSeeder requires tenant DB infra
-        try {
-            $firstExitCode = Artisan::call('db:seed', [
-                '--env' => 'testing',
-            ]);
-        } catch (\Throwable $e) {
-            $this->markTestSkipped(
-                'Full db:seed skipped: TenantSeeder requires tenant database '.
-                'infrastructure not available in test environment. '.
-                'Error: '.$e->getMessage()
-            );
+        // First full seed run. This provisions real tenant databases via
+        // TenantSeeder; the test environment provides the required infra.
+        $firstExitCode = Artisan::call('db:seed', [
+            '--env' => 'testing',
+        ]);
 
-            return;
-        }
-
-        if ($firstExitCode !== 0) {
-            $this->markTestIncomplete(
-                'First db:seed failed (exit code '.$firstExitCode.'). '.
-                'The TenantSeeder may require tenant database infrastructure. '.
-                'Seeders tested individually below pass correctly.'
-            );
-
-            return;
-        }
+        $this->assertSame(0, $firstExitCode,
+            'First db:seed should exit with code 0. Output: '.Artisan::output());
 
         // Capture baseline counts from key tables
         $firstCounts = $this->captureKeyTableCounts();
+        $firstTenantIds = Tenant::withTrashed()->pluck('id')->sort()->values()->all();
 
-        // Second full seed run
-        try {
-            $secondExitCode = Artisan::call('db:seed', [
-                '--env' => 'testing',
-            ]);
-        } catch (\Throwable $e) {
-            $this->markTestSkipped(
-                'Second db:seed skipped: '.$e->getMessage()
-            );
-
-            return;
-        }
+        // Second full seed run — must be idempotent. Regression guard: TenantSeeder
+        // used to re-provision every tenant (it looked them up by slug, not domain),
+        // so the second run aborted with "Domain ... is already in use".
+        $secondExitCode = Artisan::call('db:seed', [
+            '--env' => 'testing',
+        ]);
 
         $this->assertSame(0, $secondExitCode, 'Second db:seed should exit with code 0');
 
         $secondCounts = $this->captureKeyTableCounts();
+        $secondTenantIds = Tenant::withTrashed()->pluck('id')->sort()->values()->all();
 
         // Assert each table count is unchanged
         foreach ($firstCounts as $table => $count) {
@@ -214,6 +191,13 @@ class SeederIdempotencyTest extends TestCase
                 "Table {$table} count changed after re-running db:seed (was {$count}, now {$secondCounts[$table]})"
             );
         }
+
+        // Existing tenants must be reused (same ids), not re-provisioned.
+        $this->assertSame(
+            $firstTenantIds,
+            $secondTenantIds,
+            'Tenant ids must be reused on re-seed — TenantSeeder must resolve existing tenants by domain, not provision duplicates.'
+        );
     }
 
     /**

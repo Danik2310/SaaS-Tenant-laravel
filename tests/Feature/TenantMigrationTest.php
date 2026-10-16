@@ -336,10 +336,6 @@ class TenantMigrationTest extends TestCase
 
     /**
      * Test: Running the full DatabaseSeeder through db:seed pipeline.
-     *
-     * NOTE: The full DatabaseSeeder calls TenantSeeder which provisions
-     * real tenant databases. If this infrastructure is not available or
-     * the seeder fails, the test is skipped gracefully.
      */
     public function test_database_seeder_full_pipeline(): void
     {
@@ -354,30 +350,13 @@ class TenantMigrationTest extends TestCase
             '--class' => 'Database\\Seeders\\PlanSeeder',
         ]);
 
-        // Try running the full DatabaseSeeder
-        try {
-            $firstExitCode = Artisan::call('db:seed', [
-                '--env' => 'testing',
-            ]);
-        } catch (\Throwable $e) {
-            $this->markTestSkipped(
-                'Full db:seed skipped: TenantSeeder requires tenant database '.
-                'infrastructure not available in test environment. '.
-                'Error: '.$e->getMessage()
-            );
+        // First run of the full DatabaseSeeder (provisions real tenant databases).
+        $firstExitCode = Artisan::call('db:seed', [
+            '--env' => 'testing',
+        ]);
 
-            return;
-        }
-
-        if ($firstExitCode !== 0) {
-            $this->markTestIncomplete(
-                'First db:seed failed (exit code '.$firstExitCode.'). '.
-                'The TenantSeeder may require tenant database infrastructure. '.
-                'Seeders tested individually pass correctly.'
-            );
-
-            return;
-        }
+        $this->assertSame(0, $firstExitCode,
+            'First db:seed should exit with code 0. Output: '.Artisan::output());
 
         // Capture baseline counts from key central tables
         $firstPlansCount = Plan::count();
@@ -385,18 +364,12 @@ class TenantMigrationTest extends TestCase
         $firstPermissionsCount = Permission::count();
         $firstRolesCount = Role::count();
 
-        // Second run
-        try {
-            $secondExitCode = Artisan::call('db:seed', [
-                '--env' => 'testing',
-            ]);
-        } catch (\Throwable $e) {
-            $this->markTestSkipped(
-                'Second db:seed skipped: '.$e->getMessage()
-            );
-
-            return;
-        }
+        // Second run — must be idempotent. TenantSeeder now resolves existing
+        // tenants by domain, so re-seeding reuses them instead of aborting with
+        // "Domain ... is already in use".
+        $secondExitCode = Artisan::call('db:seed', [
+            '--env' => 'testing',
+        ]);
 
         $this->assertSame(0, $secondExitCode, 'Second db:seed should exit with code 0');
 
