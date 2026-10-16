@@ -57,7 +57,7 @@ class SharedServiceProvider extends ServiceProvider
         $this->app->singleton(LocationCatalog::class, DatabaseLocationCatalog::class);
 
         $this->app->singleton(ServerDiskInfo::class, function () {
-            return env('SERVER_DISK_DRIVER', 'local') === 's3'
+            return config('filesystems.server_disk_driver', 'local') === 's3'
                 ? new CloudServerDiskInfo
                 : new LocalServerDiskInfo;
         });

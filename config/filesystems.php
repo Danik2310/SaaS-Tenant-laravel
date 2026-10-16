@@ -79,4 +79,20 @@ return [
         public_path('storage') => storage_path('app/public'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Server Disk Info
+    |--------------------------------------------------------------------------
+    |
+    | Driver used by the ServerDiskInfo container binding ('local' or 's3') and
+    | the total storage quota (in GB) reported by the S3 driver. These live in
+    | config (not env()) so they keep working under `config:cache`, where env()
+    | is unavailable outside config files.
+    |
+    */
+
+    'server_disk_driver' => env('SERVER_DISK_DRIVER', 'local'),
+
+    'cloud_storage_limit_gb' => env('CLOUD_STORAGE_LIMIT_GB'),
+
 ];

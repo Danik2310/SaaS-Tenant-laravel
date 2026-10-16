@@ -18,7 +18,7 @@ class CloudServerDiskInfo implements ServerDiskInfo
 
     public function __construct()
     {
-        $limit = env('CLOUD_STORAGE_LIMIT_GB');
+        $limit = config('filesystems.cloud_storage_limit_gb');
 
         $this->limitGb = $limit !== null && $limit !== '' ? (float) $limit : null;
     }
