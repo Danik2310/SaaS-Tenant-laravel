@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\PlanFeature;
 use App\Models\Tenant;
 use App\Plans\Support\FeatureFlagCatalog;
+use App\Plans\Support\TenantPlanCache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -104,6 +105,10 @@ class PlanController extends Controller
         $plan->update($data);
 
         $this->syncFeatures($plan, $features);
+
+        // Plan name/price/limits/features are cached per tenant for an hour;
+        // flush the tenants on this plan so the change is visible immediately.
+        TenantPlanCache::forgetForPlan($plan->id);
 
         $plan->load('featureGates');
 

@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreFeatureFlagRequest;
 use App\Http\Requests\Admin\UpdateFeatureFlagRequest;
 use App\Models\FeatureFlag;
 use App\Models\PlanFeature;
+use App\Plans\Support\TenantPlanCache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -126,6 +127,10 @@ class FeatureFlagController extends Controller
             DB::connection('mysql_central')->table('plan_features')
                 ->where('feature_key', $oldKey)
                 ->update(['feature_key' => $data['key']]);
+
+            // The rename cascaded onto plan_features: tenants on the affected
+            // plans now entitle a differently-named feature — drop their cache.
+            TenantPlanCache::forgetForFeature($data['key']);
         }
 
         Log::info('Feature flag updated', ['flag_id' => $flag->id, 'flag_key' => $flag->key]);
