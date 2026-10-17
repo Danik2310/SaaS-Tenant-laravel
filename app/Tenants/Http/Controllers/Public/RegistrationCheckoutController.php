@@ -64,7 +64,13 @@ class RegistrationCheckoutController extends Controller
             return redirect()->route('register.tenant');
         }
 
-        $existing = Tenant::withTrashed()->where('email', $validated['email'])->first();
+        // Soft-deleted tenants are deliberately excluded: a trashed workspace
+        // must never be handed back as the result of a paid signup. Registration
+        // already offers the same address as a fresh claim
+        // (StoreTenantRegistrationRequest), so a returning customer whose old
+        // workspace was closed gets a new one instead of a dead domain. Active
+        // tenants still short-circuit to their existing workspace.
+        $existing = Tenant::where('email', $validated['email'])->first();
 
         if ($existing) {
             $domain = (string) ($existing->domains()->first()?->domain ?? '');

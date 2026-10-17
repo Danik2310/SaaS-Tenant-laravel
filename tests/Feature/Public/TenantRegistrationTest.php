@@ -636,6 +636,65 @@ class TenantRegistrationTest extends TestCase
         $this->createdTenantDbNames[] = $tenant->database()->getName();
     }
 
+    public function test_checkout_success_provisions_a_new_tenant_when_the_email_sits_on_a_soft_deleted_tenant(): void
+    {
+        $former = Tenant::withoutEvents(fn (): Tenant => Tenant::create([
+            'id' => 'TEN-000200',
+            'name' => 'Former Workspace',
+            'email' => 'jane@acme.test',
+            'status' => 'Inactive',
+        ]));
+
+        $former->delete();
+
+        $token = 'checkout-token';
+
+        $this->withSession([
+            'pending_tenant_registration' => [
+                'token' => $token,
+                'plan' => 'growth',
+                'payload' => $this->hashedPayload(['plan' => 'growth']),
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
+            ],
+        ]);
+
+        $this->mock(PaymentGatewayInterface::class, function ($mock) use ($token) {
+            $mock->shouldReceive('retrieveCheckoutSession')
+                ->once()
+                ->with('cs_test_123')
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'payment_status' => 'paid',
+                    'customer_email' => 'jane@acme.test',
+                    'metadata' => [
+                        'pending_token' => $token,
+                    ],
+                    'url' => '',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
+        // The paid signup must be answered with the workspace it just bought,
+        // not with the closed one still holding the address.
+        $this->get('/register/payment/success?session_id=cs_test_123')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('domain', 'acme-corp.sasapp'));
+
+        $this->assertSame(1, Tenant::count());
+        $this->assertSame(2, Tenant::withTrashed()->count(), 'the closed tenant keeps its row');
+
+        $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertNull($tenant->deleted_at);
+        $this->assertNotSame($former->id, $tenant->id);
+        $this->assertSame('Active', $tenant->status);
+
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+    }
+
     public function test_honeypot_field_rejects_bots(): void
     {
         $this->post('/register', $this->payload(['website' => 'http://spam.example']))
