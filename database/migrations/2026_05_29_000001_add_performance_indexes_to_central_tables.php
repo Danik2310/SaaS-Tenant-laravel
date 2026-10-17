@@ -1,11 +1,14 @@
 <?php
 
+use App\Shared\Traits\HandlesIdempotentSchemaChanges;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    use HandlesIdempotentSchemaChanges;
+
     public function up(): void
     {
         // Uses try/catch for cross-database compatibility (MySQL + SQLite)
@@ -15,7 +18,10 @@ return new class extends Migration
             Schema::table('tenants', function (Blueprint $table) {
                 $table->index(['plan_id', 'status']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may already exist — idempotent, skip
         }
 
@@ -23,7 +29,10 @@ return new class extends Migration
             Schema::table('domains', function (Blueprint $table) {
                 $table->index('tenant_id');
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may already exist — idempotent, skip
         }
 
@@ -31,7 +40,10 @@ return new class extends Migration
             Schema::table('subscriptions', function (Blueprint $table) {
                 $table->index(['plan_id', 'status']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may already exist — idempotent, skip
         }
 
@@ -39,7 +51,10 @@ return new class extends Migration
             Schema::table('payment_methods', function (Blueprint $table) {
                 $table->index('active');
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may already exist — idempotent, skip
         }
     }
@@ -64,7 +79,10 @@ return new class extends Migration
             Schema::table('tenants', function (Blueprint $table) {
                 $table->dropForeign('tenants_plan_id_foreign');
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may have already been dropped — that's fine during rollback
         }
 
@@ -72,7 +90,10 @@ return new class extends Migration
             Schema::table('tenants', function (Blueprint $table) {
                 $table->dropIndex(['plan_id', 'status']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may have already been dropped — that's fine
         }
 
@@ -81,7 +102,10 @@ return new class extends Migration
             Schema::table('domains', function (Blueprint $table) {
                 $table->dropForeign('domains_tenant_id_foreign');
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may have already been dropped — that's fine during rollback
         }
 
@@ -89,7 +113,10 @@ return new class extends Migration
             Schema::table('domains', function (Blueprint $table) {
                 $table->dropIndex(['tenant_id']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may have already been dropped — that's fine
         }
 
@@ -100,7 +127,10 @@ return new class extends Migration
             Schema::table('subscriptions', function (Blueprint $table) {
                 $table->dropForeign('subscriptions_plan_id_foreign');
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may have already been dropped — that's fine during rollback
         }
 
@@ -108,7 +138,10 @@ return new class extends Migration
             Schema::table('subscriptions', function (Blueprint $table) {
                 $table->dropIndex(['plan_id', 'status']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may have already been dropped — that's fine
         }
 
@@ -116,7 +149,10 @@ return new class extends Migration
             Schema::table('payment_methods', function (Blueprint $table) {
                 $table->dropIndex(['active']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may have already been dropped — that's fine
         }
 
@@ -137,7 +173,10 @@ return new class extends Migration
                     ->on('plans')
                     ->nullOnDelete();
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may still exist or driver may not support ALTER ADD CONSTRAINT
             // (e.g. SQLite) — fine, integrity is already preserved.
         }
@@ -149,7 +188,10 @@ return new class extends Migration
                     ->on('tenants')
                     ->cascadeOnDelete();
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // See above.
         }
 
@@ -160,7 +202,10 @@ return new class extends Migration
                     ->on('plans')
                     ->nullOnDelete();
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // See above.
         }
     }

@@ -33,17 +33,26 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tenants', function (Blueprint $table) {
-            $table->dropIndex(['email']);
-            $columns = [];
-            foreach (['name', 'email', 'status'] as $col) {
-                if (Schema::hasColumn('tenants', $col)) {
-                    $columns[] = $col;
-                }
+        // The plain email index may already be gone — e.g. when this runs as
+        // part of a full rollback after 2026_10_17_000003 replaced it with a
+        // partial unique index. Guard the drop so the rollback does not abort.
+        if (Schema::hasIndex('tenants', 'tenants_email_index')) {
+            Schema::table('tenants', function (Blueprint $table) {
+                $table->dropIndex('tenants_email_index');
+            });
+        }
+
+        $columns = [];
+        foreach (['name', 'email', 'status'] as $col) {
+            if (Schema::hasColumn('tenants', $col)) {
+                $columns[] = $col;
             }
-            if ($columns !== []) {
+        }
+
+        if ($columns !== []) {
+            Schema::table('tenants', function (Blueprint $table) use ($columns) {
                 $table->dropColumn($columns);
-            }
-        });
+            });
+        }
     }
 };

@@ -1,5 +1,6 @@
 <?php
 
+use App\Shared\Traits\HandlesIdempotentSchemaChanges;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -7,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    use HandlesIdempotentSchemaChanges;
+
     public function up(): void
     {
         if (! $this->foreignKeyExists('tenant_resource_usage', 'tenant_resource_usage_tenant_id_foreign')) {
@@ -23,7 +26,10 @@ return new class extends Migration
                 Schema::table('tenant_resource_usage', function (Blueprint $table) {
                     $table->dropForeign(['tenant_id']);
                 });
-            } catch (Throwable) {
+            } catch (Throwable $e) {
+                if (! $this->isBenignSchemaError($e)) {
+                    throw $e;
+                }
                 // FK already dropped by another rollback step — idempotent
             }
         }

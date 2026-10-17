@@ -1,11 +1,14 @@
 <?php
 
+use App\Shared\Traits\HandlesIdempotentSchemaChanges;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    use HandlesIdempotentSchemaChanges;
+
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
@@ -31,7 +34,10 @@ return new class extends Migration
             Schema::table('tenants', function (Blueprint $table) {
                 $table->dropForeign(['plan_id']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may have already been dropped — that's fine during rollback
         }
 

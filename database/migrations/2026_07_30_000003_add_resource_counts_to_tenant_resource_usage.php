@@ -20,8 +20,15 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('tenant_resource_usage', function (Blueprint $table) {
-            $table->dropColumn(['warehouses_count', 'categories_count']);
-        });
+        $columns = array_values(array_filter(
+            ['warehouses_count', 'categories_count'],
+            fn (string $column): bool => Schema::hasColumn('tenant_resource_usage', $column),
+        ));
+
+        if ($columns !== []) {
+            Schema::table('tenant_resource_usage', function (Blueprint $table) use ($columns) {
+                $table->dropColumn($columns);
+            });
+        }
     }
 };

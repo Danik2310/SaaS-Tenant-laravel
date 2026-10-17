@@ -1,5 +1,6 @@
 <?php
 
+use App\Shared\Traits\HandlesIdempotentSchemaChanges;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -7,6 +8,8 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    use HandlesIdempotentSchemaChanges;
+
     public function up(): void
     {
         $fkName = 'subscriptions_tenant_id_foreign';
@@ -22,7 +25,10 @@ return new class extends Migration
                     ->on('tenants')
                     ->cascadeOnDelete();
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may already exist — idempotent, skip
         }
     }
@@ -36,7 +42,10 @@ return new class extends Migration
             Schema::table('subscriptions', function (Blueprint $table) use ($fkName) {
                 $table->dropForeign($fkName);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may have already been dropped — that's fine during rollback
         }
     }

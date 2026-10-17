@@ -1,11 +1,14 @@
 <?php
 
+use App\Shared\Traits\HandlesIdempotentSchemaChanges;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    use HandlesIdempotentSchemaChanges;
+
     /**
      * Run the migrations.
      *
@@ -21,7 +24,10 @@ return new class extends Migration
             Schema::table('subscriptions', function (Blueprint $table) {
                 $table->index(['tenant_id', 'status']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may already exist — idempotent, skip
         }
     }
@@ -50,7 +56,10 @@ return new class extends Migration
             Schema::table('subscriptions', function (Blueprint $table) use ($fkName) {
                 $table->dropForeign($fkName);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK may have already been dropped — that's fine
         }
 
@@ -58,7 +67,10 @@ return new class extends Migration
             Schema::table('subscriptions', function (Blueprint $table) {
                 $table->dropIndex(['tenant_id', 'status']);
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // Index may have already been dropped — that's fine
         }
 
@@ -74,7 +86,10 @@ return new class extends Migration
                     ->on('tenants')
                     ->cascadeOnDelete();
             });
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            if (! $this->isBenignSchemaError($e)) {
+                throw $e;
+            }
             // FK already present (or cannot be re-created) — idempotent
         }
     }
