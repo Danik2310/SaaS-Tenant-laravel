@@ -7,6 +7,7 @@ namespace App\Tenants;
 use App\Tenants\Builders\TenantBuilder;
 use App\Tenants\Console\Commands\CollectTenantMetricsCommand;
 use App\Tenants\Console\Commands\ExpireTrialsCommand;
+use App\Tenants\Console\Commands\PruneOrphanTenantsCommand;
 use App\Tenants\Contracts\DatabaseServiceInterface;
 use App\Tenants\Contracts\TenantBuilderInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
@@ -49,6 +50,7 @@ class TenantServiceProvider extends ServiceProvider
         $this->commands([
             CollectTenantMetricsCommand::class,
             ExpireTrialsCommand::class,
+            PruneOrphanTenantsCommand::class,
         ]);
     }
 }
