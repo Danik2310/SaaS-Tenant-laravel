@@ -7,6 +7,7 @@ namespace App\Providers;
 use App\Tenants\Events\TenantReactivated;
 use App\Tenants\Events\TenantSuspended;
 use App\Tenants\Listeners\CreateTenantStorageSkeleton;
+use App\Tenants\Listeners\DeleteTenantStorageSkeleton;
 use App\Tenants\Listeners\HandleTenantReactivation;
 use App\Tenants\Listeners\HandleTenantSuspension;
 use App\Tenants\TenantManager;
@@ -51,7 +52,7 @@ class TenancyServiceProvider extends ServiceProvider
      *
      * Highlights:
      *  - `TenantCreated` → storage skeleton + a queued provisioning JobPipeline.
-     *  - `TenantDeleted` → drop the database only when force-deleting.
+     *  - `TenantDeleted` → drop the database and storage skeleton on force-delete only.
      *  - `TenantSuspended` / `TenantReactivated` → module listeners.
      *  - `TenancyInitialized` / `TenancyEnded` → stancl's bootstrap/revert
      *    listeners, plus clearing Spatie's cached permission collection when
@@ -81,6 +82,7 @@ class TenancyServiceProvider extends ServiceProvider
             Events\TenantUpdated::class => [],
             Events\DeletingTenant::class => [],
             Events\TenantDeleted::class => [
+                DeleteTenantStorageSkeleton::class,
                 function (Events\TenantDeleted $event) {
                     $tenant = $event->tenant;
 

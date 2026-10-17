@@ -175,11 +175,17 @@ class TenantManager implements TenantManagerInterface
     }
 
     /**
-     * Soft-delete a tenant and drop its database.
+     * Soft-delete a tenant, retaining its database for later restore.
      *
-     * The `$tenant->delete()` call must run *after* the transaction: it fires
-     * TenantDeleted → DeleteDatabase (a MySQL DROP, i.e. DDL), which implicitly
-     * commits any open transaction and would break `commit()`.
+     * The database is dropped only on a subsequent force-delete: the
+     * `TenantDeleted` listener issues `DeleteDatabase` (MySQL DDL) solely when
+     * `isForceDeleting()` is true, and the storage skeleton is cleaned up the
+     * same way. A soft-delete itself performs no DDL.
+     *
+     * `$tenant->delete()` is still kept *outside* the transaction as a
+     * defensive measure: if this path ever becomes a force-delete (or the
+     * listener drops unconditionally), the DROP would implicitly commit any
+     * open transaction and break `commit()`.
      */
     public function delete(Tenant $tenant): void
     {
@@ -192,10 +198,11 @@ class TenantManager implements TenantManagerInterface
             TenantStateManager::transitionTo($tenant, 'Deleted');
         });
 
-        // $tenant->delete() must run AFTER the transaction because it triggers
-        // TenantDeleted -> DeleteDatabase -> DROP DATABASE (MySQL DDL).
-        // MySQL implicitly commits any active transaction when executing DDL,
-        // which would cause PDO::commit() to throw "no active transaction".
+        // Soft-delete runs AFTER the transaction. It issues no DDL itself (the
+        // TenantDeleted listener drops the database only on force-delete), but
+        // running it outside the transaction keeps us safe if the delete path
+        // later becomes a force-delete: MySQL implicitly commits on DDL
+        // (DROP DATABASE), which would break an open PDO transaction.
         $tenant->delete();
 
         TenantStateManager::flushTenantCache($tenant);
