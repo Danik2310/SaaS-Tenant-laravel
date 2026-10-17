@@ -22,7 +22,7 @@ Kernel stays thin:
 | Provider | Commands |
 |----------|----------|
 | [`SharedServiceProvider::boot()`](../../app/Shared/SharedServiceProvider.php) `:68` | `AssignStaffRole`, `AssignSuperAdminRole`, `CheckAdminPermissions`, `CheckPermissionsData`, `GenerateTenantReferenceIds` |
-| [`TenantServiceProvider`](../../app/Tenants/TenantServiceProvider.php) `:49` | `CollectTenantMetricsCommand`, `ExpireTrialsCommand` |
+| [`TenantServiceProvider`](../../app/Tenants/TenantServiceProvider.php) `:49` | `CollectTenantMetricsCommand`, `ExpireTrialsCommand`, `PruneOrphanTenantsCommand` |
 | [`BillingServiceProvider::boot()`](../../app/Billing/BillingServiceProvider.php) `:57` (console only) | `ExpireSubscriptionsCommand`, `SyncTenantSubscriptions`, `UpdatePaymentMethod` |
 
 ---
@@ -35,9 +35,14 @@ Kernel stays thin:
 | hourly | `tenants:collect-metrics` | Snapshot tenant resource usage |
 | daily | `tenants:expire-trials` | Move lapsed trials out of `Trial` |
 | daily | `tenants:expire-subscriptions` | Expire lapsed subscriptions + suspend tenants |
+| daily | `tenants:prune-orphans --force` | Drop tenant databases whose tenant row is gone |
 
 All tasks are **idempotent** — safe to re-run. In production a single cron entry
 runs `php artisan schedule:run` every minute.
+
+`tenants:prune-orphans --force` is the one destructive task: it drops schemas that no
+tenant row references. A soft-deleted tenant keeps its row — and therefore its schema —
+until it is force-deleted, and `--delete-rows` is deliberately left off the schedule.
 
 ---
 
@@ -47,7 +52,8 @@ runs `php artisan schedule:run` every minute.
 
 | Command | Effect |
 |---------|--------|
-| `tenants:expire-trials [--dry-run]` | Suspend `Trial` tenants past `trial_ends_at` via `TenantStateManager` |
+| `tenants:expire-trials [--dry-run]` | Suspend `Trial` tenants past `trial_ends_at` via `TenantManagerInterface::suspend()` |
+| `tenants:prune-orphans [--force] [--delete-rows]` | Report tenant/database drift; `--force` drops orphan schemas, `--delete-rows` (requires `--force`) removes rows with no schema |
 | `tenants:collect-metrics [--tenant=*]` | Dispatch `CollectTenantMetrics` for each selected tenant |
 | `tenants:generate-reference-ids [--dry-run]` | Backfill `reference_id` on tenants (incl. trashed) |
 

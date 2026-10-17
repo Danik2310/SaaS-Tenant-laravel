@@ -27,6 +27,9 @@ class Kernel extends ConsoleKernel
      *  - `tenants:collect-metrics` — snapshot tenant resource usage (hourly).
      *  - `tenants:expire-trials` — move lapsed trials out of Trial (daily).
      *  - `tenants:expire-subscriptions` — expire lapsed subscriptions (daily).
+     *  - `tenants:prune-orphans --force` — drop tenant databases whose tenant
+     *    row is gone (daily). Row-safe: a schema is spared whenever a row
+     *    references it, including soft-deleted tenants kept for restore.
      *
      * @see ExportService::cleanupExpired()
      */
@@ -45,6 +48,13 @@ class Kernel extends ConsoleKernel
 
         // Expire subscriptions daily
         $schedule->command('tenants:expire-subscriptions')->daily();
+
+        // Drop orphan tenant databases daily. Provisioning always writes the
+        // tenant row before its schema (TenantManager::ensureDatabaseAvailable
+        // runs ahead of the builder), so a schema without a row can only be
+        // leftover from a crashed provision or a lost row. Never schedules
+        // --delete-rows: removing a tenant row is the irreversible direction.
+        $schedule->command('tenants:prune-orphans --force')->daily();
     }
 
     /**
