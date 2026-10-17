@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tenants\Services;
 
-use App\Models\Tenant;
 use App\Tenants\Contracts\DatabaseServiceInterface;
 use Illuminate\Support\Facades\DB;
 use Stancl\Tenancy\TenantDatabaseManagers\MySQLDatabaseManager;
@@ -26,10 +25,15 @@ class DatabaseService implements DatabaseServiceInterface
 
     public function dropDatabase(string $name): void
     {
-        $stub = new Tenant;
-        $stub->setInternal('db_name', $name);
+        // `DROP DATABASE IF EXISTS` keeps the operation idempotent: it never
+        // throws when the database is already gone, so a concurrent drop (or a
+        // re-run of an orphan reaper) cannot be masked as a hard failure.
+        // stancl's MySQLDatabaseManager issues a bare `DROP DATABASE`, which
+        // raises "Unknown database" in that case.
+        $connection = (string) config('tenancy.database.central_connection');
+        $safe = '`'.str_replace('`', '``', $name).'`';
 
-        $this->manager->deleteDatabase($stub);
+        DB::connection($connection)->statement("DROP DATABASE IF EXISTS {$safe}");
     }
 
     public function getDatabaseSizeKb(string $name): int
