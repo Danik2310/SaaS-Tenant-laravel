@@ -180,7 +180,6 @@ abstract class TestCase extends BaseTestCase
             $tenantId = 'test-'.uniqid();
             $t = Tenant::create([
                 'id' => $tenantId,
-                'domain' => $tenantId.'.sasapp',
             ]);
 
             $t->database()->makeCredentials();
@@ -190,7 +189,7 @@ abstract class TestCase extends BaseTestCase
             // Create a domain record so the InitializeTenancyByDomain middleware can identify this tenant
             Domain::create([
                 'tenant_id' => $t->id,
-                'domain' => $t->domain,
+                'domain' => $tenantId.'.sasapp',
                 'is_primary' => true,
             ]);
 

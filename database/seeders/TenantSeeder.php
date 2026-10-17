@@ -158,7 +158,6 @@ class TenantSeeder extends Seeder
                 'domain' => $config['domain'],
                 'is_primary' => true,
             ]);
-            $tenant->forceFill(['domain' => $config['domain']])->saveQuietly();
         }
 
         $tenant->load('plan');

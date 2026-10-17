@@ -75,7 +75,7 @@ class TenantBuilder implements TenantBuilderInterface
     }
 
     /**
-     * Attach a domain to the tenant and mirror it onto the tenant row.
+     * Attach a domain to the tenant.
      *
      * @throws InvalidArgumentException when the domain is already in use
      */
@@ -84,8 +84,6 @@ class TenantBuilder implements TenantBuilderInterface
         $this->assertDomainAvailable($domain);
 
         $this->tenant->domains()->create(['domain' => $domain]);
-        $this->tenant->domain = $domain;
-        $this->tenant->saveQuietly();
 
         return $this;
     }
