@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tenants\Console\Commands;
 
 use App\Models\Tenant;
-use App\Tenants\States\TenantStateManager;
+use App\Tenants\Contracts\TenantManagerInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Log;
  * `tenants:expire-trials` — suspends tenants whose trial has ended.
  *
  * Flow: queries `Trial` tenants past `trial_ends_at` (or null), lazily streams
- * them, and transitions each to `Suspended` via {@see TenantStateManager}.
- * `--dry-run` lists without changes; per-tenant failures are logged, not fatal.
+ * them, and delegates each to {@see TenantManagerInterface::suspend()}, which
+ * cancels the active subscription, transitions the state to `Suspended` and
+ * invalidates the tenant-scoped cache. `--dry-run` lists without changes;
+ * per-tenant failures are logged, not fatal.
  *
  * @see docs/architecture/03-multi-tenancy.md
  */
@@ -24,6 +26,11 @@ class ExpireTrialsCommand extends Command
         {--dry-run : List tenants that would be affected without making changes}';
 
     protected $description = 'Expire trial periods for tenants past their trial_ends_at date';
+
+    public function __construct(private readonly TenantManagerInterface $tenants)
+    {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -46,7 +53,7 @@ class ExpireTrialsCommand extends Command
                 }
 
                 try {
-                    TenantStateManager::transitionTo($tenant, 'Suspended');
+                    $this->tenants->suspend($tenant);
 
                     Log::info('Tenant suspended due to trial expiration', [
                         'tenant_id' => $tenant->id,

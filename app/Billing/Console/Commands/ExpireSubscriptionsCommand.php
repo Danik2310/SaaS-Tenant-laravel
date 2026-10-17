@@ -27,49 +27,53 @@ class ExpireSubscriptionsCommand extends Command
 
     public function handle(): int
     {
-        $expired = Subscription::with('tenant')
-            ->expired()
-            ->get();
+        $query = Subscription::with('tenant')->expired();
 
-        if ($expired->isEmpty()) {
+        $count = (clone $query)->count();
+
+        if ($count === 0) {
             $this->info('No expired subscriptions found.');
 
             return self::SUCCESS;
         }
 
-        $this->info("Found {$expired->count()} expired subscription(s).");
+        $this->info("Found {$count} expired subscription(s).");
 
-        foreach ($expired as $subscription) {
-            $tenant = $subscription->tenant;
+        // Process in chunks so a large backlog does not load every subscription
+        // (and its tenant) into memory at once.
+        $query->chunkById(200, function ($subscriptions): void {
+            foreach ($subscriptions as $subscription) {
+                $tenant = $subscription->tenant;
 
-            if ($this->option('dry-run')) {
-                $this->line("[DRY-RUN] Would expire subscription {$subscription->id} for tenant {$tenant->id} ({$tenant->name})");
+                if ($this->option('dry-run')) {
+                    $this->line("[DRY-RUN] Would expire subscription {$subscription->id} for tenant {$tenant->id} ({$tenant->name})");
 
-                continue;
+                    continue;
+                }
+
+                try {
+                    $subscription->update(['status' => 'expired']);
+
+                    TenantStateManager::transitionTo($tenant, 'Suspended');
+
+                    Log::info('Tenant suspended due to subscription expiration', [
+                        'tenant_id' => $tenant->id,
+                        'tenant_name' => $tenant->name,
+                        'subscription_id' => $subscription->id,
+                        'ends_at' => $subscription->ends_at,
+                    ]);
+
+                    $this->line("Expired subscription {$subscription->id} and suspended tenant {$tenant->id} ({$tenant->name})");
+                } catch (\Exception $e) {
+                    $this->error("Failed to expire subscription {$subscription->id} for tenant {$tenant->id}: {$e->getMessage()}");
+                    Log::error('Subscription expiration failed', [
+                        'tenant_id' => $tenant->id,
+                        'subscription_id' => $subscription->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
-
-            try {
-                $subscription->update(['status' => 'expired']);
-
-                TenantStateManager::transitionTo($tenant, 'Suspended');
-
-                Log::info('Tenant suspended due to subscription expiration', [
-                    'tenant_id' => $tenant->id,
-                    'tenant_name' => $tenant->name,
-                    'subscription_id' => $subscription->id,
-                    'ends_at' => $subscription->ends_at,
-                ]);
-
-                $this->line("Expired subscription {$subscription->id} and suspended tenant {$tenant->id} ({$tenant->name})");
-            } catch (\Exception $e) {
-                $this->error("Failed to expire subscription {$subscription->id} for tenant {$tenant->id}: {$e->getMessage()}");
-                Log::error('Subscription expiration failed', [
-                    'tenant_id' => $tenant->id,
-                    'subscription_id' => $subscription->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
+        });
 
         return self::SUCCESS;
     }

@@ -24,21 +24,23 @@ class CollectTenantMetricsCommand extends Command
     {
         $tenantIds = $this->option('tenant');
 
-        if (! empty($tenantIds)) {
-            $tenants = Tenant::whereIn('id', $tenantIds)->get();
-        } else {
-            $tenants = Tenant::where('status', 'Active')->get();
-        }
+        $query = ! empty($tenantIds)
+            ? Tenant::whereIn('id', $tenantIds)
+            : Tenant::where('status', 'Active');
 
-        $this->info("Collecting metrics for {$tenants->count()} tenant(s)...");
+        // Count first (cheap, indexed), then stream the rows so a large tenant
+        // base does not materialise every model at once.
+        $count = (clone $query)->count();
 
-        $bar = $this->output->createProgressBar($tenants->count());
+        $this->info("Collecting metrics for {$count} tenant(s)...");
+
+        $bar = $this->output->createProgressBar($count);
         $bar->start();
 
-        foreach ($tenants as $tenant) {
+        $query->lazyById(200)->each(function (Tenant $tenant) use ($bar) {
             CollectTenantMetrics::dispatch($tenant);
             $bar->advance();
-        }
+        });
 
         $bar->finish();
         $this->newLine();
