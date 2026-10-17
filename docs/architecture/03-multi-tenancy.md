@@ -206,7 +206,7 @@ the table and fires side-effect events:
 |--------|--------|
 | [`suspend()`](../../app/Tenants/TenantManager.php) `:101` | cancel active subscription → `Suspended` |
 | [`activate()`](../../app/Tenants/TenantManager.php) `:116` | reactivate most recent cancelled subscription → `Active` |
-| [`delete()`](../../app/Tenants/TenantManager.php) `:135` | cancel subscription → `Deleted`, then soft-delete (DROPs the DB) |
+| [`delete()`](../../app/Tenants/TenantManager.php) `:135` | cancel subscription → `Deleted`, then soft-delete (keeps the DB; a later force-delete drops it) |
 | [`restore()`](../../app/Tenants/TenantManager.php) `:157` | reactivate/create subscription, ensure a domain, clear `deleted_at` → `Active` |
 | [`changePlan()`](../../app/Tenants/TenantManager.php) `:230` | swap plan / enter-or-leave trial, fire `PlanChanged` |
 | [`extendTrial()`](../../app/Tenants/TenantManager.php) `:333` | push `trial_ends_at` out by N days (Trial only) |
