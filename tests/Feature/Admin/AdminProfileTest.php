@@ -114,8 +114,8 @@ class AdminProfileTest extends TestCase
 
         $admin = AdminUser::factory()->create([
             'password' => Hash::make('secret123'),
-            'is_main_admin' => true,
         ]);
+        $admin->forceFill(['is_main_admin' => true])->save();
         $admin->assignRole('admin');
         $this->actingAs($admin, 'admin');
 

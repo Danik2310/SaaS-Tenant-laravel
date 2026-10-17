@@ -55,10 +55,18 @@ class StaffSeeder extends Seeder
             $role = $data['role'];
             unset($data['role']);
 
+            $isMainAdmin = (bool) ($data['is_main_admin'] ?? false);
+            unset($data['is_main_admin']);
+
             $user = AdminUser::updateOrCreate(
                 ['email' => $data['email']],
                 $data,
             );
+
+            // `is_main_admin` is intentionally not mass-assignable (privilege flag).
+            if ($isMainAdmin && ! $user->is_main_admin) {
+                $user->forceFill(['is_main_admin' => true])->save();
+            }
 
             if (! $user->hasRole($role)) {
                 $user->assignRole($role);

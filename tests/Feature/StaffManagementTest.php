@@ -645,7 +645,8 @@ class StaffManagementTest extends TestCase
 
     private function createMainAdmin(): AdminUser
     {
-        $admin = AdminUser::factory()->create(['is_main_admin' => true]);
+        $admin = AdminUser::factory()->create();
+        $admin->forceFill(['is_main_admin' => true])->save();
         $admin->assignRole('super-admin');
 
         return $admin;

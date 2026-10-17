@@ -27,9 +27,13 @@ class AdminUserSeeder extends Seeder
             [
                 'name' => 'System Administrator',
                 'password' => Hash::make($password),
-                'is_main_admin' => true,
             ]
         );
+
+        // `is_main_admin` is intentionally not mass-assignable (privilege flag).
+        if (! $user->is_main_admin) {
+            $user->forceFill(['is_main_admin' => true])->save();
+        }
 
         // ensure super-admin role assigned
         if (! $user->hasRole('super-admin')) {
