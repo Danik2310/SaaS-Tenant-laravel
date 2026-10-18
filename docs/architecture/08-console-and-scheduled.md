@@ -12,18 +12,18 @@
 [`App\Console\Kernel`](../../app/Console/Kernel.php) extends Laravel's
 `ConsoleKernel`:
 
-- `commands()` `:59` loads `app/Console/Commands` and requires
+- `commands()` `:69` loads `app/Console/Commands` and requires
   `routes/console.php` (closure commands only — currently just `inspire`).
-- `schedule()` `:33` declares the recurring tasks below.
+- `schedule()` `:36` declares the recurring tasks below.
 
 **Module commands are registered by their own service providers**, so the core
 Kernel stays thin:
 
 | Provider | Commands |
 |----------|----------|
-| [`SharedServiceProvider::boot()`](../../app/Shared/SharedServiceProvider.php) `:68` | `AssignStaffRole`, `AssignSuperAdminRole`, `CheckAdminPermissions`, `CheckPermissionsData`, `GenerateTenantReferenceIds` |
-| [`TenantServiceProvider`](../../app/Tenants/TenantServiceProvider.php) `:49` | `CollectTenantMetricsCommand`, `ExpireTrialsCommand`, `PruneOrphanTenantsCommand` |
-| [`BillingServiceProvider::boot()`](../../app/Billing/BillingServiceProvider.php) `:57` (console only) | `ExpireSubscriptionsCommand`, `SyncTenantSubscriptions`, `UpdatePaymentMethod` |
+| [`SharedServiceProvider::boot()`](../../app/Shared/SharedServiceProvider.php) `:66` | `AssignStaffRole`, `AssignSuperAdminRole`, `CheckAdminPermissions`, `CheckPermissionsData`, `GenerateTenantReferenceIds` |
+| [`TenantServiceProvider`](../../app/Tenants/TenantServiceProvider.php) `:48` | `CollectTenantMetricsCommand`, `ExpireTrialsCommand`, `PruneOrphanTenantsCommand` |
+| [`BillingServiceProvider::boot()`](../../app/Billing/BillingServiceProvider.php) `:50` (console only) | `ExpireSubscriptionsCommand`, `SyncTenantSubscriptions`, `UpdatePaymentMethod` |
 
 ---
 

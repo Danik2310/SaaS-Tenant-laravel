@@ -84,9 +84,9 @@ sequenceDiagram
 ```
 
 1. **Privilege hierarchy** — an admin may only grant permissions they hold
-   themselves ([`validatePrivilegeHierarchy()`](../../app/Shared/Services/PermissionService.php) `:26`).
+   themselves ([`validatePrivilegeHierarchy()`](../../app/Shared/Services/PermissionService.php) `:35`).
 2. **Prerequisites** — dependent permissions require their prerequisites
-   ([`validateDependencies()`](../../app/Shared/Services/PermissionService.php) `:43`),
+   ([`validateDependencies()`](../../app/Shared/Services/PermissionService.php) `:52`),
    delegated to
    [`PermissionPrerequisiteValidator`](../../app/Shared/Services/PermissionPrerequisiteValidator.php):
 
@@ -97,7 +97,7 @@ sequenceDiagram
    | `restore tenants` | `view tenants` |
 
    The map lives in
-   [`PermissionPrerequisiteStrategyFactory::STRATEGY_MAP`](../../app/Shared/Factories/PermissionPrerequisiteStrategyFactory.php) `:12`;
+   [`PermissionPrerequisiteStrategyFactory::STRATEGY_MAP`](../../app/Shared/Factories/PermissionPrerequisiteStrategyFactory.php) `:19`;
    unmapped permissions use the no-op
    [`NullPrerequisiteStrategy`](../../app/Shared/Strategies/NullPrerequisiteStrategy.php).
 
@@ -110,14 +110,14 @@ Two flavours: **boolean features** and **numeric limits**.
 ### 2.1 Feature flags
 
 A feature is a key in the `FeatureFlag` table. The catalog is read live by
-[`FeatureFlagCatalog::definitions()`](../../app/Plans/Support/FeatureFlagCatalog.php) `:18`
+[`FeatureFlagCatalog::definitions()`](../../app/Plans/Support/FeatureFlagCatalog.php) `:24`
 (no caching, so admin edits apply immediately).
 
 A plan enables features through its `featureGates` relation:
 
 ```php
 $plan->hasFeature('advanced_reports');   // Plan.php:62
-$tenant->hasFeature('advanced_reports'); // Tenant.php:179 → plan or false
+$tenant->hasFeature('advanced_reports'); // Tenant.php:177 → plan or false
 ```
 
 `Plan::hasFeature()` uses the loaded relation when available, otherwise queries
@@ -132,7 +132,7 @@ the tenant lacks the feature.
 
 Limits (`max_users`, `max_storage`, `max_warehouses`, `max_categories`,
 `max_products`) are read via `Plan::getLimit()` `:75` /
-`Tenant::getLimit()` `:184`, where `null` means unlimited (`PHP_INT_MAX`).
+`Tenant::getLimit()` `:182`, where `null` means unlimited (`PHP_INT_MAX`).
 
 The **Strategy + Factory** pair keeps callers free of plan branching:
 
@@ -146,7 +146,7 @@ flowchart LR
     S -- default --> A[StarterResourceStrategy]
 ```
 
-- [`ResourceEnforcementFactory::make()`](../../app/Billing/Factories/ResourceEnforcementFactory.php) `:17`
+- [`ResourceEnforcementFactory::make()`](../../app/Billing/Factories/ResourceEnforcementFactory.php) `:23`
   resolves the tenant's plan (falling back to `tenancy.default_plan_slug`).
 - Each strategy implements
   [`ResourceEnforcementInterface`](../../app/Billing/Contracts/ResourceEnforcementInterface.php)

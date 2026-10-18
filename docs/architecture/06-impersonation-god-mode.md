@@ -48,7 +48,7 @@ sequenceDiagram
 
 ### Phase 1 — start (central)
 
-[`ImpersonationController::start()`](../../app/Shared/Http/Controllers/Admin/ImpersonationController.php) `:27`:
+[`ImpersonationController::start()`](../../app/Shared/Http/Controllers/Admin/ImpersonationController.php) `:33`:
 
 1. If a session is already active, clear it and log "replaced stale session".
 2. Resolve the tenant's primary domain (422 if none).
@@ -60,7 +60,7 @@ sequenceDiagram
 
 ### Phase 2 — enter (tenant)
 
-[`ImpersonationEntryController::enter()`](../../app/Shared/Http/Controllers/Tenant/ImpersonationEntryController.php) `:26`:
+[`ImpersonationEntryController::enter()`](../../app/Shared/Http/Controllers/Tenant/ImpersonationEntryController.php) `:32`:
 
 1. If already in god mode here, redirect to the dashboard.
 2. [`ImpersonationToken::verify()`](../../app/Shared/Support/ImpersonationToken.php) `:40`
@@ -127,9 +127,9 @@ not from withholding permissions. It is attached via
 
 ## 4. Exit
 
-- **Tenant exit** — [`stop()`](../../app/Shared/Http/Controllers/Tenant/ImpersonationEntryController.php) `:78`:
+- **Tenant exit** — [`stop()`](../../app/Shared/Http/Controllers/Tenant/ImpersonationEntryController.php) `:84`:
   clears all impersonation keys and redirects to the first central domain.
-- **Central exit** — [`ImpersonationController::stop()`](../../app/Shared/Http/Controllers/Admin/ImpersonationController.php) `:75`:
+- **Central exit** — [`ImpersonationController::stop()`](../../app/Shared/Http/Controllers/Admin/ImpersonationController.php) `:81`:
   just clears the session flags.
 
 All flags are cleared together through

@@ -12,8 +12,8 @@
 ## 1. Model observers
 
 Observers are registered in
-[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:62`.
-Event auto-discovery is **off** (`shouldDiscoverEvents()` `:93`) — every observer
+[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:66`.
+Event auto-discovery is **off** (`shouldDiscoverEvents()` `:124`) — every observer
 is explicit.
 
 ### 1.1 Activity log
@@ -35,9 +35,9 @@ flowchart TD
 ```
 
 - `updated()` skips noisy models (`Category`, `Warehouse`) and Order updates that
-  don't change `status` (`:28`).
-- Diffs exclude `password`, `remember_token`, `api_key`, `secret_key` (`:11`).
-- **Causer resolution** (`:82`): the `admin` guard is only queried when
+  don't change `status` (`:29`).
+- Diffs exclude `password`, `remember_token`, `api_key`, `secret_key` (`:22`).
+- **Causer resolution** (`:95`): the `admin` guard is only queried when
   `! tenancy()->initialized` — inside a tenant request the `admin_users` table
   does not exist on the tenant connection, so it falls back to `auth()->user()`.
 
@@ -57,7 +57,7 @@ counters incremental (no COUNT queries on the hot path):
 | [`WarehouseObserver`](../../app/Observers/Tenant/WarehouseObserver.php) | `warehouses_count` |
 
 Every observer **no-ops outside tenant context** (`tenant('id') === null`).
-[`ProductObserver::deleted()`](../../app/Observers/Tenant/ProductObserver.php) `:34`
+[`ProductObserver::deleted()`](../../app/Observers/Tenant/ProductObserver.php) `:35`
 guards against double-decrementing on force-delete of an already soft-deleted
 product.
 
@@ -73,15 +73,15 @@ product.
 | `TenantReactivated` | `HandleTenantReactivation` | `TenancyServiceProvider` |
 | stancl tenancy events | bootstrap/revert + provisioning pipeline | `TenancyServiceProvider` (see `03`) |
 
-- [`HandlePlanChange`](../../app/Billing/Listeners/HandlePlanChange.php) `:16`
+- [`HandlePlanChange`](../../app/Billing/Listeners/HandlePlanChange.php) `:23`
   classifies the change as upgrade/downgrade, and on a **downgrade** re-counts the
   affected resources (initialising tenancy to count inside the tenant DB) and
   notifies the tenant when limits are exceeded or features are lost.
-- [`HandleTenantSuspension`](../../app/Tenants/Listeners/HandleTenantSuspension.php) `:13`
+- [`HandleTenantSuspension`](../../app/Tenants/Listeners/HandleTenantSuspension.php) `:14`
   and
-  [`HandleTenantReactivation`](../../app/Tenants/Listeners/HandleTenantReactivation.php) `:13`
+  [`HandleTenantReactivation`](../../app/Tenants/Listeners/HandleTenantReactivation.php) `:14`
   flush the tenant's cache tags (tolerating non-taggable stores).
-- [`CreateTenantStorageSkeleton`](../../app/Tenants/Listeners/CreateTenantStorageSkeleton.php) `:12`
+- [`CreateTenantStorageSkeleton`](../../app/Tenants/Listeners/CreateTenantStorageSkeleton.php) `:13`
   creates the tenant's storage directories on `TenantCreated`.
 
 ---
@@ -122,12 +122,12 @@ sequenceDiagram
     J->>J: tenancy()->end() in finally
 ```
 
-- [`RunExportJob`](../../app/Shared/Jobs/RunExportJob.php) `:17` carries a unique
+- [`RunExportJob`](../../app/Shared/Jobs/RunExportJob.php) `:28` carries a unique
   `jobId` and a 300s timeout. Status/progress live in the **untagged `global`**
-  cache store (`:53`) so they can be read from either central or tenant context.
+  cache store (`:63`) so they can be read from either central or tenant context.
 - [`ExportService`](../../app/Shared/Services/ExportService.php) `:32` streams each
-  entity with `lazy(500)`, caps the row count per entity (`MAX_RECORDS` `:24`),
-  and writes via OpenSpout. Files expire after 24h (`EXPIRY_HOURS` `:22`) and are
+  entity with `lazy(500)`, caps the row count per entity (`MAX_RECORDS` `:36`),
+  and writes via OpenSpout. Files expire after 24h (`EXPIRY_HOURS` `:34`) and are
   removed by `cleanupExpired()`.
 
 > **Cross-tenant safety.** RunExportJob keys its cache entries by

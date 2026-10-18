@@ -54,9 +54,9 @@ sequenceDiagram
     G-->>C: authenticated user
 ```
 
-- [`JwtCookie::make()`](../../app/Shared/Support/JwtCookie.php) `:10` — HttpOnly,
+- [`JwtCookie::make()`](../../app/Shared/Support/JwtCookie.php) `:21` — HttpOnly,
   `secure` from `session.secure`, `SameSite=Lax`, TTL `jwt.refresh_ttl`.
-- [`JwtCookie::forget()`](../../app/Shared/Support/JwtCookie.php) `:25` — clears it.
+- [`JwtCookie::forget()`](../../app/Shared/Support/JwtCookie.php) `:37` — clears it.
 - [`AuthenticateJwtFromCookie`](../../app/Shared/Middleware/AuthenticateJwtFromCookie.php)
   (alias `jwt.cookie`) copies the cookie into `Authorization: Bearer …` so the
   rest of the stack only deals with bearer tokens.
@@ -91,26 +91,26 @@ sequenceDiagram
     end
 ```
 
-- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:32`.
-- [`LoginRequest::authenticate()`](../../app/Http/Requests/Auth/LoginRequest.php) `:42`
+- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:42`.
+- [`LoginRequest::authenticate()`](../../app/Http/Requests/Auth/LoginRequest.php) `:51`
   — throttles to **5 attempts / minute** keyed on `email|ip`,
-  [`ensureIsNotRateLimited()`](../../app/Http/Requests/Auth/LoginRequest.php) `:66`.
+  [`ensureIsNotRateLimited()`](../../app/Http/Requests/Auth/LoginRequest.php) `:75`.
 
 ### 3.2 Admin login
 
 Same shape via
-[`AdminAuthController::login()`](../../app/Shared/Http/Controllers/Admin/Auth/AdminAuthController.php) `:50`
+[`AdminAuthController::login()`](../../app/Shared/Http/Controllers/Admin/Auth/AdminAuthController.php) `:56`
 and
-[`AdminLoginRequest::authenticate()`](../../app/Http/Requests/Admin/AdminLoginRequest.php) `:28`,
+[`AdminLoginRequest::authenticate()`](../../app/Http/Requests/Admin/AdminLoginRequest.php) `:36`,
 but on the `admin` guard. One difference: a blocked account
 (`is_active = false`) gets a distinct message rather than the generic
 `auth.failed`, so support can tell the two apart — while an unknown email still
 returns the generic message.
 
-`AdminAuthController::user()` `:89` returns the admin plus the **flattened**
+`AdminAuthController::user()` `:95` returns the admin plus the **flattened**
 permission set (role permissions ∪ direct permissions), which the SPA uses to
 render the menu. The login page itself is the one Blade view, `admin.login`
-(`showLogin()` `:27`).
+(`showLogin()` `:33`).
 
 ---
 

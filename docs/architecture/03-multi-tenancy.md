@@ -32,10 +32,10 @@ The tenant model, id generator and domain model are wired in
 [`config/tenancy.php`](../../config/tenancy.php):
 
 ```php
-'tenant_model' => App\Models\Tenant::class,          // :17
-'id_generator' => SequentialIdGenerator::class,      // :18
-'domain_model' => Domain::class,                     // :20
-'central_domains' => explode(',', env('CENTRAL_DOMAINS', '127.0.0.1,localhost')), // :27
+'tenant_model' => App\Models\Tenant::class,          // :25
+'id_generator' => SequentialIdGenerator::class,      // :26
+'domain_model' => Domain::class,                     // :28
+'central_domains' => explode(',', env('CENTRAL_DOMAINS', '127.0.0.1,localhost')), // :35
 ```
 
 ---
@@ -43,7 +43,7 @@ The tenant model, id generator and domain model are wired in
 ## 2. Bootstrappers — making Laravel tenant-aware
 
 `tenancy()->initialize($tenant)` runs the bootstrappers listed at
-`config/tenancy.php:51`:
+`config/tenancy.php:59`:
 
 ```mermaid
 flowchart LR
@@ -54,9 +54,9 @@ flowchart LR
 ```
 
 - **DatabaseTenancyBootstrapper** — swaps the default connection to the tenant's
-  `tenant<id>` database (`prefix` `tenant`, `suffix` `` at `:75`).
+  `tenant<id>` database (`prefix` `tenant`, `suffix` `` at `:83`).
 - **CacheTenancyBootstrapper** — prefixes every cache key with the tag base
-  `tenant_` + tenant id (`:112`). Keep that literal in sync with the hand-written
+  `tenant_` + tenant id (`:120`). Keep that literal in sync with the hand-written
   `'tenant_'.$id` tags used in `TenantStateManager::flushTenantCache()`.
 - **FilesystemTenancyBootstrapper** — suffixes `storage_path()` and the `local`
   / `public` disks per tenant.
@@ -68,7 +68,7 @@ flowchart LR
 > tenant that has already been dropped — `DatabaseTenancyBootstrapper` throws and
 > the subsequent `end()` corrupts the cache manager. Flush tags directly:
 > `Cache::tags(['tenant_'.$tenant->key])->flush()`. See
-> [`TenantStateManager::flushTenantCache()`](../../app/Tenants/States/TenantStateManager.php) `:56`.
+> [`TenantStateManager::flushTenantCache()`](../../app/Tenants/States/TenantStateManager.php) `:82`.
 
 ---
 
@@ -95,7 +95,7 @@ sequenceDiagram
     R->>DB: controller queries hit the tenant DB
 ```
 
-- [`TenancyServiceProvider::makeTenancyMiddlewareHighestPriority()`](../../app/Providers/TenancyServiceProvider.php) `:211`
+- [`TenancyServiceProvider::makeTenancyMiddlewareHighestPriority()`](../../app/Providers/TenancyServiceProvider.php) `:213`
   prepends the identification middleware in reverse so it ends up first.
 - Then [`CheckTenantState`](../../app/Shared/Middleware/CheckTenantState.php) gates
   the group on the lifecycle state (see §6).
@@ -107,7 +107,7 @@ sequenceDiagram
 ## 4. Provisioning a tenant
 
 Provisioning is triggered by admin/signup controllers via
-[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:29`, then
+[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:60`, then
 completed **asynchronously** by a queued pipeline.
 
 ```mermaid
@@ -135,37 +135,37 @@ sequenceDiagram
 
 ### 4.1 Validation before any row exists
 
-[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:29` allocates
+[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:60` allocates
 the sequential id and validates the **domain** and **plan** *before* the tenant
 row (and its queued pipeline) exists, so a rejected signup can never leave an
 orphaned tenant or database behind:
 
-- [`TenantBuilder::assertDomainAvailable()`](../../app/Tenants/Builders/TenantBuilder.php) `:72` — rejects a domain already used.
-- [`TenantBuilder::resolveAssignablePlan()`](../../app/Tenants/Builders/TenantBuilder.php) `:105` — for public signup, refuses an inactive plan or a paid plan without a confirmed payment.
+- [`TenantBuilder::assertDomainAvailable()`](../../app/Tenants/Builders/TenantBuilder.php) `:95` — rejects a domain already used.
+- [`TenantBuilder::resolveAssignablePlan()`](../../app/Tenants/Builders/TenantBuilder.php) `:134` — for public signup, refuses an inactive plan or a paid plan without a confirmed payment.
 - If the builder still throws mid-way, the row is `forceDelete()`d.
 
 ### 4.2 Why the lock, and why not a singleton
 
 - The `tenancy:provision` cache lock serialises **sequential id allocation**, held
   only across the row insert — not the whole queued pipeline.
-- `TenantBuilder` is **bound, not singleton** (`TenantServiceProvider` `:43`):
+- `TenantBuilder` is **bound, not singleton** (`TenantServiceProvider` `:36`):
   it is stateful, so a shared instance could leak one tenant's state into the
   next provision. `TenantManager` resolves a fresh builder per call.
 
 ### 4.3 The queued pipeline
 
-`TenantCreated` fires [`TenancyServiceProvider::events()`](../../app/Providers/TenancyServiceProvider.php) `:67`:
+`TenantCreated` fires [`TenancyServiceProvider::events()`](../../app/Providers/TenancyServiceProvider.php) `:63`:
 
 1. `CreateTenantStorageSkeleton` (listener, runs inline).
 2. A `JobPipeline` of `CreateDatabase → MigrateDatabase → SeedDatabase`, queued
    (`shouldBeQueued(true)`).
 
 Migrations come from `database/migrations/tenant/` with `--step` per migration
-(`config/tenancy.php:209`). Failures in stancl's jobs are logged by
-`registerTenantJobFailureHandler()` `:234`.
+(`config/tenancy.php:232`). Failures in stancl's jobs are logged by
+`registerTenantJobFailureHandler()` `:236`.
 
 **Deleting** only drops the database on a *force* delete; a soft delete keeps it
-so the tenant can be restored (`events()` `:83`).
+so the tenant can be restored (`events()` `:63`).
 
 ---
 
@@ -191,7 +191,7 @@ stateDiagram-v2
     Deleted --> Active: restore
 ```
 
-[`transitionTo()`](../../app/Tenants/States/TenantStateManager.php) `:28` enforces
+[`transitionTo()`](../../app/Tenants/States/TenantStateManager.php) `:49` enforces
 the table and fires side-effect events:
 
 - → `Suspended` fires [`TenantSuspended`](../../app/Tenants/Events/TenantSuspended.php)
@@ -204,12 +204,12 @@ the table and fires side-effect events:
 
 | Method | Effect |
 |--------|--------|
-| [`suspend()`](../../app/Tenants/TenantManager.php) `:101` | cancel active subscription → `Suspended` |
-| [`activate()`](../../app/Tenants/TenantManager.php) `:116` | reactivate most recent cancelled subscription → `Active` |
-| [`delete()`](../../app/Tenants/TenantManager.php) `:135` | cancel subscription → `Deleted`, then soft-delete (keeps the DB; a later force-delete drops it) |
-| [`restore()`](../../app/Tenants/TenantManager.php) `:157` | reactivate/create subscription, ensure a domain, clear `deleted_at` → `Active` |
-| [`changePlan()`](../../app/Tenants/TenantManager.php) `:230` | swap plan / enter-or-leave trial, fire `PlanChanged` |
-| [`extendTrial()`](../../app/Tenants/TenantManager.php) `:333` | push `trial_ends_at` out by N days (Trial only) |
+| [`suspend()`](../../app/Tenants/TenantManager.php) `:137` | cancel active subscription → `Suspended` |
+| [`activate()`](../../app/Tenants/TenantManager.php) `:158` | reactivate most recent cancelled subscription → `Active` |
+| [`delete()`](../../app/Tenants/TenantManager.php) `:190` | cancel subscription → `Deleted`, then soft-delete (keeps the DB; a later force-delete drops it) |
+| [`restore()`](../../app/Tenants/TenantManager.php) `:224` | reactivate/create subscription, ensure a domain, clear `deleted_at` → `Active` |
+| [`changePlan()`](../../app/Tenants/TenantManager.php) `:304` | swap plan / enter-or-leave trial, fire `PlanChanged` |
+| [`extendTrial()`](../../app/Tenants/TenantManager.php) `:422` | push `trial_ends_at` out by N days (Trial only) |
 
 ### Why the tricky ordering
 
