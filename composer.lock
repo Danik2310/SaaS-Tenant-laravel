@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "017926dc42d392c6cff81ee2ef3f299d",
+    "content-hash": "4a6df09759318a9d98c0f0319a0aa6b9",
     "packages": [
         {
             "name": "altwaireb/laravel-world",
@@ -10717,8 +10717,11 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.2"
+        "php": "^8.3"
     },
     "platform-dev": {},
+    "platform-overrides": {
+        "php": "8.3.0"
+    },
     "plugin-api-version": "2.9.0"
 }
