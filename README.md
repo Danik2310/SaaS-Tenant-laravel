@@ -6,7 +6,7 @@ Multi-tenant SaaS platform built with Laravel 12 and React 18, using a **modular
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Laravel 12, PHP 8.2+ |
+| Backend | Laravel 12, PHP 8.3+ |
 | Frontend | React 18, Inertia.js v2, Tailwind CSS 3 |
 | UI Components | MUI v7, Material React Table v3 |
 | Auth & Permissions | Spatie Laravel Permission v6, Sanctum v4 |
@@ -18,7 +18,7 @@ Multi-tenant SaaS platform built with Laravel 12 and React 18, using a **modular
 
 ## Prerequisites
 
-- PHP 8.2+
+- PHP 8.3+
 - Node.js 18+
 - MySQL 8.0+
 - Composer, pnpm
