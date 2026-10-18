@@ -66,6 +66,9 @@ jobs:
       - name: Check code style (Pint)
         run: ./vendor/bin/pint --test
 
+      - name: Check doc anchors
+        run: php scripts/check-doc-anchors.php
+
       - name: Run PHP suite
         run: ./vendor/bin/phpunit
 
