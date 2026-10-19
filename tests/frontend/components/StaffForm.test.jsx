@@ -45,11 +45,11 @@ describe('StaffForm', () => {
     renderForm({ staff });
 
     await screen.findByRole('radio', { name: /super-admin/ });
-    expect(screen.getByRole('radio', { name: /staff/ })).toBeChecked();
+    await waitFor(() => expect(screen.getByRole('radio', { name: /staff/ })).toBeChecked());
 
     fireEvent.click(screen.getByRole('radio', { name: /super-admin/ }));
 
-    expect(screen.getByRole('radio', { name: /super-admin/ })).toBeChecked();
+    await waitFor(() => expect(screen.getByRole('radio', { name: /super-admin/ })).toBeChecked());
     expect(screen.getByRole('radio', { name: /staff/ })).not.toBeChecked();
   });
 
