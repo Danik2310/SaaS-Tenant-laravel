@@ -7,14 +7,11 @@ export default defineConfig({
         environment: 'jsdom',
         setupFiles: ['./tests/setup.js'],
         globals: true,
-        // 'threads' starts workers far faster than the default 'forks' pool.
-        pool: 'threads',
-        // Reuse a worker's module registry/environment across test files. The
-        // per-file jsdom boot + setupFile run + re-import of MUI/Emotion is the
-        // bulk of the suite's wall time, and our tests clean up after
-        // themselves (tests/setup.js runs RTL cleanup in afterEach). Revert to
-        // the default (isolate: true) if cross-file state ever leaks.
-        isolate: false,
+        // Isolate each test file in its own module registry/environment.
+        // `isolate: false` is markedly faster but leaked state between files
+        // (e.g. tests/frontend/hooks/usePlan.test.js passed alone but failed
+        // 9/14 in the full run), so it is deliberately left at the default.
+        isolate: true,
         // Pre-bundle the heavy UI dependencies once per worker instead of
         // transforming them on every test file that imports them.
         deps: {
