@@ -5,3 +5,13 @@ allowBuilds:
 
 # Opt out of the default 1-day release cooldown (pnpm 11+ default: 1440).
 minimumReleaseAge: 0
+
+overrides:
+  postcss-selector-parser@<7.1.6: ^7.1.6
+
+# Accepted dependency advisories — see docs/security/known-advisories.md.
+# Each entry must have a documented rationale and a review trigger; anything
+# not listed here still fails `pnpm audit`.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-vfj7-8cjw-p6xm
