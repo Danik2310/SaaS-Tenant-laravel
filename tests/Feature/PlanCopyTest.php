@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\Plan;
+use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,7 +15,7 @@ class PlanCopyTest extends TestCase
 
     public function test_every_seeded_plan_has_summary_and_footnote(): void
     {
-        $this->seed();
+        $this->seed(PlanSeeder::class);
 
         $copy = (array) config('plan_copy');
 
