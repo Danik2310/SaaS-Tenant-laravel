@@ -11,9 +11,142 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  php:
-    name: PHP — Pint + PHPUnit
+  lint:
+    name: Lint — Pint + doc anchors
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, gd, zip
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Check code style (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Check doc anchors
+        run: php scripts/check-doc-anchors.php
+
+  php-tests:
+    name: PHP — PHPUnit (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Shards are balanced by summed per-file time from a full local run.
+        # Regenerate with the timings in storage/logs/junit-*.xml (bin-pack
+        # largest-first) whenever classes are added/removed. Shard 1 is a single
+        # file because SubscriptionTest's full-seed test dominates the suite.
+        include:
+          - shard: 1
+            files: "tests/Feature/SubscriptionTest.php"
+          - shard: 2
+            files: >-
+              tests/Feature/Admin/AdminSystemEndpointProtectionTest.php
+              tests/Feature/Admin/AdminWriteProtectionTest.php
+              tests/Feature/Admin/CentralRolePermissionSeederTest.php
+              tests/Feature/Admin/LimitedStaffDashboardAccessTest.php
+              tests/Feature/Admin/PermissionConsoleCommandTest.php
+              tests/Feature/Admin/SanctumApiTokenTest.php
+              tests/Feature/Admin/TenantDomainTest.php
+              tests/Feature/Admin/TenantRestoreTest.php
+              tests/Feature/FeatureFlagTest.php
+              tests/Feature/Observers/OrderObserverTest.php
+              tests/Feature/Observers/ProductObserverTest.php
+              tests/Feature/PermissionEdgeCasesTest.php
+              tests/Feature/PlanCopyTest.php
+              tests/Feature/PlanGatingTest.php
+              tests/Feature/SecurityTest.php
+              tests/Feature/SeederIdempotencyTest.php
+              tests/Feature/StaffManagementTest.php
+              tests/Feature/Tenant/Auth/EmailVerificationGateTest.php
+              tests/Feature/Tenant/Auth/JwtTenantScopeTest.php
+              tests/Feature/Tenant/Auth/PasswordUpdateTest.php
+              tests/Feature/Tenant/BillingUpgradeTest.php
+              tests/Feature/Tenant/DeleteTenantStorageSkeletonTest.php
+              tests/Feature/Tenant/Impersonation/EntryTest.php
+              tests/Feature/Tenant/ProfileTest.php
+              tests/Feature/TenantPermissionIsolationTest.php
+              tests/Unit/Billing/PaymentGatewayFactoryTest.php
+              tests/Unit/Models/CategoryTest.php
+              tests/Unit/PaymentMethodModelTest.php
+          - shard: 3
+            files: >-
+              tests/Feature/Admin/AdminProfileTest.php
+              tests/Feature/Admin/DashboardStatsTest.php
+              tests/Feature/Admin/ImpersonationTest.php
+              tests/Feature/Admin/StaffPermissionAssignmentTest.php
+              tests/Feature/CheckTenantStateTest.php
+              tests/Feature/ExampleTest.php
+              tests/Feature/ExportControllerTest.php
+              tests/Feature/MigrationUpDownTest.php
+              tests/Feature/ModelConnectionContractTest.php
+              tests/Feature/PermissionCacheTest.php
+              tests/Feature/PlanTest.php
+              tests/Feature/Plans/TenantPlanCacheTest.php
+              tests/Feature/Public/RegistrationLocationTest.php
+              tests/Feature/ResourceUsage/TenantResourceUsageTest.php
+              tests/Feature/RouteRegistrationTest.php
+              tests/Feature/Tenant/Auth/EmailVerificationTest.php
+              tests/Feature/Tenant/Impersonation/EnsureImpersonationValidTest.php
+              tests/Feature/Tenant/Impersonation/GodModeDashboardAccessTest.php
+              tests/Feature/Tenant/Products/ProductManagementTest.php
+              tests/Feature/Tenant/PruneOrphanTenantsCommandTest.php
+              tests/Feature/Tenant/TenantCacheFlushTest.php
+              tests/Feature/Tenant/TenantRootRouteTest.php
+              tests/Feature/TenantMigrationTest.php
+              tests/Unit/Billing/StripePaymentAdapterTest.php
+              tests/Unit/Models/OrderItemTest.php
+              tests/Unit/Models/PaymentTest.php
+              tests/Unit/SubdomainGeneratorTest.php
+              tests/Unit/TenantReferenceIdTest.php
+          - shard: 4
+            files: >-
+              tests/Feature/Admin/AdminAuthTest.php
+              tests/Feature/Admin/AdminEmailRollbackReleaseTest.php
+              tests/Feature/Admin/AdminReadProtectionTest.php
+              tests/Feature/Admin/GranularPermissionGatingTest.php
+              tests/Feature/Admin/JwtAuthTest.php
+              tests/Feature/Admin/TenantLifecycleTest.php
+              tests/Feature/ExchangeRateTest.php
+              tests/Feature/ExportServiceTest.php
+              tests/Feature/Observers/UserObserverTest.php
+              tests/Feature/PaymentMethodTest.php
+              tests/Feature/PermissionGuardIsolationTest.php
+              tests/Feature/PlanFeatureStandardizationTest.php
+              tests/Feature/Public/TenantRegistrationTest.php
+              tests/Feature/RolePermissionTest.php
+              tests/Feature/SecurityHeadersTest.php
+              tests/Feature/SubscriptionPaymentTest.php
+              tests/Feature/Tenant/Auth/AuthenticationTest.php
+              tests/Feature/Tenant/Auth/PasswordConfirmationTest.php
+              tests/Feature/Tenant/Auth/PasswordResetTest.php
+              tests/Feature/Tenant/Billing/PaymentHistoryTest.php
+              tests/Feature/Tenant/CreateTenantStorageSkeletonTest.php
+              tests/Feature/Tenant/DatabaseServiceTest.php
+              tests/Feature/Tenant/PathIdentificationTest.php
+              tests/Feature/Tenant/TenantProvisioningTest.php
+              tests/Unit/HandlesIdempotentSchemaChangesTest.php
+              tests/Unit/Models/CustomerTest.php
+              tests/Unit/Models/OrderTest.php
+              tests/Unit/Models/ProductTest.php
 
     services:
       mysql:
@@ -66,18 +199,21 @@ jobs:
           php artisan key:generate --ansi
           php artisan optimize:clear
 
-      - name: Check code style (Pint)
-        run: ./vendor/bin/pint --test
+      - name: Run PHP suite (shard ${{ matrix.shard }})
+        run: ./vendor/bin/phpunit ${{ matrix.files }} --log-junit junit-shard-${{ matrix.shard }}.xml
 
-      - name: Check doc anchors
-        run: php scripts/check-doc-anchors.php
-
-      - name: Run PHP suite
-        run: ./vendor/bin/phpunit
+      - name: Upload shard timing report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-shard-${{ matrix.shard }}
+          path: junit-shard-${{ matrix.shard }}.xml
+          if-no-files-found: ignore
 
   frontend:
     name: Frontend — Vitest + Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
