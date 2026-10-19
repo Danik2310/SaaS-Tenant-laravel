@@ -6,8 +6,9 @@
         "dev": "vite",
         "build": "vite build",
         "test": "vitest",
+        "test:run": "vitest run",
         "test:ui": "vitest --ui",
-        "test:coverage": "vitest --coverage",
+        "test:coverage": "vitest run --coverage",
         "build:analyze": "vite build"
     },
     "devDependencies": {
