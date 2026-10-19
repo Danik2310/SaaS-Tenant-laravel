@@ -6,35 +6,18 @@ use App\Models\Domain;
 use App\Models\Tenant;
 use App\Models\User;
 use Database\Seeders\PlanSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Tests\Support\TenantSchemaCloner;
 
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
 
     protected $connectionsToTransact = ['mysql'];
-
-    /**
-     * Name of the tenant database whose schema every test tenant is cloned
-     * from. Built once per test process by tenantTemplateDatabase().
-     */
-    private static ?string $tenantTemplateDatabase = null;
-
-    /**
-     * Whether the "keep migrate:fresh fast" teardown hook has been registered
-     * for this test (see createTestTenant()).
-     */
-    protected bool $tenantRefreshHookRegistered = false;
-
-    /**
-     * Cached [table, CREATE statement] pairs from the tenant template, built
-     * once per process (see cloneTenantSchema()).
-     */
-    private static array $tenantTemplateDdl = [];
 
     /**
      * Purge committed leftovers that RefreshDatabase's transaction never
@@ -44,8 +27,35 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
+        $this->restoreMigratedFastPath();
+
         $this->purgeCentralLeaks();
         $this->reSeedCanonicalData();
+    }
+
+    /**
+     * Keep RefreshDatabase's "migrated once" fast path after tenant DDL.
+     *
+     * Creating a tenant issues CREATE DATABASE, which MySQL auto-commits and
+     * therefore destroys RefreshDatabase's transaction. Laravel then marks the
+     * database dirty (RefreshDatabase.php:158) and re-runs migrate:fresh
+     * (~4.5s) before *every* subsequent test. The central schema is still
+     * intact and purgeCentralLeaks() removes committed rows, so restore the
+     * fast path at teardown. This callback is registered after RefreshDatabase's
+     * own callback (in parent::setUp), so it runs last and wins.
+     *
+     * Gated to RefreshDatabase tests: the migration suites deliberately
+     * migrate/roll back and must never skip a real refresh.
+     */
+    private function restoreMigratedFastPath(): void
+    {
+        if (! in_array(RefreshDatabase::class, class_uses_recursive(static::class), true)) {
+            return;
+        }
+
+        $this->beforeApplicationDestroyed(function () {
+            RefreshDatabaseState::$migrated = true;
+        });
     }
 
     /**
@@ -61,7 +71,18 @@ abstract class TestCase extends BaseTestCase
         $central = DB::connection('mysql_central');
 
         // FK-safe order: children before parents.
+        // Permission rows commit too (they are written before, or outside, the
+        // transaction). Without this purge a role granted a permission by one
+        // test — e.g. the shared "regular" role in SubscriptionTest — keeps it
+        // for every later test, so a permission-free admin gets 200 instead of
+        // 403. Tests that need these rows recreate them: AdminAuthSetup() and
+        // CentralRolePermissionSeeder() both run after this, in setUp().
         foreach ([
+            'model_has_permissions',
+            'model_has_roles',
+            'role_has_permissions',
+            'roles',
+            'permissions',
             'activity_log',
             'personal_access_tokens',
             'admin_users',
@@ -193,21 +214,6 @@ abstract class TestCase extends BaseTestCase
      */
     protected function createTestTenant(): Tenant
     {
-        // Creating a tenant issues DDL (CREATE DATABASE), which MySQL
-        // auto-commits and therefore destroys RefreshDatabase's transaction.
-        // Laravel then treats the database as dirty and re-runs migrate:fresh
-        // before *every* subsequent test (RefreshDatabase.php:159) — ~4.5s
-        // each. The central schema is still intact and purgeCentralLeaks()
-        // already removes committed rows, so restore the "migrated once" fast
-        // path at teardown (our callback is registered after RefreshDatabase's,
-        // so it runs last and wins).
-        if (! $this->tenantRefreshHookRegistered) {
-            $this->tenantRefreshHookRegistered = true;
-            $this->beforeApplicationDestroyed(function () {
-                RefreshDatabaseState::$migrated = true;
-            });
-        }
-
         $this->seed(PlanSeeder::class);
 
         $tenant = Tenant::withoutEvents(function () {
@@ -240,119 +246,11 @@ abstract class TestCase extends BaseTestCase
         // and so cannot be rolled back by RefreshDatabase, which is why every
         // test still gets its own physical database — it is just created from
         // a template built once per process.
-        $this->cloneTenantSchema($this->tenantTemplateDatabase(), $dbName);
+        TenantSchemaCloner::cloneTenantSchema(TenantSchemaCloner::template(), $dbName);
 
-        $this->useTenantConnection($dbName);
+        TenantSchemaCloner::useTenantConnection($dbName);
 
         return $tenant;
-    }
-
-    /**
-     * Build — once per test process — a tenant database with every tenant
-     * migration applied. Subsequent tests clone its schema, turning several
-     * seconds of per-test migrations into a handful of fast DDL statements.
-     */
-    private function tenantTemplateDatabase(): string
-    {
-        $template = config('tenancy.database.prefix').'schema-template';
-
-        if (self::$tenantTemplateDatabase === $template && $this->tenantDatabaseExists($template)) {
-            return $template;
-        }
-
-        $central = DB::connection('mysql_central');
-        $central->statement("DROP DATABASE IF EXISTS `{$template}`");
-        $central->statement("CREATE DATABASE `{$template}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-
-        $this->useTenantConnection($template);
-
-        Artisan::call('migrate', [
-            '--path' => 'database/migrations/tenant',
-            '--database' => 'tenant',
-            '--env' => 'testing',
-            '--force' => true,
-        ]);
-
-        return self::$tenantTemplateDatabase = $template;
-    }
-
-    /**
-     * Copy every base table from the migrated template database into the
-     * target database, foreign keys included.
-     */
-    private function cloneTenantSchema(string $source, string $target): void
-    {
-        $central = DB::connection('mysql_central');
-
-        $central->statement("CREATE DATABASE IF NOT EXISTS `{$target}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-
-        // The template's DDL is read once and reused, so each test only pays
-        // for executing the CREATE statements, not for re-introspecting.
-        if (self::$tenantTemplateDdl === []) {
-            $tables = $central->select(
-                "SELECT table_name AS name FROM information_schema.tables
-                 WHERE table_schema = ? AND table_type = 'BASE TABLE'",
-                [$source]
-            );
-
-            foreach ($tables as $table) {
-                self::$tenantTemplateDdl[] = [
-                    $table->name,
-                    $central->select("SHOW CREATE TABLE `{$source}`.`{$table->name}`")[0]->{'Create Table'},
-                ];
-            }
-        }
-
-        // Foreign-key checks are disabled so tables may be created in any
-        // order (a child can reference a parent that does not exist yet).
-        $central->statement('SET FOREIGN_KEY_CHECKS=0');
-
-        try {
-            foreach (self::$tenantTemplateDdl as [$name, $ddl]) {
-                // SHOW CREATE TABLE emits an unqualified `CREATE TABLE `name``;
-                // qualify it with the target database.
-                $central->statement(preg_replace(
-                    '/^CREATE TABLE `'.preg_quote($name, '/').'`/i',
-                    "CREATE TABLE `{$target}`.`{$name}`",
-                    $ddl,
-                    1
-                ));
-            }
-        } finally {
-            $central->statement('SET FOREIGN_KEY_CHECKS=1');
-        }
-    }
-
-    private function tenantDatabaseExists(string $name): bool
-    {
-        return DB::connection('mysql_central')
-            ->select('SELECT schema_name FROM information_schema.schemata WHERE schema_name = ?', [$name]) !== [];
-    }
-
-    /**
-     * Point the 'tenant' connection at a database, sidestepping the connection
-     * caching issues where tenancy()->initialize() caches the wrong DB name.
-     */
-    private function useTenantConnection(string $database): void
-    {
-        config([
-            'database.connections.tenant' => [
-                'driver' => env('DB_CONNECTION', 'mysql'),
-                'host' => env('DB_HOST', '127.0.0.1'),
-                'port' => env('DB_PORT', '3306'),
-                'database' => $database,
-                'username' => env('DB_USERNAME', 'root'),
-                'password' => env('DB_PASSWORD', ''),
-                'charset' => 'utf8mb4',
-                'collation' => 'utf8mb4_unicode_ci',
-                'prefix' => '',
-                'prefix_indexes' => true,
-                'strict' => true,
-                'engine' => null,
-            ],
-        ]);
-
-        DB::purge('tenant');
     }
 
     /**
