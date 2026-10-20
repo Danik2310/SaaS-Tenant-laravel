@@ -108,6 +108,24 @@ class MigrationUpDownTest extends TestCase
         // The wider compound indexes must still be present
         $this->assertTrue(Schema::hasIndex('permissions', 'permissions_guard_module_name_index'));
         $this->assertTrue(Schema::hasIndex('roles', 'roles_guard_name_name_index'));
+
+        // Schema parity with the tenant copy (2026_10_20_000003): the same
+        // App\Models\User (now SoftDeletes) resolves in central context, so the
+        // central table must carry deleted_at.
+        $this->assertTrue(Schema::hasColumn('users', 'deleted_at'),
+            'central users must carry deleted_at for App\Models\User parity');
+
+        // The central email index stays a plain column unique: only tenant users
+        // are soft-deleted by app flows (2026_10_20_000002). Pinning this makes
+        // the intentional asymmetry explicit rather than accidental.
+        $centralEmailIndex = array_filter(
+            DB::select('SHOW INDEXES FROM `users`'),
+            fn ($row) => $row->Key_name === 'users_email_unique'
+        );
+        $this->assertNotEmpty($centralEmailIndex, 'central users_email_unique should exist');
+        $this->assertNotNull(reset($centralEmailIndex)->Column_name,
+            'central users_email_unique should remain a plain column index '
+            .'(only the tenant copy is functional — see 2026_10_20_000002)');
     }
 
     /**

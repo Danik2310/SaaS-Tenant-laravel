@@ -222,6 +222,20 @@ class TenantMigrationTest extends TestCase
      */
     private function assertTenantIndexState(string $dbName, string $connectionName): void
     {
+        // 2026_10_20_000001 — soft-delete support; also the input column of the
+        // functional index asserted below, so pin it explicitly.
+        $this->assertTrue(
+            Schema::connection($connectionName)->hasColumn('users', 'deleted_at'),
+            "users.deleted_at should exist in database '{$dbName}'"
+        );
+
+        // 2026_10_20_000002 — email must accept NULL (released duplicates).
+        $emailColumn = collect(Schema::connection($connectionName)->getColumns('users'))
+            ->firstWhere('name', 'email');
+        $this->assertTrue((bool) ($emailColumn['nullable'] ?? false),
+            "users.email must be nullable on tenant databases (database '{$dbName}')"
+        );
+
         $keyNames = fn (string $table) => array_map(
             fn ($row) => $row->Key_name,
             DB::connection($connectionName)->select("SHOW INDEXES FROM `{$table}`")
@@ -250,6 +264,65 @@ class TenantMigrationTest extends TestCase
         $this->assertNotContains('roles_guard_name_index', $roleIndexes,
             "redundant roles_guard_name_index should be dropped in database '{$dbName}'"
         );
+
+        // users.email keeps its unique index name, but it must now be the
+        // partial (functional) index added by
+        // 2026_10_20_000002_make_users_email_unique_only_for_active — proven
+        // by MySQL reporting it as an expression index (Column_name IS NULL).
+        $userIndexRows = array_filter(
+            DB::connection($connectionName)->select('SHOW INDEXES FROM `users`'),
+            fn ($row) => $row->Key_name === 'users_email_unique'
+        );
+        $this->assertNotEmpty($userIndexRows,
+            "users_email_unique should exist in database '{$dbName}'"
+        );
+        $this->assertNull(reset($userIndexRows)->Column_name,
+            'users_email_unique must be a functional index over (CASE WHEN deleted_at IS NULL THEN email END), not a plain column unique'
+        );
+    }
+
+    /**
+     * Test: central and tenant `users` stay column-aligned.
+     *
+     * App\Models\User resolves in both contexts, so both tables must expose the
+     * same columns in the same order. Email nullability and the unique index
+     * shape are known, intentional differences (tenant-only soft-delete email
+     * reuse, 2026_10_20_000002).
+     */
+    public function test_users_schema_parity_between_central_and_tenant(): void
+    {
+        $tenant = $this->createTenantForMigration();
+
+        try {
+            $exitCode = Artisan::call('tenants:migrate', [
+                '--env' => 'testing',
+                '--tenants' => [$tenant->id],
+            ]);
+            $this->assertSame(0, $exitCode, 'tenants:migrate failed: '.Artisan::output());
+
+            $columnNames = function (string $schema): array {
+                $rows = DB::connection('mysql_central')->select(
+                    'SELECT COLUMN_NAME AS name FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = \'users\'
+                     ORDER BY ORDINAL_POSITION',
+                    [$schema]
+                );
+
+                return array_map(fn ($row) => $row->name, $rows);
+            };
+
+            $central = $columnNames(config('database.connections.mysql.database'));
+            $tenantDb = $tenant->database()->getName();
+
+            $this->assertNotEmpty($central, 'central users table should have columns');
+            $this->assertSame(
+                $central,
+                $columnNames($tenantDb),
+                "tenant users columns must mirror central users (schema {$tenantDb})"
+            );
+        } finally {
+            $this->cleanupTenant($tenant);
+        }
     }
 
     /**

@@ -96,7 +96,12 @@ class ProfileTest extends TestCase
             ->assertRedirect('/');
 
         $this->assertGuest();
-        $this->assertNull($user->fresh());
+
+        // Account deletion is a soft delete: the row persists (so its email can
+        // be released and the account restored) but is hidden from live queries.
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
+        $this->assertNull(User::find($user->id));
+        $this->assertNotNull(User::withTrashed()->find($user->id));
     }
 
     public function test_correct_password_must_be_provided_to_delete_account(): void
