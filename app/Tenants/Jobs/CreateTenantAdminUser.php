@@ -23,12 +23,16 @@ class CreateTenantAdminUser extends TenantAwareJob
 
     public int $backoff = 20;
 
+    private readonly string $email;
+
     public function __construct(
         Tenant $tenant,
         private readonly string $name,
-        private readonly string $email,
+        string $email,
         private readonly string $passwordHash,
     ) {
+        $this->email = strtolower(trim($email));
+
         parent::__construct($tenant);
     }
 
