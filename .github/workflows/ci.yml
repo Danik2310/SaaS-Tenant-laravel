@@ -45,6 +45,29 @@ jobs:
       - name: Audit PHP dependencies
         run: composer audit --locked --no-interaction
 
+      - name: Verify every test file is assigned to exactly one shard
+        run: |
+          # The php-tests shards are explicit file lists, so a test file that is
+          # not listed here silently never runs. Fail if any *Test.php is
+          # unassigned, or if one is listed by more than one shard.
+          grep -oE 'tests/[A-Za-z0-9_/]+\.php' .github/workflows/ci.yml | sort -u > /tmp/assigned.txt
+          find tests -name '*Test.php' | sort > /tmp/all.txt
+          grep -oE 'tests/[A-Za-z0-9_/]+\.php' .github/workflows/ci.yml | sort | uniq -d > /tmp/dups.txt
+
+          status=0
+          missing=$(comm -23 /tmp/all.txt /tmp/assigned.txt)
+          if [ -n "$missing" ]; then
+            echo "::error::Test files not assigned to any php-tests shard (they will never run in CI):"
+            printf '%s\n' "$missing"
+            status=1
+          fi
+          if [ -s /tmp/dups.txt ]; then
+            echo "::error::Test files assigned to more than one shard (double runtime):"
+            cat /tmp/dups.txt
+            status=1
+          fi
+          exit $status
+
   php-tests:
     name: PHP — PHPUnit (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
@@ -82,6 +105,7 @@ jobs:
               tests/Feature/Tenant/Auth/EmailVerificationGateTest.php
               tests/Feature/Tenant/Auth/JwtTenantScopeTest.php
               tests/Feature/Tenant/Auth/PasswordUpdateTest.php
+              tests/Feature/Tenant/Auth/UserEmailUniquenessTest.php
               tests/Feature/Tenant/BillingUpgradeTest.php
               tests/Feature/Tenant/DeleteTenantStorageSkeletonTest.php
               tests/Feature/Tenant/Impersonation/EntryTest.php
