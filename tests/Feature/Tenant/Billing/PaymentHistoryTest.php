@@ -121,15 +121,12 @@ class PaymentHistoryTest extends TestCase
 
     /**
      * A tenant row used purely to satisfy the FK on subscription_payments.
-     * Inserted through the query builder so no Eloquent events fire and no
-     * tenant database is provisioned.
+     * Created on the central connection with Eloquent so the model's
+     * generateReferenceId logic keeps the unique reference_id (and the partial
+     * unique email index) collision-free across a multi-file shard.
      */
     private function foreignTenant(): Tenant
     {
-        $tenant = Tenant::factory()->make();
-
-        DB::connection('mysql_central')->table('tenants')->insert($tenant->getAttributes());
-
-        return $tenant;
+        return Tenant::withoutEvents(fn () => Tenant::factory()->create());
     }
 }
