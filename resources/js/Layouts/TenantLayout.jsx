@@ -5,6 +5,7 @@ import InventoryIcon from '@mui/icons-material/Inventory';
 import CategoryIcon from '@mui/icons-material/Category';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MoveUpIcon from '@mui/icons-material/MoveUp';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import GodModeIndicator from '@/Components/GodModeIndicator';
@@ -15,9 +16,10 @@ const navItems = [
     { id: 'tenant.categories.index', label: 'Categories', icon: <CategoryIcon />, section: 'Inventory' },
     { id: 'tenant.warehouses.index', label: 'Warehouses', icon: <WarehouseIcon />, section: 'Inventory' },
     { id: 'tenant.inventory.index', label: 'Movements', icon: <MoveUpIcon />, section: 'Inventory' },
+    { id: 'billing.payments.index', label: 'Payments', icon: <ReceiptLongIcon />, section: 'Billing' },
 ];
 
-const sectionLabels = { Main: 'Main', Inventory: 'Inventory', System: 'System' };
+const sectionLabels = { Main: 'Main', Inventory: 'Inventory', Billing: 'Billing', System: 'System' };
 
 const TenantLayout = React.memo(function TenantLayout({ children }) {
     const { auth } = usePage().props;
