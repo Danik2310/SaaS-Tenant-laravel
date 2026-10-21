@@ -1,5 +1,5 @@
 import React from 'react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import TenantLayout from '@/Layouts/TenantLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -13,9 +13,7 @@ export default function Upgrade({ currentPlan, plans }) {
     const labelFor = (key) => featureDefinitions[key]?.label ?? key;
 
     return (
-        <AuthenticatedLayout
-            header={<Typography variant="h6">Upgrade Plan</Typography>}
-        >
+        <TenantLayout>
             <Head title="Upgrade Plan" />
 
             <Box sx={{ py: 4 }}>
@@ -72,6 +70,6 @@ export default function Upgrade({ currentPlan, plans }) {
                     ))}
                 </Grid>
             </Box>
-        </AuthenticatedLayout>
+        </TenantLayout>
     );
 }
