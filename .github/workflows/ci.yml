@@ -123,6 +123,7 @@ jobs:
               tests/Feature/CheckTenantStateTest.php
               tests/Feature/ExampleTest.php
               tests/Feature/ExportControllerTest.php
+              tests/Feature/InertiaComponentExistenceTest.php
               tests/Feature/MigrationUpDownTest.php
               tests/Feature/ModelConnectionContractTest.php
               tests/Feature/PermissionCacheTest.php
@@ -225,6 +226,10 @@ jobs:
           cp .env.example .env
           php artisan key:generate --ansi
           php artisan optimize:clear
+          # A stray Vite hot file would make Vite skip the manifest entirely and
+          # mask missing-asset failures. CI never runs a dev server, so remove it
+          # to force the built manifest to be used.
+          rm -f public/hot
 
       # Tests that fully render an Inertia page hit @vite in the root Blade view
       # (app.blade.php / admin/*.blade.php) and need a real Vite manifest. It is
