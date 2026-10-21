@@ -226,6 +226,25 @@ jobs:
           php artisan key:generate --ansi
           php artisan optimize:clear
 
+      # Tests that fully render an Inertia page hit @vite in the root Blade view
+      # (app.blade.php / admin/*.blade.php) and need a real Vite manifest. It is
+      # gitignored, so it must be built here — otherwise every full-page render
+      # throws ViteManifestNotFoundException and returns 500.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend assets
+        run: pnpm run build
+
       - name: Run PHP suite (shard ${{ matrix.shard }})
         run: ./vendor/bin/phpunit ${{ matrix.files }} --log-junit junit-shard-${{ matrix.shard }}.xml
 
@@ -235,6 +254,14 @@ jobs:
         with:
           name: junit-shard-${{ matrix.shard }}
           path: junit-shard-${{ matrix.shard }}.xml
+          if-no-files-found: ignore
+
+      - name: Upload Laravel log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: laravel-log-shard-${{ matrix.shard }}
+          path: storage/logs/laravel.log
           if-no-files-found: ignore
 
   frontend:
