@@ -6,6 +6,7 @@ namespace Tests\Support;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * Builds — once per test process — a tenant database with every tenant
@@ -51,12 +52,19 @@ final class TenantSchemaCloner
 
         self::useTenantConnection($template);
 
-        Artisan::call('migrate', [
+        $status = Artisan::call('migrate', [
             '--path' => 'database/migrations/tenant',
             '--database' => 'tenant',
             '--env' => 'testing',
             '--force' => true,
         ]);
+
+        if ($status !== 0) {
+            throw new RuntimeException(
+                "Tenant template migration failed (exit code {$status}); "
+                .'the schema template would be incomplete.'
+            );
+        }
 
         // A freshly migrated template invalidates any cached DDL.
         self::$ddl = [];
