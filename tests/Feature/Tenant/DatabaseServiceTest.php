@@ -71,4 +71,18 @@ class DatabaseServiceTest extends TestCase
 
         $this->assertFalse((new DatabaseService)->databaseExists($schema));
     }
+
+    public function test_get_database_size_kb_returns_zero_for_a_missing_schema(): void
+    {
+        $this->assertSame(0, (new DatabaseService)->getDatabaseSizeKb('tenanttest-never-created'));
+    }
+
+    public function test_get_database_size_kb_reports_the_allocated_size(): void
+    {
+        DB::connection('mysql_central')->statement(
+            "CREATE TABLE `{$this->schema}`.size_probe (id INT PRIMARY KEY, payload VARCHAR(255))"
+        );
+
+        $this->assertGreaterThan(0, (new DatabaseService)->getDatabaseSizeKb($this->schema));
+    }
 }
