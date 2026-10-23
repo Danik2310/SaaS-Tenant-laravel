@@ -194,15 +194,13 @@ class TenantController extends Controller
             $newPlan = Plan::findOrFail($planId);
             $tenant->fill($data)->save();
             $this->tenantManager->changePlan($tenant, $newPlan);
-            $needsSave = false;
-            $planChanged = true;
         } else {
-            $tenant->fill($data);
-            $needsSave = true;
-            $planChanged = false;
+            $tenant->fill($data)->save();
         }
 
-        if ($status !== null && ! $planChanged) {
+        // A status supplied alongside a plan change is still applied, after the
+        // plan change, so both intents in one request are honoured.
+        if ($status !== null) {
             try {
                 $this->tenantManager->setStatus($tenant, $status);
             } catch (InvalidArgumentException $e) {
@@ -214,8 +212,6 @@ class TenantController extends Controller
 
                 return response()->json(['message' => 'Invalid status transition'], 422);
             }
-        } elseif ($needsSave) {
-            $tenant->save();
         }
 
         $tenant->refresh();

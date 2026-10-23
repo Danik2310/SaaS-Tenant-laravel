@@ -14,6 +14,6 @@ class ActiveState extends TenantState
 
     public static function allowedTransitions(): array
     {
-        return ['Suspended', 'Deleted'];
+        return ['Trial', 'Suspended', 'Deleted'];
     }
 }

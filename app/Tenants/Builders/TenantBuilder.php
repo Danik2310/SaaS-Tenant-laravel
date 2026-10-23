@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Tenants\Contracts\TenantBuilderInterface;
+use App\Tenants\States\TenantStateManager;
 use App\Tenants\TenantManager;
 use InvalidArgumentException;
 
@@ -110,13 +111,21 @@ class TenantBuilder implements TenantBuilderInterface
         $plan = $this->resolveAssignablePlan($planSlug, $publicSignup, $confirmedPayment);
 
         if ($plan) {
+            $targetStatus = $this->tenant->status;
+
             if ($plan->isTrial()) {
-                $this->tenant->status = 'Trial';
                 $this->tenant->trial_ends_at ??= now()->addDays((int) config('tenancy.trial_days', 14));
+                $targetStatus = 'Trial';
             }
 
             $this->tenant->plan_id = $plan->id;
             $this->tenant->save();
+
+            // Status changes always go through the state machine so the
+            // transition is validated and its events fire consistently.
+            if ($targetStatus !== $this->tenant->status) {
+                TenantStateManager::transitionTo($this->tenant, $targetStatus);
+            }
 
             if (! $this->tenant->activeSubscription) {
                 $endsAt = $this->tenant->trial_ends_at;

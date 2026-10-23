@@ -11,7 +11,6 @@ use App\Models\Tenant;
 use App\Tenants\Contracts\DatabaseServiceInterface;
 use App\Tenants\Contracts\TenantBuilderInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
-use App\Tenants\Events\TenantReactivated;
 use App\Tenants\Generators\SequentialIdGenerator;
 use App\Tenants\States\TenantStateManager;
 use Carbon\Carbon;
@@ -218,8 +217,9 @@ class TenantManager implements TenantManagerInterface
      *     inside a nested transaction under `RefreshDatabase` corrupts savepoints).
      *  2. Reactivate the matching cancelled subscription, or create a fresh one.
      *  3. Recreate a primary domain if none exists.
-     *  4. Clear `deleted_at` and set status in memory, then a single `save()`.
-     *  5. Fire {@see TenantReactivated} after the transaction commits.
+     *  4. Clear `deleted_at` and save once inside the transaction.
+     *  5. Transition to Active *after* the transaction commits, which fires
+     *     the `TenantReactivated` event through the state machine.
      */
     public function restore(Tenant $tenant): void
     {
@@ -278,17 +278,16 @@ class TenantManager implements TenantManagerInterface
                 ]);
             }
 
-            // Set status in memory and save ONCE with all changes.
-            // This minimizes lock duration and avoids the self-deadlock
-            // caused by multiple saves firing model events mid-transaction.
-            $oldStatus = $tenant->status;
-            $tenant->status = 'Active';
+            // Save ONCE with the `deleted_at` change. Status is left untouched
+            // here: multiple saves firing model events mid-transaction can
+            // self-deadlock (see the note above), and the transition belongs
+            // outside the transaction so its event fires after commit.
             $tenant->save();
         });
 
-        // Fire reactivation event AFTER the transaction commits.
-        // HandleTenantReactivation flushes the tenant-scoped cache.
-        event(new TenantReactivated($tenant));
+        // Transition after commit: validates via the state machine and fires
+        // TenantReactivated, whose listener flushes the tenant-scoped cache.
+        TenantStateManager::transitionTo($tenant, 'Active');
 
         Cache::forget('admin_dashboard_stats_active');
         Cache::forget('admin_dashboard_stats_trashed');
@@ -316,14 +315,15 @@ class TenantManager implements TenantManagerInterface
         }
 
         $oldPlan = null;
+        $oldStatus = $tenant->status;
+        $enteringTrial = $newPlan->isTrial();
+        $leavingTrial = ! $enteringTrial && $oldStatus === 'Trial';
+        $targetStatus = $enteringTrial ? 'Trial' : ($leavingTrial ? 'Active' : $oldStatus);
 
-        DB::transaction(function () use ($tenant, $newPlan, &$oldPlan) {
+        DB::transaction(function () use ($tenant, $newPlan, &$oldPlan, $enteringTrial, $leavingTrial) {
             $tenant = Tenant::findOrFail($tenant->id);
 
             $oldPlan = $tenant->plan ?? Plan::where('slug', config('tenancy.default_plan_slug', 'free'))->firstOrFail();
-
-            $enteringTrial = $newPlan->isTrial();
-            $leavingTrial = ! $enteringTrial && $tenant->status === 'Trial';
 
             $tenant->activeSubscription?->update([
                 'status' => 'cancelled',
@@ -338,13 +338,18 @@ class TenantManager implements TenantManagerInterface
             );
 
             $tenant->update([
-                'status' => $enteringTrial ? 'Trial' : ($leavingTrial ? 'Active' : $tenant->status),
                 'trial_ends_at' => $enteringTrial
                     ? now()->addDays((int) config('tenancy.trial_days', 14))
                     : ($leavingTrial ? null : $tenant->trial_ends_at),
                 'plan_id' => $newPlan->id,
             ]);
         });
+
+        // Status changes go through the state machine after commit so the
+        // transition is validated and its events fire outside the transaction.
+        if ($targetStatus !== $oldStatus) {
+            TenantStateManager::transitionTo($tenant, $targetStatus);
+        }
 
         try {
             event(new PlanChanged($tenant, $oldPlan, $newPlan));
