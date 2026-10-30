@@ -8,10 +8,13 @@ use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Shared\Constants\PermissionNames;
+use Database\Seeders\TenantUserRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class PaymentHistoryTest extends TestCase
@@ -45,7 +48,7 @@ class PaymentHistoryTest extends TestCase
 
     public function test_lists_only_the_current_tenant_payments(): void
     {
-        $user = User::factory()->create();
+        $user = $this->billingUser();
         $own = $this->createPaymentFor($this->tenant);
         $this->createPaymentFor($this->foreignTenant());
 
@@ -63,7 +66,7 @@ class PaymentHistoryTest extends TestCase
 
     public function test_filters_payments_by_status(): void
     {
-        $user = User::factory()->create();
+        $user = $this->billingUser();
         $this->createPaymentFor($this->tenant, ['status' => 'completed']);
         $pending = $this->createPaymentFor($this->tenant, ['status' => 'pending']);
 
@@ -80,7 +83,7 @@ class PaymentHistoryTest extends TestCase
 
     public function test_new_payment_invalidates_the_cached_history(): void
     {
-        $user = User::factory()->create();
+        $user = $this->billingUser();
 
         $this->actingAs($user)->get('/billing/payments')
             ->assertInertia(fn (Assert $page) => $page
@@ -94,6 +97,22 @@ class PaymentHistoryTest extends TestCase
                 ->component('Tenant/Billing/Payments', false)
                 ->has('payments.data', 1)
                 ->where('payments.data.0.id', $payment->id));
+    }
+
+    /**
+     * A tenant user holding the `manage payments` permission required by the
+     * billing routes.
+     */
+    private function billingUser(): User
+    {
+        $this->seed(TenantUserRolePermissionSeeder::class);
+
+        $user = User::factory()->create();
+        $user->assignRole(PermissionNames::ROLE_TENANT_ADMIN);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $user->fresh();
     }
 
     /**

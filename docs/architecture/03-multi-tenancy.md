@@ -100,7 +100,8 @@ sequenceDiagram
 - Then [`CheckTenantState`](../../app/Shared/Middleware/CheckTenantState.php) gates
   the group on the lifecycle state (see §6).
 - A path-based identifier exists too (`InitializeTenancyByPath`) and is used in
-  tests (`tests/Feature/Tenant/PathIdentificationTest.php`).
+  tests (`tests/Feature/Tenant/PathIdentificationTest.php`). The dev-only probe
+  route it backs requires `auth:admin` and returns no database details.
 
 ---
 

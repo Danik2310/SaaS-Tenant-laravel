@@ -17,12 +17,11 @@ class AdminAuthTest extends TestCase
         $response->assertStatus(200);
     }
 
-    public function test_user_probe_returns_null_user_when_guest(): void
+    public function test_user_probe_requires_authentication(): void
     {
         $response = $this->getJson('/admin/user');
 
-        $response->assertOk()
-            ->assertExactJson(['user' => null]);
+        $response->assertUnauthorized();
     }
 
     public function test_admin_can_login_with_valid_credentials(): void

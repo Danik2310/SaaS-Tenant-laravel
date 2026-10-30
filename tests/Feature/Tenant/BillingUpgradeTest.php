@@ -6,9 +6,12 @@ namespace Tests\Feature\Tenant;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Shared\Constants\PermissionNames;
+use Database\Seeders\TenantUserRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class BillingUpgradeTest extends TestCase
@@ -35,7 +38,7 @@ class BillingUpgradeTest extends TestCase
 
     public function test_upgrade_page_excludes_trial_plan(): void
     {
-        $user = User::factory()->create();
+        $user = $this->billingUser();
 
         $response = $this->actingAs($user)->get('/billing/upgrade');
 
@@ -48,5 +51,28 @@ class BillingUpgradeTest extends TestCase
 
         $this->assertContains('free', $slugs);
         $this->assertNotContains('trial', $slugs);
+    }
+
+    public function test_user_without_manage_payments_permission_is_forbidden(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/billing/upgrade')->assertForbidden();
+    }
+
+    /**
+     * A tenant user holding the `manage payments` permission, which the billing
+     * routes require.
+     */
+    private function billingUser(): User
+    {
+        $this->seed(TenantUserRolePermissionSeeder::class);
+
+        $user = User::factory()->create();
+        $user->assignRole(PermissionNames::ROLE_TENANT_ADMIN);
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return $user->fresh();
     }
 }

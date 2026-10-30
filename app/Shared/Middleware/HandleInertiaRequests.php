@@ -89,6 +89,11 @@ class HandleInertiaRequests extends Middleware
                 'user' => $impersonation
                     ? ['id' => null, 'name' => $impersonation['admin_name'] ?? 'Administrator', 'email' => $impersonation['admin_email'] ?? '']
                     : $request->user()?->only(['id', 'name', 'email']),
+                // Permission names drive navigation visibility. God mode sees
+                // everything (`*`); guests get an empty list.
+                'permissions' => $impersonation
+                    ? ['*']
+                    : ($request->user()?->getAllPermissions()->pluck('name')->all() ?? []),
             ],
             'impersonation' => $impersonation && $currentTenant instanceof Tenant ? [
                 'active' => true,

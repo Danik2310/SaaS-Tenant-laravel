@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Tenant;
 
+use App\Models\AdminUser;
 use App\Models\Tenant;
 use App\Models\TenantResourceUsage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,13 +53,20 @@ class PathIdentificationTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_path_route_requires_an_authenticated_admin(): void
+    {
+        $this->getJson("/p/{$this->tenant->id}/hello")->assertUnauthorized();
+    }
+
     public function test_path_route_identifies_tenant_and_switches_database(): void
     {
-        $response = $this->get("/p/{$this->tenant->id}/hello");
+        $admin = AdminUser::factory()->create();
+
+        $response = $this->actingAs($admin, 'admin')->get("/p/{$this->tenant->id}/hello");
 
         $response->assertOk()
             ->assertJsonPath('tenant_id', $this->tenant->id)
             ->assertJsonPath('tenant_name', 'Avventura Path Tenant')
-            ->assertJsonPath('connection', $this->dbName);
+            ->assertJsonMissingPath('connection');
     }
 }

@@ -21,7 +21,6 @@ use App\Products\Http\Controllers\Tenant\WarehouseController;
 use App\Shared\Constants\PermissionNames;
 use App\Shared\Http\Controllers\Tenant\DashboardController;
 use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
@@ -136,12 +135,15 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             Route::get('/dashboard', [DashboardController::class, 'index'])
                 ->name('tenant.dashboard');
 
-            // Billing / Plan upgrade
-            Route::get('/billing/upgrade', [BillingController::class, 'upgrade'])
-                ->name('billing.upgrade');
+            // Billing — plan catalogue and invoices are financial data, so they
+            // are gated behind the tenant `manage payments` permission.
+            Route::middleware([PermissionNames::middleware([PermissionNames::MANAGE_PAYMENTS], 'web')])->group(function () {
+                Route::get('/billing/upgrade', [BillingController::class, 'upgrade'])
+                    ->name('billing.upgrade');
 
-            Route::get('/billing/payments', [SubscriptionPaymentController::class, 'index'])
-                ->name('billing.payments.index');
+                Route::get('/billing/payments', [SubscriptionPaymentController::class, 'index'])
+                    ->name('billing.payments.index');
+            });
 
             // Products
             Route::prefix('products')->name('tenant.products.')->middleware([PermissionNames::middleware([PermissionNames::MANAGE_PRODUCTS], 'web')])->group(function () {
@@ -190,18 +192,18 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
 | InitializeTenancyByPath can pick it up). Requests hit the central host
 | (saas-app.test) and are routed to the tenant's own database.
 |
-| No auth guard is applied here on purpose — this isolates *identification*
-| from the still-open auth/session question. Do not build on this block for
-| production until that isolation is resolved.
+| Because this runs on the central host it cannot use
+| PreventAccessFromCentralDomains, so it is guarded by `auth:admin` instead:
+| only a logged-in central admin (the same JWT cookie the panel issues) can
+| reach it. It never exposes connection/database details.
 |
 */
 if (app()->environment('local', 'testing') && config('tenancy.path_identification')) {
-    Route::middleware(['web', InitializeTenancyByPath::class])->prefix('p/{tenant}')->group(function () {
+    Route::middleware(['web', 'jwt.cookie', 'auth:admin', InitializeTenancyByPath::class])->prefix('p/{tenant}')->group(function () {
         Route::get('/hello', function () {
             return response()->json([
                 'tenant_id' => tenant('id'),
                 'tenant_name' => tenant('name'),
-                'connection' => DB::connection()->getDatabaseName(),
             ]);
         })->name('tenant.path.hello');
     });

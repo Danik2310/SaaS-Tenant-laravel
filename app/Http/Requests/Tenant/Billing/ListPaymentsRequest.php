@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Tenant\Billing;
 
 use App\Models\SubscriptionPayment;
+use App\Shared\Constants\PermissionNames;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -13,12 +14,15 @@ use Illuminate\Validation\Rules\In;
 class ListPaymentsRequest extends FormRequest
 {
     /**
-     * Authorization is handled by the tenant route group (auth + verified);
-     * any signed-in tenant user may view their own payment history.
+     * Payment history is financial data: only tenant users holding the
+     * `manage payments` permission may read it. Enforced again at the route
+     * level (`permission:manage payments,web`) as defence in depth.
      */
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+
+        return $user !== null && tenant() && $user->can(PermissionNames::MANAGE_PAYMENTS);
     }
 
     /**

@@ -12,17 +12,21 @@ import GodModeIndicator from '@/Components/GodModeIndicator';
 
 const navItems = [
     { id: 'tenant.dashboard', label: 'Dashboard', icon: <DashboardIcon />, section: 'Main' },
-    { id: 'tenant.products.index', label: 'Products', icon: <InventoryIcon />, section: 'Inventory' },
-    { id: 'tenant.categories.index', label: 'Categories', icon: <CategoryIcon />, section: 'Inventory' },
-    { id: 'tenant.warehouses.index', label: 'Warehouses', icon: <WarehouseIcon />, section: 'Inventory' },
-    { id: 'tenant.inventory.index', label: 'Movements', icon: <MoveUpIcon />, section: 'Inventory' },
-    { id: 'billing.payments.index', label: 'Payments', icon: <ReceiptLongIcon />, section: 'Billing' },
+    { id: 'tenant.products.index', label: 'Products', icon: <InventoryIcon />, section: 'Inventory', permission: 'manage products' },
+    { id: 'tenant.categories.index', label: 'Categories', icon: <CategoryIcon />, section: 'Inventory', permission: 'manage categories' },
+    { id: 'tenant.warehouses.index', label: 'Warehouses', icon: <WarehouseIcon />, section: 'Inventory', permission: 'manage inventory' },
+    { id: 'tenant.inventory.index', label: 'Movements', icon: <MoveUpIcon />, section: 'Inventory', permission: 'manage inventory' },
+    { id: 'billing.payments.index', label: 'Payments', icon: <ReceiptLongIcon />, section: 'Billing', permission: 'manage payments' },
 ];
 
 const sectionLabels = { Main: 'Main', Inventory: 'Inventory', Billing: 'Billing', System: 'System' };
 
+const canSee = (item, permissions) =>
+    !item.permission || permissions.includes('*') || permissions.includes(item.permission);
+
 const TenantLayout = React.memo(function TenantLayout({ children }) {
     const { auth } = usePage().props;
+    const permissions = auth?.permissions ?? [];
     const [collapsed, setCollapsed] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -66,11 +70,13 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
 
             <nav style={{ flex: 1, padding: '8px 8px', overflowY: 'auto' }}>
                 {Object.entries(
-                    navItems.reduce((acc, item) => {
-                        if (!acc[item.section]) acc[item.section] = [];
-                        acc[item.section].push(item);
-                        return acc;
-                    }, {})
+                    navItems
+                        .filter((item) => canSee(item, permissions))
+                        .reduce((acc, item) => {
+                            if (!acc[item.section]) acc[item.section] = [];
+                            acc[item.section].push(item);
+                            return acc;
+                        }, {})
                 ).map(([section, items]) => (
                     <div key={section} style={{ marginBottom: 16 }}>
                         {!collapsed && (
