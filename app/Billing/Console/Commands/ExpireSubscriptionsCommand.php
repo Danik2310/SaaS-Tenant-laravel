@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Billing\Console\Commands;
 
 use App\Models\Subscription;
-use App\Tenants\States\TenantStateManager;
+use App\Shared\Contracts\TenantLifecycleInterface;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 /**
  * `tenants:expire-subscriptions` — expires subscriptions and suspends tenants.
  *
- * Flow: loads `expired()` subscriptions, marks each `expired`, and transitions
- * its tenant to `Suspended` via {@see TenantStateManager}. `--dry-run` reports
- * only; per-subscription failures are logged.
+ * Flow: loads `expired()` subscriptions, marks each `expired`, and suspends its
+ * tenant through {@see TenantLifecycleInterface}. `--dry-run` reports only;
+ * per-subscription failures are logged.
  *
  * @see docs/architecture/03-multi-tenancy.md
  */
@@ -25,7 +25,7 @@ class ExpireSubscriptionsCommand extends Command
 
     protected $description = 'Expire active subscriptions past their end date and suspend tenants';
 
-    public function handle(): int
+    public function handle(TenantLifecycleInterface $lifecycle): int
     {
         $query = Subscription::with('tenant')->expired();
 
@@ -41,7 +41,7 @@ class ExpireSubscriptionsCommand extends Command
 
         // Process in chunks so a large backlog does not load every subscription
         // (and its tenant) into memory at once.
-        $query->chunkById(200, function ($subscriptions): void {
+        $query->chunkById(200, function ($subscriptions) use ($lifecycle): void {
             foreach ($subscriptions as $subscription) {
                 $tenant = $subscription->tenant;
 
@@ -54,7 +54,7 @@ class ExpireSubscriptionsCommand extends Command
                 try {
                     $subscription->update(['status' => 'expired']);
 
-                    TenantStateManager::transitionTo($tenant, 'Suspended');
+                    $lifecycle->suspend($tenant);
 
                     Log::info('Tenant suspended due to subscription expiration', [
                         'tenant_id' => $tenant->id,
