@@ -30,3 +30,4 @@ AGENTS.md
 /cleanup_*.php
 /force_*.php
 /tenancy-audit-report.md
+/repomix-output.xml
