@@ -6,7 +6,7 @@ namespace App\Billing\Factories;
 
 use App\Billing\Adapters\MercadoPagoAdapter;
 use App\Billing\Adapters\StripePaymentAdapter;
-use App\Billing\Contracts\PaymentGatewayInterface;
+use App\Shared\Contracts\PaymentGatewayInterface;
 use Stripe\StripeClient;
 
 class PaymentGatewayFactory

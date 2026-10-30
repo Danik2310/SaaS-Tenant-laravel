@@ -7,12 +7,12 @@ namespace App\Billing;
 use App\Billing\Console\Commands\ExpireSubscriptionsCommand;
 use App\Billing\Console\Commands\SyncTenantSubscriptions;
 use App\Billing\Console\Commands\UpdatePaymentMethod;
-use App\Billing\Contracts\PaymentGatewayInterface;
 use App\Billing\Events\PlanChanged;
 use App\Billing\Factories\PaymentGatewayFactory;
 use App\Billing\Listeners\HandlePlanChange;
 use App\Billing\Listeners\TenantPaymentCacheObserver;
 use App\Models\SubscriptionPayment;
+use App\Shared\Contracts\PaymentGatewayInterface;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 

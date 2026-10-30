@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Billing\Factories;
 
-use App\Billing\Contracts\ResourceEnforcementInterface;
 use App\Billing\Strategies\EnterpriseResourceStrategy;
 use App\Billing\Strategies\GrowthResourceStrategy;
 use App\Billing\Strategies\ProResourceStrategy;
 use App\Billing\Strategies\StarterResourceStrategy;
 use App\Models\Plan;
 use App\Models\Tenant;
+use App\Shared\Contracts\ResourceEnforcementInterface;
 
 /**
  * Factory for the per-plan resource-enforcement strategy (Strategy pattern).

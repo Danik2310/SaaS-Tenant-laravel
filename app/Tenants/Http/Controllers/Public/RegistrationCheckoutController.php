@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tenants\Http\Controllers\Public;
 
-use App\Billing\Contracts\PaymentGatewayInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Shared\Contracts\PaymentGatewayInterface;
 use App\Shared\Contracts\PublicPlanCatalogInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;

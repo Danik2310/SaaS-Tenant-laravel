@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Public;
 
-use App\Billing\Contracts\PaymentGatewayInterface;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Shared\Contracts\PaymentGatewayInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
 use Database\Seeders\PlanSeeder;

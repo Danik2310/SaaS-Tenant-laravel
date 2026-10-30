@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Billing\Strategies;
 
-use App\Billing\Contracts\ResourceEnforcementInterface;
 use App\Models\Plan;
+use App\Shared\Contracts\ResourceEnforcementInterface;
 
 class EnterpriseResourceStrategy implements ResourceEnforcementInterface
 {

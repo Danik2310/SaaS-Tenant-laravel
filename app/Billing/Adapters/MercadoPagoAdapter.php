@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Billing\Adapters;
 
-use App\Billing\Contracts\PaymentGatewayInterface;
+use App\Shared\Contracts\PaymentGatewayInterface;
 use BadMethodCallException;
 
 class MercadoPagoAdapter implements PaymentGatewayInterface

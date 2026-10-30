@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Billing\Contracts;
+namespace App\Shared\Contracts;
 
 interface ResourceEnforcementInterface
 {

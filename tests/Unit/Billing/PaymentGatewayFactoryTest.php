@@ -4,8 +4,8 @@ namespace Tests\Unit\Billing;
 
 use App\Billing\Adapters\MercadoPagoAdapter;
 use App\Billing\Adapters\StripePaymentAdapter;
-use App\Billing\Contracts\PaymentGatewayInterface;
 use App\Billing\Factories\PaymentGatewayFactory;
+use App\Shared\Contracts\PaymentGatewayInterface;
 use Tests\TestCase;
 
 class PaymentGatewayFactoryTest extends TestCase
