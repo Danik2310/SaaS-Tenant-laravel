@@ -154,7 +154,13 @@ class ExportController extends Controller
      */
     public function status(string $jobId, Request $request)
     {
-        $tenantId = $request->query('tenant_id');
+        // Never interpolate a raw query value into a cache key: a crafted
+        // tenant_id could otherwise be used to probe other tenants' job keys.
+        $validated = $request->validate([
+            'tenant_id' => ['nullable', 'string', 'max:64', 'regex:/^[A-Za-z0-9_-]+$/'],
+        ]);
+
+        $tenantId = $validated['tenant_id'] ?? null;
         $prefix = $tenantId ? "tenant:{$tenantId}:export" : 'export';
         $status = Cache::store('global')->get("{$prefix}:{$jobId}:status", 'unknown');
         $result = Cache::store('global')->get("{$prefix}:{$jobId}:result");
