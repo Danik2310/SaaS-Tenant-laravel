@@ -15,7 +15,18 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with('category', 'images')
+        $products = Product::with('category:id,name', 'images')
+            ->select([
+                'id',
+                'category_id',
+                'name',
+                'sku',
+                'price',
+                'cost',
+                'active',
+                'created_at',
+                'updated_at',
+            ])
             ->latest()
             ->paginate(5);
 
@@ -48,11 +59,22 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $product->load('category', 'images');
+        $product->load('category:id,name', 'images');
         $categories = Category::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Tenant/Products/Form', [
-            'product' => $product,
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'description' => $product->description,
+                'sku' => $product->sku,
+                'category_id' => $product->category_id,
+                'price' => $product->price,
+                'cost' => $product->cost,
+                'active' => $product->active,
+                'category' => $product->category?->only(['id', 'name']),
+                'images' => $product->images,
+            ],
             'categories' => $categories,
         ]);
     }

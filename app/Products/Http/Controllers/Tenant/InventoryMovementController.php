@@ -14,7 +14,9 @@ class InventoryMovementController extends Controller
 {
     public function index()
     {
-        $movements = InventoryMovement::with('product', 'warehouse')
+        $movements = InventoryMovement::query()
+            ->select(['id', 'product_id', 'warehouse_id', 'type', 'quantity', 'reason', 'created_at', 'updated_at'])
+            ->with('product:id,name,sku', 'warehouse:id,name')
             ->latest()
             ->paginate(5);
 

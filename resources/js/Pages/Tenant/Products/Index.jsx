@@ -82,7 +82,7 @@ export default function ProductIndex({ products }) {
                                 <TableRow key={product.id} sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
                                     <TableCell>
                                         {product.images?.[0] ? (
-                                            <img src={product.images[0].url()} alt={product.name}
+                                            <img src={product.images[0].url} alt={product.name}
                                                 style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} />
                                         ) : (
                                             <Box sx={{ width: 40, height: 40, borderRadius: 4, bgcolor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

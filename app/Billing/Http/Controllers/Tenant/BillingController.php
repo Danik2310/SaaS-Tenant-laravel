@@ -37,7 +37,9 @@ class BillingController extends Controller
             ->paginate(5);
 
         return inertia('Tenant/Billing/Upgrade', [
-            'currentPlan' => $tenant instanceof Tenant ? $tenant->plan : null,
+            'currentPlan' => $tenant instanceof Tenant && $tenant->plan !== null
+                ? new PlanResource($tenant->plan)
+                : null,
             'plans' => PlanResource::collection($plans),
         ]);
     }

@@ -14,7 +14,9 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        $categories = Category::withCount('products')
+        $categories = Category::query()
+            ->select(['id', 'name', 'slug', 'description', 'active', 'parent_id', 'created_at', 'updated_at'])
+            ->withCount('products')
             ->with('parent:id,name')
             ->orderBy('name')
             ->paginate(5);

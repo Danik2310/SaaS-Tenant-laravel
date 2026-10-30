@@ -86,7 +86,7 @@ export default function ProductForm({ product, categories }) {
                     <FormInput label="Image" error={errors.image}>
                         {existingImage && (
                             <Box sx={{ mb: 1 }}>
-                                <img src={existingImage.url()} alt="Preview"
+                                <img src={existingImage.url} alt="Preview"
                                     style={{ maxWidth: 200, maxHeight: 150, borderRadius: 4, objectFit: 'cover' }} />
                             </Box>
                         )}
