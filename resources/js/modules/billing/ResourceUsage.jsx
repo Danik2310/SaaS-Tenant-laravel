@@ -19,7 +19,18 @@ import DnsIcon from '@mui/icons-material/Dns';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { alpha } from '@mui/material/styles';
-import { AreaChart, Area, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    Filler,
+    LineElement,
+    LinearScale,
+    PointElement,
+    Tooltip as ChartTooltip,
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, Filler, LineElement, LinearScale, PointElement, ChartTooltip);
 
 function UsageBar({ current, limit, label, color = 'primary.main' }) {
     const hasLimit = limit !== null && limit !== undefined;
@@ -72,35 +83,64 @@ function Sparkline({ data, dataKey = 'storage_kb', color = '#6366f1' }) {
         return null;
     }
 
+    const chartData = {
+        labels: data.map((point) => point.snapshot_date ?? ''),
+        datasets: [
+            {
+                data: data.map((point) => point[dataKey] ?? 0),
+                borderColor: color,
+                borderWidth: 1.5,
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                pointHoverBorderWidth: 0,
+                tension: 0.4,
+                fill: true,
+                backgroundColor: (context) => {
+                    const { ctx, chartArea } = context.chart;
+                    if (!chartArea) {
+                        return 'transparent';
+                    }
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0.05, alpha(color, 0.2));
+                    gradient.addColorStop(0.95, alpha(color, 0));
+                    return gradient;
+                },
+            },
+        ],
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                displayColors: false,
+                padding: 6,
+                cornerRadius: 4,
+                titleFont: { size: 11 },
+                bodyFont: { size: 11 },
+                callbacks: {
+                    label: (context) => `${Math.round(context.parsed.y / 1024)} MB`,
+                    title: (items) => new Date(items[0].label).toLocaleDateString(),
+                },
+            },
+        },
+        scales: {
+            x: { display: false },
+            y: { display: false, beginAtZero: true },
+        },
+    };
+
     return (
         <Box sx={{ mt: 1, mb: 1 }}>
             <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 500, display: 'block', mb: 0.5 }}>
                 Storage trend (30d)
             </Typography>
-            <ResponsiveContainer width="100%" height={60}>
-                <AreaChart data={data} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                    <defs>
-                        <linearGradient id={`gradient-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
-                            <stop offset="95%" stopColor={color} stopOpacity={0} />
-                        </linearGradient>
-                    </defs>
-                    <RechartsTooltip
-                        contentStyle={{ fontSize: 11, padding: '4px 8px', borderRadius: 4 }}
-                        formatter={(value) => `${Math.round(value / 1024)} MB`}
-                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                    />
-                    <Area
-                        type="monotone"
-                        dataKey={dataKey}
-                        stroke={color}
-                        strokeWidth={1.5}
-                        fill={`url(#gradient-${dataKey})`}
-                        dot={false}
-                        activeDot={{ r: 3, strokeWidth: 0 }}
-                    />
-                </AreaChart>
-            </ResponsiveContainer>
+            <Box sx={{ position: 'relative', height: 60 }}>
+                <Line data={chartData} options={chartOptions} />
+            </Box>
         </Box>
     );
 }

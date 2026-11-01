@@ -14,7 +14,7 @@ Multi-tenant SaaS platform built with Laravel 12 and React 18, using a **modular
 | Build | Vite 5 (port 5174, strict) |
 | Testing | PHPUnit 11 (PHP), Vitest 4 (JS) |
 | API Docs | Scribe v5 |
-| Charts | Recharts v3 |
+| Charts | Chart.js v4 (react-chartjs-2) |
 
 ## Prerequisites
 
@@ -270,7 +270,7 @@ pnpm exec vitest run tests/frontend/components/Subscriptions.test.jsx
 | `tightenco/ziggy` v2 | Laravel routes available in JavaScript |
 | `knuckleswtf/scribe` v5 | API documentation generator |
 | `material-react-table` v3 | MUI-powered data tables with filtering, sorting, pagination |
-| `recharts` v3 | Charts for dashboard overview |
+| `chart.js` v4 + `react-chartjs-2` v5 | Charts for dashboard overview |
 
 ## Production
 

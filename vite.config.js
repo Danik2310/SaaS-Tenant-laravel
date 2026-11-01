@@ -32,6 +32,7 @@ export default defineConfig({
                     'vendor-react':  ['react', 'react-dom', '@inertiajs/react'],
                     'vendor-mui':    ['@mui/material', '@mui/icons-material'],
                     'vendor-mrt':    ['material-react-table'],
+                    'vendor-charts': ['chart.js', 'react-chartjs-2'],
                     'vendor-utils':  ['axios'],
                 },
             },

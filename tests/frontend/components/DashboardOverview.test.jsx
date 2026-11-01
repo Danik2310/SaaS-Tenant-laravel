@@ -10,23 +10,10 @@ const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }
 
 vi.mock('@/services/api', () => ({ default: mockApi }));
 vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
-vi.mock('recharts', () => {
-  const { createElement } = require('react');
-  const container = ({ children }) => createElement('div', null, children);
-  const leaf = () => null;
-  return {
-    ResponsiveContainer: container,
-    AreaChart: container,
-    Area: leaf,
-    XAxis: leaf,
-    YAxis: leaf,
-    CartesianGrid: leaf,
-    Tooltip: leaf,
-    PieChart: container,
-    Pie: leaf,
-    Cell: leaf,
-  };
-});
+vi.mock('react-chartjs-2', () => ({
+  Line: () => null,
+  Doughnut: () => null,
+}));
 
 const statsResponse = {
   data: {

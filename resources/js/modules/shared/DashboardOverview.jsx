@@ -22,7 +22,7 @@ import TablePagination from '@mui/material/TablePagination';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import PeopleIcon from '@mui/icons-material/People';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import BlockIcon from '@mui/icons-material/Block';
@@ -30,17 +30,18 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import GroupIcon from '@mui/icons-material/Group';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    PieChart,
-    Pie,
-    Cell,
-} from 'recharts';
+    Chart as ChartJS,
+    ArcElement,
+    CategoryScale,
+    Filler,
+    LinearScale,
+    LineElement,
+    PointElement,
+    Tooltip as ChartTooltip,
+} from 'chart.js';
+import { Doughnut, Line } from 'react-chartjs-2';
+
+ChartJS.register(ArcElement, CategoryScale, Filler, LinearScale, LineElement, PointElement, ChartTooltip);
 
 const StatCard = ({ title, value, icon, color, subtitle, trend }) => {
     const muiTheme = useTheme();
@@ -178,9 +179,93 @@ export default function DashboardOverview() {
     });
 
     const chartHeight = isMobile ? 220 : isTablet ? 260 : 300;
-    const pieRadius = isMobile ? 60 : 80;
 
     const COLORS = [theme.palette.success.light, theme.palette.warning.light, theme.palette.error.light, theme.palette.text.secondary];
+
+    const growthChartData = {
+        labels: formattedMonthlyData.map((item) => item.name),
+        datasets: [
+            {
+                label: 'Tenants',
+                data: formattedMonthlyData.map((item) => item.Tenants),
+                borderColor: theme.palette.primary.light,
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.4,
+                fill: true,
+                backgroundColor: (context) => {
+                    const { ctx, chartArea } = context.chart;
+                    if (!chartArea) {
+                        return 'transparent';
+                    }
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0.05, alpha(theme.palette.primary.light, 0.3));
+                    gradient.addColorStop(0.95, alpha(theme.palette.primary.light, 0.02));
+                    return gradient;
+                },
+            },
+        ],
+    };
+
+    const growthChartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#fff',
+                titleColor: theme.palette.text.primary,
+                bodyColor: theme.palette.text.primary,
+                borderColor: theme.palette.divider,
+                borderWidth: 1,
+                cornerRadius: 8,
+                padding: 10,
+                displayColors: false,
+                titleFont: { size: 13 },
+                bodyFont: { size: 13 },
+            },
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                border: { display: false },
+                ticks: { color: theme.palette.text.disabled, font: { size: 11 } },
+            },
+            y: {
+                beginAtZero: true,
+                grid: { color: theme.palette.background.default, tickBorderDash: [3, 3] },
+                border: { display: false },
+                ticks: { color: theme.palette.text.disabled, font: { size: 11 }, precision: 0 },
+            },
+        },
+    };
+
+    const statusChartData = {
+        labels: statusDistribution.map((item) => item.name),
+        datasets: [
+            {
+                data: statusDistribution.map((item) => item.value),
+                backgroundColor: statusDistribution.map((_, index) => COLORS[index % COLORS.length]),
+                borderColor: theme.palette.background.paper,
+                borderWidth: 4,
+            },
+        ],
+    };
+
+    const statusChartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                displayColors: true,
+                padding: 8,
+                cornerRadius: 8,
+            },
+        },
+    };
 
     const paginatedTenants = recentTenants.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -265,35 +350,9 @@ export default function DashboardOverview() {
                                 </Typography>
                             </Box>
                         ) : (
-                            <ResponsiveContainer width="100%" height={chartHeight}>
-                                <AreaChart data={formattedMonthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                    <defs>
-                                        <linearGradient id="colorTenants" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor={theme.palette.primary.light} stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor={theme.palette.primary.light} stopOpacity={0.02} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.background.default} />
-                                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke={theme.palette.text.disabled} />
-                                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke={theme.palette.text.disabled} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: '#fff',
-                                            border: `1px solid ${theme.palette.divider}`,
-                                            borderRadius: '8px',
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                                            fontSize: '13px',
-                                        }}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="Tenants"
-                                        stroke={theme.palette.primary.light}
-                                        strokeWidth={2}
-                                        fill="url(#colorTenants)"
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
+                            <Box sx={{ position: 'relative', height: chartHeight }}>
+                                <Line data={growthChartData} options={growthChartOptions} />
+                            </Box>
                         )}
                     </Paper>
                 </Grid>
@@ -317,25 +376,9 @@ export default function DashboardOverview() {
                             </Box>
                         ) : (
                             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                <ResponsiveContainer width="100%" height={chartHeight * 0.7}>
-                                    <PieChart>
-                                        <Pie
-                                            data={statusDistribution}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={pieRadius * 0.65}
-                                            outerRadius={pieRadius}
-                                            paddingAngle={4}
-                                            dataKey="value"
-                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        >
-                                            {statusDistribution.map((_, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                <Box sx={{ position: 'relative', width: '100%', height: chartHeight * 0.7 }}>
+                                    <Doughnut data={statusChartData} options={statusChartOptions} />
+                                </Box>
                                 <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
                                     {statusDistribution.map((item, index) => (
                                         <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
