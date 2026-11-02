@@ -108,7 +108,7 @@ sequenceDiagram
 ## 4. Provisioning a tenant
 
 Provisioning is triggered by admin/signup controllers via
-[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:60`, then
+[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:59`, then
 completed **asynchronously** by a queued pipeline.
 
 ```mermaid
@@ -136,13 +136,13 @@ sequenceDiagram
 
 ### 4.1 Validation before any row exists
 
-[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:60` allocates
+[`TenantManager::provision()`](../../app/Tenants/TenantManager.php) `:59` allocates
 the sequential id and validates the **domain** and **plan** *before* the tenant
 row (and its queued pipeline) exists, so a rejected signup can never leave an
 orphaned tenant or database behind:
 
-- [`TenantBuilder::assertDomainAvailable()`](../../app/Tenants/Builders/TenantBuilder.php) `:95` — rejects a domain already used.
-- [`TenantBuilder::resolveAssignablePlan()`](../../app/Tenants/Builders/TenantBuilder.php) `:134` — for public signup, refuses an inactive plan or a paid plan without a confirmed payment.
+- [`TenantBuilder::assertDomainAvailable()`](../../app/Tenants/Builders/TenantBuilder.php) `:96` — rejects a domain already used.
+- [`TenantBuilder::resolveAssignablePlan()`](../../app/Tenants/Builders/TenantBuilder.php) `:143` — for public signup, refuses an inactive plan or a paid plan without a confirmed payment.
 - If the builder still throws mid-way, the row is `forceDelete()`d.
 
 ### 4.2 Why the lock, and why not a singleton
@@ -205,12 +205,12 @@ the table and fires side-effect events:
 
 | Method | Effect |
 |--------|--------|
-| [`suspend()`](../../app/Tenants/TenantManager.php) `:137` | cancel active subscription → `Suspended` |
-| [`activate()`](../../app/Tenants/TenantManager.php) `:158` | reactivate most recent cancelled subscription → `Active` |
-| [`delete()`](../../app/Tenants/TenantManager.php) `:190` | cancel subscription → `Deleted`, then soft-delete (keeps the DB; a later force-delete drops it) |
+| [`suspend()`](../../app/Tenants/TenantManager.php) `:136` | cancel active subscription → `Suspended` |
+| [`activate()`](../../app/Tenants/TenantManager.php) `:157` | reactivate most recent cancelled subscription → `Active` |
+| [`delete()`](../../app/Tenants/TenantManager.php) `:189` | cancel subscription → `Deleted`, then soft-delete (keeps the DB; a later force-delete drops it) |
 | [`restore()`](../../app/Tenants/TenantManager.php) `:224` | reactivate/create subscription, ensure a domain, clear `deleted_at` → `Active` |
-| [`changePlan()`](../../app/Tenants/TenantManager.php) `:304` | swap plan / enter-or-leave trial, fire `PlanChanged` |
-| [`extendTrial()`](../../app/Tenants/TenantManager.php) `:422` | push `trial_ends_at` out by N days (Trial only) |
+| [`changePlan()`](../../app/Tenants/TenantManager.php) `:307` | swap plan / enter-or-leave trial, fire `PlanChanged` |
+| [`extendTrial()`](../../app/Tenants/TenantManager.php) `:431` | push `trial_ends_at` out by N days (Trial only) |
 
 ### Why the tricky ordering
 
