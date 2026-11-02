@@ -112,6 +112,7 @@ jobs:
               tests/Feature/Tenant/ProfileTest.php
               tests/Feature/TenantPermissionIsolationTest.php
               tests/Unit/Billing/PaymentGatewayFactoryTest.php
+              tests/Unit/Billing/ResourceEnforcementStrategiesTest.php
               tests/Unit/Models/CategoryTest.php
               tests/Unit/PaymentMethodModelTest.php
           - shard: 3
@@ -120,6 +121,7 @@ jobs:
               tests/Feature/Admin/DashboardStatsTest.php
               tests/Feature/Admin/ImpersonationTest.php
               tests/Feature/Admin/StaffPermissionAssignmentTest.php
+              tests/Feature/Admin/TenantAuxiliaryEndpointsTest.php
               tests/Feature/CheckTenantStateTest.php
               tests/Feature/ExampleTest.php
               tests/Feature/ExportControllerTest.php
@@ -133,13 +135,18 @@ jobs:
               tests/Feature/ResourceUsage/TenantResourceUsageTest.php
               tests/Feature/RouteRegistrationTest.php
               tests/Feature/Tenant/Auth/EmailVerificationTest.php
+              tests/Feature/Tenant/ExpireTrialsCommandTest.php
               tests/Feature/Tenant/Impersonation/EnsureImpersonationValidTest.php
               tests/Feature/Tenant/Impersonation/GodModeDashboardAccessTest.php
               tests/Feature/Tenant/Products/ProductManagementTest.php
               tests/Feature/Tenant/PruneOrphanTenantsCommandTest.php
+              tests/Feature/Tenant/TenantBuilderTest.php
               tests/Feature/Tenant/TenantCacheFlushTest.php
               tests/Feature/Tenant/TenantRootRouteTest.php
+              tests/Feature/Tenant/TenantStateManagerTest.php
               tests/Feature/TenantMigrationTest.php
+              tests/Unit/Billing/MercadoPagoAdapterTest.php
+              tests/Unit/Billing/PlanDowngradeWarningTest.php
               tests/Unit/Billing/StripePaymentAdapterTest.php
               tests/Unit/Models/OrderItemTest.php
               tests/Unit/Models/PaymentTest.php
@@ -167,10 +174,15 @@ jobs:
               tests/Feature/Tenant/Auth/PasswordConfirmationTest.php
               tests/Feature/Tenant/Auth/PasswordResetTest.php
               tests/Feature/Tenant/Billing/PaymentHistoryTest.php
+              tests/Feature/Tenant/CollectTenantMetricsTest.php
               tests/Feature/Tenant/CreateTenantStorageSkeletonTest.php
               tests/Feature/Tenant/DatabaseServiceTest.php
               tests/Feature/Tenant/PathIdentificationTest.php
+              tests/Feature/Tenant/SequentialIdGeneratorTest.php
               tests/Feature/Tenant/TenantProvisioningTest.php
+              tests/Feature/Tenant/TenantRepositoryTest.php
+              tests/Unit/Billing/HandlePlanChangeTest.php
+              tests/Unit/Billing/ResourceEnforcementFactoryTest.php
               tests/Unit/HandlesIdempotentSchemaChangesTest.php
               tests/Unit/Models/CustomerTest.php
               tests/Unit/Models/OrderTest.php
