@@ -37,11 +37,12 @@ class TenantController extends Controller
      * @queryParam search string Search across name, email, domain, and reference ID. Example: acme
      * @queryParam status string Filter by tenant status (Active, Trial, Suspended). Example: Active
      * @queryParam plan_id integer Filter by plan ID. Example: 2
+     * @queryParam plan_name string Filter by plan name (exact). Example: Pro
      * @queryParam date_from string Filter by created_at from date (Y-m-d). Example: 2026-01-01
      * @queryParam date_to string Filter by created_at to date (Y-m-d). Example: 2026-07-09
      * @queryParam sort string Column to sort by (name, email, status, plan_id, created_at). Default: created_at
      * @queryParam order string Sort direction (asc, desc). Default: desc
-     * @queryParam per_page integer Number of results per page (max 100). Default 25. Example: 10
+     * @queryParam per_page integer Number of results per page (max 100). Default 5. Example: 10
      *
      * @responseField tenants array[] List of tenant resources.
      * @responseField total integer Total number of tenants matching the query.
