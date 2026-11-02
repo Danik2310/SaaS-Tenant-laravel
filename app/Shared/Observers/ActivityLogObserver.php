@@ -40,6 +40,15 @@ class ActivityLogObserver
     {
         $label = class_basename($model);
 
+        // SoftDeletes::restore() clears `deleted_at` and then saves, which fires
+        // both `updated` and `restored` for one change. Skip the `updated` entry
+        // and let restored() own it, so a restore is not logged twice.
+        if (method_exists($model, 'getDeletedAtColumn')
+            && $model->wasChanged($model->getDeletedAtColumn())
+            && $model->getAttribute($model->getDeletedAtColumn()) === null) {
+            return;
+        }
+
         if (in_array($label, self::SKIP_UPDATE_MODELS, true)) {
             return;
         }

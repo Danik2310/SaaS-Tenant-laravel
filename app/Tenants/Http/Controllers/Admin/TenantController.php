@@ -271,15 +271,10 @@ class TenantController extends Controller
         $tenant = Tenant::withTrashed()->findOrFail($id);
 
         try {
+            // No explicit activity() here: the Tenants domain change is audited by
+            // ActivityLogObserver, which records the `restored` event fired inside
+            // TenantManager::restore(). Logging here as well would duplicate it.
             $this->tenantManager->restore($tenant);
-
-            $adminUser = auth('admin')->user();
-
-            activity('tenant')
-                ->performedOn($tenant->fresh())
-                ->causedBy($adminUser)
-                ->withProperties(['tenant_name' => $tenant->name, 'action' => 'restore'])
-                ->log("Restored tenant {$tenant->name}");
         } catch (\Throwable $e) {
             \Log::warning('Failed to restore tenant', [
                 'tenant_id' => $id,

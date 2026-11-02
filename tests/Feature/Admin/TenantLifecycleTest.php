@@ -290,6 +290,24 @@ class TenantLifecycleTest extends TestCase
         $tenant->refresh();
         $this->assertNull($tenant->deleted_at);
         $this->assertEquals('Active', $tenant->status);
+
+        // The restore is audited exactly once — by the observer's `restored`
+        // event. The controller must not add its own duplicate entry.
+        $this->assertSame(
+            1,
+            DB::table('activity_log')
+                ->where('log_name', 'tenant')
+                ->where('subject_id', $tenant->id)
+                ->where('description', 'like', 'Tenant restored:%')
+                ->count(),
+            'Expected exactly one "Tenant restored" activity row.'
+        );
+
+        $this->assertSame(
+            0,
+            DB::table('activity_log')->where('description', 'like', 'Restored tenant%')->count(),
+            'TenantController::restore() must not write its own activity entry.'
+        );
     }
 
     public function test_can_change_tenant_plan(): void

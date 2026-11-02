@@ -235,11 +235,12 @@ class TenantManager implements TenantManagerInterface
         }
 
         DB::transaction(function () use ($tenant) {
-            // Set deleted_at in memory only — do NOT save yet.
-            // Each save() fires 'saved' → InvalidatesResolverCache, which can
-            // query the subscriptions table and create a self-deadlock when the
+            // `deleted_at` is cleared by $tenant->restore() at the end of this
+            // transaction, which performs the single Tenant save. Saving here
+            // would add a second model event (and query) mid-transaction: each
+            // save() fires 'saved' → InvalidatesResolverCache, which can query
+            // the subscriptions table and create a self-deadlock when the
             // subscription UPDATE below tries to acquire the same row lock.
-            $tenant->deleted_at = null;
 
             // Try to reactivate the most recent cancelled subscription matching the tenant's plan.
             // This query uses the CURRENT plan_id (before any change), so it must run
@@ -278,11 +279,14 @@ class TenantManager implements TenantManagerInterface
                 ]);
             }
 
-            // Save ONCE with the `deleted_at` change. Status is left untouched
-            // here: multiple saves firing model events mid-transaction can
-            // self-deadlock (see the note above), and the transition belongs
-            // outside the transaction so its event fires after commit.
-            $tenant->save();
+            // Restore ONCE: SoftDeletes::restore() clears `deleted_at`, performs
+            // the single save (persisting any plan_id change made above) and
+            // fires `restored`, which the activity observer records. Status is
+            // left untouched here: extra saves firing model events mid-
+            // transaction can self-deadlock (see the note above), and the
+            // transition belongs outside the transaction so its event fires
+            // after commit.
+            $tenant->restore();
         });
 
         // Transition after commit: validates via the state machine and fires
