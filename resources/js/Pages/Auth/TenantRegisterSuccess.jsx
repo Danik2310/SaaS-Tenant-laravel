@@ -45,8 +45,8 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
                 </div>
 
                 <p className="mt-6 text-sm text-gray-600">
-                    Open that link to activate <span className="font-medium text-gray-900">{domain}</span>. You
-                    will be asked to sign in with the password you chose.
+                    Open that link to activate your workspace. You will be asked to sign in with the
+                    password you chose.
                 </p>
 
                 <ol className="mt-6 space-y-2 rounded-xl border border-gray-200 p-5 text-left text-sm text-gray-600">
