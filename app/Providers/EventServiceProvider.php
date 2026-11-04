@@ -29,8 +29,8 @@ use App\Observers\Tenant\UserObserver;
 use App\Observers\Tenant\WarehouseObserver;
 use App\Shared\Observers\ActivityLogObserver;
 use App\Shared\Support\ImpersonatedAdmin;
+use App\Tenants\Listeners\SendTenantVerificationEmail;
 use Illuminate\Auth\Events\Registered;
-use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Auth;
@@ -41,8 +41,8 @@ use Stancl\Tenancy\Database\Models\Domain;
  * Central event and model-observer registration.
  *
  * Flow:
- *  1. `$listen` binds the framework's `Registered` event to the email
- *     verification listener.
+ *  1. `$listen` binds the framework's `Registered` event to the tenant-aware
+ *     email verification listener.
  *  2. `boot()` attaches observers:
  *     - every central model and tenant model → {@see ActivityLogObserver}, which
  *       is tenant-context aware and records create/update/delete to the activity
@@ -59,7 +59,7 @@ class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
         Registered::class => [
-            SendEmailVerificationNotification::class,
+            SendTenantVerificationEmail::class,
         ],
     ];
 
@@ -124,5 +124,17 @@ class EventServiceProvider extends ServiceProvider
     public function shouldDiscoverEvents(): bool
     {
         return false;
+    }
+
+    /**
+     * The tenant-aware listener in `$listen` replaces the framework's email
+     * verification listener. Without this override the framework appends
+     * `SendEmailVerificationNotification` whenever it is absent from
+     * `$listen[Registered::class]` and every registration sends a second,
+     * unbranded email rooted at the central domain.
+     */
+    protected function configureEmailVerification(): void
+    {
+        //
     }
 }

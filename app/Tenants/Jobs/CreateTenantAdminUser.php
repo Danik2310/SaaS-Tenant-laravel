@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Shared\Constants\PermissionNames;
 use App\Shared\Jobs\TenantAwareJob;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -55,6 +56,14 @@ class CreateTenantAdminUser extends TenantAwareJob
 
             if (! $user->hasRole(PermissionNames::ROLE_TENANT_ADMIN)) {
                 $user->assignRole(PermissionNames::ROLE_TENANT_ADMIN);
+            }
+
+            // The owner is provisioned but not yet usable: `verified` holds the
+            // app back until the signed link is clicked. Firing the framework
+            // event keeps the notification wiring in one place
+            // (`EventServiceProvider::$listen`) instead of mailing from the job.
+            if (! $user->hasVerifiedEmail()) {
+                event(new Registered($user));
             }
         } catch (\Throwable $e) {
             Log::error('Failed to create tenant admin user', [
