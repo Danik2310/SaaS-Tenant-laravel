@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Billing\Http\Controllers\Admin\PaymentMethodController;
 use App\Billing\Http\Controllers\Admin\SubscriptionController;
 use App\Billing\Http\Controllers\Admin\SubscriptionPaymentController;
