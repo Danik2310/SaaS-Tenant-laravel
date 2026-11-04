@@ -117,13 +117,14 @@ Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:ad
     ]);
 })->name('admin.unauthorized');
 
-// Auth-state probe — requires a valid admin JWT; the SPA treats 401 as logged
-// out (resources/js/hooks/useAuth.jsx already handles the rejection).
-Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry'])->get('/admin/user', [AdminAuthController::class, 'user']);
-
 // Protected admin routes — only accessible on central domains
 Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+
+    // Auth-state probe — no permission required; every authenticated admin may
+    // read its own identity. The SPA treats 401 as logged out
+    // (resources/js/hooks/useAuth.jsx already handles the rejection).
+    Route::get('/user', [AdminAuthController::class, 'user']);
 
     // Dashboard statistics - requires read-level tenant access
     Route::get('/api/dashboard-stats', [DashboardController::class, 'stats'])->middleware(PermissionNames::middleware([PermissionNames::VIEW_TENANTS], 'admin'));
