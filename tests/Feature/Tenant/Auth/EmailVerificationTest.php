@@ -4,10 +4,13 @@ namespace Tests\Feature\Tenant\Auth;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Tenants\Notifications\TenantEmailVerification;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -74,5 +77,61 @@ class EmailVerificationTest extends TestCase
         $this->actingAs($user)->get($verificationUrl);
 
         $this->assertFalse($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_registered_event_sends_the_tenant_rooted_verification_email(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create();
+
+        event(new Registered($user));
+
+        $url = null;
+
+        Notification::assertSentTo(
+            $user,
+            TenantEmailVerification::class,
+            function (TenantEmailVerification $notification) use (&$url): bool {
+                $url = $notification->verificationUrl;
+
+                return true;
+            }
+        );
+
+        $this->assertIsString($url);
+        $this->assertStringStartsWith(
+            'http://'.$this->tenant->domain.'/verify-email/'.$user->getKey().'/',
+            $url
+        );
+    }
+
+    public function test_email_can_be_verified_from_the_tenant_rooted_link(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create();
+
+        event(new Registered($user));
+
+        $url = null;
+
+        Notification::assertSentTo(
+            $user,
+            TenantEmailVerification::class,
+            function (TenantEmailVerification $notification) use (&$url): bool {
+                $url = $notification->verificationUrl;
+
+                return true;
+            }
+        );
+
+        Event::fake();
+
+        $this->actingAs($user)
+            ->get($url)
+            ->assertRedirect(route('tenant.dashboard').'?verified=1');
+
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
     }
 }

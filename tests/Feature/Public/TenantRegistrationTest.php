@@ -10,11 +10,13 @@ use App\Models\User;
 use App\Shared\Contracts\PaymentGatewayInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
+use App\Tenants\Notifications\TenantEmailVerification;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Inertia\Testing\AssertableInertia as Assert;
 use InvalidArgumentException;
@@ -873,5 +875,54 @@ class TenantRegistrationTest extends TestCase
 
         $response->assertStatus(429);
         $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_registration_creates_an_unverified_owner_and_sends_the_verification_email(): void
+    {
+        Notification::fake();
+
+        $this->post('/register', $this->payload(['plan' => 'trial']))->assertOk();
+
+        $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertNull($user->email_verified_at);
+        $this->assertFalse($user->hasVerifiedEmail());
+
+        Notification::assertSentTo(
+            $user,
+            TenantEmailVerification::class,
+            function (TenantEmailVerification $notification) use ($user): bool {
+                $expectedPrefix = 'http://acme-corp.sasapp/verify-email/'.$user->getKey().'/';
+
+                return str_starts_with($notification->verificationUrl, $expectedPrefix)
+                    && str_contains($notification->verificationUrl, 'signature=')
+                    && $notification->domain === 'acme-corp.sasapp';
+            }
+        );
+
+        $this->forgetTenant();
+    }
+
+    public function test_newly_registered_owner_is_held_at_the_verification_screen(): void
+    {
+        $this->post('/register', $this->payload(['plan' => 'trial']))->assertOk();
+
+        $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertRedirect(route('verification.notice'));
+
+        $this->forgetTenant();
     }
 }
