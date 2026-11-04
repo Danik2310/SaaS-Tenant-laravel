@@ -5,7 +5,7 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
     return (
         <GuestLayout>
             <Head>
-                <title>Workspace created</title>
+                <title>Verify your email</title>
                 <meta name="robots" content="noindex" />
             </Head>
 
@@ -19,14 +19,18 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
                         stroke="currentColor"
                         className="h-6 w-6 text-brand-600"
                     >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0l-9.75 6.75L2.25 6.75"
+                        />
                     </svg>
                 </div>
 
-                <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">All set</p>
+                <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">One last step</p>
 
                 <h1 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">
-                    Your workspace is ready
+                    Check your email
                 </h1>
 
                 <p className="mt-2 text-sm text-gray-600">
@@ -35,15 +39,23 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
 
                 <div className="mt-6 rounded-xl border border-brand-100 bg-brand-50/60 p-5 text-center">
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-600">
-                        Your workspace address
+                        Verification link sent to
                     </p>
-                    <p className="mt-1 font-display text-2xl text-ink">{domain}</p>
+                    <p className="mt-1 break-all font-display text-lg text-ink">{email}</p>
                 </div>
 
                 <p className="mt-6 text-sm text-gray-600">
-                    Sign in with your email <span className="font-medium text-gray-900">{email}</span> and the
-                    password you chose.
+                    Open that link to activate <span className="font-medium text-gray-900">{domain}</span>. You
+                    will be asked to sign in with the password you chose.
                 </p>
+
+                <ol className="mt-6 space-y-2 rounded-xl border border-gray-200 p-5 text-left text-sm text-gray-600">
+                    <li>1. Open the email from us.</li>
+                    <li>2. Click “Verify my email”.</li>
+                    <li>
+                        3. Sign in to <span className="font-medium text-gray-900">{domain}</span>.
+                    </li>
+                </ol>
 
                 <a
                     href={loginUrl}
@@ -51,6 +63,10 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
                 >
                     Go to your workspace
                 </a>
+
+                <p className="mt-4 text-xs text-gray-500">
+                    Did not receive it? Sign in and resend the link from the verification screen.
+                </p>
             </div>
         </GuestLayout>
     );
