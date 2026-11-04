@@ -67,7 +67,7 @@ product.
 
 | Event | Listener(s) | Registered in |
 |-------|-------------|---------------|
-| `Registered` | `SendEmailVerificationNotification` | `EventServiceProvider::$listen` |
+| `Registered` | `SendTenantVerificationEmail` | `EventServiceProvider::$listen` |
 | `PlanChanged` | `HandlePlanChange` | billing provider |
 | `TenantSuspended` | `HandleTenantSuspension` | `TenancyServiceProvider` |
 | `TenantReactivated` | `HandleTenantReactivation` | `TenancyServiceProvider` |
@@ -77,6 +77,11 @@ product.
   classifies the change as upgrade/downgrade, and on a **downgrade** re-counts the
   affected resources (initialising tenancy to count inside the tenant DB) and
   notifies the tenant when limits are exceeded or features are lost.
+- [`SendTenantVerificationEmail`](../../app/Tenants/Listeners/SendTenantVerificationEmail.php) `:25`
+  replaces the framework verification listener: it builds a tenant-rooted signed
+  link (see [`04-authentication.md`](04-authentication.md) §3.3) and sends the
+  branded mail. The tenant-owner provisioning job fires `Registered` so central
+  signup and the in-tenant self-service signup share one path.
 - [`HandleTenantSuspension`](../../app/Tenants/Listeners/HandleTenantSuspension.php) `:14`
   and
   [`HandleTenantReactivation`](../../app/Tenants/Listeners/HandleTenantReactivation.php) `:14`

@@ -112,6 +112,27 @@ permission set (role permissions ∪ direct permissions), which the SPA uses to
 render the menu. The login page itself is the one Blade view, `admin.login`
 (`showLogin()` `:33`).
 
+### 3.3 Tenant owner email confirmation (signup)
+
+Login does **not** require a verified email: an unverified owner must be able to
+sign in to reach the resend button. Instead, the `verified` middleware holds them
+at `/verify-email` for everything below the verification routes.
+
+The central `/register` flow provisions the tenant and creates the owner through
+[`CreateTenantAdminUser`](../../app/Tenants/Jobs/CreateTenantAdminUser.php) `:66`,
+which fires `Registered` from inside `tenancy()->initialize()`. The owner is kept
+**unverified** (`email_verified_at = null`), so the first dashboard request
+redirects to `verification.notice` until the signed link is clicked.
+
+The link must be rooted at the tenant domain: the provisioning job runs on a queue
+worker with no tenant request, where `URL` would otherwise sign the central
+`APP_URL`. [`TenantVerificationUrl::for()`](../../app/Tenants/Support/TenantVerificationUrl.php) `:28`
+forces the URL root and scheme to the tenant's primary domain and restores both in
+a `finally` (URL state is process-global and leaks into later jobs on a
+long-lived worker). [`SendTenantVerificationEmail::handle()`](../../app/Tenants/Listeners/SendTenantVerificationEmail.php) `:25`
+replaces the framework listener, so the in-tenant self-service signup shares the
+same branded mail; send failures are logged and never fail provisioning.
+
 ---
 
 ## 4. Token refresh & expiry
