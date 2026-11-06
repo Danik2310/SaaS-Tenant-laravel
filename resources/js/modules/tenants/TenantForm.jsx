@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
+import axios from 'axios';
 import { toast } from 'sonner';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
 import api from '../../services/api';
@@ -31,20 +32,28 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        fetchPlans();
-    }, []);
+        const controller = new AbortController();
 
-    const fetchPlans = async () => {
-        setPlansLoading(true);
-        try {
-            const res = await api.get('/admin/api/plans-list');
-            setPlans(res.data.plans || []);
-        } catch {
-            toast.error('Failed to load plans');
-        } finally {
-            setPlansLoading(false);
-        }
-    };
+        const fetchPlans = async () => {
+            setPlansLoading(true);
+            try {
+                const res = await api.get('/admin/api/plans-list', { signal: controller.signal });
+                if (controller.signal.aborted) return;
+                setPlans(res.data.plans || []);
+            } catch (err) {
+                // An abort means the form is gone; it is not a failure.
+                if (controller.signal.aborted || axios.isCancel(err)) return;
+                toast.error('Failed to load plans');
+            } finally {
+                // An abort means this request no longer owns the loading state.
+                if (!controller.signal.aborted) setPlansLoading(false);
+            }
+        };
+
+        fetchPlans();
+
+        return () => controller.abort();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

@@ -3,6 +3,7 @@ import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
 import TenantForm from '@/modules/tenants/TenantForm';
 import { mockPlans } from '../fixtures';
+import { toast } from 'sonner';
 
 const mockApi = vi.hoisted(() => ({
   get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn(),
@@ -70,8 +71,40 @@ describe('TenantForm', () => {
     renderCreate();
 
     await waitFor(() => {
-      expect(mockApi.get).toHaveBeenCalledWith('/admin/api/plans-list');
+      expect(mockApi.get).toHaveBeenCalledWith(
+        '/admin/api/plans-list',
+        expect.objectContaining({ signal: expect.anything() })
+      );
     });
+  });
+
+  test('aborts the plans request on unmount', () => {
+    let signal;
+    mockApi.get.mockImplementation((url, config) => {
+      signal = config.signal;
+      return new Promise(() => {});
+    });
+
+    const { unmount } = renderCreate();
+    expect(signal).toBeInstanceOf(AbortSignal);
+    expect(signal.aborted).toBe(false);
+
+    unmount();
+
+    expect(signal.aborted).toBe(true);
+  });
+
+  test('ignores a plans failure that lands after unmount', async () => {
+    let rejectPlans;
+    mockApi.get.mockReturnValue(new Promise((_, reject) => { rejectPlans = reject; }));
+
+    const { unmount } = renderCreate();
+    unmount();
+
+    rejectPlans(new Error('Network Error'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   test('calls onSubmit with correct payload for create', async () => {
