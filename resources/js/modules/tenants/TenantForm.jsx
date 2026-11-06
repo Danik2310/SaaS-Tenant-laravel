@@ -1,47 +1,34 @@
 import React, { useState, useEffect } from 'react';
+import { useForm } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
 import api from '../../services/api';
 import { useMoney } from '@/shared/money';
 
+const defaultsFrom = (tenant) => ({
+    name: tenant?.name || '',
+    email: tenant?.email || '',
+    domain: tenant?.domain || '',
+    plan_id: tenant?.plan?.id != null ? String(tenant.plan.id) : '',
+    company_name: tenant?.company_name || '',
+    first_name: tenant?.first_name || '',
+    last_name: tenant?.last_name || '',
+    phone: tenant?.phone || '',
+    address_line1: tenant?.address_line1 || '',
+    address_line2: tenant?.address_line2 || '',
+    city: tenant?.city || '',
+    state: tenant?.state || '',
+    postal_code: tenant?.postal_code || '',
+    country: tenant?.country || '',
+});
+
 export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
     const { formatMoney } = useMoney();
-    const [name, setName] = useState(tenant?.name || '');
-    const [email, setEmail] = useState(tenant?.email || '');
-    const [domain, setDomain] = useState(tenant?.domain || '');
-    const [planId, setPlanId] = useState(tenant?.plan?.id || '');
-    const [companyName, setCompanyName] = useState(tenant?.company_name || '');
-    const [firstName, setFirstName] = useState(tenant?.first_name || '');
-    const [lastName, setLastName] = useState(tenant?.last_name || '');
-    const [phone, setPhone] = useState(tenant?.phone || '');
-    const [addressLine1, setAddressLine1] = useState(tenant?.address_line1 || '');
-    const [addressLine2, setAddressLine2] = useState(tenant?.address_line2 || '');
-    const [city, setCity] = useState(tenant?.city || '');
-    const [state, setState] = useState(tenant?.state || '');
-    const [postalCode, setPostalCode] = useState(tenant?.postal_code || '');
-    const [country, setCountry] = useState(tenant?.country || '');
+    const { data, setData, reset } = useForm(defaultsFrom(tenant));
     const [plans, setPlans] = useState([]);
     const [plansLoading, setPlansLoading] = useState(false);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        setName(tenant?.name || '');
-        setEmail(tenant?.email || '');
-        setDomain(tenant?.domain || '');
-        setPlanId(tenant?.plan?.id || '');
-        setCompanyName(tenant?.company_name || '');
-        setFirstName(tenant?.first_name || '');
-        setLastName(tenant?.last_name || '');
-        setPhone(tenant?.phone || '');
-        setAddressLine1(tenant?.address_line1 || '');
-        setAddressLine2(tenant?.address_line2 || '');
-        setCity(tenant?.city || '');
-        setState(tenant?.state || '');
-        setPostalCode(tenant?.postal_code || '');
-        setCountry(tenant?.country || '');
-        setError(null);
-    }, [tenant]);
 
     useEffect(() => {
         fetchPlans();
@@ -66,28 +53,28 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
 
         try {
             const payload = {
-                name,
-                email,
-                company_name: companyName || null,
-                first_name: firstName || null,
-                last_name: lastName || null,
-                phone: phone || null,
-                address_line1: addressLine1 || null,
-                address_line2: addressLine2 || null,
-                city: city || null,
-                state: state || null,
-                postal_code: postalCode || null,
-                country: country || null,
+                name: data.name,
+                email: data.email,
+                company_name: data.company_name || null,
+                first_name: data.first_name || null,
+                last_name: data.last_name || null,
+                phone: data.phone || null,
+                address_line1: data.address_line1 || null,
+                address_line2: data.address_line2 || null,
+                city: data.city || null,
+                state: data.state || null,
+                postal_code: data.postal_code || null,
+                country: data.country || null,
             };
             if (tenant) {
                 payload.id = tenant.id;
-                if (planId) {
-                    payload.plan_id = Number(planId);
+                if (data.plan_id) {
+                    payload.plan_id = Number(data.plan_id);
                 }
             } else {
-                payload.domain = domain;
-                if (planId) {
-                    const selectedPlan = plans.find(p => p.id === Number(planId));
+                payload.domain = data.domain;
+                if (data.plan_id) {
+                    const selectedPlan = plans.find(p => p.id === Number(data.plan_id));
                     if (selectedPlan) {
                         payload.plan = selectedPlan.slug;
                     }
@@ -95,20 +82,7 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
             }
             await onSubmit(payload);
             if (!tenant) {
-                setName('');
-                setEmail('');
-                setDomain('');
-                setPlanId('');
-                setCompanyName('');
-                setFirstName('');
-                setLastName('');
-                setPhone('');
-                setAddressLine1('');
-                setAddressLine2('');
-                setCity('');
-                setState('');
-                setPostalCode('');
-                setCountry('');
+                reset();
             }
         } catch (err) {
             const message = err.message || (tenant ? 'Failed to update tenant' : 'Failed to create tenant');
@@ -135,8 +109,8 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                 <FormInput label="Tenant Name" required>
                     <input
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        value={data.name}
+                        onChange={(e) => setData('name', e.target.value)}
                         placeholder="e.g., Acme Corp"
                         required
                     />
@@ -145,8 +119,8 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                 <FormInput label="Email" required hint="Primary contact email for this tenant">
                     <input
                         type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={data.email}
+                        onChange={(e) => setData('email', e.target.value)}
                         placeholder="admin@tenant.com"
                         required
                     />
@@ -156,8 +130,8 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                     <FormInput label="Domain" required hint="Unique domain for tenant access, e.g., acme.sasapp">
                         <input
                             type="text"
-                            value={domain}
-                            onChange={(e) => setDomain(e.target.value)}
+                            value={data.domain}
+                            onChange={(e) => setData('domain', e.target.value)}
                             placeholder="acme.sasapp"
                             required
                         />
@@ -176,8 +150,8 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
 
                 <FormInput label="Plan" hint={tenant ? "Change the tenant's subscription plan" : "Assign a plan to this tenant (optional)"}>
                     <select
-                        value={planId}
-                        onChange={(e) => setPlanId(e.target.value)}
+                        value={data.plan_id}
+                        onChange={(e) => setData('plan_id', e.target.value)}
                         disabled={plansLoading}
                         style={{
                             width: '100%',
@@ -214,41 +188,41 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                     <FormInput label="Company Name" hint="Legal or trading name of the company">
-                        <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="e.g., Acme Corp LLC" />
+                        <input type="text" value={data.company_name} onChange={(e) => setData('company_name', e.target.value)} placeholder="e.g., Acme Corp LLC" />
                     </FormInput>
                     <FormInput label="Phone" hint="Primary contact phone number">
-                        <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 555 123 4567" />
+                        <input type="text" value={data.phone} onChange={(e) => setData('phone', e.target.value)} placeholder="+1 555 123 4567" />
                     </FormInput>
                     <FormInput label="First Name" hint="Primary contact's first name">
-                        <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jane" />
+                        <input type="text" value={data.first_name} onChange={(e) => setData('first_name', e.target.value)} placeholder="Jane" />
                     </FormInput>
                     <FormInput label="Last Name" hint="Primary contact's last name">
-                        <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" />
+                        <input type="text" value={data.last_name} onChange={(e) => setData('last_name', e.target.value)} placeholder="Doe" />
                     </FormInput>
                 </div>
 
                 <FormInput label="Address Line 1" hint="Street address (e.g., 123 Main St)">
-                    <input type="text" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} placeholder="123 Main St" />
+                    <input type="text" value={data.address_line1} onChange={(e) => setData('address_line1', e.target.value)} placeholder="123 Main St" />
                 </FormInput>
 
                 <FormInput label="Address Line 2" hint="Apartment, suite, unit, etc. (optional)">
-                    <input type="text" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} placeholder="Suite 400" />
+                    <input type="text" value={data.address_line2} onChange={(e) => setData('address_line2', e.target.value)} placeholder="Suite 400" />
                 </FormInput>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
                     <FormInput label="City" hint="City or locality">
-                        <input type="text" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Springfield" />
+                        <input type="text" value={data.city} onChange={(e) => setData('city', e.target.value)} placeholder="Springfield" />
                     </FormInput>
                     <FormInput label="State / Province" hint="State, province, or region">
-                        <input type="text" value={state} onChange={(e) => setState(e.target.value)} placeholder="IL" />
+                        <input type="text" value={data.state} onChange={(e) => setData('state', e.target.value)} placeholder="IL" />
                     </FormInput>
                     <FormInput label="Postal Code" hint="ZIP / postal code">
-                        <input type="text" value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="62701" />
+                        <input type="text" value={data.postal_code} onChange={(e) => setData('postal_code', e.target.value)} placeholder="62701" />
                     </FormInput>
                 </div>
 
                 <FormInput label="Country" hint="Country of the registered address">
-                    <input type="text" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="United States" />
+                    <input type="text" value={data.country} onChange={(e) => setData('country', e.target.value)} placeholder="United States" />
                 </FormInput>
 
                 <FormActions>
