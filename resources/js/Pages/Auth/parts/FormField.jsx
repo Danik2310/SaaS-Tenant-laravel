@@ -7,11 +7,26 @@ import InputLabel from '@/Components/InputLabel';
  * correct aria-describedby / aria-invalid pairing. The control is passed as
  * `children` and cloned with those attributes, keeping a single source of
  * truth for the ids.
+ *
+ * `status` is an optional live-feedback node (e.g. a `role="status"` line for
+ * a matching password confirmation). It is rendered under the control and
+ * cloned with the id so aria-describedby can point at it without the caller
+ * having to invent one.
  */
-export default function FormField({ label, htmlFor, hint, error, required = false, row = false, children }) {
+export default function FormField({
+    label,
+    htmlFor,
+    hint,
+    error,
+    status = null,
+    required = false,
+    row = false,
+    children,
+}) {
     const hintId = hint ? `${htmlFor}-hint` : undefined;
     const errorId = error ? `${htmlFor}-error` : undefined;
-    const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
+    const statusId = status ? `${htmlFor}-status` : undefined;
+    const describedBy = [hintId, errorId, statusId].filter(Boolean).join(' ') || undefined;
 
     const control = isValidElement(children)
         ? cloneElement(children, {
@@ -55,6 +70,8 @@ export default function FormField({ label, htmlFor, hint, error, required = fals
                     {control}
 
                     <InputError id={errorId} message={error} className={`mt-1 ${errorTone}`} />
+
+                    {status && cloneElement(status, { id: statusId })}
                 </div>
             </div>
         );
@@ -81,6 +98,8 @@ export default function FormField({ label, htmlFor, hint, error, required = fals
             )}
 
             <InputError id={errorId} message={error} className="mt-1" />
+
+            {status && cloneElement(status, { id: statusId })}
         </div>
     );
 }

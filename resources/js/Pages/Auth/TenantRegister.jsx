@@ -13,6 +13,7 @@ import OptionalDetails from './parts/OptionalDetails';
 import PlanGrid from './parts/PlanGrid';
 import PlanSummary from './parts/PlanSummary';
 import StepIndicator from './parts/StepIndicator';
+import { passwordsMatch } from './parts/passwordFeedback';
 import { Head, useForm } from '@inertiajs/react';
 
 const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9 -]*$/;
@@ -115,6 +116,11 @@ export default function TenantRegister({
         [plans, data.plan]
     );
     const isPaidPlan = Boolean(selectedPlan?.price > 0);
+
+    // Live match feedback only, never a submit gate: the request stays the
+    // source of truth (`required|confirmed|min:8`), and both fields empty is
+    // not a match.
+    const confirmationMatches = passwordsMatch(data.password, data.password_confirmation);
 
     useEffect(() => {
         return () => {
@@ -676,6 +682,37 @@ export default function TenantRegister({
                                         label="Confirm Password"
                                         htmlFor="password_confirmation"
                                         error={errors.password_confirmation}
+                                        status={
+                                            <p
+                                                role="status"
+                                                data-testid="password-match-status"
+                                                className={
+                                                    data.password_confirmation !== ''
+                                                        ? 'mt-1.5'
+                                                        : undefined
+                                                }
+                                            >
+                                                {data.password_confirmation !== '' && (
+                                                    <span
+                                                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs ${
+                                                            confirmationMatches
+                                                                ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300'
+                                                                : 'border-white/15 bg-white/5 text-white/60'
+                                                        }`}
+                                                    >
+                                                        <span
+                                                            aria-hidden="true"
+                                                            className="text-[11px] leading-none"
+                                                        >
+                                                            {confirmationMatches ? '✓' : '○'}
+                                                        </span>
+                                                        {confirmationMatches
+                                                            ? 'Passwords match'
+                                                            : 'Passwords do not match yet'}
+                                                    </span>
+                                                )}
+                                            </p>
+                                        }
                                         required
                                     >
                                         <TextInput
