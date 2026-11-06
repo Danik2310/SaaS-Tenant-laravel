@@ -383,6 +383,53 @@ describe('TenantRegister', () => {
         expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'text');
     });
 
+    test('shows no match message until the confirmation is typed', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        // The live region is mounted empty so its first content change is
+        // announced; nothing is reported while the field is untouched.
+        expect(screen.getByTestId('password-match-status').textContent).toBe('');
+        expect(screen.getByLabelText('Confirm Password')).toHaveAttribute(
+            'aria-describedby',
+            'password_confirmation-status'
+        );
+        expect(screen.queryByText('Passwords match')).not.toBeInTheDocument();
+    });
+
+    test('reports a mismatch then a match as the confirmation is typed', () => {
+        render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
+
+        const status = () => screen.getByTestId('password-match-status');
+        const pill = () => status().firstElementChild;
+
+        fireEvent.change(screen.getByLabelText('Password'), {
+            target: { value: 'supersecret' },
+        });
+        fireEvent.change(screen.getByLabelText('Confirm Password'), {
+            target: { value: 'super' },
+        });
+
+        // A prefix always differs, so this is neutral copy, not an error.
+        expect(pill()).toHaveTextContent('Passwords do not match yet');
+        expect(pill().className).toContain('text-white/60');
+        expect(pill().className).not.toContain('emerald');
+        expect(status()).toHaveAttribute('role', 'status');
+
+        fireEvent.change(screen.getByLabelText('Confirm Password'), {
+            target: { value: 'supersecret' },
+        });
+
+        expect(pill()).toHaveTextContent('Passwords match');
+        expect(pill().className).toContain('text-emerald-300');
+        expect(screen.queryByText('Passwords do not match yet')).not.toBeInTheDocument();
+
+        fireEvent.change(screen.getByLabelText('Confirm Password'), {
+            target: { value: '' },
+        });
+
+        expect(status().textContent).toBe('');
+    });
+
     test('announces the generated workspace address', () => {
         render(<TenantRegister plans={plans} selected_plan="trial" tenant_domain_suffix="sasapp" />);
 
