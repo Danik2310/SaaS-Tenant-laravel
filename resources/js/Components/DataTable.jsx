@@ -149,7 +149,11 @@ const DataTable = React.memo(function DataTable({
         return row[column.accessorKey];
     };
 
-    const renderActions = (row) => {
+    // Memoized so the action column is not rebuilt on every row render. The
+    // dependency list has to stay complete: this closure reads the menu anchor
+    // and row state, so trimming it to just the action handlers would freeze
+    // `menuAnchor` at `null` and the "More actions" menu would never open.
+    const renderActions = useCallback((row) => {
         const actions = [];
         if (onEdit) actions.push({ type: 'edit' });
         if (onToggleStatus) actions.push({ type: 'toggle', isActive: row.is_active });
@@ -243,7 +247,18 @@ const DataTable = React.memo(function DataTable({
                 })}
             </Box>
         );
-    };
+    }, [
+        onEdit,
+        onDelete,
+        onToggleStatus,
+        onView,
+        onImpersonate,
+        rowMenuActions,
+        handleMenuOpen,
+        handleMenuClose,
+        menuAnchor,
+        menuRow,
+    ]);
 
     const colCount = columns.length + (enableSelection ? 1 : 0) + (
         onEdit || onDelete || onImpersonate || onView || onToggleStatus || rowMenuActions.length > 0 ? 1 : 0
