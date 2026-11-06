@@ -25,9 +25,9 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 
 function TrendBadge({ value }) {
+    const { palette } = useTheme();
     if (value === 0) return null;
     const isUp = value > 0;
-    const { palette } = useTheme();
     return (
         <Tooltip title={`${isUp ? 'Up' : 'Down'} ${Math.abs(value)}% vs last month`}>
             <Box component="span" sx={{
