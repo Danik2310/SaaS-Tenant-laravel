@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { MaterialReactTable } from 'material-react-table';
+import axios from 'axios';
 import api from '@/services/api';
 import { useAuthContext } from '@/context/AuthContext';
 import Box from '@mui/material/Box';
@@ -73,6 +74,7 @@ export default function TenantList({
     const [actionMenuAnchor, setActionMenuAnchor] = useState(null);
     const [actionMenuRow, setActionMenuRow] = useState(null);
     const [pendingBulkAction, setPendingBulkAction] = useState(null);
+    const abortRef = useRef(null);
 
     useEffect(() => {
         const canFetchPlans = ['view plans', 'view subscriptions', 'create tenants', 'edit tenants']
@@ -84,6 +86,11 @@ export default function TenantList({
     }, [permissions]);
 
     const fetchTenants = useCallback(async () => {
+        // A newer request (or unmount) supersedes the previous one.
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
         setLoading(true);
         setError(null);
         try {
@@ -121,20 +128,25 @@ export default function TenantList({
                 params.set('order', sorting[0].desc ? 'desc' : 'asc');
             }
 
-            const response = await api.get(`/admin/api/tenants?${params}`);
+            const response = await api.get(`/admin/api/tenants?${params}`, { signal: controller.signal });
+            if (controller.signal.aborted) return;
             setData(response.data.tenants);
             setTotal(response.data.total);
         } catch (err) {
+            // Aborted requests are superseded or unmounted, not failures.
+            if (controller.signal.aborted || axios.isCancel(err)) return;
             const message = 'Failed to fetch tenants';
             toast.error(message);
             setError(message);
         } finally {
-            setLoading(false);
+            // A newer request owns the loading state by now.
+            if (!controller.signal.aborted) setLoading(false);
         }
     }, [showDeleted, pagination, globalFilter, columnFilters, sorting]);
 
     useEffect(() => {
         fetchTenants();
+        return () => abortRef.current?.abort();
     }, [fetchTenants, refreshTrigger]);
 
     const selectedIds = useMemo(() =>
@@ -439,7 +451,7 @@ export default function TenantList({
                 onSortingChange={setSorting}
                 onRowSelectionChange={setRowSelection}
                 enableRowSelection
-                getRowId={(originalRow) => originalRow.id}
+                getRowId={(row) => String(row.id)}
                 enableGlobalFilter
                 enableColumnFilters
                 enableSorting
