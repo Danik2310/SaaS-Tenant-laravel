@@ -118,6 +118,32 @@ Login does **not** require a verified email: an unverified owner must be able to
 sign in to reach the resend button. Instead, the `verified` middleware holds them
 at `/verify-email` for everything below the verification routes.
 
+The signed link itself is **self-contained**:
+[`VerifyEmailController`](../../app/Http/Controllers/Auth/VerifyEmailController.php)
+sits outside the `auth` group, looks the owner up by the `id` in the URL and
+validates the signature in the controller. Mail clients open the link in whatever
+browser is handy, so requiring a session pushed the owner through the login form
+before the address was confirmed. The route still runs inside the tenant group,
+so the lookup hits the tenant database; a signed link whose `hash` does not match
+`sha1(email)` is refused.
+
+The controller answers with a page in every case. `Auth/EmailVerified` shows the
+green confirmation and hands the owner to `/login` after a short pause (a
+fallback sign-in link covers a blocked redirect; repeating the visit renders the
+"already confirmed" variant and redirects too). `Auth/EmailVerificationExpired`
+returns a 403 when the link is past its 60-minute window, was tampered with, or
+points at a deleted account, and routes the owner to sign in and resend. The gate
+page `Auth/VerifyEmail` shows the address the link went to, states that the
+workspace stays locked until it is confirmed, and has no link into the workspace;
+resend and logout remain. The signup success page
+`Auth/TenantRegisterSuccess` likewise has no way forward — the signed link is the
+only route in.
+
+Locally, the mail reaches Laragon's Mailpit when `.env` sets
+`MAIL_MAILER=smtp` and `MAIL_HOST=127.0.0.1` (SMTP on port 1025, UI on 8025).
+The signed links are rooted at `<slug>.sasapp`, so the Laragon Apache vhost must
+also alias `*.sasapp`; otherwise the button falls through to the default docroot.
+
 The central `/register` flow provisions the tenant and creates the owner through
 [`CreateTenantAdminUser`](../../app/Tenants/Jobs/CreateTenantAdminUser.php) `:66`,
 which fires `Registered` from inside `tenancy()->initialize()`. The owner is kept
