@@ -240,11 +240,10 @@ describe('TenantRegister', () => {
         expect(form.data.plan).toBe('trial');
     });
 
-    test('success page shows the workspace domain and login link', () => {
+    test('success page names the domain and offers no way in before confirmation', () => {
         render(
             <TenantRegisterSuccess
                 domain="acme-corp.sasapp"
-                loginUrl="https://acme-corp.sasapp/login"
                 plan="Trial"
                 trialDays={14}
                 email="jane@acme.test"
@@ -253,11 +252,14 @@ describe('TenantRegister', () => {
 
         expect(screen.getByText('acme-corp.sasapp')).toBeInTheDocument();
         expect(screen.getByText('jane@acme.test')).toBeInTheDocument();
+        expect(
+            screen.getByText(/you must confirm your email to continue/i)
+        ).toBeInTheDocument();
 
-        expect(screen.getByRole('link', { name: /go to your workspace/i })).toHaveAttribute(
-            'href',
-            'https://acme-corp.sasapp/login'
-        );
+        expect(
+            screen.queryByRole('link', { name: /go to your workspace/i })
+        ).not.toBeInTheDocument();
+        expect(screen.queryAllByRole('button')).toHaveLength(0);
     });
 
     test('renders a grid with no carousel controls', () => {
