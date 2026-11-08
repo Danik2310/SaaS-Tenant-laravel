@@ -96,15 +96,20 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
         ->middleware('throttle:6,1')
         ->name('god-mode.enter');
 
+    // Email verification link — public by design. The signed URL is the
+    // credential, so it has to work in whatever browser the email client opens
+    // it in, with no session. The controller validates the signature itself so
+    // an expired link renders a branded page instead of the framework's 403.
+    Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
+        ->middleware('throttle:6,1')
+        ->name('verification.verify');
+
     // Authenticated tenant routes
     Route::middleware(['jwt.cookie', 'impersonation.session', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'session.expiry:web', 'throttle:60,1'])->group(function () {
-        // Email verification — auth only, NOT verified (avoids infinite redirect loop)
+        // The prompt stays behind auth but NOT verified: it is where an
+        // unverified owner resends the link (avoids an infinite redirect loop).
         Route::get('verify-email', EmailVerificationPromptController::class)
             ->name('verification.notice');
-
-        Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
-            ->middleware(['signed', 'throttle:6,1'])
-            ->name('verification.verify');
 
         Route::post('email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
             ->middleware('throttle:6,1')

@@ -188,7 +188,6 @@ class TenantRegistrationController extends Controller
     {
         return Inertia::render('Auth/TenantRegisterSuccess', [
             'domain' => $domain,
-            'loginUrl' => 'https://'.$domain.'/login',
             'plan' => (string) ($tenant->plan?->name ?? 'Trial'),
             'trialDays' => $tenant->status === 'Trial'
                 ? (int) config('tenancy.trial_days', 14)

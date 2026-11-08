@@ -177,7 +177,6 @@ class RegistrationCheckoutController extends Controller
     {
         return inertia('Auth/TenantRegisterSuccess', [
             'domain' => $domain,
-            'loginUrl' => 'https://'.$domain.'/login',
             'plan' => (string) ($tenant->plan?->name ?? 'Trial'),
             'trialDays' => $tenant->status === 'Trial'
                 ? (int) config('tenancy.trial_days', 14)

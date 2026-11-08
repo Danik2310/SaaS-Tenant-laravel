@@ -1,7 +1,7 @@
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head } from '@inertiajs/react';
 
-export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDays, email }) {
+export default function TenantRegisterSuccess({ domain, plan, trialDays, email }) {
     return (
         <GuestLayout>
             <Head>
@@ -45,8 +45,9 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
                 </div>
 
                 <p className="mt-6 text-sm text-gray-600">
-                    Open that link to activate your workspace. You will be asked to sign in with the
-                    password you chose.
+                    <span className="font-medium text-ink">You must confirm your email to continue.</span>{' '}
+                    Open the link we sent to the address above — the workspace stays locked until it
+                    is confirmed.
                 </p>
 
                 <ol className="mt-6 space-y-2 rounded-xl border border-gray-200 p-5 text-left text-sm text-gray-600">
@@ -56,13 +57,6 @@ export default function TenantRegisterSuccess({ domain, loginUrl, plan, trialDay
                         3. Sign in to <span className="font-medium text-gray-900">{domain}</span>.
                     </li>
                 </ol>
-
-                <a
-                    href={loginUrl}
-                    className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-brand-700 px-6 py-3 text-sm font-semibold text-white transition ease-in-out duration-150 hover:bg-brand-800 active:bg-brand-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
-                >
-                    Go to your workspace
-                </a>
 
                 <p className="mt-4 text-xs text-gray-500">
                     Did not receive it? Sign in and resend the link from the verification screen.
