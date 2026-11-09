@@ -21,6 +21,7 @@ use App\Shared\Http\Controllers\Admin\StaffController;
 use App\Tenants\Http\Controllers\Admin\TenantController;
 use App\Tenants\Http\Controllers\Admin\TenantDomainController;
 use App\Tenants\Http\Controllers\Admin\TenantMetricsController;
+use App\Tenants\Http\Controllers\Public\PendingRegistrationController;
 use App\Tenants\Http\Controllers\Public\RegistrationCheckoutController;
 use App\Tenants\Http\Controllers\Public\RegistrationLocationController;
 use App\Tenants\Http\Controllers\Public\TenantRegistrationController;
@@ -109,6 +110,22 @@ foreach ((array) config('tenancy.central_domains', []) as $index => $centralDoma
             ->when($isPrimary, fn ($route) => $route->name('register.payment.cancel'));
     });
 }
+
+// Signed confirmation-waiting screen and its resend action. These live on the
+// central domain and the signed URL is the credential: the owner has no session
+// yet. Registered once (not per central domain) because the URI does not collide
+// with a tenant route; `central.domain` keeps it off tenant hosts, and the forced
+// central root in TenantVerificationUrl keeps the signature valid on the host
+// that started the signup.
+Route::middleware(['central.domain', 'guest'])->group(function () {
+    Route::get('/register/pending', [PendingRegistrationController::class, 'show'])
+        ->middleware(['signed', 'throttle:30,1'])
+        ->name('register.pending');
+
+    Route::post('/register/pending/resend', [PendingRegistrationController::class, 'resend'])
+        ->middleware(['signed', 'throttle:6,1'])
+        ->name('register.pending.resend');
+});
 
 // Unauthorized page (accessible to authenticated admin users on central domain only)
 Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:admin'])->get('/admin/unauthorized', function () {

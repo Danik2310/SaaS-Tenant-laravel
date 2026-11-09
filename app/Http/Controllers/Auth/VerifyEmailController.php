@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Tenants\Support\TenantVerificationUrl;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -46,11 +48,21 @@ class VerifyEmailController extends Controller
             event(new Verified($user));
         }
 
-        return Inertia::render('Auth/EmailVerified', [
-            'email' => $user->getEmailForVerification(),
-            'alreadyVerified' => $alreadyVerified,
-            'loginUrl' => route('login'),
-        ])->toResponse($request);
+        $tenant = tenant();
+
+        if (! $tenant instanceof Tenant) {
+            return redirect()->route('login');
+        }
+
+        $pendingUrl = TenantVerificationUrl::pendingFor($tenant, $user->getEmailForVerification());
+
+        if ($pendingUrl === null) {
+            return redirect()->route('login');
+        }
+
+        // The signed waiting screen re-reads `email_verified_at`, so it shows the
+        // green check and hands the owner to the tenant login page.
+        return redirect()->to($pendingUrl);
     }
 
     private function invalidLink(Request $request): Response

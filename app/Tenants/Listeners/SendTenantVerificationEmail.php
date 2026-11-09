@@ -6,11 +6,9 @@ namespace App\Tenants\Listeners;
 
 use App\Models\Tenant;
 use App\Models\User;
-use App\Tenants\Notifications\TenantEmailVerification;
-use App\Tenants\Support\TenantVerificationUrl;
+use App\Tenants\Support\TenantVerificationMailer;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Sends the branded tenant-owner verification mail.
@@ -47,32 +45,6 @@ class SendTenantVerificationEmail
             return;
         }
 
-        $url = TenantVerificationUrl::for($user, $tenant);
-
-        if ($url === null) {
-            Log::error('Cannot send tenant verification email: tenant has no domain', [
-                'tenant_id' => $tenant->id,
-                'user_id' => $user->getKey(),
-            ]);
-
-            return;
-        }
-
-        try {
-            $user->notify(new TenantEmailVerification(
-                $url,
-                (string) $tenant->name,
-                (string) $tenant->domain,
-                TenantVerificationUrl::EXPIRY_MINUTES,
-            ));
-        } catch (\Throwable $e) {
-            // Provisioning must not fail because mail is down: the owner can
-            // still sign in and resend from the verification screen.
-            Log::error('Failed to send tenant verification email', [
-                'tenant_id' => $tenant->id,
-                'user_id' => $user->getKey(),
-                'error' => $e->getMessage(),
-            ]);
-        }
+        TenantVerificationMailer::send($user, $tenant);
     }
 }

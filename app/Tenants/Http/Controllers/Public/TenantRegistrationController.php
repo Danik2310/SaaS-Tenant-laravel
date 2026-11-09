@@ -7,12 +7,16 @@ namespace App\Tenants\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Public\StoreTenantRegistrationRequest;
 use App\Models\Plan;
+use App\Models\Tenant;
 use App\Shared\Contracts\LocationCatalog;
 use App\Shared\Contracts\PaymentGatewayInterface;
 use App\Shared\Contracts\PublicPlanCatalogInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
 use App\Tenants\Support\SubdomainGenerator;
+use App\Tenants\Support\TenantVerificationCooldown;
+use App\Tenants\Support\TenantVerificationUrl;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -126,7 +130,7 @@ class TenantRegistrationController extends Controller
             $validated['password'],
         ));
 
-        return $this->successResponse($domain, $validated, $tenant);
+        return $this->pendingRedirect($tenant, $validated['email']);
     }
 
     private function startPaidCheckout(StoreTenantRegistrationRequest $request, array $validated, Plan $plan)
@@ -184,16 +188,24 @@ class TenantRegistrationController extends Controller
         return ! is_int($expiresAt) || $expiresAt > now()->getTimestamp();
     }
 
-    private function successResponse(string $domain, array $validated, $tenant): Response
+    /**
+     * Send the owner to the signed confirmation-waiting screen instead of
+     * rendering it in the POST response: the waiting screen must survive a
+     * refresh, a resend redirect, and the verification link's own redirect.
+     */
+    private function pendingRedirect(Tenant $tenant, string $email): RedirectResponse
     {
-        return Inertia::render('Auth/TenantRegisterSuccess', [
-            'domain' => $domain,
-            'plan' => (string) ($tenant->plan?->name ?? 'Trial'),
-            'trialDays' => $tenant->status === 'Trial'
-                ? (int) config('tenancy.trial_days', 14)
-                : null,
-            'email' => $validated['email'],
-        ]);
+        $url = TenantVerificationUrl::pendingFor($tenant, $email);
+
+        if ($url === null) {
+            return redirect()->route('register.tenant');
+        }
+
+        // The initial signup mail is already on its way (or queued). Start the
+        // cooldown now so the first resend cannot duplicate it immediately.
+        TenantVerificationCooldown::start($tenant, $email);
+
+        return redirect()->to($url)->with('status', 'verification-link-sent');
     }
 
     /**

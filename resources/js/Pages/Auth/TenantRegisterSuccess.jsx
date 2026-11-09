@@ -1,7 +1,166 @@
+import { useEffect, useState } from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 
-export default function TenantRegisterSuccess({ domain, plan, trialDays, email }) {
+/** Long enough to read the confirmation, short enough not to feel stuck. */
+const REDIRECT_DELAY_MS = 3000;
+
+/** How often the waiting screen asks the server whether the link was used. */
+const POLL_INTERVAL_MS = 5000;
+
+const STATUS_MESSAGES = {
+    'verification-link-sent': 'A new verification link is on its way.',
+    'verification-preparing':
+        'Your workspace is still being prepared. Please try resending in a moment.',
+    'verification-cooldown': 'Please wait a moment before requesting another link.',
+    'verification-failed': 'We could not send the email just now. Please try again.',
+};
+
+/**
+ * The signed confirmation-waiting screen (and its confirmed state).
+ *
+ * The screen is the destination after signup, after a resend, and after the
+ * email link itself. It deliberately offers no way into the workspace until
+ * `verified` is true: the only action is a server-rate-limited resend. While it
+ * waits it polls its own `verified` prop, so an already-open tab flips to the
+ * green check as soon as the address is confirmed in another one.
+ */
+export default function TenantRegisterSuccess({
+    domain,
+    plan,
+    trialDays,
+    email,
+    verified = false,
+    tenantReady = true,
+    resendUrl = null,
+    loginUrl = null,
+    cooldownSeconds = 0,
+    status = null,
+}) {
+    const [secondsLeft, setSecondsLeft] = useState(cooldownSeconds);
+    const [sending, setSending] = useState(false);
+
+    // The server is authoritative: every page load hands down the remaining
+    // cooldown, and the client just ticks it down for display.
+    useEffect(() => {
+        setSecondsLeft(cooldownSeconds);
+    }, [cooldownSeconds]);
+
+    useEffect(() => {
+        if (verified || secondsLeft <= 0) {
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            setSecondsLeft((value) => (value <= 1 ? 0 : value - 1));
+        }, 1000);
+
+        return () => window.clearTimeout(timer);
+    }, [secondsLeft, verified]);
+
+    useEffect(() => {
+        if (verified) {
+            return undefined;
+        }
+
+        const interval = window.setInterval(() => {
+            router.reload({ only: ['verified'] });
+        }, POLL_INTERVAL_MS);
+
+        return () => window.clearInterval(interval);
+    }, [verified]);
+
+    useEffect(() => {
+        if (!verified || !loginUrl) {
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            router.visit(loginUrl, { replace: true });
+        }, REDIRECT_DELAY_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [verified, loginUrl]);
+
+    const resend = () => {
+        if (!resendUrl || sending || secondsLeft > 0) {
+            return;
+        }
+
+        setSending(true);
+        router.post(
+            resendUrl,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setSending(false),
+            }
+        );
+    };
+
+    const statusMessage = status ? STATUS_MESSAGES[status] ?? null : null;
+
+    if (verified) {
+        return (
+            <GuestLayout>
+                <Head>
+                    <title>Email confirmed</title>
+                    <meta name="robots" content="noindex" />
+                </Head>
+
+                <div className="text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="1.5"
+                            stroke="currentColor"
+                            aria-hidden="true"
+                            className="h-6 w-6 text-emerald-600"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M4.5 12.75l6 6 9-13.5"
+                            />
+                        </svg>
+                    </div>
+
+                    <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+                        You are confirmed
+                    </p>
+
+                    <h1 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">
+                        Email confirmed
+                    </h1>
+
+                    <div className="mt-6 rounded-xl border border-emerald-100 bg-emerald-50/60 p-5 text-center">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-gray-600">
+                            Confirmed address
+                        </p>
+                        <p className="mt-1 break-all font-display text-lg text-ink">{email}</p>
+                    </div>
+
+                    <p className="mt-6 text-sm text-gray-600">
+                        Your workspace is unlocked. Taking you to the sign-in page…
+                    </p>
+
+                    <p className="mt-4 text-xs text-gray-500">
+                        Not redirected?{' '}
+                        <a
+                            href={loginUrl ?? '#'}
+                            className="rounded-md font-medium text-brand-700 underline hover:text-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                        >
+                            Sign in now
+                        </a>
+                        .
+                    </p>
+                </div>
+            </GuestLayout>
+        );
+    }
+
     return (
         <GuestLayout>
             <Head>
@@ -9,7 +168,7 @@ export default function TenantRegisterSuccess({ domain, plan, trialDays, email }
                 <meta name="robots" content="noindex" />
             </Head>
 
-            <div role="status" className="text-center">
+            <div className="text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-50">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -17,6 +176,7 @@ export default function TenantRegisterSuccess({ domain, plan, trialDays, email }
                         viewBox="0 0 24 24"
                         strokeWidth="1.5"
                         stroke="currentColor"
+                        aria-hidden="true"
                         className="h-6 w-6 text-brand-600"
                     >
                         <path
@@ -27,7 +187,9 @@ export default function TenantRegisterSuccess({ domain, plan, trialDays, email }
                     </svg>
                 </div>
 
-                <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">One last step</p>
+                <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
+                    One last step
+                </p>
 
                 <h1 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">
                     Check your email
@@ -44,10 +206,21 @@ export default function TenantRegisterSuccess({ domain, plan, trialDays, email }
                     <p className="mt-1 break-all font-display text-lg text-ink">{email}</p>
                 </div>
 
+                {statusMessage && (
+                    <p
+                        role="status"
+                        className="mt-4 rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800"
+                    >
+                        {statusMessage}
+                    </p>
+                )}
+
                 <p className="mt-6 text-sm text-gray-600">
-                    <span className="font-medium text-ink">You must confirm your email to continue.</span>{' '}
-                    Open the link we sent to the address above — the workspace stays locked until it
-                    is confirmed.
+                    <span className="font-medium text-ink">
+                        You must confirm your email to continue.
+                    </span>{' '}
+                    Open the link we sent to the address above — the workspace stays locked until
+                    it is confirmed.
                 </p>
 
                 <ol className="mt-6 space-y-2 rounded-xl border border-gray-200 p-5 text-left text-sm text-gray-600">
@@ -58,8 +231,28 @@ export default function TenantRegisterSuccess({ domain, plan, trialDays, email }
                     </li>
                 </ol>
 
+                {!tenantReady && (
+                    <p className="mt-4 text-xs text-gray-500">
+                        Your workspace is still being prepared. If the email does not arrive, try
+                        resending in a moment.
+                    </p>
+                )}
+
+                <button
+                    type="button"
+                    onClick={resend}
+                    disabled={!resendUrl || sending || secondsLeft > 0}
+                    className="mt-6 inline-flex items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {sending
+                        ? 'Sending…'
+                        : secondsLeft > 0
+                          ? `Resend email in ${secondsLeft}s`
+                          : 'Resend email'}
+                </button>
+
                 <p className="mt-4 text-xs text-gray-500">
-                    Did not receive it? Sign in and resend the link from the verification screen.
+                    Did not receive it? Use the button above to resend the link.
                 </p>
             </div>
         </GuestLayout>
