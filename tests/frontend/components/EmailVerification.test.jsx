@@ -1,12 +1,14 @@
 import { vi, describe, test, beforeEach, afterEach, expect } from 'vitest';
 import { render, screen, fireEvent, act } from '../test-utils';
-import EmailVerified from '@/Pages/Auth/EmailVerified';
+import TenantRegisterSuccess from '@/Pages/Auth/TenantRegisterSuccess';
 import EmailVerificationExpired from '@/Pages/Auth/EmailVerificationExpired';
 import VerifyEmail from '@/Pages/Auth/VerifyEmail';
 
-const { postMock, visitMock } = vi.hoisted(() => ({
+const { postMock, visitMock, reloadMock, routerPostMock } = vi.hoisted(() => ({
     postMock: vi.fn(),
     visitMock: vi.fn(),
+    reloadMock: vi.fn(),
+    routerPostMock: vi.fn(),
 }));
 
 vi.mock('@inertiajs/react', async () => {
@@ -16,7 +18,7 @@ vi.mock('@inertiajs/react', async () => {
         Head: ({ children }) => ReactActual.createElement(ReactActual.Fragment, null, children),
         Link: ({ href, children }) => ReactActual.createElement('a', { href }, children),
         useForm: () => ({ post: postMock, processing: false }),
-        router: { visit: visitMock },
+        router: { visit: visitMock, reload: reloadMock, post: routerPostMock },
     };
 });
 
@@ -25,6 +27,8 @@ describe('email verification pages', () => {
         vi.stubGlobal('route', (name) => `/${name}`);
         postMock.mockClear();
         visitMock.mockClear();
+        reloadMock.mockClear();
+        routerPostMock.mockClear();
     });
 
     afterEach(() => {
@@ -75,16 +79,19 @@ describe('email verification pages', () => {
         });
     });
 
-    describe('EmailVerified result', () => {
+    describe('TenantRegisterSuccess confirmed state', () => {
         beforeEach(() => {
             vi.useFakeTimers();
         });
 
         test('shows the confirmed address then redirects to sign in', () => {
             render(
-                <EmailVerified
+                <TenantRegisterSuccess
+                    domain="acme-corp.sasapp"
+                    plan="Trial"
+                    trialDays={14}
                     email="owner@acme.test"
-                    alreadyVerified={false}
+                    verified
                     loginUrl="http://acme.sasapp.test/login"
                 />
             );
@@ -108,22 +115,94 @@ describe('email verification pages', () => {
             });
         });
 
-        test('says so when the address was confirmed earlier', () => {
+        test('offers a fallback sign-in link', () => {
             render(
-                <EmailVerified
+                <TenantRegisterSuccess
+                    domain="acme-corp.sasapp"
+                    plan="Trial"
+                    trialDays={14}
                     email="owner@acme.test"
-                    alreadyVerified
+                    verified
                     loginUrl="http://acme.sasapp.test/login"
                 />
             );
 
             expect(
-                screen.getByRole('heading', { name: /email already confirmed/i })
-            ).toBeInTheDocument();
-            expect(screen.getByText(/earlier visit/i)).toBeInTheDocument();
-            expect(
                 screen.getByRole('link', { name: /sign in now/i })
             ).toHaveAttribute('href', 'http://acme.sasapp.test/login');
+        });
+    });
+
+    describe('TenantRegisterSuccess waiting state', () => {
+        const pendingProps = {
+            domain: 'acme-corp.sasapp',
+            plan: 'Trial',
+            trialDays: 14,
+            email: 'owner@acme.test',
+            resendUrl: 'http://localhost/register/pending/resend?signature=abc',
+            loginUrl: 'http://acme.sasapp.test/login',
+        };
+
+        test('offers a resend but no way into the workspace before confirmation', () => {
+            render(<TenantRegisterSuccess {...pendingProps} cooldownSeconds={0} />);
+
+            expect(screen.getByText('acme-corp.sasapp')).toBeInTheDocument();
+            expect(screen.getByText('owner@acme.test')).toBeInTheDocument();
+            expect(
+                screen.getByText(/you must confirm your email to continue/i)
+            ).toBeInTheDocument();
+            expect(
+                screen.queryByRole('link', { name: /go to your workspace/i })
+            ).not.toBeInTheDocument();
+            expect(
+                screen.getByRole('button', { name: /resend email/i })
+            ).toBeInTheDocument();
+        });
+
+        test('posts the signed resend URL', () => {
+            render(<TenantRegisterSuccess {...pendingProps} cooldownSeconds={0} />);
+
+            fireEvent.click(screen.getByRole('button', { name: /resend email/i }));
+
+            expect(routerPostMock).toHaveBeenCalledWith(
+                pendingProps.resendUrl,
+                {},
+                expect.objectContaining({ preserveScroll: true })
+            );
+        });
+
+        test('disables the resend while the server cooldown is running', () => {
+            render(<TenantRegisterSuccess {...pendingProps} cooldownSeconds={30} />);
+
+            expect(
+                screen.getByRole('button', { name: /resend email in 30s/i })
+            ).toBeDisabled();
+        });
+
+        test('polls the verified prop while waiting', () => {
+            vi.useFakeTimers();
+
+            render(<TenantRegisterSuccess {...pendingProps} cooldownSeconds={0} />);
+
+            act(() => {
+                vi.advanceTimersByTime(5000);
+            });
+
+            expect(reloadMock).toHaveBeenCalledWith({ only: ['verified'] });
+        });
+
+        test('shows the resend result status', () => {
+            render(
+                <TenantRegisterSuccess
+                    {...pendingProps}
+                    cooldownSeconds={0}
+                    status="verification-link-sent"
+                />
+            );
+
+            expect(screen.getByRole('status')).toHaveTextContent(
+                /new verification link is on its way/i
+            );
         });
     });
 

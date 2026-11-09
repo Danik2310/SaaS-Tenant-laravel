@@ -128,12 +128,20 @@ class TenantRegistrationTest extends TestCase
     {
         $response = $this->post('/register', $this->payload(['plan' => 'trial']));
 
-        $response->assertOk()
+        $response->assertRedirect();
+
+        $pendingUrl = (string) $response->headers->get('Location');
+
+        $this->assertStringContainsString('/register/pending', $pendingUrl);
+
+        $this->get($pendingUrl)
+            ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
                 ->where('domain', 'acme-corp.sasapp')
                 ->where('email', 'jane@acme.test')
                 ->where('plan', 'Trial')
+                ->where('verified', false)
                 ->where('trialDays', (int) config('tenancy.trial_days', 14)));
 
         $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
@@ -180,7 +188,7 @@ class TenantRegistrationTest extends TestCase
             'state' => 'Illinois',
             'postal_code' => '62701',
             'country' => 'United States',
-        ]))->assertOk();
+        ]))->assertRedirect();
 
         $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
 
@@ -213,7 +221,7 @@ class TenantRegistrationTest extends TestCase
         $this->post('/register', $this->payload([
             'city' => 'Springfield',
             'country' => 'United States',
-        ]))->assertOk();
+        ]))->assertRedirect();
 
         $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
 
@@ -277,7 +285,10 @@ class TenantRegistrationTest extends TestCase
     {
         $response = $this->post('/register', $this->payload(['plan' => 'free']));
 
-        $response->assertOk()
+        $response->assertRedirect();
+
+        $this->get((string) $response->headers->get('Location'))
+            ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
                 ->where('plan', 'Free')
@@ -312,7 +323,10 @@ class TenantRegistrationTest extends TestCase
     {
         $response = $this->post('/register', $this->payload(['subdomain' => 'my-workspace']));
 
-        $response->assertOk()
+        $response->assertRedirect();
+
+        $this->get((string) $response->headers->get('Location'))
+            ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
                 ->where('domain', 'my-workspace.sasapp')
@@ -426,12 +440,17 @@ class TenantRegistrationTest extends TestCase
                 ]);
         });
 
-        $this->get('/register/payment/success?session_id=cs_test_123')
+        $response = $this->get('/register/payment/success?session_id=cs_test_123');
+
+        $response->assertRedirect();
+
+        $this->get((string) $response->headers->get('Location'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
                 ->where('domain', 'acme-corp.sasapp')
-                ->where('plan', 'Growth'));
+                ->where('plan', 'Growth')
+                ->where('verified', false));
 
         $tenant = Tenant::with(['plan', 'activeSubscription'])->where('email', 'jane@acme.test')->firstOrFail();
 
@@ -495,7 +514,11 @@ class TenantRegistrationTest extends TestCase
                 ]);
         });
 
-        $this->get('/register/payment/success?session_id=cs_test_123')
+        $response = $this->get('/register/payment/success?session_id=cs_test_123');
+
+        $response->assertRedirect();
+
+        $this->get((string) $response->headers->get('Location'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
@@ -620,7 +643,11 @@ class TenantRegistrationTest extends TestCase
 
         $old->delete();
 
-        $this->post('/register', $this->payload())
+        $response = $this->post('/register', $this->payload());
+
+        $response->assertRedirect();
+
+        $this->get((string) $response->headers->get('Location'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
@@ -679,7 +706,11 @@ class TenantRegistrationTest extends TestCase
 
         // The paid signup must be answered with the workspace it just bought,
         // not with the closed one still holding the address.
-        $this->get('/register/payment/success?session_id=cs_test_123')
+        $response = $this->get('/register/payment/success?session_id=cs_test_123');
+
+        $response->assertRedirect();
+
+        $this->get((string) $response->headers->get('Location'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegisterSuccess')
@@ -725,7 +756,7 @@ class TenantRegistrationTest extends TestCase
         Queue::fake([CreateTenantAdminUser::class]);
 
         $this->post('/register', $this->payload(['plan' => 'trial']))
-            ->assertOk();
+            ->assertRedirect();
 
         Queue::assertPushed(CreateTenantAdminUser::class, function (CreateTenantAdminUser $job) {
             return ! str_contains(serialize($job), 'StrongPass1!');
@@ -881,7 +912,7 @@ class TenantRegistrationTest extends TestCase
     {
         Notification::fake();
 
-        $this->post('/register', $this->payload(['plan' => 'trial']))->assertOk();
+        $this->post('/register', $this->payload(['plan' => 'trial']))->assertRedirect();
 
         $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
         $this->createdTenantDbNames[] = $tenant->database()->getName();
@@ -910,7 +941,7 @@ class TenantRegistrationTest extends TestCase
 
     public function test_newly_registered_owner_is_held_at_the_verification_screen(): void
     {
-        $this->post('/register', $this->payload(['plan' => 'trial']))->assertOk();
+        $this->post('/register', $this->payload(['plan' => 'trial']))->assertRedirect();
 
         $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
         $this->createdTenantDbNames[] = $tenant->database()->getName();

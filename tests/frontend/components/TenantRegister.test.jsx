@@ -26,6 +26,7 @@ vi.mock('@inertiajs/react', async () => {
         Link: ({ href, children, ...rest }) =>
             ReactActual.createElement('a', { href, ...rest }, children),
         useForm: useFormMock,
+        router: { reload: vi.fn(), post: vi.fn(), visit: vi.fn() },
     };
 });
 
@@ -247,6 +248,8 @@ describe('TenantRegister', () => {
                 plan="Trial"
                 trialDays={14}
                 email="jane@acme.test"
+                resendUrl="http://localhost/register/pending/resend?signature=abc"
+                loginUrl="http://acme-corp.sasapp/login"
             />
         );
 
@@ -259,7 +262,9 @@ describe('TenantRegister', () => {
         expect(
             screen.queryByRole('link', { name: /go to your workspace/i })
         ).not.toBeInTheDocument();
-        expect(screen.queryAllByRole('button')).toHaveLength(0);
+        expect(
+            screen.getByRole('button', { name: /resend email/i })
+        ).toBeInTheDocument();
     });
 
     test('renders a grid with no carousel controls', () => {

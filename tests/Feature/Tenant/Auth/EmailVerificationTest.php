@@ -5,6 +5,8 @@ namespace Tests\Feature\Tenant\Auth;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Tenants\Notifications\TenantEmailVerification;
+use App\Tenants\Support\TenantVerificationCooldown;
+use App\Tenants\Support\TenantVerificationUrl;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -61,13 +63,24 @@ class EmailVerificationTest extends TestCase
 
         $verificationUrl = $this->verificationUrl($user);
 
-        $this->get($verificationUrl)
+        $response = $this->get($verificationUrl);
+
+        $response->assertRedirect();
+
+        $pendingUrl = (string) $response->headers->get('Location');
+
+        $this->assertStringContainsString('/register/pending', $pendingUrl);
+        $this->assertStringContainsString('signature=', $pendingUrl);
+
+        $this->get($pendingUrl)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Auth/EmailVerified')
+                ->component('Auth/TenantRegisterSuccess')
                 ->where('email', $user->email)
-                ->where('alreadyVerified', false)
+                ->where('verified', true)
+                ->where('domain', $this->tenant->domain)
                 ->has('loginUrl')
+                ->has('resendUrl')
             );
 
         Event::assertDispatched(Verified::class);
@@ -129,16 +142,20 @@ class EmailVerificationTest extends TestCase
         $user = User::factory()->unverified()->create();
         $verificationUrl = $this->verificationUrl($user);
 
-        $this->get($verificationUrl)->assertOk();
+        $this->get($verificationUrl)->assertRedirect();
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
 
         Event::fake();
 
-        $this->get($verificationUrl)
+        $response = $this->get($verificationUrl);
+
+        $response->assertRedirect();
+
+        $this->get((string) $response->headers->get('Location'))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('Auth/EmailVerified')
-                ->where('alreadyVerified', true)
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('verified', true)
             );
 
         Event::assertNotDispatched(Verified::class);
@@ -191,9 +208,90 @@ class EmailVerificationTest extends TestCase
             }
         );
 
-        $this->get($url)->assertOk();
+        $this->get($url)->assertRedirect();
 
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_pending_page_shows_the_waiting_state_for_an_unverified_owner(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $url = TenantVerificationUrl::pendingFor($this->tenant, $user->email);
+
+        $this->assertNotNull($url);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('email', $user->email)
+                ->where('verified', false)
+                ->where('domain', $this->tenant->domain)
+                ->where('tenantReady', true)
+                ->where('cooldownSeconds', 0)
+                ->has('resendUrl')
+                ->has('loginUrl')
+            );
+    }
+
+    public function test_pending_page_rejects_a_tampered_signature(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $url = (string) TenantVerificationUrl::pendingFor($this->tenant, $user->email);
+        $tampered = preg_replace('/email=[^&]+/', 'email=attacker%40acme.test', $url);
+
+        $this->get($tampered)->assertStatus(403);
+    }
+
+    public function test_resend_sends_the_branded_email_and_starts_the_cooldown(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->unverified()->create();
+
+        $url = TenantVerificationUrl::resendFor($this->tenant, $user->email);
+
+        $this->assertNotNull($url);
+
+        $this->post($url)
+            ->assertRedirect()
+            ->assertSessionHas('status', 'verification-link-sent');
+
+        Notification::assertSentTo($user, TenantEmailVerification::class);
+        $this->assertGreaterThan(
+            0,
+            TenantVerificationCooldown::remaining($this->tenant, $user->email)
+        );
+
+        // A second request inside the server-side cooldown must not send again.
+        $this->post($url)
+            ->assertRedirect()
+            ->assertSessionHas('status', 'verification-cooldown');
+
+        Notification::assertSentTimes(TenantEmailVerification::class, 1);
+    }
+
+    public function test_resend_requires_a_valid_signature(): void
+    {
+        $user = User::factory()->unverified()->create();
+
+        $url = (string) TenantVerificationUrl::resendFor($this->tenant, $user->email);
+        $unsigned = preg_replace('/&signature=[^&]+/', '', $url);
+
+        $this->post($unsigned)->assertStatus(403);
+    }
+
+    public function test_resend_before_the_owner_exists_reports_preparing(): void
+    {
+        $url = TenantVerificationUrl::resendFor($this->tenant, 'missing@acme.test');
+
+        $this->assertNotNull($url);
+
+        $this->post($url)
+            ->assertRedirect()
+            ->assertSessionHas('status', 'verification-preparing');
     }
 
     private function verificationUrl(User $user): string
