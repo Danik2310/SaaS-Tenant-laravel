@@ -127,17 +127,30 @@ before the address was confirmed. The route still runs inside the tenant group,
 so the lookup hits the tenant database; a signed link whose `hash` does not match
 `sha1(email)` is refused.
 
-The controller answers with a page in every case. `Auth/EmailVerified` shows the
-green confirmation and hands the owner to `/login` after a short pause (a
-fallback sign-in link covers a blocked redirect; repeating the visit renders the
-"already confirmed" variant and redirects too). `Auth/EmailVerificationExpired`
-returns a 403 when the link is past its 60-minute window, was tampered with, or
-points at a deleted account, and routes the owner to sign in and resend. The gate
-page `Auth/VerifyEmail` shows the address the link went to, states that the
-workspace stays locked until it is confirmed, and has no link into the workspace;
-resend and logout remain. The signup success page
-`Auth/TenantRegisterSuccess` likewise has no way forward — the signed link is the
-only route in.
+The controller redirects to the signed central waiting screen `GET
+/register/pending`, which renders `Auth/TenantRegisterSuccess` in its pending
+state. That screen names the address, keeps the workspace locked, and has no link
+into the workspace; it polls its own `verified` prop every five seconds, so an
+already-open tab flips to the green check when the link is used in another one.
+The verified state shows the confirmation and hands the owner to the tenant
+`/login` after a short pause (a fallback sign-in link covers a blocked redirect;
+visiting the link again re-renders the same confirmed state).
+`Auth/EmailVerificationExpired` returns a 403 when the link is past its 60-minute
+window, was tampered with, or points at a deleted account, and routes the owner
+to sign in and resend. The in-tenant gate page `Auth/VerifyEmail` shows the
+address the link went to, states that the workspace stays locked until it is
+confirmed, and has no link into the workspace; resend and logout remain.
+
+The pending screen and its resend action are **signed central URLs**
+(`register.pending`, `register.pending.resend`, valid 24 hours): the owner has no
+session yet, so the signature is the credential. Signup and paid checkout
+redirect to the pending URL and start a server-side 60-second cooldown keyed by
+tenant and normalised email. The screen's **Resend email** button posts the
+signed resend URL and is disabled while that cooldown runs, so a reload, a second
+tab, or a hand-crafted POST cannot send a stream of mails. The resend reuses
+[`TenantVerificationMailer::send()`](../../app/Tenants/Support/TenantVerificationMailer.php),
+so the initial mail and the resend share one template and one tenant-rooted
+signed link.
 
 Locally, the mail reaches Laragon's Mailpit when `.env` sets
 `MAIL_MAILER=smtp` and `MAIL_HOST=127.0.0.1` (SMTP on port 1025, UI on 8025).
@@ -152,10 +165,10 @@ redirects to `verification.notice` until the signed link is clicked.
 
 The link must be rooted at the tenant domain: the provisioning job runs on a queue
 worker with no tenant request, where `URL` would otherwise sign the central
-`APP_URL`. [`TenantVerificationUrl::for()`](../../app/Tenants/Support/TenantVerificationUrl.php) `:28`
+`APP_URL`. [`TenantVerificationUrl::for()`](../../app/Tenants/Support/TenantVerificationUrl.php) `:33`
 forces the URL root and scheme to the tenant's primary domain and restores both in
 a `finally` (URL state is process-global and leaks into later jobs on a
-long-lived worker). [`SendTenantVerificationEmail::handle()`](../../app/Tenants/Listeners/SendTenantVerificationEmail.php) `:25`
+long-lived worker). [`SendTenantVerificationEmail::handle()`](../../app/Tenants/Listeners/SendTenantVerificationEmail.php) `:23`
 replaces the framework listener, so the in-tenant self-service signup shares the
 same branded mail; send failures are logged and never fail provisioning.
 
