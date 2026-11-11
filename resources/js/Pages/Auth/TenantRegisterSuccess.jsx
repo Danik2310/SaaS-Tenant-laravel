@@ -2,9 +2,6 @@ import { useEffect, useState } from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, router } from '@inertiajs/react';
 
-/** Long enough to read the confirmation, short enough not to feel stuck. */
-const REDIRECT_DELAY_MS = 3000;
-
 /** How often the waiting screen asks the server whether the link was used. */
 const POLL_INTERVAL_MS = 5000;
 
@@ -22,8 +19,10 @@ const STATUS_MESSAGES = {
  * The screen is the destination after signup, after a resend, and after the
  * email link itself. It deliberately offers no way into the workspace until
  * `verified` is true: the only action is a server-rate-limited resend. While it
- * waits it polls its own `verified` prop, so an already-open tab flips to the
- * green check as soon as the address is confirmed in another one.
+ * waits it subscribes to the tenant's public Reverb channel and also polls its
+ * own `verified` prop, so an already-open tab flips to the green check as soon
+ * as the address is confirmed in another one. The poll is the fallback when
+ * Reverb is not running.
  */
 export default function TenantRegisterSuccess({
     domain,
@@ -31,6 +30,7 @@ export default function TenantRegisterSuccess({
     trialDays,
     email,
     verified = false,
+    verificationChannel = null,
     tenantReady = true,
     resendUrl = null,
     loginUrl = null,
@@ -39,6 +39,39 @@ export default function TenantRegisterSuccess({
 }) {
     const [secondsLeft, setSecondsLeft] = useState(cooldownSeconds);
     const [sending, setSending] = useState(false);
+    const [confirmed, setConfirmed] = useState(verified);
+
+    // The prop is the server/polling answer. Once either the poll or the
+    // broadcast flips the screen, a later stale response must not flip it back.
+    useEffect(() => {
+        if (verified) {
+            setConfirmed(true);
+        }
+    }, [verified]);
+
+    // The waiting screen is unauthenticated, so this is a public channel. The
+    // backend derives the same HMAC name; an absent channel (builds without
+    // Reverb) simply leaves the 5-second poll in charge.
+    useEffect(() => {
+        if (
+            confirmed ||
+            !verificationChannel ||
+            typeof window === 'undefined' ||
+            !window.Echo
+        ) {
+            return undefined;
+        }
+
+        const channel = window.Echo.channel(verificationChannel);
+
+        channel.listen('.tenant.email.verified', () => {
+            setConfirmed(true);
+        });
+
+        return () => {
+            window.Echo?.leaveChannel?.(verificationChannel);
+        };
+    }, [confirmed, verificationChannel]);
 
     // The server is authoritative: every page load hands down the remaining
     // cooldown, and the client just ticks it down for display.
@@ -47,7 +80,7 @@ export default function TenantRegisterSuccess({
     }, [cooldownSeconds]);
 
     useEffect(() => {
-        if (verified || secondsLeft <= 0) {
+        if (confirmed || secondsLeft <= 0) {
             return undefined;
         }
 
@@ -56,10 +89,10 @@ export default function TenantRegisterSuccess({
         }, 1000);
 
         return () => window.clearTimeout(timer);
-    }, [secondsLeft, verified]);
+    }, [secondsLeft, confirmed]);
 
     useEffect(() => {
-        if (verified) {
+        if (confirmed) {
             return undefined;
         }
 
@@ -68,19 +101,7 @@ export default function TenantRegisterSuccess({
         }, POLL_INTERVAL_MS);
 
         return () => window.clearInterval(interval);
-    }, [verified]);
-
-    useEffect(() => {
-        if (!verified || !loginUrl) {
-            return undefined;
-        }
-
-        const timer = window.setTimeout(() => {
-            router.visit(loginUrl, { replace: true });
-        }, REDIRECT_DELAY_MS);
-
-        return () => window.clearTimeout(timer);
-    }, [verified, loginUrl]);
+    }, [confirmed]);
 
     const resend = () => {
         if (!resendUrl || sending || secondsLeft > 0) {
@@ -100,11 +121,11 @@ export default function TenantRegisterSuccess({
 
     const statusMessage = status ? STATUS_MESSAGES[status] ?? null : null;
 
-    if (verified) {
+    if (confirmed) {
         return (
             <GuestLayout>
                 <Head>
-                    <title>Email confirmed</title>
+                    <title>Email verified</title>
                     <meta name="robots" content="noindex" />
                 </Head>
 
@@ -128,11 +149,11 @@ export default function TenantRegisterSuccess({
                     </div>
 
                     <p className="mt-5 text-xs font-bold uppercase tracking-[0.2em] text-brand-700">
-                        You are confirmed
+                        Verified
                     </p>
 
                     <h1 className="mt-2 font-display text-3xl leading-tight tracking-tight text-ink">
-                        Email confirmed
+                        Email verified successfully
                     </h1>
 
                     <div className="mt-6 rounded-xl border border-emerald-100 bg-emerald-50/60 p-5 text-center">
@@ -143,19 +164,16 @@ export default function TenantRegisterSuccess({
                     </div>
 
                     <p className="mt-6 text-sm text-gray-600">
-                        Your workspace is unlocked. Taking you to the sign-in page…
+                        Your email address has been confirmed. You can now sign in to your
+                        workspace.
                     </p>
 
-                    <p className="mt-4 text-xs text-gray-500">
-                        Not redirected?{' '}
-                        <a
-                            href={loginUrl ?? '#'}
-                            className="rounded-md font-medium text-brand-700 underline hover:text-brand-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-                        >
-                            Sign in now
-                        </a>
-                        .
-                    </p>
+                    <a
+                        href={loginUrl ?? '#'}
+                        className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-brand-700 px-6 py-3 text-sm font-semibold text-white transition ease-in-out duration-150 hover:bg-brand-800 active:bg-brand-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                    >
+                        Go to Login
+                    </a>
                 </div>
             </GuestLayout>
         );
