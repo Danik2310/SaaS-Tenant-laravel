@@ -4,9 +4,8 @@ import TenantRegisterSuccess from '@/Pages/Auth/TenantRegisterSuccess';
 import EmailVerificationExpired from '@/Pages/Auth/EmailVerificationExpired';
 import VerifyEmail from '@/Pages/Auth/VerifyEmail';
 
-const { postMock, visitMock, reloadMock, routerPostMock } = vi.hoisted(() => ({
+const { postMock, reloadMock, routerPostMock } = vi.hoisted(() => ({
     postMock: vi.fn(),
-    visitMock: vi.fn(),
     reloadMock: vi.fn(),
     routerPostMock: vi.fn(),
 }));
@@ -18,7 +17,7 @@ vi.mock('@inertiajs/react', async () => {
         Head: ({ children }) => ReactActual.createElement(ReactActual.Fragment, null, children),
         Link: ({ href, children }) => ReactActual.createElement('a', { href }, children),
         useForm: () => ({ post: postMock, processing: false }),
-        router: { visit: visitMock, reload: reloadMock, post: routerPostMock },
+        router: { reload: reloadMock, post: routerPostMock },
     };
 });
 
@@ -26,7 +25,6 @@ describe('email verification pages', () => {
     beforeEach(() => {
         vi.stubGlobal('route', (name) => `/${name}`);
         postMock.mockClear();
-        visitMock.mockClear();
         reloadMock.mockClear();
         routerPostMock.mockClear();
     });
@@ -80,11 +78,7 @@ describe('email verification pages', () => {
     });
 
     describe('TenantRegisterSuccess confirmed state', () => {
-        beforeEach(() => {
-            vi.useFakeTimers();
-        });
-
-        test('shows the confirmed address then redirects to sign in', () => {
+        test('shows the verified message and a Go to Login button', () => {
             render(
                 <TenantRegisterSuccess
                     domain="acme-corp.sasapp"
@@ -97,38 +91,14 @@ describe('email verification pages', () => {
             );
 
             expect(
-                screen.getByRole('heading', { name: /^email confirmed$/i })
+                screen.getByRole('heading', { name: /^email verified successfully$/i })
             ).toBeInTheDocument();
             expect(screen.getByText('owner@acme.test')).toBeInTheDocument();
-            expect(screen.getByText(/workspace is unlocked/i)).toBeInTheDocument();
             expect(
-                screen.getByText(/taking you to the sign-in page/i)
+                screen.getByText(/you can now sign in to your workspace/i)
             ).toBeInTheDocument();
-            expect(visitMock).not.toHaveBeenCalled();
-
-            act(() => {
-                vi.advanceTimersByTime(3000);
-            });
-
-            expect(visitMock).toHaveBeenCalledWith('http://acme.sasapp.test/login', {
-                replace: true,
-            });
-        });
-
-        test('offers a fallback sign-in link', () => {
-            render(
-                <TenantRegisterSuccess
-                    domain="acme-corp.sasapp"
-                    plan="Trial"
-                    trialDays={14}
-                    email="owner@acme.test"
-                    verified
-                    loginUrl="http://acme.sasapp.test/login"
-                />
-            );
-
             expect(
-                screen.getByRole('link', { name: /sign in now/i })
+                screen.getByRole('link', { name: /go to login/i })
             ).toHaveAttribute('href', 'http://acme.sasapp.test/login');
         });
     });
@@ -189,6 +159,38 @@ describe('email verification pages', () => {
             });
 
             expect(reloadMock).toHaveBeenCalledWith({ only: ['verified'] });
+        });
+
+        test('flips to confirmed as soon as the Reverb broadcast arrives', () => {
+            const listen = vi.fn();
+            const leaveChannel = vi.fn();
+
+            vi.stubGlobal('Echo', {
+                channel: vi.fn(() => ({ listen })),
+                leaveChannel,
+            });
+
+            render(
+                <TenantRegisterSuccess
+                    {...pendingProps}
+                    cooldownSeconds={0}
+                    verificationChannel="tenant-verification.test"
+                />
+            );
+
+            expect(listen).toHaveBeenCalledWith(
+                '.tenant.email.verified',
+                expect.any(Function)
+            );
+
+            act(() => {
+                listen.mock.calls[0][1]({ verified: true });
+            });
+
+            expect(
+                screen.getByRole('heading', { name: /^email verified successfully$/i })
+            ).toBeInTheDocument();
+            expect(leaveChannel).toHaveBeenCalledWith('tenant-verification.test');
         });
 
         test('shows the resend result status', () => {

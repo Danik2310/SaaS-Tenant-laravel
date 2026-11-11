@@ -159,4 +159,26 @@ class TenantBuilderTest extends TestCase
         $this->assertSame($tenant->id, $attached->id);
         $this->assertTrue($tenant->domains()->where('domain', 'extra.sasapp')->exists());
     }
+
+    public function test_new_tenant_starts_with_an_unverified_owner_email(): void
+    {
+        $tenant = (new TenantBuilder)->withData($this->data())->build();
+
+        $this->assertNull($tenant->owner_email_verified_at);
+        $this->assertFalse($tenant->hasVerifiedOwnerEmail());
+    }
+
+    public function test_owner_email_verification_is_persisted_on_the_tenant(): void
+    {
+        $tenant = (new TenantBuilder)->withData($this->data())->build();
+        $verifiedAt = now()->startOfSecond();
+
+        $tenant->markOwnerEmailVerified($verifiedAt);
+
+        $stored = $tenant->fresh();
+
+        $this->assertNotNull($stored->owner_email_verified_at);
+        $this->assertTrue($stored->owner_email_verified_at->equalTo($verifiedAt));
+        $this->assertTrue($stored->hasVerifiedOwnerEmail());
+    }
 }

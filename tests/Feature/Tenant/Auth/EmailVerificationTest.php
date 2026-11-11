@@ -4,7 +4,9 @@ namespace Tests\Feature\Tenant\Auth;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Tenants\Events\TenantEmailVerified;
 use App\Tenants\Notifications\TenantEmailVerification;
+use App\Tenants\Support\TenantVerificationChannel;
 use App\Tenants\Support\TenantVerificationCooldown;
 use App\Tenants\Support\TenantVerificationUrl;
 use Illuminate\Auth\Events\Registered;
@@ -85,6 +87,61 @@ class EmailVerificationTest extends TestCase
 
         Event::assertDispatched(Verified::class);
         $this->assertTrue($user->fresh()->hasVerifiedEmail());
+    }
+
+    public function test_owner_verification_is_projected_and_broadcast(): void
+    {
+        Event::fake([TenantEmailVerified::class]);
+
+        $user = User::factory()->unverified()->create(['email' => 'owner@acme.test']);
+        $this->tenant->forceFill(['email' => $user->email])->saveQuietly();
+
+        $this->get($this->verificationUrl($user))->assertRedirect();
+
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+        $this->assertNotNull($this->tenant->fresh()->owner_email_verified_at);
+
+        Event::assertDispatched(
+            TenantEmailVerified::class,
+            fn (TenantEmailVerified $event): bool => $event->email === $user->email
+                && $event->tenant->is($this->tenant)
+                && $event->broadcastOn()->name === TenantVerificationChannel::for($this->tenant, $user->email)
+        );
+    }
+
+    public function test_teammate_verification_does_not_flip_the_owner_projection(): void
+    {
+        Event::fake([TenantEmailVerified::class]);
+
+        $this->tenant->forceFill(['email' => 'owner@acme.test'])->saveQuietly();
+
+        $teammate = User::factory()->unverified()->create(['email' => 'teammate@acme.test']);
+
+        $this->get($this->verificationUrl($teammate))->assertRedirect();
+
+        $this->assertTrue($teammate->fresh()->hasVerifiedEmail());
+        $this->assertNull($this->tenant->fresh()->owner_email_verified_at);
+
+        Event::assertNotDispatched(TenantEmailVerified::class);
+    }
+
+    public function test_pending_page_uses_the_central_projection_for_a_verified_owner(): void
+    {
+        $user = User::factory()->unverified()->create(['email' => 'owner@acme.test']);
+        $this->tenant->forceFill(['email' => $user->email])->saveQuietly();
+        $this->tenant->markOwnerEmailVerified(now());
+
+        $url = TenantVerificationUrl::pendingFor($this->tenant, $user->email);
+
+        $this->assertNotNull($url);
+
+        $this->get($url)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegisterSuccess')
+                ->where('verified', true)
+                ->where('tenantReady', true)
+            );
     }
 
     public function test_email_is_not_verified_with_invalid_hash(): void
@@ -227,6 +284,7 @@ class EmailVerificationTest extends TestCase
                 ->component('Auth/TenantRegisterSuccess')
                 ->where('email', $user->email)
                 ->where('verified', false)
+                ->where('verificationChannel', TenantVerificationChannel::for($this->tenant, $user->email))
                 ->where('domain', $this->tenant->domain)
                 ->where('tenantReady', true)
                 ->where('cooldownSeconds', 0)
