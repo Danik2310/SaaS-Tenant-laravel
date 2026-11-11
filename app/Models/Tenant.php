@@ -40,6 +40,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     protected $casts = [
         'trial_ends_at' => 'datetime',
+        'owner_email_verified_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
@@ -111,6 +112,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'id',
             'name',
             'email',
+            'owner_email_verified_at',
             'status',
             'plan_id',
             'trial_ends_at',
@@ -130,6 +132,32 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'created_at',
             'updated_at',
         ];
+    }
+
+    /**
+     * Record that the tenant owner confirmed their email address.
+     *
+     * This is the central projection consumed by the pending registration
+     * screen and the broadcast. The tenant-side `users.email_verified_at` row
+     * remains authoritative; the listener writes this after it flips.
+     */
+    public function markOwnerEmailVerified(?\DateTimeInterface $verifiedAt = null): bool
+    {
+        // Deliberately not mass assignable: only the verification listener may
+        // write this column, so a crafted tenant payload cannot fake it.
+        //
+        // Quiet save: this is a projection, and the central activity-log
+        // observer stores the tenant key in a bigint `subject_id`. Test tenants
+        // use string keys, and a logging failure must never undo a real
+        // verification. The tenant-side user update is logged normally.
+        return $this->forceFill([
+            'owner_email_verified_at' => $verifiedAt ?? now(),
+        ])->saveQuietly();
+    }
+
+    public function hasVerifiedOwnerEmail(): bool
+    {
+        return $this->owner_email_verified_at !== null;
     }
 
     public function domains()

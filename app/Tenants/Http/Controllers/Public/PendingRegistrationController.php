@@ -7,6 +7,7 @@ namespace App\Tenants\Http\Controllers\Public;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Tenants\Support\TenantVerificationChannel;
 use App\Tenants\Support\TenantVerificationCooldown;
 use App\Tenants\Support\TenantVerificationMailer;
 use App\Tenants\Support\TenantVerificationUrl;
@@ -44,28 +45,35 @@ class PendingRegistrationController extends Controller
             return redirect()->route('register.tenant');
         }
 
-        $verified = false;
-        $tenantReady = true;
+        $ownerEmail = strtolower(trim((string) $tenant->email));
+
+        // The central projection lets a verified owner skip tenancy entirely.
+        // A different address still falls through to the tenant-side user row,
+        // which stays authoritative.
+        $verified = $email === $ownerEmail && $tenant->hasVerifiedOwnerEmail();
+        $tenantReady = $verified;
         $startedTenancy = ! tenancy()->initialized;
 
-        try {
-            if ($startedTenancy) {
-                tenancy()->initialize($tenant);
-            }
+        if (! $verified) {
+            try {
+                if ($startedTenancy) {
+                    tenancy()->initialize($tenant);
+                }
 
-            $user = User::where('email', $email)->first();
-            $tenantReady = $user !== null;
-            $verified = $user !== null && $user->hasVerifiedEmail();
-        } catch (\Throwable $e) {
-            $tenantReady = false;
+                $user = User::where('email', $email)->first();
+                $tenantReady = $user !== null;
+                $verified = $user !== null && $user->hasVerifiedEmail();
+            } catch (\Throwable $e) {
+                $tenantReady = false;
 
-            Log::warning('Could not read the pending registration owner', [
-                'tenant_id' => $tenant->id,
-                'error' => $e->getMessage(),
-            ]);
-        } finally {
-            if ($startedTenancy && tenancy()->initialized) {
-                tenancy()->end();
+                Log::warning('Could not read the pending registration owner', [
+                    'tenant_id' => $tenant->id,
+                    'error' => $e->getMessage(),
+                ]);
+            } finally {
+                if ($startedTenancy && tenancy()->initialized) {
+                    tenancy()->end();
+                }
             }
         }
 
@@ -77,6 +85,7 @@ class PendingRegistrationController extends Controller
                 : null,
             'email' => $email,
             'verified' => $verified,
+            'verificationChannel' => TenantVerificationChannel::for($tenant, $email),
             'tenantReady' => $tenantReady,
             'resendUrl' => TenantVerificationUrl::resendFor($tenant, $email),
             'loginUrl' => TenantVerificationUrl::loginFor($tenant),

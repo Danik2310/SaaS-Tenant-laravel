@@ -29,8 +29,10 @@ use App\Observers\Tenant\UserObserver;
 use App\Observers\Tenant\WarehouseObserver;
 use App\Shared\Observers\ActivityLogObserver;
 use App\Shared\Support\ImpersonatedAdmin;
+use App\Tenants\Listeners\BroadcastTenantEmailVerified;
 use App\Tenants\Listeners\SendTenantVerificationEmail;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Auth;
@@ -60,6 +62,9 @@ class EventServiceProvider extends ServiceProvider
     protected $listen = [
         Registered::class => [
             SendTenantVerificationEmail::class,
+        ],
+        Verified::class => [
+            BroadcastTenantEmailVerified::class,
         ],
     ];
 
