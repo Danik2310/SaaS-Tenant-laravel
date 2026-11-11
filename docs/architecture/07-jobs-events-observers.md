@@ -12,8 +12,8 @@
 ## 1. Model observers
 
 Observers are registered in
-[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:66`.
-Event auto-discovery is **off** (`shouldDiscoverEvents()` `:124`) — every observer
+[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:71`.
+Event auto-discovery is **off** (`shouldDiscoverEvents()` `:129`) — every observer
 is explicit.
 
 ### 1.1 Activity log
@@ -68,6 +68,7 @@ product.
 | Event | Listener(s) | Registered in |
 |-------|-------------|---------------|
 | `Registered` | `SendTenantVerificationEmail` | `EventServiceProvider::$listen` |
+| `Verified` | `BroadcastTenantEmailVerified` | `EventServiceProvider::$listen` |
 | `PlanChanged` | `HandlePlanChange` | billing provider |
 | `TenantSuspended` | `HandleTenantSuspension` | `TenancyServiceProvider` |
 | `TenantReactivated` | `HandleTenantReactivation` | `TenancyServiceProvider` |
@@ -82,6 +83,13 @@ product.
   link (see [`04-authentication.md`](04-authentication.md) §3.3) and sends the
   branded mail. The tenant-owner provisioning job fires `Registered` so central
   signup and the in-tenant self-service signup share one path.
+- [`BroadcastTenantEmailVerified`](../../app/Tenants/Listeners/BroadcastTenantEmailVerified.php) `:24`
+  projects the owner's tenant-side confirmation onto
+  `tenants.owner_email_verified_at` and broadcasts `TenantEmailVerified` on the
+  waiting screen's HMAC channel (see
+  [`04-authentication.md`](04-authentication.md) §3.3). A teammate's own address
+  is ignored; a Reverb failure is logged and the 5-second poll remains the
+  fallback.
 - [`HandleTenantSuspension`](../../app/Tenants/Listeners/HandleTenantSuspension.php) `:14`
   and
   [`HandleTenantReactivation`](../../app/Tenants/Listeners/HandleTenantReactivation.php) `:14`

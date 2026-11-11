@@ -130,11 +130,30 @@ so the lookup hits the tenant database; a signed link whose `hash` does not matc
 The controller redirects to the signed central waiting screen `GET
 /register/pending`, which renders `Auth/TenantRegisterSuccess` in its pending
 state. That screen names the address, keeps the workspace locked, and has no link
-into the workspace; it polls its own `verified` prop every five seconds, so an
-already-open tab flips to the green check when the link is used in another one.
-The verified state shows the confirmation and hands the owner to the tenant
-`/login` after a short pause (a fallback sign-in link covers a blocked redirect;
-visiting the link again re-renders the same confirmed state).
+into the workspace. Two things flip it to the green check:
+
+1. **Reverb** — when the owner clicks the link, the `Verified` listener
+   [`BroadcastTenantEmailVerified`](../../app/Tenants/Listeners/BroadcastTenantEmailVerified.php)
+   projects `owner_email_verified_at` onto the central `tenants` row and
+   broadcasts `TenantEmailVerified` on the public HMAC channel
+   `tenant-verification.<sha256>`
+   ([`TenantVerificationChannel`](../../app/Tenants/Support/TenantVerificationChannel.php)).
+   The open tab is already subscribed through Echo, so it flips immediately.
+2. **Poll fallback** — the screen still polls its own `verified` prop every five
+   seconds, so it also flips when Reverb is not running.
+
+`tenants.owner_email_verified_at` is a **projection**: the tenant-side
+`users.email_verified_at` row remains authoritative, and only the owner's address
+is projected — a teammate confirming their own address must not unlock the
+owner's workspace. Real-time requires `BROADCAST_DRIVER=reverb` and a running
+`php artisan reverb:start`; `php artisan reverb:install` generates the
+`REVERB_*`/`VITE_REVERB_*` credentials. Without either, the poll keeps the flow
+working.
+
+The verified state shows the confirmation and a full-width **Go to Login**
+button pointing at the tenant `/login`; it no longer auto-redirects, so the
+owner chooses when to leave the screen (visiting the link again re-renders the
+same confirmed state).
 `Auth/EmailVerificationExpired` returns a 403 when the link is past its 60-minute
 window, was tampered with, or points at a deleted account, and routes the owner
 to sign in and resend. The in-tenant gate page `Auth/VerifyEmail` shows the
