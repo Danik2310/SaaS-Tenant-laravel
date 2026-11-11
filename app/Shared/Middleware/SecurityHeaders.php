@@ -46,10 +46,25 @@ class SecurityHeaders
 
     private function devCsp(): string
     {
+        $connectSources = ["'self'", 'ws://127.0.0.1:5174', 'http://127.0.0.1:5174'];
+        $reverb = $this->reverbConnectSource();
+
+        if ($reverb !== null) {
+            $connectSources[] = $reverb;
+
+            // The browser may be opened on either loopback spelling; allow the
+            // counterpart so VITE_REVERB_HOST and the address bar can disagree.
+            if (str_contains($reverb, '://localhost')) {
+                $connectSources[] = str_replace('://localhost', '://127.0.0.1', $reverb);
+            } elseif (str_contains($reverb, '://127.0.0.1')) {
+                $connectSources[] = str_replace('://127.0.0.1', '://localhost', $reverb);
+            }
+        }
+
         return implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://127.0.0.1:5174",
-            "connect-src 'self' ws://127.0.0.1:5174 http://127.0.0.1:5174",
+            'connect-src '.implode(' ', $connectSources),
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "font-src 'self' data: https://fonts.bunny.net",
             "img-src 'self' data:",
@@ -62,10 +77,17 @@ class SecurityHeaders
 
     private function productionCsp(string $nonce): string
     {
+        $connectSources = ["'self'"];
+        $reverb = $this->reverbConnectSource();
+
+        if ($reverb !== null) {
+            $connectSources[] = $reverb;
+        }
+
         return implode('; ', [
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}'",
-            "connect-src 'self'",
+            'connect-src '.implode(' ', $connectSources),
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "font-src 'self' data: https://fonts.bunny.net",
             "img-src 'self' data:",
@@ -74,5 +96,24 @@ class SecurityHeaders
             "base-uri 'self'",
             "object-src 'none'",
         ]);
+    }
+
+    /**
+     * WebSocket origin for the Echo client, derived from the same Reverb
+     * connection the server broadcasts through.
+     */
+    private function reverbConnectSource(): ?string
+    {
+        $options = (array) config('broadcasting.connections.reverb.options', []);
+        $host = trim((string) ($options['host'] ?? ''));
+
+        if ($host === '') {
+            return null;
+        }
+
+        $scheme = ($options['scheme'] ?? 'https') === 'https' ? 'wss' : 'ws';
+        $port = $options['port'] ?? null;
+
+        return $scheme.'://'.$host.($port ? ':'.$port : '');
     }
 }
