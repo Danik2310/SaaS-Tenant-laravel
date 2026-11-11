@@ -58,7 +58,44 @@ class SecurityHeadersTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
 
         $this->assertStringNotContainsString('127.0.0.1:5174', $csp);
-        $this->assertStringNotContainsString('ws://', $csp);
+        $this->assertStringNotContainsString("'unsafe-eval'", $csp);
+    }
+
+    public function test_dev_csp_includes_reverb_websocket_origin(): void
+    {
+        app()['env'] = 'local';
+        config([
+            'broadcasting.connections.reverb.options.host' => 'localhost',
+            'broadcasting.connections.reverb.options.port' => 8080,
+            'broadcasting.connections.reverb.options.scheme' => 'http',
+        ]);
+
+        $middleware = new SecurityHeaders;
+        $request = Request::create('/');
+        $response = $middleware->handle($request, fn ($req) => response('OK'));
+
+        $csp = $response->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString('ws://localhost:8080', $csp);
+        $this->assertStringContainsString('ws://127.0.0.1:8080', $csp);
+    }
+
+    public function test_prod_csp_includes_reverb_websocket_origin(): void
+    {
+        app()['env'] = 'production';
+        config([
+            'broadcasting.connections.reverb.options.host' => 'reverb.example.com',
+            'broadcasting.connections.reverb.options.port' => 443,
+            'broadcasting.connections.reverb.options.scheme' => 'https',
+        ]);
+
+        $middleware = new SecurityHeaders;
+        $request = Request::create('/');
+        $response = $middleware->handle($request, fn ($req) => response('OK'));
+
+        $csp = $response->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString('wss://reverb.example.com:443', $csp);
         $this->assertStringNotContainsString("'unsafe-eval'", $csp);
     }
 
