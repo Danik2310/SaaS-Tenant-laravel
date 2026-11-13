@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Public;
 
+use App\Models\GlobalSetting;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
@@ -122,6 +123,24 @@ class TenantRegistrationTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Auth/TenantRegister')
                 ->where('selected_plan', null));
+    }
+
+    public function test_registration_is_forbidden_when_disabled_in_settings(): void
+    {
+        GlobalSetting::set('allow_registration', 'false');
+
+        $this->post('/register', $this->payload())
+            ->assertStatus(403);
+
+        $this->assertFalse(Tenant::where('email', 'jane@acme.test')->exists());
+    }
+
+    public function test_registration_stays_open_when_setting_is_missing(): void
+    {
+        GlobalSetting::where('key', 'allow_registration')->delete();
+
+        $this->post('/register', $this->payload())
+            ->assertRedirect();
     }
 
     public function test_guest_can_register_a_workspace_with_trial_plan(): void

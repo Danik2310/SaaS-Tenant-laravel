@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Public;
 
 use App\Models\Domain;
+use App\Models\GlobalSetting;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Shared\Contracts\LocationCatalog;
@@ -21,7 +22,13 @@ class StoreTenantRegistrationRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        // Settings are stored as the strings 'true'/'false', so a plain cast
+        // would treat 'false' as enabled. Default stays open for a fresh
+        // database that has not been seeded yet.
+        return filter_var(
+            GlobalSetting::get('allow_registration', true),
+            FILTER_VALIDATE_BOOLEAN
+        );
     }
 
     public function rules(): array
