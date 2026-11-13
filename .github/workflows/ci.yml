@@ -101,6 +101,7 @@ jobs:
               tests/Feature/PlanGatingTest.php
               tests/Feature/SecurityTest.php
               tests/Feature/SeederIdempotencyTest.php
+              tests/Feature/Shared/DevStackTest.php
               tests/Feature/StaffManagementTest.php
               tests/Feature/Tenant/Auth/EmailVerificationGateTest.php
               tests/Feature/Tenant/Auth/JwtTenantScopeTest.php
