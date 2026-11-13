@@ -19,7 +19,9 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:5174')],
+    // No localhost fallback: an unset FRONTEND_URL yields an empty allowlist
+    // (fail closed) instead of trusting a local origin in production.
+    'allowed_origins' => array_filter([env('FRONTEND_URL')]),
 
     'allowed_origins_patterns' => [],
 

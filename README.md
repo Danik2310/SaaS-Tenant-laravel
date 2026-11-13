@@ -48,6 +48,7 @@ php artisan db:seed
 | `ADMIN_EMAIL` | Admin login email | `admin@example.com` |
 | `ADMIN_PASSWORD` | Admin login password | _(set in .env)_ |
 | `TENANT_PASSWORD` | Default password for seeded tenants | _(set in .env)_ |
+| `FRONTEND_URL` | Exact frontend origin allowed by CORS (required in production) | `http://localhost:5174` |
 | `QUEUE_CONNECTION` | Must be `sync` for seeding | `sync` |
 | `CACHE_DRIVER` | Must be `array` or `redis` for tenancy | `redis` |
 
@@ -273,6 +274,11 @@ pnpm exec vitest run tests/frontend/components/Subscriptions.test.jsx
 | `chart.js` v4 + `react-chartjs-2` v5 | Charts for dashboard overview |
 
 ## Production
+
+Required before deploying: set `FRONTEND_URL` to the exact frontend origin
+(scheme + host + port, no trailing slash). `config/cors.php` has no
+`localhost` fallback — leaving it unset fails closed and disables
+cross-origin API access.
 
 ```bash
 # Clear caches
