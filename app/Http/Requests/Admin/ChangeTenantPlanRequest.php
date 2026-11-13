@@ -15,7 +15,7 @@ class ChangeTenantPlanRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'plan_id' => 'required|integer|exists:mysql_central.plans,id',
+            'plan_id' => 'required|integer|exists:'.config('tenancy.central_connection').'.plans,id',
         ];
     }
 

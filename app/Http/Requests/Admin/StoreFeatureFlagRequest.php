@@ -15,7 +15,7 @@ class StoreFeatureFlagRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'key' => ['required', 'string', 'max:100', 'regex:/^[a-z][a-z0-9_]*$/', 'unique:mysql_central.feature_flags,key'],
+            'key' => ['required', 'string', 'max:100', 'regex:/^[a-z][a-z0-9_]*$/', 'unique:'.config('tenancy.central_connection').'.feature_flags,key'],
             'label' => 'required|string|max:150',
             'description' => 'nullable|string|max:255',
             'is_active' => 'sometimes|boolean',

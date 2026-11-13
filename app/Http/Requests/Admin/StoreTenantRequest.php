@@ -20,7 +20,7 @@ class StoreTenantRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => 'required|email',
             'domain' => 'required|string',
-            'plan' => 'nullable|string|exists:mysql_central.plans,slug',
+            'plan' => 'nullable|string|exists:'.config('tenancy.central_connection').'.plans,slug',
             'company_name' => 'nullable|string|max:255',
             'first_name' => 'nullable|string|max:255',
             'last_name' => 'nullable|string|max:255',

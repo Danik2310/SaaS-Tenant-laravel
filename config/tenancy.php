@@ -35,6 +35,15 @@ return [
     'central_domains' => explode(',', env('CENTRAL_DOMAINS', '127.0.0.1,localhost')),
 
     /**
+     * The database connection that stores central tables (tenants, plans,
+     * payment methods, feature flags). Central models and admin validation
+     * rules resolve it from here so renaming the connection only needs one
+     * change. Distinct from `database.central_connection`, which is the
+     * connection stancl/tenancy boots against.
+     */
+    'central_connection' => env('CENTRAL_DB_CONNECTION', 'mysql_central'),
+
+    /**
      * The default plan slug used when a tenant doesn't have a plan assigned.
      */
     'default_plan_slug' => env('DEFAULT_PLAN_SLUG', 'free'),

@@ -17,7 +17,7 @@ class UpdateFeatureFlagRequest extends FormRequest
         $flagId = $this->route('id');
 
         return [
-            'key' => ['required', 'string', 'max:100', 'regex:/^[a-z][a-z0-9_]*$/', 'unique:mysql_central.feature_flags,key,'.$flagId],
+            'key' => ['required', 'string', 'max:100', 'regex:/^[a-z][a-z0-9_]*$/', 'unique:'.config('tenancy.central_connection').'.feature_flags,key,'.$flagId],
             'label' => 'required|string|max:150',
             'description' => 'nullable|string|max:255',
             'is_active' => 'sometimes|boolean',

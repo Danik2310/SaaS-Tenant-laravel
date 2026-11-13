@@ -20,7 +20,7 @@ class UpdatePlanRequest extends FormRequest
 
         return [
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:mysql_central.plans,slug,'.$planId,
+            'slug' => 'required|string|max:255|unique:'.config('tenancy.central_connection').'.plans,slug,'.$planId,
             'status' => 'sometimes|required|string|in:active,inactive',
             'price' => 'required|numeric|min:0',
             'duration_months' => 'sometimes|required|integer|min:1',
