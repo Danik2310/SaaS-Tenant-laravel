@@ -5,6 +5,7 @@ use App\Plans\PlansServiceProvider;
 use App\Products\ProductsServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\AuthServiceProvider;
+use App\Providers\DevStackServiceProvider;
 use App\Providers\EventServiceProvider;
 use App\Providers\RouteServiceProvider;
 use App\Providers\TenancyServiceProvider;
@@ -185,6 +186,7 @@ return [
         AppServiceProvider::class,
         AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
+        DevStackServiceProvider::class,
         EventServiceProvider::class,
         SharedServiceProvider::class,
         JwtServiceProvider::class,
