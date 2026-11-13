@@ -51,16 +51,24 @@ php artisan db:seed
 | `FRONTEND_URL` | Exact frontend origin allowed by CORS (required in production) | `http://localhost:5174` |
 | `QUEUE_CONNECTION` | Must be `sync` for seeding | `sync` |
 | `CACHE_DRIVER` | Must be `array` or `redis` for tenancy | `redis` |
+| `DEV_STACK` | `php artisan serve` also starts Vite + Reverb (local only) | `false` |
 
 ## Development
 
 ```bash
-# Start Vite dev server (port 5174)
-pnpm run dev
+# One command: Laravel (:8000) + Vite (:5174) + Reverb (:8080).
+# Requires DEV_STACK=true in .env (on in the local .env, off in .env.example).
+# Ctrl+C stops all three and removes public/hot.
+php artisan serve
 
-# In another terminal — Laravel via Laragon/Nginx/Valet
-# No separate artisan serve needed when using Laragon
+# Vite and Reverb only, if Laravel is served by Laragon/Nginx/Valet
+pnpm run dev
+php artisan reverb:start
 ```
+
+Laragon/Apache keeps port 80 for tenant vhosts. With `artisan serve`, tenant
+sites are reachable at `http://<tenant>.sasapp:8000` after adding the host to
+your hosts file — the port is stripped before tenant identification.
 
 ## Commands
 
