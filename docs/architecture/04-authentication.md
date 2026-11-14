@@ -91,7 +91,7 @@ sequenceDiagram
     end
 ```
 
-- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:42`.
+- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:48`.
 - [`LoginRequest::authenticate()`](../../app/Http/Requests/Auth/LoginRequest.php) `:51`
   — throttles to **5 attempts / minute** keyed on `email|ip`,
   [`ensureIsNotRateLimited()`](../../app/Http/Requests/Auth/LoginRequest.php) `:75`.
@@ -184,12 +184,98 @@ redirects to `verification.notice` until the signed link is clicked.
 
 The link must be rooted at the tenant domain: the provisioning job runs on a queue
 worker with no tenant request, where `URL` would otherwise sign the central
-`APP_URL`. [`TenantVerificationUrl::for()`](../../app/Tenants/Support/TenantVerificationUrl.php) `:33`
+`APP_URL`. [`TenantVerificationUrl::for()`](../../app/Tenants/Support/TenantVerificationUrl.php) `:34`
 forces the URL root and scheme to the tenant's primary domain and restores both in
 a `finally` (URL state is process-global and leaks into later jobs on a
 long-lived worker). [`SendTenantVerificationEmail::handle()`](../../app/Tenants/Listeners/SendTenantVerificationEmail.php) `:23`
 replaces the framework listener, so the in-tenant self-service signup shares the
 same branded mail; send failures are logged and never fail provisioning.
+
+### 3.4 Google OAuth (tenant login & registration)
+
+Tenant users can sign in — or create an account — with Google instead of a
+password. The flow is a **two-host handoff**: Google only accepts an exact
+redirect URI, so a per-tenant callback (`<slug>.sasapp/...`) cannot be
+registered (wildcards are rejected, and plain `http` is refused outside
+loopback). Both OAuth endpoints therefore live on a **central** domain, and the
+tenant is carried in the central session — never in the callback query string.
+`GOOGLE_REDIRECT_URI` must be on the same host as `APP_URL`: that cookie is
+host-scoped, so an entry link minted for `127.0.0.1` that returns to `localhost`
+would lose the tenant and end in the "session expired" path.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant T as Tenant host (slug.sasapp)
+    participant C as Central host
+    participant G as Google
+
+    B->>T: GET /login
+    T-->>B: providers[] → central /auth/google/redirect?tenant=…&intent=…
+    B->>C: GET /auth/google/redirect  (session: oauth.tenant)
+    C-->>B: 302 accounts.google.com (prompt=select_account)
+    B->>G: consent
+    G-->>B: 302 /auth/google/callback?code=…
+    B->>C: GET /auth/google/callback
+    C->>C: exchange code, resolve/create user in the tenant DB
+    C-->>B: 302 <slug>.sasapp/auth/google/complete?signature=… (60 s)
+    B->>T: GET /auth/google/complete  (signed)
+    T-->>B: 302 /dashboard + JWT cookie
+```
+
+- Entry point and callback:
+  [`GoogleOAuthController::redirect()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:53`
+  and [`GoogleOAuthController::callback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:71`.
+  Registered once as `oauth.google.redirect` / `oauth.google.callback` behind
+  `central.domain` — `routes/web.php` :144. Deliberately **no `guest`**: these
+  are central routes with no tenant session to protect, and `guest` would bounce
+  a visitor who is already signed in instead of letting them switch accounts.
+- Tenant end:
+  [`GoogleOAuthCompleteController::__invoke()`](../../app/Http/Controllers/Auth/GoogleOAuthCompleteController.php) `:30`,
+  route `auth.google.complete` with `signed` and `throttle:10,1`, outside both
+  `auth` and `guest` — `routes/tenant.php` :112.
+- Account resolution:
+  [`OAuthAccountLinker::loginOrRegister()`](../../app/Shared/Support/OAuthAccountLinker.php) `:38`.
+- Handoff URL:
+  [`OAuthHandoffUrl::for()`](../../app/Tenants/Support/OAuthHandoffUrl.php) `:34`
+  (`EXPIRY_SECONDS = 60`).
+
+**Linking rules** (one `oauth_accounts` row per provider identity):
+
+1. A known `provider` + `provider_user_id` signs in directly. Email is never
+   consulted on this path, so an address change on either side cannot hijack the
+   link.
+2. An unknown identity may link to an existing local account **only when Google
+   reports `email_verified`**. Linking an unverified provider email would let
+   anyone who can create an unverified Google account for `victim@example.com`
+   take over the victim's local account.
+3. No local account → a user is created with `password = NULL`,
+   `email_verified_at = now()` and `is_active = true`, subject to the plan's
+   `max_users` quota (same `PlanLimitExceededException` as `StoreUserRequest`).
+   `Registered` is **not** dispatched: its only listener sends the verification
+   mail that Google has already made redundant.
+
+Soft-deleted accounts are never resurrected — the Eloquent global scope keeps the
+email lookup inside `deleted_at IS NULL`, matching the partial unique index.
+Inactive accounts are refused on both paths, and every refusal returns to the
+tenant host with a **signed** `?oauth_error=<code>` because a cross-host session
+flash is unreadable on the other host
+([`OAuthCallbackError`](../../app/Shared/Support/OAuthCallbackError.php) owns the
+codes and the copy).
+
+`users.password` is nullable for these accounts
+(`2026_11_14_000002_make_users_password_nullable`). A NULL hash is not a bypass:
+`BcryptHasher::check()` returns false for it, and the user can adopt a password
+later through the profile / password-reset flows. The JWT is minted only on the
+tenant host, so it never appears in a URL, and no provider access or refresh
+tokens are stored.
+
+Socialite does not implement the OAuth `state` parameter. The central session
+binding (the tenant must be in *this* browser's session) plus
+`prompt=select_account` — which forces the account chooser instead of a silent
+SSO round trip — are what stand in for it; a login-CSRF would otherwise need the
+victim to consent to the attacker's Google account unprompted.
 
 ---
 
