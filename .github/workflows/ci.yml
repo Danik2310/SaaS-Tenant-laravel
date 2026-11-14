@@ -136,6 +136,8 @@ jobs:
               tests/Feature/ResourceUsage/TenantResourceUsageTest.php
               tests/Feature/RouteRegistrationTest.php
               tests/Feature/Tenant/Auth/EmailVerificationTest.php
+              tests/Feature/Tenant/Auth/GoogleOAuthIsolationTest.php
+              tests/Feature/Tenant/Auth/GoogleOAuthTest.php
               tests/Feature/Tenant/ExpireTrialsCommandTest.php
               tests/Feature/Tenant/Impersonation/EnsureImpersonationValidTest.php
               tests/Feature/Tenant/Impersonation/GodModeDashboardAccessTest.php

@@ -166,6 +166,7 @@ class TenantMigrationTest extends TestCase
             'payments',
             'settings',
             'activity_log',
+            'oauth_accounts',
             'migrations',
         ];
     }
