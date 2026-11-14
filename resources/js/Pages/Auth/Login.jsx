@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import Checkbox from '@/Components/Checkbox';
+import GoogleButton from '@/Components/Auth/GoogleButton';
 import GuestLayout from '@/Layouts/GuestLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -7,7 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Login({ status, canResetPassword }) {
+export default function Login({ status, canResetPassword, providers = [], oauthError = null }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -36,6 +37,14 @@ export default function Login({ status, canResetPassword }) {
             </div>
 
             {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
+
+            {oauthError && (
+                <div role="alert" className="mt-4 text-sm text-red-600">
+                    {oauthError}
+                </div>
+            )}
+
+            <GoogleButton providers={providers} />
 
             <form onSubmit={submit} className="mt-6">
                 <div>

@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\GoogleOAuthCompleteController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
@@ -103,6 +104,14 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
     Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
         ->middleware('throttle:6,1')
         ->name('verification.verify');
+
+    // Google sign-in handoff — public by design, the signed URL is the
+    // credential. The central callback cannot set a tenant session or the
+    // tenant JWT cookie (different host), so it sends the browser here with a
+    // 60-second signature and this endpoint mints the token in tenant context.
+    Route::get('auth/google/complete', GoogleOAuthCompleteController::class)
+        ->middleware(['signed', 'throttle:10,1'])
+        ->name('auth.google.complete');
 
     // Authenticated tenant routes
     Route::middleware(['jwt.cookie', 'impersonation.session', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'session.expiry:web', 'throttle:60,1'])->group(function () {

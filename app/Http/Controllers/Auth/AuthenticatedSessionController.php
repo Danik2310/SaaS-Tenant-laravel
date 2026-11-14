@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
 use App\Shared\Support\JwtCookie;
+use App\Shared\Support\OAuthCallbackError;
+use App\Shared\Support\OAuthProviderLinks;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,11 +30,15 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
+            // "Continue with …" links; empty when no provider is configured.
+            'providers' => OAuthProviderLinks::for('login'),
+            // Signed `?oauth_error=` carried back by the Google callback.
+            'oauthError' => OAuthCallbackError::message($request),
         ]);
     }
 

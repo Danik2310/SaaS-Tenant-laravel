@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import GoogleButton from '@/Components/Auth/GoogleButton';
 import GuestLayout from '@/Layouts/GuestLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
@@ -6,7 +7,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Register() {
+export default function Register({ providers = [], oauthError = null }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -34,6 +35,14 @@ export default function Register() {
                 <h1 className="font-display text-2xl leading-tight tracking-tight text-ink">Create your account</h1>
                 <p className="mt-1 text-sm text-gray-600">Create an account for this workspace.</p>
             </div>
+
+            {oauthError && (
+                <div role="alert" className="mt-4 text-sm text-red-600">
+                    {oauthError}
+                </div>
+            )}
+
+            <GoogleButton providers={providers} />
 
             <form onSubmit={submit} className="mt-6">
                 <div>

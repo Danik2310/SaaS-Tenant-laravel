@@ -37,4 +37,19 @@ return [
         'mode' => env('STRIPE_MODE', 'test'),
     ],
 
+    /*
+    | Google OAuth 2.0 — tenant login / registration only (see GoogleOAuthController).
+    |
+    | `redirect` must equal the Authorized redirect URI registered in Google
+    | Cloud Console *exactly*, so it is configured explicitly instead of being
+    | derived from APP_URL: local, staging and production cannot drift apart.
+    | Google rejects wildcard URIs, which is why the whole flow runs on the
+    | central host and hands the tenant a signed, short-lived redirect.
+    */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
 ];

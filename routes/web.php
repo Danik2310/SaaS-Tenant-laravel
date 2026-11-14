@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Billing\Http\Controllers\Admin\PaymentMethodController;
 use App\Billing\Http\Controllers\Admin\SubscriptionController;
 use App\Billing\Http\Controllers\Admin\SubscriptionPaymentController;
+use App\Http\Controllers\Auth\GoogleOAuthController;
 use App\Plans\Http\Controllers\Admin\FeatureFlagController;
 use App\Plans\Http\Controllers\Admin\PlanController;
 use App\Shared\Constants\PermissionNames;
@@ -125,6 +126,25 @@ Route::middleware(['central.domain', 'guest'])->group(function () {
     Route::post('/register/pending/resend', [PendingRegistrationController::class, 'resend'])
         ->middleware(['signed', 'throttle:6,1'])
         ->name('register.pending.resend');
+});
+
+// Google OAuth 2.0 — tenant login/registration only (central workspace signup
+// does not use it). The whole flow runs on the central host because Google
+// refuses wildcard redirect URIs and plain http outside loopback, so a
+// per-tenant callback (`<slug>.sasapp/auth/google/callback`) cannot be
+// registered. The tenant travels in the central session and is handed back a
+// signed tenant URL; see GoogleOAuthController.
+//
+// Deliberately no `guest`: this endpoint has no tenant session to protect, and
+// `guest` would bounce a visitor who is already signed in to the panel instead
+// of letting them switch accounts. Registered once (no domain constraint) —
+// `central.domain` keeps it off tenant hosts, like /register/pending above.
+Route::middleware(['central.domain', 'throttle:20,1'])->group(function () {
+    Route::get('/auth/google/redirect', [GoogleOAuthController::class, 'redirect'])
+        ->name('oauth.google.redirect');
+
+    Route::get('/auth/google/callback', [GoogleOAuthController::class, 'callback'])
+        ->name('oauth.google.callback');
 });
 
 // Unauthorized page (accessible to authenticated admin users on central domain only)
