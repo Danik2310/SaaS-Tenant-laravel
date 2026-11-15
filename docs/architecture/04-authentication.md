@@ -91,7 +91,7 @@ sequenceDiagram
     end
 ```
 
-- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:48`.
+- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:53`.
 - [`LoginRequest::authenticate()`](../../app/Http/Requests/Auth/LoginRequest.php) `:51`
   — throttles to **5 attempts / minute** keyed on `email|ip`,
   [`ensureIsNotRateLimited()`](../../app/Http/Requests/Auth/LoginRequest.php) `:75`.
@@ -177,10 +177,12 @@ The signed links are rooted at `<slug>.sasapp`, so the Laragon Apache vhost must
 also alias `*.sasapp`; otherwise the button falls through to the default docroot.
 
 The central `/register` flow provisions the tenant and creates the owner through
-[`CreateTenantAdminUser`](../../app/Tenants/Jobs/CreateTenantAdminUser.php) `:66`,
-which fires `Registered` from inside `tenancy()->initialize()`. The owner is kept
-**unverified** (`email_verified_at = null`), so the first dashboard request
-redirects to `verification.notice` until the signed link is clicked.
+[`CreateTenantAdminUser::execute()`](../../app/Tenants/Jobs/CreateTenantAdminUser.php) `:46`,
+which fires `Registered` from inside `tenancy()->initialize()`. For an
+email/password signup the owner is kept **unverified** (`email_verified_at =
+null`), so the first dashboard request redirects to `verification.notice` until
+the signed link is clicked. A Google signup arrives with the address already
+confirmed — see §3.4.
 
 The link must be rooted at the tenant domain: the provisioning job runs on a queue
 worker with no tenant request, where `URL` would otherwise sign the central
@@ -191,17 +193,24 @@ long-lived worker). [`SendTenantVerificationEmail::handle()`](../../app/Tenants/
 replaces the framework listener, so the in-tenant self-service signup shares the
 same branded mail; send failures are logged and never fail provisioning.
 
-### 3.4 Google OAuth (tenant login & registration)
+### 3.4 Google OAuth (tenant login, joining, and new-workspace signup)
 
-Tenant users can sign in — or create an account — with Google instead of a
-password. The flow is a **two-host handoff**: Google only accepts an exact
-redirect URI, so a per-tenant callback (`<slug>.sasapp/...`) cannot be
+Google runs end to end on a **central** host, because Google only accepts an
+exact redirect URI: a per-tenant callback (`<slug>.sasapp/...`) cannot be
 registered (wildcards are rejected, and plain `http` is refused outside
-loopback). Both OAuth endpoints therefore live on a **central** domain, and the
-tenant is carried in the central session — never in the callback query string.
-`GOOGLE_REDIRECT_URI` must be on the same host as `APP_URL`: that cookie is
-host-scoped, so an entry link minted for `127.0.0.1` that returns to `localhost`
-would lose the tenant and end in the "session expired" path.
+loopback). The same two endpoints serve three entry kinds:
+
+| Entry | Entry link | Session marker | May create a tenant user? |
+|---|---|---|---|
+| Tenant login | tenant `/login` → `?tenant=…&intent=login` | `oauth.tenant`, `oauth.intent=login` | **Never** — an unknown Google email is refused |
+| Tenant join | tenant `/register` → `?tenant=…&intent=register` | `oauth.tenant`, `oauth.intent=register` | Yes, within the plan's user quota |
+| New workspace | central `/register` → `?flow=signup` | `oauth.flow=signup` | No tenant is provisioned during OAuth at all |
+
+The tenant id — and the fact that *this browser* started the flow — are carried
+in the central session, never in the callback query string.
+`GOOGLE_REDIRECT_URI` must be on the same host as `APP_URL`: the session cookie
+is host-scoped, so an entry link minted for `127.0.0.1` that returns to
+`localhost` would lose the tenant and end in the "session expired" path.
 
 ```mermaid
 sequenceDiagram
@@ -211,24 +220,24 @@ sequenceDiagram
     participant C as Central host
     participant G as Google
 
-    B->>T: GET /login
+    B->>T: GET /login (or /register)
     T-->>B: providers[] → central /auth/google/redirect?tenant=…&intent=…
-    B->>C: GET /auth/google/redirect  (session: oauth.tenant)
+    B->>C: GET /auth/google/redirect  (session: oauth.tenant, oauth.intent)
     C-->>B: 302 accounts.google.com (prompt=select_account)
     B->>G: consent
     G-->>B: 302 /auth/google/callback?code=…
     B->>C: GET /auth/google/callback
-    C->>C: exchange code, resolve/create user in the tenant DB
+    C->>C: exchange code, resolve/link the user in the tenant DB
     C-->>B: 302 <slug>.sasapp/auth/google/complete?signature=… (60 s)
     B->>T: GET /auth/google/complete  (signed)
     T-->>B: 302 /dashboard + JWT cookie
 ```
 
 - Entry point and callback:
-  [`GoogleOAuthController::redirect()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:53`
-  and [`GoogleOAuthController::callback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:71`.
+  [`GoogleOAuthController::redirect()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:67`
+  and [`GoogleOAuthController::callback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:96`.
   Registered once as `oauth.google.redirect` / `oauth.google.callback` behind
-  `central.domain` — `routes/web.php` :144. Deliberately **no `guest`**: these
+  `central.domain` — `routes/web.php` :148. Deliberately **no `guest`**: these
   are central routes with no tenant session to protect, and `guest` would bounce
   a visitor who is already signed in instead of letting them switch accounts.
 - Tenant end:
@@ -236,10 +245,15 @@ sequenceDiagram
   route `auth.google.complete` with `signed` and `throttle:10,1`, outside both
   `auth` and `guest` — `routes/tenant.php` :112.
 - Account resolution:
-  [`OAuthAccountLinker::loginOrRegister()`](../../app/Shared/Support/OAuthAccountLinker.php) `:38`.
+  [`OAuthAccountLinker::loginOrRegister()`](../../app/Shared/Support/OAuthAccountLinker.php) `:41`.
 - Handoff URL:
   [`OAuthHandoffUrl::for()`](../../app/Tenants/Support/OAuthHandoffUrl.php) `:34`
   (`EXPIRY_SECONDS = 60`).
+- The tenant login footer links to the **central** `/register` through
+  [`CentralSignupUrl::for()`](../../app/Shared/Support/CentralSignupUrl.php) `:20`,
+  because a plain `route('register.tenant')` rendered on a tenant host resolves
+  to *that tenant's* `/register` (join the existing workspace), not the central
+  page that creates a new one.
 
 **Linking rules** (one `oauth_accounts` row per provider identity):
 
@@ -250,11 +264,21 @@ sequenceDiagram
    reports `email_verified`**. Linking an unverified provider email would let
    anyone who can create an unverified Google account for `victim@example.com`
    take over the victim's local account.
-3. No local account → a user is created with `password = NULL`,
-   `email_verified_at = now()` and `is_active = true`, subject to the plan's
-   `max_users` quota (same `PlanLimitExceededException` as `StoreUserRequest`).
-   `Registered` is **not** dispatched: its only listener sends the verification
-   mail that Google has already made redundant.
+3. No local account — behaviour depends on intent:
+   - **login** refuses with `no_account`. The login button must not silently add
+     a member to a workspace the visitor was never invited to; joining goes
+     through that workspace's own `/register`.
+   - **register** creates the user with `password = NULL`,
+     `email_verified_at = now()` and `is_active = true`, subject to the plan's
+     `max_users` quota (same `PlanLimitExceededException` as
+     `StoreUserRequest`). `Registered` is **not** dispatched: its only listener
+     sends the verification mail that Google has already made redundant.
+   - the **central signup** flow never reaches the linker; it parks the identity
+     and lets the normal `POST /register` provision a brand-new workspace.
+
+Refusal order is `inactive` → `unverified` → `no_account`: an unverified
+identity that also has no account still reports `unverified`, because the
+untrusted address is the reason it cannot be used.
 
 Soft-deleted accounts are never resurrected — the Eloquent global scope keeps the
 email lookup inside `deleted_at IS NULL`, matching the partial unique index.
@@ -262,7 +286,57 @@ Inactive accounts are refused on both paths, and every refusal returns to the
 tenant host with a **signed** `?oauth_error=<code>` because a cross-host session
 flash is unreadable on the other host
 ([`OAuthCallbackError`](../../app/Shared/Support/OAuthCallbackError.php) owns the
-codes and the copy).
+codes and the copy: `cancelled`, `failed`, `expired`, `inactive`, `unverified`,
+`user_limit`, `no_account`, `account_exists`).
+
+**Google-first workspace signup.** The central `/register` button points at the
+same redirect with `flow=signup`; `redirect()` forgets the tenant keys and stores
+`oauth.flow=signup`. After consent,
+[`GoogleOAuthController::signupCallback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:175`
+stays on the central host and:
+
+1. refuses a cancelled or failed consent (`oauth_error=cancelled|failed`);
+2. requires `email_verified` (`oauth_error=unverified`), since the form will
+   force this address on submit;
+3. refuses an address that already owns a workspace
+   (`oauth_error=account_exists`), so a returning owner is sent to log in rather
+   than into a second, empty workspace;
+4. parks the verified name and lowercased address in the central session through
+   [`PendingOAuthSignup::remember()`](../../app/Tenants/Support/PendingOAuthSignup.php) `:31`
+   (30-minute TTL) and redirects to `/register?oauth=1`.
+
+The callback never provisions a tenant and never charges a card: the normal
+`POST /register` remains the single provisioning choke point (including the paid
+checkout), so an abandoned consent cannot create or bill a workspace.
+
+The plan step then shows the identity and asks only for what Google does not
+supply — plan, company name, workspace name, workspace address, terms. On
+submit, `StoreTenantRegistrationRequest::prepareForValidation()` forces the
+session address over the posted payload, the password rules become `nullable`
+and `TenantRegistrationController::store()` persists `password = null`. The
+queued [`CreateTenantAdminUser::execute()`](../../app/Tenants/Jobs/CreateTenantAdminUser.php) `:46`
+therefore creates a **passwordless, pre-verified** owner: `users.email_verified_at`
+and the central `tenants.owner_email_verified_at` projection are written, and
+`Registered` is skipped because Google already confirmed the address. The
+verification screen is bypassed for this owner.
+
+A paid selection carries the Google profile name in the pending signup
+(`admin_name`) together with the `NULL` password. The name must travel with the
+pending payload because the 30-minute session identity can expire while the
+guest is at the hosted checkout; `RegistrationCheckoutController` passes that
+name and hash straight to the job.
+
+**Use email instead** posts `register.oauth.forget`, which drops the parked
+identity so the same form can be completed with an email and password. There is
+no `sessionStorage` draft to restore: Google is clicked before anything has been
+typed.
+
+Because both ends of the signup flow are on the central host, its errors are
+plain same-host `?oauth_error=` values resolved with
+[`OAuthCallbackError::fromCode()`](../../app/Shared/Support/OAuthCallbackError.php) `:69`
+— no signature is needed, and the fixed map means an unknown code renders
+nothing. The tenant flow keeps its **signed** `?oauth_error=` handoff, since a
+flash cannot cross hosts.
 
 `users.password` is nullable for these accounts
 (`2026_11_14_000002_make_users_password_nullable`). A NULL hash is not a bypass:
