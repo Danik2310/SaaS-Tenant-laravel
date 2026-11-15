@@ -39,6 +39,15 @@ describe('GoogleButton', () => {
         expect(screen.queryByText('or')).not.toBeInTheDocument();
     });
 
+    test('can lead with the divider when the form sits above the button', () => {
+        render(<GoogleButton providers={[google]} divider="before" />);
+
+        const rule = screen.getByText('or');
+        const link = screen.getByRole('link', { name: /continue with google/i });
+
+        expect(rule.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
     test('uses the dark palette on the ledger signup page', () => {
         render(<GoogleButton providers={[google]} tone="dark" />);
 
