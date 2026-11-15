@@ -10,6 +10,10 @@
  * `label` is rendered verbatim (e.g. "Sign up with Google"); without it the
  * button keeps the generic "Continue with {provider}" copy. `tone` picks the
  * palette for a light guest card or the dark ledger signup page.
+ *
+ * `divider` controls the "or" rule: `true`/`'after'` trails the button (the
+ * form follows it, as on register), `'before'` leads it (the login form sits
+ * above the button), and `false` drops it entirely.
  */
 const MARKS = {
     google: (
@@ -60,9 +64,13 @@ export default function GoogleButton({
     }
 
     const palette = TONES[tone] ?? TONES.light;
+    const ruleBefore = divider === 'before';
+    const ruleAfter = divider === true || divider === 'after';
 
     return (
         <div className="mt-6">
+            {ruleBefore && <Rule palette={palette} className="mb-6" />}
+
             <div className="space-y-3">
                 {providers.map((provider) => (
                     <a
@@ -76,15 +84,20 @@ export default function GoogleButton({
                 ))}
             </div>
 
-            {divider && (
-                <div className="mt-6 flex items-center gap-3" aria-hidden="true">
-                    <span className={`h-px flex-1 ${palette.rule}`} />
-                    <span className={`text-xs font-medium uppercase tracking-wide ${palette.ruleLabel}`}>
-                        or
-                    </span>
-                    <span className={`h-px flex-1 ${palette.rule}`} />
-                </div>
-            )}
+            {ruleAfter && <Rule palette={palette} className="mt-6" />}
+        </div>
+    );
+}
+
+/** The "or" rule separating the social button from the email form. */
+function Rule({ palette, className }) {
+    return (
+        <div className={`flex items-center gap-3 ${className}`} aria-hidden="true">
+            <span className={`h-px flex-1 ${palette.rule}`} />
+            <span className={`text-xs font-medium uppercase tracking-wide ${palette.ruleLabel}`}>
+                or
+            </span>
+            <span className={`h-px flex-1 ${palette.rule}`} />
         </div>
     );
 }

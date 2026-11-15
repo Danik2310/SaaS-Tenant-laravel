@@ -44,8 +44,6 @@ export default function Login({ status, canResetPassword, providers = [], oauthE
                 </div>
             )}
 
-            <GoogleButton providers={providers} />
-
             <form onSubmit={submit} className="mt-6">
                 <div>
                     <InputLabel htmlFor="email" value="Email" />
@@ -92,20 +90,23 @@ export default function Login({ status, canResetPassword, providers = [], oauthE
                 </div>
 
                 <div className="flex items-center justify-end mt-4">
-                    {canResetPassword && (
-                        <Link
-                            href={route('password.request')}
-                            className="underline text-sm text-brand-600 hover:text-brand-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
-                        >
-                            Forgot your password?
-                        </Link>
-                    )}
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Log in
-                    </PrimaryButton>
+                    <PrimaryButton disabled={processing}>Log in</PrimaryButton>
                 </div>
             </form>
+
+            <GoogleButton providers={providers} label="Sign in with Google" divider="before" />
+
+            {canResetPassword && (
+                <p className="mt-6 text-center text-sm text-gray-600">
+                    Don&apos;t remember your password?{' '}
+                    <Link
+                        href={route('password.request')}
+                        className="font-medium text-brand-600 underline hover:text-brand-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
+                    >
+                        Forgot your password?
+                    </Link>
+                </p>
+            )}
 
             {signupUrl && (
                 <p className="mt-8 border-t border-gray-200 pt-6 text-center text-sm text-gray-600">
