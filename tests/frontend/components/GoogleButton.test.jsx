@@ -26,4 +26,22 @@ describe('GoogleButton', () => {
 
         expect(screen.getByText('or')).toBeInTheDocument();
     });
+
+    test('renders a custom label verbatim', () => {
+        render(<GoogleButton providers={[google]} label="Sign up with Google" />);
+
+        expect(screen.getByRole('link', { name: /sign up with google/i })).toHaveAttribute('href', google.url);
+    });
+
+    test('can drop the email divider on the signup page', () => {
+        render(<GoogleButton providers={[google]} divider={false} />);
+
+        expect(screen.queryByText('or')).not.toBeInTheDocument();
+    });
+
+    test('uses the dark palette on the ledger signup page', () => {
+        render(<GoogleButton providers={[google]} tone="dark" />);
+
+        expect(screen.getByRole('link', { name: /continue with google/i })).toHaveClass('text-white');
+    });
 });

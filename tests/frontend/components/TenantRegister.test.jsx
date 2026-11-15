@@ -1,6 +1,7 @@
 ﻿import { vi, describe, test, beforeEach, expect } from 'vitest';
 import React from 'react';
 import axios from 'axios';
+import { router } from '@inertiajs/react';
 import { render, screen, fireEvent, waitFor, within } from '../test-utils';
 import TenantRegister from '@/Pages/Auth/TenantRegister';
 import TenantRegisterSuccess from '@/Pages/Auth/TenantRegisterSuccess';
@@ -665,5 +666,125 @@ describe('TenantRegister', () => {
         );
         expect(screen.getByLabelText('Country')).toHaveAttribute('aria-invalid', 'true');
         expect(screen.getByLabelText('Country')).toHaveFocus();
+    });
+
+    // ──────────────────────────────────────────────
+    //  Google-first workspace signup
+    // ──────────────────────────────────────────────
+
+    const googleProvider = {
+        id: 'google',
+        label: 'Google',
+        url: 'http://localhost/auth/google/redirect?flow=signup',
+    };
+
+    test('offers Google before the plan grid when configured', () => {
+        render(
+            <TenantRegister
+                plans={plans}
+                tenant_domain_suffix="sasapp"
+                providers={[googleProvider]}
+            />
+        );
+
+        expect(screen.getByTestId('google-signup')).toBeInTheDocument();
+        expect(screen.getByRole('link', { name: /sign up with google/i })).toHaveAttribute(
+            'href',
+            googleProvider.url
+        );
+        expect(screen.getByTestId('plan-grid')).toBeInTheDocument();
+    });
+
+    test('does not offer Google when no provider is configured', () => {
+        render(<TenantRegister plans={plans} tenant_domain_suffix="sasapp" />);
+
+        expect(screen.queryByTestId('google-signup')).not.toBeInTheDocument();
+    });
+
+    test('shows the verified identity on the plan step after Google returns', () => {
+        render(
+            <TenantRegister
+                plans={plans}
+                tenant_domain_suffix="sasapp"
+                providers={[googleProvider]}
+                oauthIdentity={{ name: 'Ada Lovelace', email: 'ada@example.com' }}
+            />
+        );
+
+        expect(screen.getByTestId('google-identity')).toBeInTheDocument();
+        expect(screen.getByText(/signing up as ada lovelace/i)).toBeInTheDocument();
+        // The button would start a second consent round.
+        expect(screen.queryByTestId('google-signup')).not.toBeInTheDocument();
+        expect(screen.getByTestId('use-email-instead')).toBeInTheDocument();
+    });
+
+    test('hides the email and password fields for a Google signup', () => {
+        render(
+            <TenantRegister
+                plans={plans}
+                selected_plan="trial"
+                tenant_domain_suffix="sasapp"
+                oauthIdentity={{ name: 'Ada Lovelace', email: 'ada@example.com' }}
+            />
+        );
+
+        expect(screen.queryByLabelText('Email')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+        expect(screen.queryByLabelText('Confirm Password')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('password-visibility-toggle')).not.toBeInTheDocument();
+        expect(screen.getByTestId('google-account-summary')).toHaveTextContent('ada@example.com');
+        // Google owns the address, so the form seeds the hidden field with it.
+        expect(lastForm().data.email).toBe('ada@example.com');
+    });
+
+    test('moves a Google signup to payment without asking for a password', () => {
+        render(
+            <TenantRegister
+                plans={plans}
+                selected_plan="growth"
+                tenant_domain_suffix="sasapp"
+                oauthIdentity={{ name: 'Ada Lovelace', email: 'ada@example.com' }}
+            />
+        );
+
+        fireEvent.change(screen.getByLabelText('Company Name'), {
+            target: { value: 'Acme Corp' },
+        });
+        fireEvent.change(screen.getByLabelText('Workspace name'), {
+            target: { value: 'Acme Workspace' },
+        });
+        fireEvent.click(screen.getByRole('checkbox', { name: /terms of service/i }));
+
+        fireEvent.click(screen.getByRole('button', { name: /continue to payment/i }));
+
+        expect(screen.getByRole('heading', { name: /payment method/i })).toBeInTheDocument();
+        expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+    });
+
+    test('lets the visitor switch from Google to email and password', () => {
+        render(
+            <TenantRegister
+                plans={plans}
+                tenant_domain_suffix="sasapp"
+                providers={[googleProvider]}
+                oauthIdentity={{ name: 'Ada Lovelace', email: 'ada@example.com' }}
+            />
+        );
+
+        fireEvent.click(screen.getByTestId('use-email-instead'));
+
+        expect(router.post).toHaveBeenCalledWith('/register.oauth.forget');
+    });
+
+    test('renders the signup callback error', () => {
+        render(
+            <TenantRegister
+                plans={plans}
+                tenant_domain_suffix="sasapp"
+                oauthError="An account already exists for that email. Log in to your existing workspace instead."
+            />
+        );
+
+        expect(screen.getByTestId('oauth-error')).toHaveTextContent(/already exists for that email/i);
     });
 });

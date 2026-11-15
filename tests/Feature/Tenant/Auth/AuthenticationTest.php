@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -36,6 +37,22 @@ class AuthenticationTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
+    }
+
+    public function test_login_screen_links_to_the_central_workspace_signup(): void
+    {
+        $centralHosts = config('tenancy.central_domains');
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/Login')
+                // A visitor without a workspace creates one on the central
+                // host; this tenant's /register would join the existing
+                // workspace instead.
+                ->where('signupUrl', fn (string $url): bool => parse_url($url, PHP_URL_PATH) === '/register'
+                    && in_array(parse_url($url, PHP_URL_HOST), $centralHosts, true)
+                    && parse_url($url, PHP_URL_HOST) !== $this->tenant->domain));
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void

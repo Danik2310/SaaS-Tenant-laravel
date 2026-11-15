@@ -8,10 +8,12 @@ use App\Models\GlobalSetting;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Shared\Constants\OAuthProvider;
 use App\Shared\Contracts\PaymentGatewayInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
 use App\Tenants\Notifications\TenantEmailVerification;
+use App\Tenants\Support\PendingOAuthSignup;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
@@ -80,6 +82,31 @@ class TenantRegistrationTest extends TestCase
         $data['password_confirmation'] = $data['password'];
 
         return $data;
+    }
+
+    /**
+     * The central-session identity the Google signup callback parks before the
+     * plan step, shaped exactly as {@see PendingOAuthSignup} stores it.
+     *
+     * @return array<string, array{name: string, email: string, expires_at: int}>
+     */
+    private function googleSession(bool $expired = false): array
+    {
+        return [
+            'oauth.signup' => [
+                'name' => 'Ada Lovelace',
+                'email' => 'ada@example.com',
+                'expires_at' => ($expired ? now()->subMinute() : now()->addMinutes(20))->getTimestamp(),
+            ],
+        ];
+    }
+
+    private function configureGoogle(): void
+    {
+        config([
+            'services.google.client_id' => 'test-client-id',
+            'services.google.client_secret' => 'test-client-secret',
+        ]);
     }
 
     public function test_register_page_renders_active_plans(): void
@@ -974,5 +1001,241 @@ class TenantRegistrationTest extends TestCase
             ->assertRedirect(route('verification.notice'));
 
         $this->forgetTenant();
+    }
+
+    // ──────────────────────────────────────────────
+    //  Google-first workspace signup
+    // ──────────────────────────────────────────────
+
+    public function test_register_page_offers_google_sign_up_when_configured(): void
+    {
+        $this->configureGoogle();
+
+        $this->get('/register')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->has('providers', 1)
+                ->where('providers.0.id', OAuthProvider::GOOGLE)
+                ->where('providers.0.label', 'Google')
+                // A new-workspace flow carries no tenant: the verified identity
+                // is parked in the central session instead.
+                ->where('providers.0.url', fn (string $url): bool => str_contains($url, '/auth/google/redirect')
+                    && str_contains($url, 'flow=signup')
+                    && ! str_contains($url, 'tenant='))
+                ->where('oauthIdentity', null)
+                ->where('oauthError', null));
+    }
+
+    public function test_register_page_hides_google_sign_up_when_not_configured(): void
+    {
+        $this->get('/register')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->has('providers', 0));
+    }
+
+    public function test_register_page_renders_the_identity_parked_by_the_callback(): void
+    {
+        $this->configureGoogle();
+
+        $this->withSession($this->googleSession())
+            ->get('/register?oauth=1')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->where('oauthIdentity.name', 'Ada Lovelace')
+                ->where('oauthIdentity.email', 'ada@example.com'));
+    }
+
+    public function test_register_page_renders_the_signup_callback_error(): void
+    {
+        $this->get('/register?oauth_error=account_exists')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Auth/TenantRegister')
+                ->where('oauthError', fn (string $message): bool => str_contains($message, 'already exists')));
+
+        $this->get('/register?oauth_error=not-a-real-code')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('oauthError', null));
+    }
+
+    public function test_google_signup_registers_a_passwordless_verified_owner(): void
+    {
+        Notification::fake();
+
+        $response = $this->withSession($this->googleSession())
+            ->post('/register', $this->payload([
+                // A tampered address must lose to the verified one.
+                'email' => 'attacker@example.com',
+                'password' => null,
+                'password_confirmation' => null,
+                'plan' => 'trial',
+            ]));
+
+        $response->assertRedirect();
+
+        $tenant = Tenant::where('email', 'ada@example.com')->firstOrFail();
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->assertFalse(Tenant::where('email', 'attacker@example.com')->exists());
+        $this->assertNotNull($tenant->owner_email_verified_at, 'the owner is pre-verified');
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'ada@example.com')->firstOrFail();
+
+        $this->assertSame('Ada Lovelace', $user->name);
+        $this->assertNull($user->password);
+        $this->assertTrue($user->hasVerifiedEmail());
+        $this->assertTrue($user->hasRole('tenant-admin'));
+
+        // No verification mail: Google already verified the address.
+        Notification::assertNotSentTo($user, TenantEmailVerification::class);
+
+        // The parked identity must not silently apply to a later signup.
+        $this->assertNull(PendingOAuthSignup::identity());
+
+        $this->forgetTenant();
+    }
+
+    public function test_expired_google_identity_requires_a_password_again(): void
+    {
+        $this->withSession($this->googleSession(expired: true))
+            ->post('/register', $this->payload([
+                'password' => '',
+                'password_confirmation' => '',
+            ]))
+            ->assertSessionHasErrors('password');
+
+        $this->assertSame(0, Tenant::count());
+
+        // With a password supplied, the same stale session registers the
+        // submitted email, not the abandoned Google one.
+        $this->withSession($this->googleSession(expired: true))
+            ->post('/register', $this->payload(['email' => 'jane@acme.test']))
+            ->assertRedirect();
+
+        $tenant = Tenant::where('email', 'jane@acme.test')->firstOrFail();
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'jane@acme.test')->firstOrFail();
+
+        $this->assertTrue(Hash::check('StrongPass1!', $user->password));
+        $this->assertNull($user->email_verified_at);
+
+        $this->forgetTenant();
+    }
+
+    public function test_google_signup_paid_plan_carries_the_identity_into_checkout(): void
+    {
+        $this->mock(PaymentGatewayInterface::class, function ($mock) {
+            $mock->shouldReceive('createCheckoutSession')
+                ->once()
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'url' => 'https://checkout.stripe.com/c/pay/cs_test_123',
+                    'payment_status' => 'unpaid',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
+        $this->withSession($this->googleSession())
+            ->post('/register', $this->payload([
+                'email' => 'attacker@example.com',
+                'password' => null,
+                'password_confirmation' => null,
+                'plan' => 'growth',
+                'subdomain' => 'acme-corp',
+            ]))
+            ->assertRedirect('https://checkout.stripe.com/c/pay/cs_test_123');
+
+        $pending = session('pending_tenant_registration');
+
+        $this->assertSame('ada@example.com', $pending['payload']['email']);
+        // No credential: the account is passwordless. The hash field must not
+        // hold the string "null" or a stray empty hash.
+        $this->assertNull($pending['payload']['password']);
+        // The name travels with the pending signup so an expired session
+        // identity still names the owner correctly after checkout.
+        $this->assertSame('Ada Lovelace', $pending['admin_name']);
+
+        $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_checkout_success_provisions_a_passwordless_verified_owner_for_a_google_signup(): void
+    {
+        Notification::fake();
+
+        $token = 'checkout-token';
+
+        $this->withSession($this->googleSession() + [
+            'pending_tenant_registration' => [
+                'token' => $token,
+                'plan' => 'growth',
+                'payload' => $this->payload([
+                    'plan' => 'growth',
+                    'email' => 'ada@example.com',
+                    'password' => null,
+                    'password_confirmation' => null,
+                ]),
+                'admin_name' => 'Ada Lovelace',
+                'expires_at' => now()->addMinutes(30)->getTimestamp(),
+            ],
+        ]);
+
+        $this->mock(PaymentGatewayInterface::class, function ($mock) use ($token) {
+            $mock->shouldReceive('retrieveCheckoutSession')
+                ->once()
+                ->with('cs_test_123')
+                ->andReturn([
+                    'id' => 'cs_test_123',
+                    'payment_status' => 'paid',
+                    'customer_email' => 'ada@example.com',
+                    'metadata' => [
+                        'pending_token' => $token,
+                    ],
+                    'url' => '',
+                    'currency' => 'usd',
+                    'amount_total' => 1500,
+                ]);
+        });
+
+        $this->get('/register/payment/success?session_id=cs_test_123')->assertRedirect();
+
+        $tenant = Tenant::where('email', 'ada@example.com')->firstOrFail();
+        $this->createdTenantDbNames[] = $tenant->database()->getName();
+
+        $this->assertNotNull($tenant->owner_email_verified_at);
+
+        $this->initializeTenant($tenant);
+
+        $user = User::where('email', 'ada@example.com')->firstOrFail();
+
+        $this->assertSame('Ada Lovelace', $user->name);
+        $this->assertNull($user->password);
+        $this->assertTrue($user->hasVerifiedEmail());
+        Notification::assertNotSentTo($user, TenantEmailVerification::class);
+
+        $this->assertNull(PendingOAuthSignup::identity());
+        $this->forgetTenant();
+    }
+
+    public function test_google_signup_can_switch_to_email_and_password(): void
+    {
+        $this->withSession($this->googleSession())
+            ->post('/register/oauth/forget')
+            ->assertRedirect('/register');
+
+        $this->assertNull(session('oauth.signup'));
+
+        $this->get('/register')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('oauthIdentity', null));
     }
 }

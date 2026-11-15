@@ -149,7 +149,8 @@ class GoogleOAuthTest extends TestCase
 
         $this->fakeGoogleProvider($this->googleIdentity());
 
-        $response = $this->runCallback();
+        // Only the register screen may turn a Google identity into a member.
+        $response = $this->runCallback([], 'register');
 
         $response->assertRedirectContains($this->tenant->domain.'/auth/google/complete');
 
@@ -176,6 +177,20 @@ class GoogleOAuthTest extends TestCase
         // A null hash must never be accepted as a valid credential.
         $this->assertFalse(Auth::guard('web')->attempt(['email' => 'ada@example.com', 'password' => '']));
         $this->assertFalse(Auth::guard('web')->attempt(['email' => 'ada@example.com', 'password' => 'password']));
+    }
+
+    public function test_login_callback_refuses_an_unknown_identity_without_creating_a_user(): void
+    {
+        $this->fakeGoogleProvider($this->googleIdentity());
+
+        $this->runCallback()->assertRedirectContains('oauth_error='.OAuthCallbackError::NO_ACCOUNT);
+
+        $this->inspectTenantDatabase();
+
+        // The login button signs in; it must never silently add a member to a
+        // workspace the visitor was not invited to.
+        $this->assertSame(0, DB::connection('tenant')->table('users')->count());
+        $this->assertDatabaseCount('oauth_accounts', 0, 'tenant');
     }
 
     public function test_callback_links_an_existing_account_by_verified_email(): void
@@ -214,7 +229,7 @@ class GoogleOAuthTest extends TestCase
     {
         $this->fakeGoogleProvider($this->googleIdentity(emailVerified: false));
 
-        $this->runCallback()->assertRedirectContains('oauth_error='.OAuthCallbackError::UNVERIFIED);
+        $this->runCallback([], 'register')->assertRedirectContains('oauth_error='.OAuthCallbackError::UNVERIFIED);
 
         $this->inspectTenantDatabase();
 
@@ -241,7 +256,7 @@ class GoogleOAuthTest extends TestCase
 
         $this->fakeGoogleProvider($this->googleIdentity());
 
-        $this->runCallback()->assertRedirectContains($this->tenant->domain.'/auth/google/complete');
+        $this->runCallback([], 'register')->assertRedirectContains($this->tenant->domain.'/auth/google/complete');
 
         $this->inspectTenantDatabase();
 
@@ -260,7 +275,7 @@ class GoogleOAuthTest extends TestCase
 
         $this->fakeGoogleProvider($this->googleIdentity(email: 'third@example.com'));
 
-        $this->runCallback()->assertRedirectContains('oauth_error='.OAuthCallbackError::USER_LIMIT);
+        $this->runCallback([], 'register')->assertRedirectContains('oauth_error='.OAuthCallbackError::USER_LIMIT);
 
         $this->inspectTenantDatabase();
 
@@ -282,6 +297,72 @@ class GoogleOAuthTest extends TestCase
 
         $this->get(self::CENTRAL.'/auth/google/callback?code=fake-code')
             ->assertRedirect('/');
+    }
+
+    // ──────────────────────────────────────────────
+    //  Workspace signup leg
+    // ──────────────────────────────────────────────
+
+    public function test_signup_redirect_starts_a_central_flow_without_a_tenant(): void
+    {
+        $this->fakeGoogleProvider($this->googleIdentity(), exchange: false);
+
+        $response = $this->get(self::CENTRAL.'/auth/google/redirect?flow=signup');
+
+        $response->assertRedirect('https://accounts.google.com/o/oauth2/auth');
+        $response->assertSessionHas('oauth.flow', 'signup');
+        $response->assertSessionMissing('oauth.tenant');
+    }
+
+    public function test_signup_callback_parks_the_verified_identity_and_returns_to_the_plan_step(): void
+    {
+        $this->fakeGoogleProvider($this->googleIdentity());
+
+        $response = $this->runSignupCallback();
+
+        // Same-host redirect: the signup flow never leaves the central host.
+        $response->assertRedirect(self::CENTRAL.'/register?oauth=1');
+        $response->assertSessionHas('oauth.signup.name', 'Ada Lovelace');
+        $response->assertSessionHas('oauth.signup.email', 'ada@example.com');
+
+        // The callback only parks the identity: the normal POST /register is
+        // the single provisioning choke point.
+        $this->assertFalse(Tenant::query()->where('email', 'ada@example.com')->exists());
+    }
+
+    public function test_signup_callback_refuses_an_unverified_identity(): void
+    {
+        $this->fakeGoogleProvider($this->googleIdentity(emailVerified: false));
+
+        $this->runSignupCallback()
+            ->assertRedirect(self::CENTRAL.'/register?oauth_error='.OAuthCallbackError::UNVERIFIED);
+
+        $this->assertNull(session('oauth.signup'));
+    }
+
+    public function test_signup_callback_refuses_an_email_that_already_owns_a_workspace(): void
+    {
+        Tenant::withoutEvents(fn () => Tenant::create([
+            'id' => 'TEN-900001',
+            'name' => 'Ada Workspace',
+            'email' => 'ada@example.com',
+            'status' => 'Active',
+        ]));
+
+        $this->fakeGoogleProvider($this->googleIdentity());
+
+        $this->runSignupCallback()
+            ->assertRedirect(self::CENTRAL.'/register?oauth_error='.OAuthCallbackError::ACCOUNT_EXISTS);
+
+        $this->assertNull(session('oauth.signup'));
+    }
+
+    public function test_cancelled_signup_consent_returns_to_the_plan_step(): void
+    {
+        $this->fakeGoogleProvider($this->googleIdentity(), exchange: false);
+
+        $this->runSignupCallback(['error' => 'access_denied'])
+            ->assertRedirect(self::CENTRAL.'/register?oauth_error='.OAuthCallbackError::CANCELLED);
     }
 
     // ──────────────────────────────────────────────
@@ -369,11 +450,28 @@ class GoogleOAuthTest extends TestCase
     /**
      * @param  array<string, string>  $query
      */
-    private function runCallback(array $query = []): TestResponse
+    private function runCallback(array $query = [], string $intent = 'login'): TestResponse
     {
         $query += ['code' => 'fake-code', 'state' => 'fake-state'];
 
-        return $this->withSession(['oauth.tenant' => $this->tenant->id, 'oauth.intent' => 'login'])
+        return $this->withSession(['oauth.tenant' => $this->tenant->id, 'oauth.intent' => $intent])
+            ->get(self::CENTRAL.'/auth/google/callback?'.http_build_query($query));
+    }
+
+    /**
+     * @param  array<string, string>  $query
+     */
+    private function runSignupCallback(array $query = []): TestResponse
+    {
+        $query += ['code' => 'fake-code', 'state' => 'fake-state'];
+
+        // initializeTenant() forces the URL root to the tenant host for the
+        // whole test. The signup callback runs on the central host in
+        // production and has no forced root, so clear it here — the relative
+        // redirect is then absolute on the central host, as it is live.
+        URL::forceRootUrl(self::CENTRAL);
+
+        return $this->withSession(['oauth.flow' => 'signup'])
             ->get(self::CENTRAL.'/auth/google/callback?'.http_build_query($query));
     }
 
