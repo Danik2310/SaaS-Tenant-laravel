@@ -45,6 +45,7 @@ php artisan db:seed
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
+| `CENTRAL_DOMAINS` | Comma-separated central hosts. The **first** entry owns the canonical route names (`register.tenant`, …), so it must be the host you browse | `127.0.0.1,localhost` |
 | `ADMIN_EMAIL` | Admin login email | `admin@example.com` |
 | `ADMIN_PASSWORD` | Admin login password | _(set in .env)_ |
 | `TENANT_PASSWORD` | Default password for seeded tenants | _(set in .env)_ |
@@ -61,6 +62,11 @@ php artisan db:seed
 # Ctrl+C stops all three and removes public/hot.
 php artisan serve
 
+# Bind the built-in server to a hostname instead of 127.0.0.1. `serve` accepts
+# options only — `php artisan serve localhost` is invalid. The name also reaches
+# the default bind, so this is only needed to own the socket on that address.
+php artisan serve --host=localhost
+
 # Vite and Reverb only, if Laravel is served by Laragon/Nginx/Valet
 pnpm run dev
 php artisan reverb:start
@@ -69,6 +75,10 @@ php artisan reverb:start
 Laragon/Apache keeps port 80 for tenant vhosts. With `artisan serve`, tenant
 sites are reachable at `http://<tenant>.sasapp:8000` after adding the host to
 your hosts file — the port is stripped before tenant identification.
+
+`localhost:8000` and `127.0.0.1:8000` are different cookie hosts. Open the app on
+the same host as `APP_URL`, and register that exact `GOOGLE_REDIRECT_URI` in
+Google Cloud Console — mixing the two mid-flow loses the OAuth session.
 
 ## Commands
 
