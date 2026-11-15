@@ -1,10 +1,15 @@
 /**
- * "Continue with Google" — the tenant login/register social entry point.
+ * "Continue with Google" — the tenant login/register social entry point, and the
+ * "Sign up with Google" entry on the central workspace signup.
  *
  * The URLs are built server-side (`OAuthProviderLinks`), because they must point
  * at the *central* OAuth endpoint while the page itself is served from a tenant
  * host. When no provider is configured the component renders nothing at all, so
  * an environment without Google credentials keeps the plain email/password form.
+ *
+ * `label` is rendered verbatim (e.g. "Sign up with Google"); without it the
+ * button keeps the generic "Continue with {provider}" copy. `tone` picks the
+ * palette for a light guest card or the dark ledger signup page.
  */
 const MARKS = {
     google: (
@@ -29,10 +34,32 @@ const MARKS = {
     ),
 };
 
-export default function GoogleButton({ providers = [] }) {
+const TONES = {
+    light: {
+        button:
+            'border-gray-300 bg-white text-ink hover:bg-gray-50 focus-visible:ring-ink focus-visible:ring-offset-2',
+        rule: 'bg-gray-200',
+        ruleLabel: 'text-gray-500',
+    },
+    dark: {
+        button:
+            'border-white/20 bg-white/[0.04] text-white hover:bg-white/[0.09] focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink',
+        rule: 'bg-white/15',
+        ruleLabel: 'text-white/50',
+    },
+};
+
+export default function GoogleButton({
+    providers = [],
+    label = null,
+    tone = 'light',
+    divider = true,
+}) {
     if (!providers.length) {
         return null;
     }
+
+    const palette = TONES[tone] ?? TONES.light;
 
     return (
         <div className="mt-6">
@@ -41,19 +68,23 @@ export default function GoogleButton({ providers = [] }) {
                     <a
                         key={provider.id}
                         href={provider.url}
-                        className="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-ink transition ease-in-out duration-150 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2"
+                        className={`flex w-full items-center justify-center gap-3 rounded-full border px-6 py-2.5 text-sm font-semibold transition ease-in-out duration-150 focus:outline-none focus-visible:ring-2 ${palette.button}`}
                     >
                         {MARKS[provider.id] ?? null}
-                        <span>Continue with {provider.label}</span>
+                        <span>{label ?? `Continue with ${provider.label}`}</span>
                     </a>
                 ))}
             </div>
 
-            <div className="mt-6 flex items-center gap-3" aria-hidden="true">
-                <span className="h-px flex-1 bg-gray-200" />
-                <span className="text-xs font-medium uppercase tracking-wide text-gray-500">or</span>
-                <span className="h-px flex-1 bg-gray-200" />
-            </div>
+            {divider && (
+                <div className="mt-6 flex items-center gap-3" aria-hidden="true">
+                    <span className={`h-px flex-1 ${palette.rule}`} />
+                    <span className={`text-xs font-medium uppercase tracking-wide ${palette.ruleLabel}`}>
+                        or
+                    </span>
+                    <span className={`h-px flex-1 ${palette.rule}`} />
+                </div>
+            )}
         </div>
     );
 }

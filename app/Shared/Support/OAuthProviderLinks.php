@@ -9,7 +9,8 @@ use App\Shared\Constants\OAuthProvider;
 
 /**
  * Builds the "Continue with …" links rendered on the tenant login/register
- * screens.
+ * screens, plus the "Sign up with Google" entry on the central workspace
+ * signup.
  *
  * The link points at the central OAuth entry point, but it is rendered from a
  * tenant-host request, so the root has to be forced back to a central domain
@@ -33,18 +34,41 @@ final class OAuthProviderLinks
             return [];
         }
 
+        return [self::link([
+            'tenant' => $tenant->getTenantKey(),
+            'intent' => $intent,
+        ])];
+    }
+
+    /**
+     * The entry point for a **new workspace** signup on the central `/register`
+     * page. There is no tenant to carry: the callback parks the verified
+     * identity in the central session and returns to the plan step.
+     *
+     * @return array<int, array{id: string, label: string, url: string}>
+     */
+    public static function forSignup(): array
+    {
+        if (! self::googleIsConfigured()) {
+            return [];
+        }
+
+        return [self::link(['flow' => 'signup'])];
+    }
+
+    /**
+     * @param  array<string, string>  $parameters
+     * @return array{id: string, label: string, url: string}
+     */
+    private static function link(array $parameters): array
+    {
         $root = ForcedUrlRoot::centralRoot();
         $scheme = parse_url($root, PHP_URL_SCHEME) ?: 'https';
 
         return [
-            [
-                'id' => OAuthProvider::GOOGLE,
-                'label' => OAuthProvider::label(OAuthProvider::GOOGLE),
-                'url' => ForcedUrlRoot::run($root, $scheme, static fn (): string => route('oauth.google.redirect', [
-                    'tenant' => $tenant->getTenantKey(),
-                    'intent' => $intent,
-                ])),
-            ],
+            'id' => OAuthProvider::GOOGLE,
+            'label' => OAuthProvider::label(OAuthProvider::GOOGLE),
+            'url' => ForcedUrlRoot::run($root, $scheme, static fn (): string => route('oauth.google.redirect', $parameters)),
         ];
     }
 

@@ -15,6 +15,9 @@ use Illuminate\Http\Request;
  * because a flash message cannot cross the central→tenant host boundary. Codes
  * rather than sentences keep provider/exception internals off the screen and
  * make the copy translatable later.
+ *
+ * The same codes are reused on the central signup page, where no host boundary
+ * is crossed and the plain query value is read through {@see fromCode()}.
  */
 final class OAuthCallbackError
 {
@@ -36,6 +39,15 @@ final class OAuthCallbackError
     /** The tenant is at its plan's user limit. */
     public const USER_LIMIT = 'user_limit';
 
+    /**
+     * A login-intent identity whose email has no local account. Sign-in never
+     * creates users; joining a workspace goes through its register screen.
+     */
+    public const NO_ACCOUNT = 'no_account';
+
+    /** A Google signup address that already owns a workspace. */
+    public const ACCOUNT_EXISTS = 'account_exists';
+
     /** @var array<string, string> */
     private const MESSAGES = [
         self::CANCELLED => 'Google sign-in was cancelled. You can try again or log in with your email.',
@@ -44,7 +56,20 @@ final class OAuthCallbackError
         self::INACTIVE => 'This account has been deactivated. Contact your workspace administrator.',
         self::UNVERIFIED => 'Google has not verified that email address, so it cannot be used to sign in.',
         self::USER_LIMIT => 'This workspace has reached its user limit. Ask an administrator to upgrade the plan.',
+        self::NO_ACCOUNT => 'No account exists for that Google email. Ask your workspace administrator for an account.',
+        self::ACCOUNT_EXISTS => 'An account already exists for that email. Log in to your existing workspace instead.',
     ];
+
+    /**
+     * Resolve a code that does not cross a host boundary, such as the
+     * `?oauth_error=` the central callback appends to the central signup page.
+     * Same-host redirects share a session, but a code still keeps the copy in
+     * one place and guarantees an unknown value renders nothing.
+     */
+    public static function fromCode(mixed $code): ?string
+    {
+        return is_string($code) ? (self::MESSAGES[$code] ?? null) : null;
+    }
 
     /**
      * Resolve the message carried by a signed `?oauth_error=` parameter.

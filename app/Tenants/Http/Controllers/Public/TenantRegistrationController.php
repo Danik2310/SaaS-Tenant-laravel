@@ -11,8 +11,11 @@ use App\Models\Tenant;
 use App\Shared\Contracts\LocationCatalog;
 use App\Shared\Contracts\PaymentGatewayInterface;
 use App\Shared\Contracts\PublicPlanCatalogInterface;
+use App\Shared\Support\OAuthCallbackError;
+use App\Shared\Support\OAuthProviderLinks;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
+use App\Tenants\Support\PendingOAuthSignup;
 use App\Tenants\Support\SubdomainGenerator;
 use App\Tenants\Support\TenantVerificationCooldown;
 use App\Tenants\Support\TenantVerificationUrl;
@@ -67,16 +70,31 @@ class TenantRegistrationController extends Controller
             'prefill' => $prefill,
             'countries' => $this->locations->countries(),
             'states' => $states,
+            // Google-first signup: the button on the plan step, and the
+            // verified identity when the callback has already run.
+            'providers' => OAuthProviderLinks::forSignup(),
+            'oauthIdentity' => PendingOAuthSignup::identity(),
+            // Same-host `?oauth_error=` from the signup callback.
+            'oauthError' => OAuthCallbackError::fromCode(request()->query('oauth_error')),
         ]);
     }
 
     public function store(StoreTenantRegistrationRequest $request)
     {
         $validated = $request->validated();
+        $identity = PendingOAuthSignup::identity();
 
-        // Hash at the boundary so the plaintext password is never written to
-        // the session or serialized into a queued job.
-        $validated['password'] = Hash::make($validated['password']);
+        if ($identity !== null) {
+            // The verified Google address wins over the submitted payload, and
+            // a passwordless account gets no hash at all.
+            $validated['email'] = $identity['email'];
+            $validated['password'] = null;
+        } else {
+            // Hash at the boundary so the plaintext password is never written
+            // to the session or serialized into a queued job.
+            $validated['password'] = Hash::make($validated['password']);
+        }
+
         unset($validated['password_confirmation']);
 
         $selectedPlan = $this->publicPlans->activePlanBySlug($validated['plan'] ?? null);
@@ -84,7 +102,7 @@ class TenantRegistrationController extends Controller
         // Paid-but-active selection: no tenant is provisioned yet. The guest is
         // sent to a hosted checkout; provisioning happens only after payment.
         if ($selectedPlan !== null && (float) $selectedPlan->price > 0) {
-            return $this->startPaidCheckout($request, $validated, $selectedPlan);
+            return $this->startPaidCheckout($request, $validated, $selectedPlan, $identity);
         }
 
         $domain = $this->subdomainGenerator->forRequest($validated);
@@ -125,15 +143,35 @@ class TenantRegistrationController extends Controller
 
         dispatch(new CreateTenantAdminUser(
             $tenant,
-            $this->adminDisplayName($validated),
+            $this->adminDisplayName($validated, $identity),
             $validated['email'],
             $validated['password'],
         ));
 
+        // Provisioning succeeded: the parked Google identity must not silently
+        // apply to a later signup in the same browser.
+        PendingOAuthSignup::forget();
+
         return $this->pendingRedirect($tenant, $validated['email']);
     }
 
-    private function startPaidCheckout(StoreTenantRegistrationRequest $request, array $validated, Plan $plan)
+    /**
+     * Forget the verified Google identity parked by the signup callback, so the
+     * visitor can complete the same form with an email and password instead.
+     */
+    public function forgetOAuth(): RedirectResponse
+    {
+        PendingOAuthSignup::forget();
+
+        // Same-host relative redirect; see signupCallback().
+        return redirect('/register');
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  array{name: string, email: string}|null  $identity
+     */
+    private function startPaidCheckout(StoreTenantRegistrationRequest $request, array $validated, Plan $plan, ?array $identity = null)
     {
         $token = Str::random(32);
 
@@ -141,6 +179,9 @@ class TenantRegistrationController extends Controller
             'token' => $token,
             'plan' => (string) $plan->slug,
             'payload' => $validated,
+            // The session identity can expire before the checkout returns, so
+            // the verified Google name travels with the pending signup.
+            'admin_name' => $identity['name'] ?? null,
             'expires_at' => now()->addMinutes(self::PENDING_SIGNUP_TTL_MINUTES)->getTimestamp(),
         ]);
 
@@ -231,8 +272,18 @@ class TenantRegistrationController extends Controller
         return null;
     }
 
-    private function adminDisplayName(array $validated): string
+    /**
+     * @param  array<string, mixed>  $validated
+     * @param  array{name: string, email: string}|null  $identity
+     */
+    private function adminDisplayName(array $validated, ?array $identity = null): string
     {
+        // A Google signup never asks for the person's name, so the verified
+        // profile name becomes the admin display name instead of the company.
+        if ($identity !== null && $identity['name'] !== '') {
+            return $identity['name'];
+        }
+
         $contactName = trim(implode(' ', array_filter([
             $validated['first_name'] ?? null,
             $validated['last_name'] ?? null,

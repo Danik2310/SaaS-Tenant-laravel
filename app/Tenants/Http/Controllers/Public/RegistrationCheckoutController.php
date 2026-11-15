@@ -10,6 +10,7 @@ use App\Shared\Contracts\PaymentGatewayInterface;
 use App\Shared\Contracts\PublicPlanCatalogInterface;
 use App\Tenants\Contracts\TenantManagerInterface;
 use App\Tenants\Jobs\CreateTenantAdminUser;
+use App\Tenants\Support\PendingOAuthSignup;
 use App\Tenants\Support\SubdomainGenerator;
 use App\Tenants\Support\TenantVerificationCooldown;
 use App\Tenants\Support\TenantVerificationUrl;
@@ -132,10 +133,15 @@ class RegistrationCheckoutController extends Controller
 
         dispatch(new CreateTenantAdminUser(
             $tenant,
-            $this->adminDisplayName($validated),
+            $this->adminName($pending, $validated),
             $validated['email'],
-            $validated['password'],
+            // A Google signup stores NULL here: the account is passwordless.
+            $validated['password'] ?? null,
         ));
+
+        // The parked Google identity is no longer needed once the workspace
+        // exists; leaving it behind would apply it to a later signup.
+        PendingOAuthSignup::forget();
 
         return $this->pendingRedirect($tenant, $validated['email']);
     }
@@ -191,6 +197,25 @@ class RegistrationCheckoutController extends Controller
         TenantVerificationCooldown::start($tenant, $email);
 
         return redirect()->to($url)->with('status', 'verification-link-sent');
+    }
+
+    /**
+     * The verified Google profile name travels with the pending signup, so a
+     * checkout that returns after the session identity expired still names the
+     * admin correctly.
+     *
+     * @param  array<string, mixed>  $pending
+     * @param  array<string, mixed>  $validated
+     */
+    private function adminName(array $pending, array $validated): string
+    {
+        $name = $pending['admin_name'] ?? null;
+
+        if (is_string($name) && trim($name) !== '') {
+            return trim($name);
+        }
+
+        return $this->adminDisplayName($validated);
     }
 
     private function adminDisplayName(array $validated): string

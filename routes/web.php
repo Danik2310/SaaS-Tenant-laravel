@@ -95,6 +95,12 @@ foreach ((array) config('tenancy.central_domains', []) as $index => $centralDoma
         Route::post('/register', [TenantRegistrationController::class, 'store'])
             ->middleware(['throttle:3,1', 'throttle:registration']);
 
+        // Drop the verified Google identity parked by the signup callback, so
+        // the visitor can complete the form with an email and password instead.
+        Route::post('/register/oauth/forget', [TenantRegistrationController::class, 'forgetOAuth'])
+            ->middleware('throttle:30,1')
+            ->when($isPrimary, fn ($route) => $route->name('register.oauth.forget'));
+
         // Country-aware city lookup for the registration form. Bounded so a
         // guest cannot use it as a bulk-query or scraping endpoint.
         Route::get('/register/locations/cities', [RegistrationLocationController::class, 'cities'])

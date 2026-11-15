@@ -7,6 +7,7 @@ use App\Models\GlobalSetting;
 use App\Models\Plan;
 use App\Models\Tenant;
 use App\Shared\Contracts\LocationCatalog;
+use App\Tenants\Support\PendingOAuthSignup;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -18,6 +19,21 @@ class StoreTenantRegistrationRequest extends FormRequest
         private LocationCatalog $locations,
     ) {
         parent::__construct();
+    }
+
+    /**
+     * A verified Google identity owns the address and the credential. The form
+     * hides both fields in that case, so this method restores the address from
+     * the session before validation — a tampered payload cannot register a
+     * workspace for a mailbox Google did not verify.
+     */
+    protected function prepareForValidation(): void
+    {
+        $identity = PendingOAuthSignup::identity();
+
+        if ($identity !== null) {
+            $this->merge(['email' => $identity['email']]);
+        }
     }
 
     public function authorize(): bool
@@ -33,11 +49,17 @@ class StoreTenantRegistrationRequest extends FormRequest
 
     public function rules(): array
     {
+        $passwordless = PendingOAuthSignup::identity() !== null;
+
         return [
             'company_name' => 'required|string|max:255',
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255',
-            'password' => ['required', 'confirmed', Password::defaults()],
+            // Google signups have no credential: the account is passwordless
+            // and the fieldset is not rendered.
+            'password' => $passwordless
+                ? ['nullable', 'confirmed', Password::defaults()]
+                : ['required', 'confirmed', Password::defaults()],
             'subdomain' => [
                 'nullable',
                 'string',

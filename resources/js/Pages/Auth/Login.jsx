@@ -8,7 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Login({ status, canResetPassword, providers = [], oauthError = null }) {
+export default function Login({ status, canResetPassword, providers = [], oauthError = null, signupUrl = null }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         email: '',
         password: '',
@@ -106,6 +106,20 @@ export default function Login({ status, canResetPassword, providers = [], oauthE
                     </PrimaryButton>
                 </div>
             </form>
+
+            {signupUrl && (
+                <p className="mt-8 border-t border-gray-200 pt-6 text-center text-sm text-gray-600">
+                    Don&apos;t have an account?{' '}
+                    <a
+                        href={signupUrl}
+                        data-testid="signup-link"
+                        className="font-medium text-brand-600 underline underline-offset-4 hover:text-brand-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
+                    >
+                        Sign up using your email
+                        {providers.length > 0 ? ' or Google account' : ''}
+                    </a>
+                </p>
+            )}
         </GuestLayout>
     );
 }

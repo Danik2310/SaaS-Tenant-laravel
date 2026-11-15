@@ -24,8 +24,11 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
  *     Google reports `email_verified`**. Linking an unverified address would let
  *     anyone who can create an unverified Google account for victim@example.com
  *     take over the victim's local account.
- *  3. No local account → create one without a password, already verified, and
- *     within the plan's user quota.
+ *  3. No local account → for a **registration** flow, create one without a
+ *     password, already verified, and within the plan's user quota. A
+ *     **login** flow never creates: an unknown identity is refused with
+ *     `NO_ACCOUNT`, because the login button must not silently add a member to
+ *     a workspace the visitor was never invited to.
  *
  * Soft-deleted accounts are never resurrected: the tenant email index is
  * partial on purpose (`deleted_at IS NULL`), and the Eloquent global scope keeps
@@ -39,6 +42,7 @@ final class OAuthAccountLinker
         SocialiteUser $identity,
         ResourceEnforcementInterface $enforcement,
         string $provider = OAuthProvider::GOOGLE,
+        bool $createUnknown = true,
     ): User {
         $providerUserId = trim((string) $identity->getId());
         $email = Str::lower(trim((string) $identity->getEmail()));
@@ -84,6 +88,13 @@ final class OAuthAccountLinker
 
         if (! $this->emailIsVerified($identity)) {
             throw new OAuthAccountRejectedException(OAuthAccountRejectedException::UNVERIFIED_EMAIL);
+        }
+
+        if (! $createUnknown) {
+            // Login only signs in. The register screen is the single place that
+            // may turn a Google identity into a new member, so an uninvited
+            // visitor cannot join a workspace by pressing the login button.
+            throw new OAuthAccountRejectedException(OAuthAccountRejectedException::NO_ACCOUNT);
         }
 
         $this->assertWithinUserQuota($enforcement);

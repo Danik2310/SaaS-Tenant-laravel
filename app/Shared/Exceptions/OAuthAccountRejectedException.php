@@ -26,6 +26,12 @@ class OAuthAccountRejectedException extends RuntimeException
     /** The provider returned no subject id or no email address. */
     public const MALFORMED = 'malformed';
 
+    /**
+     * A login-intent identity has no local account. Sign-in never creates
+     * users; that only happens from the tenant register screen.
+     */
+    public const NO_ACCOUNT = 'no_account';
+
     public function __construct(public readonly string $reason)
     {
         parent::__construct("OAuth sign-in rejected: {$reason}");

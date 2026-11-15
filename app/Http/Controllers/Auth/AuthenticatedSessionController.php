@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
+use App\Shared\Support\CentralSignupUrl;
 use App\Shared\Support\JwtCookie;
 use App\Shared\Support\OAuthCallbackError;
 use App\Shared\Support\OAuthProviderLinks;
@@ -39,6 +40,10 @@ class AuthenticatedSessionController extends Controller
             'providers' => OAuthProviderLinks::for('login'),
             // Signed `?oauth_error=` carried back by the Google callback.
             'oauthError' => OAuthCallbackError::message($request),
+            // A visitor without a workspace signs up on the **central** host
+            // (`/register` provisions a new tenant); a plain route() here would
+            // resolve against the tenant root and hit this tenant's /register.
+            'signupUrl' => CentralSignupUrl::for(),
         ]);
     }
 

@@ -26,11 +26,17 @@ class CreateTenantAdminUser extends TenantAwareJob
 
     private readonly string $email;
 
+    /**
+     * `$passwordHash` is NULL for a Google-verified signup: the account is
+     * passwordless and already verified, so no hash is stored and no
+     * verification mail is sent. Everything else receives the hash computed at
+     * submission.
+     */
     public function __construct(
         Tenant $tenant,
         private readonly string $name,
         string $email,
-        private readonly string $passwordHash,
+        private readonly ?string $passwordHash = null,
     ) {
         $this->email = strtolower(trim($email));
 
@@ -40,22 +46,40 @@ class CreateTenantAdminUser extends TenantAwareJob
     protected function execute(): void
     {
         try {
+            $passwordless = $this->passwordHash === null;
+
             $user = User::firstOrNew(['email' => $this->email]);
             $user->name = $this->name;
             $user->is_active = true;
-            $user->password = Str::random(32);
+
+            if ($passwordless) {
+                // Google vouched for the address. The tenant-side flag is
+                // authoritative and the central projection is what unlocks the
+                // pending signup screen, so both are written here.
+                $user->password = null;
+                $user->email_verified_at = now();
+            } else {
+                $user->password = Str::random(32);
+            }
+
             $user->save();
 
-            // Persist the pre-computed hash verbatim, bypassing the model's
-            // 'hashed' cast (which would re-hash an already-hashed value and
-            // break logins). The hash is computed once at submission so no
-            // plaintext password ever crosses the session or the queue.
-            DB::connection()->table('users')
-                ->where('id', $user->getKey())
-                ->update(['password' => $this->passwordHash]);
+            if (! $passwordless) {
+                // Persist the pre-computed hash verbatim, bypassing the model's
+                // 'hashed' cast (which would re-hash an already-hashed value and
+                // break logins). The hash is computed once at submission so no
+                // plaintext password ever crosses the session or the queue.
+                DB::connection()->table('users')
+                    ->where('id', $user->getKey())
+                    ->update(['password' => $this->passwordHash]);
+            }
 
             if (! $user->hasRole(PermissionNames::ROLE_TENANT_ADMIN)) {
                 $user->assignRole(PermissionNames::ROLE_TENANT_ADMIN);
+            }
+
+            if ($passwordless) {
+                $this->tenant->markOwnerEmailVerified();
             }
 
             // The owner is provisioned but not yet usable: `verified` holds the

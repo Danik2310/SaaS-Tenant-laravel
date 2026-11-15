@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import LedgerLayout from '@/Layouts/LedgerLayout';
+import GoogleButton from '@/Components/Auth/GoogleButton';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
@@ -14,7 +15,7 @@ import PlanGrid from './parts/PlanGrid';
 import PlanSummary from './parts/PlanSummary';
 import StepIndicator from './parts/StepIndicator';
 import { passwordsMatch } from './parts/passwordFeedback';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 
 const POSTAL_CODE_RE = /^[A-Za-z0-9][A-Za-z0-9 -]*$/;
 
@@ -75,6 +76,9 @@ export default function TenantRegister({
     prefill = null,
     countries = [],
     states = {},
+    providers = [],
+    oauthIdentity = null,
+    oauthError = null,
 }) {
     const [showPayment, setShowPayment] = useState(false);
     const [showForm, setShowForm] = useState(Boolean(selected_plan));
@@ -92,7 +96,9 @@ export default function TenantRegister({
     const { data, setData, post, processing, errors, reset, setError, clearErrors } = useForm({
         company_name: '',
         name: '',
-        email: '',
+        // Google-first signup: the verified address is the only one the server
+        // will accept, so it seeds the hidden field.
+        email: oauthIdentity?.email ?? '',
         phone: '',
         first_name: '',
         last_name: '',
@@ -382,6 +388,16 @@ export default function TenantRegister({
             <div className={showForm ? stepAnimation : undefined}>
                 <StepIndicator current={currentKey} />
 
+                {oauthError && (
+                    <div
+                        role="alert"
+                        data-testid="oauth-error"
+                        className="mt-6 rounded-sm border border-red-400/40 bg-red-500/10 p-4 text-sm leading-relaxed text-red-200"
+                    >
+                        {oauthError}
+                    </div>
+                )}
+
                 {!showForm ? (
                     <>
                         <div className="mt-8">
@@ -401,6 +417,54 @@ export default function TenantRegister({
                                 how many people and locations you need to run.
                             </p>
                         </div>
+
+                        {oauthIdentity ? (
+                            <div
+                                data-testid="google-identity"
+                                className="mt-8 rounded-sm border border-white/15 bg-white/[0.03] p-4"
+                            >
+                                <p className="text-sm font-semibold text-white">
+                                    Signing up as {oauthIdentity.name || oauthIdentity.email}
+                                </p>
+                                <p className="mt-0.5 text-sm text-white/60">{oauthIdentity.email}</p>
+                                <p className="mt-2 text-xs leading-relaxed text-white/50">
+                                    Google has confirmed this address. We only ask for the workspace details
+                                    it does not provide — no password needed.
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+                                    {providers[0] && (
+                                        <a
+                                            href={providers[0].url}
+                                            className="rounded-sm font-medium text-white/70 underline underline-offset-4 transition-colors duration-150 ease-out hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+                                        >
+                                            Use a different account
+                                        </a>
+                                    )}
+                                    <button
+                                        type="button"
+                                        data-testid="use-email-instead"
+                                        onClick={() => router.post(route('register.oauth.forget'))}
+                                        className="rounded-sm font-medium text-white/70 underline underline-offset-4 transition-colors duration-150 ease-out hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+                                    >
+                                        Use email instead
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            providers.length > 0 && (
+                                <div className="mt-8" data-testid="google-signup">
+                                    <GoogleButton
+                                        providers={providers}
+                                        label="Sign up with Google"
+                                        tone="dark"
+                                        divider={false}
+                                    />
+                                    <p className="mt-2 text-xs leading-relaxed text-white/50">
+                                        We&apos;ll only ask for the workspace details Google does not provide.
+                                    </p>
+                                </div>
+                            )
+                        )}
 
                         <div className="mt-8">
                             <PlanGrid
@@ -604,33 +668,51 @@ export default function TenantRegister({
                                         />
                                     </FormField>
 
-                                    <FormField
+                                    {!oauthIdentity && (
+                                        <FormField
                                             row
-                                        label="Email"
-                                        htmlFor="email"
-                                        hint="Primary contact email for this tenant"
-                                        error={errors.email}
-                                        required
-                                    >
-                                        <TextInput
-                                                tone="dark"
-                                            id="email"
-                                            type="email"
-                                            name="email"
-                                            value={data.email}
-                                            className="block w-full"
-                                            invalid={Boolean(errors.email)}
-                                            autoComplete="username"
-                                            onChange={(e) => setData('email', e.target.value)}
-                                            placeholder="admin@tenant.com"
+                                            label="Email"
+                                            htmlFor="email"
+                                            hint="Primary contact email for this tenant"
+                                            error={errors.email}
                                             required
-                                        />
-                                    </FormField>
+                                        >
+                                            <TextInput
+                                                tone="dark"
+                                                id="email"
+                                                type="email"
+                                                name="email"
+                                                value={data.email}
+                                                className="block w-full"
+                                                invalid={Boolean(errors.email)}
+                                                autoComplete="username"
+                                                onChange={(e) => setData('email', e.target.value)}
+                                                placeholder="admin@tenant.com"
+                                                required
+                                            />
+                                        </FormField>
+                                    )}
                                 </Fieldset>
 
                                 <Fieldset className="mt-8">
-                                    <Legend>Secure your account</Legend>
+                                    <Legend>{oauthIdentity ? 'Your account' : 'Secure your account'}</Legend>
 
+                                    {oauthIdentity ? (
+                                        <div
+                                            data-testid="google-account-summary"
+                                            className="rounded-sm border border-white/15 bg-white/[0.03] p-4"
+                                        >
+                                            <p className="text-sm font-semibold text-white">
+                                                {oauthIdentity.name || oauthIdentity.email}
+                                            </p>
+                                            <p className="mt-0.5 text-sm text-white/60">{oauthIdentity.email}</p>
+                                            <p className="mt-2 text-xs leading-relaxed text-white/50">
+                                                Signed in with Google. Your address is already confirmed, so
+                                                there is no password to create.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <>
                                     <div>
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex items-baseline gap-1">
@@ -728,6 +810,8 @@ export default function TenantRegister({
                                             required
                                         />
                                     </FormField>
+                                        </>
+                                    )}
 
                                     <div>
                                         <label htmlFor="terms" className="flex items-start text-sm text-white/70">
@@ -969,15 +1053,17 @@ export default function TenantRegister({
                                                 onClick={(e) => {
                                                     e.preventDefault();
                                                     clearErrors();
-                                                    const required = [
-                                                        'company_name',
-                                                        'name',
-                                                        'email',
-                                                        'password',
-                                                        'password_confirmation',
-                                                        'terms',
-                                                        'subdomain',
-                                                    ];
+                                                    const required = oauthIdentity
+                                                        ? ['company_name', 'name', 'subdomain', 'terms']
+                                                        : [
+                                                              'company_name',
+                                                              'name',
+                                                              'email',
+                                                              'password',
+                                                              'password_confirmation',
+                                                              'terms',
+                                                              'subdomain',
+                                                          ];
                                                     const firstMissing = required.find((k) => {
                                                         const v = data[k];
                                                         if (k === 'terms') return !v;
@@ -989,11 +1075,13 @@ export default function TenantRegister({
                                                         focusField(firstMissing);
                                                         return;
                                                     }
-                                                    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                                                    if (!emailRe.test(data.email.trim())) {
-                                                        setError('email', 'Please enter a valid email address');
-                                                        focusField('email');
-                                                        return;
+                                                    if (!oauthIdentity) {
+                                                        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                                        if (!emailRe.test(data.email.trim())) {
+                                                            setError('email', 'Please enter a valid email address');
+                                                            focusField('email');
+                                                            return;
+                                                        }
                                                     }
                                                     const subRe = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
                                                     if (!subRe.test(data.subdomain.trim())) {
@@ -1001,7 +1089,7 @@ export default function TenantRegister({
                                                         focusField('subdomain');
                                                         return;
                                                     }
-                                                    if (data.password !== data.password_confirmation) {
+                                                    if (!oauthIdentity && data.password !== data.password_confirmation) {
                                                         setError('password_confirmation', 'Passwords do not match');
                                                         focusField('password_confirmation');
                                                         return;
