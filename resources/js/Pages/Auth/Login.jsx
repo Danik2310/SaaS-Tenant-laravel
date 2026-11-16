@@ -36,7 +36,15 @@ export default function Login({ status, canResetPassword, providers = [], oauthE
                 <p className="mt-1 text-sm text-gray-600">Log in to your ShoppingLi workspace.</p>
             </div>
 
-            {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
+            {status && (
+                <div
+                    role="status"
+                    data-testid="flash-status"
+                    className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700"
+                >
+                    {status}
+                </div>
+            )}
 
             {oauthError && (
                 <div role="alert" className="mt-4 text-sm text-red-600">

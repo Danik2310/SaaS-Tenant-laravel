@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import { Head, useForm } from '@inertiajs/react';
+import { passwordsMatch } from './parts/passwordFeedback';
+import { isPasswordValid, passwordChecks, passwordRuleError } from './parts/passwordPolicy';
 
 export default function ResetPassword({ token, email }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -14,14 +16,63 @@ export default function ResetPassword({ token, email }) {
         password_confirmation: '',
     });
 
+    // The inline checks run before the request, but the server rule stays
+    // authoritative: this only avoids a round trip for an obviously invalid
+    // password.
+    const [localErrors, setLocalErrors] = useState({});
+    const passwordInput = useRef(null);
+    const confirmationInput = useRef(null);
+
     useEffect(() => {
         return () => {
             reset('password', 'password_confirmation');
         };
     }, []);
 
-    const submit = (e) => {
-        e.preventDefault();
+    const checks = passwordChecks(data.password);
+    const confirmationMatches = passwordsMatch(data.password, data.password_confirmation);
+    const fieldError = (key) => localErrors[key] ?? errors[key];
+
+    const update = (key, value) => {
+        setData(key, value);
+        setLocalErrors((previous) => {
+            if (!previous[key]) return previous;
+
+            const next = { ...previous };
+            delete next[key];
+
+            return next;
+        });
+    };
+
+    const submit = (event) => {
+        event.preventDefault();
+
+        const nextErrors = {};
+
+        if (!isPasswordValid(data.password)) {
+            nextErrors.password = passwordRuleError(data.password) ?? 'Choose a stronger password.';
+        }
+
+        if (data.password_confirmation === '') {
+            nextErrors.password_confirmation = 'Confirm your new password.';
+        } else if (!confirmationMatches) {
+            nextErrors.password_confirmation = 'Passwords do not match.';
+        }
+
+        setLocalErrors(nextErrors);
+
+        if (nextErrors.password) {
+            passwordInput.current?.focus();
+
+            return;
+        }
+
+        if (nextErrors.password_confirmation) {
+            confirmationInput.current?.focus();
+
+            return;
+        }
 
         post(route('password.store'));
     };
@@ -31,61 +82,110 @@ export default function ResetPassword({ token, email }) {
             <Head title="Reset Password" />
 
             <div>
-                <h1 className="font-display text-2xl leading-tight tracking-tight text-ink">Set a new password</h1>
-                <p className="mt-1 text-sm text-gray-600">Choose a new password for your account.</p>
+                <h1 className="font-display text-2xl leading-tight tracking-tight text-ink">
+                    Set a new password
+                </h1>
+                <p className="mt-1 text-sm text-gray-600">
+                    Choose a new password for your account, then log in with it.
+                </p>
             </div>
 
-            <form onSubmit={submit} className="mt-6">
+            <div className="mt-6 rounded-xl bg-gray-50 px-3.5 py-3 ring-1 ring-inset ring-gray-200">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Account</p>
+                <p className="mt-0.5 break-all text-sm font-medium text-ink" data-testid="reset-email">
+                    {data.email || 'No address in this link'}
+                </p>
+            </div>
+
+            <InputError message={errors.email} className="mt-2" />
+
+            <form onSubmit={submit} className="mt-5" noValidate>
                 <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={(e) => setData('email', e.target.value)}
-                    />
-
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+                    <InputLabel htmlFor="password" value="New Password" />
 
                     <TextInput
                         id="password"
+                        ref={passwordInput}
                         type="password"
                         name="password"
                         value={data.password}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
                         isFocused={true}
-                        onChange={(e) => setData('password', e.target.value)}
+                        invalid={Boolean(fieldError('password'))}
+                        aria-describedby="password-rules"
+                        aria-invalid={fieldError('password') ? 'true' : undefined}
+                        onChange={(event) => update('password', event.target.value)}
                     />
 
-                    <InputError message={errors.password} className="mt-2" />
+                    <ul
+                        id="password-rules"
+                        className="mt-2 grid grid-cols-1 gap-1 sm:grid-cols-2"
+                        aria-label="Password requirements"
+                    >
+                        {checks.map((rule) => (
+                            <li
+                                key={rule.id}
+                                data-testid={`password-rule-${rule.id}`}
+                                data-met={rule.met ? 'true' : 'false'}
+                                className={`flex items-start gap-1.5 text-xs ${
+                                    rule.met ? 'text-emerald-700' : 'text-gray-500'
+                                }`}
+                            >
+                                <span aria-hidden="true" className="mt-px leading-none">
+                                    {rule.met ? '✓' : '○'}
+                                </span>
+                                <span>
+                                    {rule.label}
+                                    <span className="sr-only">
+                                        {rule.met ? ' — met' : ' — not met yet'}
+                                    </span>
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <InputError message={fieldError('password')} className="mt-2" />
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
+                    <div className="flex items-baseline justify-between gap-3">
+                        <InputLabel htmlFor="password_confirmation" value="Confirm Password" />
+
+                        <p
+                            role="status"
+                            aria-live="polite"
+                            data-testid="password-match-status"
+                            className={`text-xs ${
+                                confirmationMatches ? 'text-emerald-700' : 'text-gray-500'
+                            }`}
+                        >
+                            {data.password_confirmation === ''
+                                ? ''
+                                : confirmationMatches
+                                  ? 'Passwords match'
+                                  : 'Passwords do not match yet'}
+                        </p>
+                    </div>
 
                     <TextInput
+                        id="password_confirmation"
+                        ref={confirmationInput}
                         type="password"
                         name="password_confirmation"
                         value={data.password_confirmation}
                         className="mt-1 block w-full"
                         autoComplete="new-password"
-                        onChange={(e) => setData('password_confirmation', e.target.value)}
+                        invalid={Boolean(fieldError('password_confirmation'))}
+                        aria-invalid={fieldError('password_confirmation') ? 'true' : undefined}
+                        onChange={(event) => update('password_confirmation', event.target.value)}
                     />
 
-                    <InputError message={errors.password_confirmation} className="mt-2" />
+                    <InputError message={fieldError('password_confirmation')} className="mt-2" />
                 </div>
 
                 <div className="mt-6">
-                    <PrimaryButton className="w-full" disabled={processing}>
+                    <PrimaryButton type="submit" className="w-full" disabled={processing}>
                         Reset Password
                     </PrimaryButton>
                 </div>
