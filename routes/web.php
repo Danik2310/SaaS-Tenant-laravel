@@ -26,6 +26,7 @@ use App\Tenants\Http\Controllers\Public\PendingRegistrationController;
 use App\Tenants\Http\Controllers\Public\RegistrationCheckoutController;
 use App\Tenants\Http\Controllers\Public\RegistrationLocationController;
 use App\Tenants\Http\Controllers\Public\TenantRegistrationController;
+use App\Tenants\Http\Controllers\Public\WorkspaceLookupController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -57,11 +58,34 @@ use Inertia\Inertia;
 // (routes/tenant.php) shares the same URI with no domain constraint; an
 // unconstrained duplicate would be silently overwritten by Laravel's
 // method+domain+URI route keying.
-foreach ((array) config('tenancy.central_domains', []) as $centralDomain) {
-    Route::domain($centralDomain)->middleware(['central.domain'])->get('/', function () {
-        return Inertia::render('Welcome');
+//
+// `/login` gets the same treatment: on tenant hosts it stays the real tenant
+// login, while on central hosts it is the workspace finder. Because
+// `route('login')` generates the bare path `/login`, every existing marketing
+// link (Nav, FinalCta) then resolves correctly on both kinds of host with no
+// component change.
+foreach ((array) config('tenancy.central_domains', []) as $index => $centralDomain) {
+    Route::domain($centralDomain)->middleware(['central.domain'])->group(function () use ($index) {
+        Route::get('/', function () {
+            return Inertia::render('Welcome');
+        });
+
+        // Names must be unique for route:cache, so only the first central
+        // domain claims the canonical name; the others register the same
+        // domain-constrained route unnamed.
+        Route::get('/login', [WorkspaceLookupController::class, 'create'])
+            ->when($index === 0, fn ($route) => $route->name('workspace.find'));
     });
 }
+
+// Workspace finder lookup — resolves a typed address to the tenant login. The
+// URI does not collide with a tenant route, so it is registered once;
+// `central.domain` keeps it off tenant hosts and the throttle bounds bulk
+// enumeration of workspace addresses.
+Route::middleware(['central.domain', 'throttle:10,1'])->group(function () {
+    Route::post('/find-workspace', WorkspaceLookupController::class)
+        ->name('workspace.lookup');
+});
 
 /*
 |--------------------------------------------------------------------------

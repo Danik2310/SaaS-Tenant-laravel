@@ -1,8 +1,9 @@
 ﻿import { Link } from '@inertiajs/react';
 import Reveal from './Reveal';
+import WorkspaceFinder from './WorkspaceFinder';
 import { STOCK_ROWS } from './content';
 
-export default function Hero() {
+export default function Hero({ tenant_domain_suffix = 'sasapp' }) {
     return (
         <section id="top" className="relative overflow-hidden bg-ink text-white">
             {/* A ruled grid instead of the blurred radial blobs this section used
@@ -59,6 +60,23 @@ export default function Hero() {
                                 </li>
                             ))}
                         </ul>
+                    </Reveal>
+
+                    {/* Returning visitors: the primary CTAs above all start a new
+                        trial, so the finder is separated by a rule and worded as a
+                        different job rather than a third competing button. */}
+                    <Reveal delay={400}>
+                        <div className="mt-10 max-w-xl border-t border-white/10 pt-6">
+                            <p className="text-sm font-semibold text-white">Already have a workspace?</p>
+                            <p className="mt-1 text-sm text-white/50">
+                                Enter your address and we&apos;ll take you to its login.
+                            </p>
+                            <WorkspaceFinder
+                                tone="dark"
+                                suffix={tenant_domain_suffix}
+                                className="mt-3"
+                            />
+                        </div>
                     </Reveal>
                 </div>
 

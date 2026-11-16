@@ -22,7 +22,7 @@ import Footer from '@/Components/Marketing/Footer';
 // To revisit: split it only if the component ever grows past ~15kB gzip or the
 // page gains several more below-the-fold widgets.
 
-export default function Welcome({ auth }) {
+export default function Welcome({ auth, tenant_domain_suffix = 'sasapp' }) {
     const canonicalUrl = typeof window !== 'undefined' ? window.location.href : 'https://shoppingli.example';
 
     const structuredData = {
@@ -72,7 +72,7 @@ export default function Welcome({ auth }) {
             <div className="sl-marketing bg-white font-sans text-ink antialiased selection:bg-brand-500 selection:text-white">
                 <Nav auth={auth} />
                 <main>
-                    <Hero />
+                    <Hero tenant_domain_suffix={tenant_domain_suffix} />
                     <CapabilityStrip />
                     <ProblemSolution />
                     <Features />

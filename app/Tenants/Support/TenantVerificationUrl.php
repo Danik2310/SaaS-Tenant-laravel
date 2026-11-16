@@ -88,10 +88,16 @@ final class TenantVerificationUrl
         ));
     }
 
-    /** Tenant login URL shown once the address is confirmed. */
-    public static function loginFor(Tenant $tenant): ?string
+    /**
+     * Tenant login URL shown once the address is confirmed.
+     *
+     * `$domain` lets the central workspace finder keep the address the visitor
+     * typed (a custom or secondary domain) instead of canonicalising to the
+     * tenant's primary one.
+     */
+    public static function loginFor(Tenant $tenant, ?string $domain = null): ?string
     {
-        $domain = (string) $tenant->domain;
+        $domain = $domain ?: (string) $tenant->domain;
 
         if ($domain === '') {
             return null;

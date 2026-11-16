@@ -133,6 +133,7 @@ jobs:
               tests/Feature/PlanTest.php
               tests/Feature/Plans/TenantPlanCacheTest.php
               tests/Feature/Public/RegistrationLocationTest.php
+              tests/Feature/Public/WorkspaceLookupTest.php
               tests/Feature/ResourceUsage/TenantResourceUsageTest.php
               tests/Feature/RouteRegistrationTest.php
               tests/Feature/Tenant/Auth/EmailVerificationTest.php
