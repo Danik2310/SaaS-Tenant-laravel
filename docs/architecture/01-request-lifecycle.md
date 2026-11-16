@@ -102,7 +102,7 @@ Aliases are declared on the kernel and applied per route. The important groups:
 | `jwt.cookie` | `AuthenticateJwtFromCookie` | Copy the JWT cookie into an `Authorization: Bearer` header |
 | `jwt.refresh` | `RefreshJwtToken` | Re-issue the JWT when it is expired or past half-TTL |
 | `jwt.tenant` | `ValidateTenantToken` | Ensure the token's `ten` claim matches the current tenant |
-| `session.expiry` | `EnsureSessionNotExpired` | Absolute session lifetime; guard-aware logout redirect |
+| `session.expiry` | `EnsureSessionNotExpired` | Idle + absolute session clocks; blacklist + guard-aware logout redirect |
 | `impersonation.expiry` | `CheckImpersonationExpiry` | Clear an expired god-mode session |
 | `impersonation.session` | `EnsureImpersonationValid` | Validate god mode, enforce read-only, inject identity |
 | `tenant.state` | `CheckTenantState` | Gate tenant routes on lifecycle state (trial/suspended/deleted) |
@@ -145,8 +145,8 @@ flowchart TD
 ### Central admin pipeline
 
 ```php
-['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:admin',
- 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry']
+['central.domain', 'jwt.cookie', 'session.expiry:admin', 'jwt.refresh:admin',
+ 'auth:admin', 'throttle:100,1', 'impersonation.expiry']
 ```
 
 …then **per-route** `PermissionNames::middleware([...], 'admin')` gates. Central
@@ -155,8 +155,8 @@ routes never touch a tenant database.
 ### Tenant authenticated pipeline
 
 ```php
-['jwt.cookie', 'impersonation.session', 'jwt.refresh:web', 'auth',
- 'jwt.tenant:web', 'session.expiry:web', 'throttle:60,1']
+['jwt.cookie', 'impersonation.session', 'session.expiry:web',
+ 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'throttle:60,1']
 ```
 
 …then `verified`, plus per-group `PermissionNames::middleware([...], 'web')`,

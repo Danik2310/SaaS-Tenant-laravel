@@ -1,8 +1,8 @@
 # 04 — Authentication
 
 > **Scope**: how a user or admin is authenticated — the two JWT guards, the
-> JWT-in-a-cookie transport, login rate limiting, token refresh, and the absolute
-> session-lifetime check.
+> JWT-in-a-cookie transport, login rate limiting, token refresh, and the idle +
+> absolute session clocks.
 >
 > **Out of scope**: authorization/permissions (`05`), god-mode impersonation
 > (`06`), and the middleware ordering (`01`).
@@ -55,8 +55,9 @@ sequenceDiagram
 ```
 
 - [`JwtCookie::make()`](../../app/Shared/Support/JwtCookie.php) `:21` — HttpOnly,
-  `secure` from `session.secure`, `SameSite=Lax`, TTL `jwt.refresh_ttl`.
-- [`JwtCookie::forget()`](../../app/Shared/Support/JwtCookie.php) `:37` — clears it.
+  `secure` from `session.secure`, `SameSite=Lax`, TTL `jwt.refresh_ttl` capped at
+  `session.absolute_lifetime`.
+- [`JwtCookie::forget()`](../../app/Shared/Support/JwtCookie.php) `:53` — clears it.
 - [`AuthenticateJwtFromCookie`](../../app/Shared/Middleware/AuthenticateJwtFromCookie.php)
   (alias `jwt.cookie`) copies the cookie into `Authorization: Bearer …` so the
   rest of the stack only deals with bearer tokens.
@@ -91,15 +92,50 @@ sequenceDiagram
     end
 ```
 
-- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:53`.
+- [`AuthenticatedSessionController::store()`](../../app/Http/Controllers/Auth/AuthenticatedSessionController.php) `:54`.
 - [`LoginRequest::authenticate()`](../../app/Http/Requests/Auth/LoginRequest.php) `:51`
   — throttles to **5 attempts / minute** keyed on `email|ip`,
   [`ensureIsNotRateLimited()`](../../app/Http/Requests/Auth/LoginRequest.php) `:75`.
 
+#### The central `/login` is a workspace finder
+
+The tenant route above can only answer on a tenant host — tenancy cannot
+identify a central domain. The marketing site therefore registers a
+domain-constrained twin of the same URI per central domain (`routes/web.php`),
+which renders `Auth/FindWorkspace`. `route('login')` emits the bare path
+`/login`, so the same expression resolves to the real tenant login on a tenant
+host and to the finder on a central host — which is what makes the marketing
+Nav and FinalCta links work on both.
+
+The finder posts to `POST /find-workspace`, handled by
+[`WorkspaceLookupController::__invoke()`](../../app/Tenants/Http/Controllers/Public/WorkspaceLookupController.php) `:44`.
+The address is reduced to ordered candidates by
+[`WorkspaceAddress::candidates()`](../../app/Tenants/Support/WorkspaceAddress.php) `:25`:
+scheme, credentials, path, query, port and trailing dot are stripped, the value
+is lowercased, a bare label gains `tenancy.tenant_domain_suffix`, and a leading
+`www.` is retried without it. The first candidate that exists in `domains` wins
+and the browser is sent to **that** host's login via
+[`TenantVerificationUrl::loginFor()`](../../app/Tenants/Support/TenantVerificationUrl.php) `:98`,
+so a visitor who typed a custom domain stays on it.
+
+Invariants:
+
+- The redirect target is always a `domains` row, never the raw input — no open
+  redirect. Central domains are rejected before the lookup.
+- Unknown input returns a **422** on `workspace` (inline in the finder), with
+  one message for "unknown" and "not an address" so the endpoint does not
+  answer whether a workspace exists more precisely than DNS already does.
+- The route is throttled to **10 lookups/minute** and only runs on submit; a
+  lookup on every keystroke would be a free enumeration API.
+- Soft-deleted tenants deliberately resolve: their own host renders the
+  deleted-account page from `tenant.state`.
+- The endpoint is central-only (`central.domain`), so the URI stays free on
+  tenant hosts.
+
 ### 3.2 Admin login
 
 Same shape via
-[`AdminAuthController::login()`](../../app/Shared/Http/Controllers/Admin/Auth/AdminAuthController.php) `:56`
+[`AdminAuthController::login()`](../../app/Shared/Http/Controllers/Admin/Auth/AdminAuthController.php) `:57`
 and
 [`AdminLoginRequest::authenticate()`](../../app/Http/Requests/Admin/AdminLoginRequest.php) `:36`,
 but on the `admin` guard. One difference: a blocked account
@@ -107,7 +143,7 @@ but on the `admin` guard. One difference: a blocked account
 `auth.failed`, so support can tell the two apart — while an unknown email still
 returns the generic message.
 
-`AdminAuthController::user()` `:95` returns the admin plus the **flattened**
+`AdminAuthController::user()` `:98` returns the admin plus the **flattened**
 permission set (role permissions ∪ direct permissions), which the SPA uses to
 render the menu. The login page itself is the one Blade view, `admin.login`
 (`showLogin()` `:33`).
@@ -241,7 +277,7 @@ sequenceDiagram
   are central routes with no tenant session to protect, and `guest` would bounce
   a visitor who is already signed in instead of letting them switch accounts.
 - Tenant end:
-  [`GoogleOAuthCompleteController::__invoke()`](../../app/Http/Controllers/Auth/GoogleOAuthCompleteController.php) `:30`,
+  [`GoogleOAuthCompleteController::__invoke()`](../../app/Http/Controllers/Auth/GoogleOAuthCompleteController.php) `:31`,
   route `auth.google.complete` with `signed` and `throttle:10,1`, outside both
   `auth` and `guest` — `routes/tenant.php` :112.
 - Account resolution:
@@ -359,7 +395,9 @@ victim to consent to the attacker's Google account unprompted.
 flowchart TD
     A[request] --> B{Authorization header?}
     B -- no --> Z[continue as guest]
-    B -- yes --> C{token expired?}
+    B -- yes --> S{session anchors fresh?}
+    S -- "no: idle > 30 min or age > 12 h" --> X[blacklist JWT + clear cookie/session → sign in]
+    S -- yes --> C{token expired?}
     C -- yes --> R[refresh + re-issue cookie]
     C -- no --> D{past half TTL?}
     D -- yes --> R
@@ -367,18 +405,37 @@ flowchart TD
     R --> Z
 ```
 
-[`RefreshJwtToken`](../../app/Shared/Middleware/RefreshJwtToken.php) refreshes on
-either condition. The tenant claim `ten` is in `persistent_claims`
-(`config/jwt.php:193`), so it survives a refresh and
+[`EnsureSessionNotExpired`](../../app/Shared/Middleware/EnsureSessionNotExpired.php)
+(alias `session.expiry`) enforces the two server-side clocks **before**
+[`RefreshJwtToken`](../../app/Shared/Middleware/RefreshJwtToken.php) runs, so an
+idle or absolute expiry can never be rescued by a token refresh:
+
+| Clock | Config | Anchor | Behaviour |
+|-------|--------|--------|-----------|
+| Idle | `session.idle_lifetime` (`SESSION_IDLE_LIFETIME`, 30 min) | `last_activity`, rewritten on every authenticated request | signed out after N minutes without a request |
+| Absolute | `session.absolute_lifetime` (`SESSION_ABSOLUTE_LIFETIME`, 720 min) | `auth_started_at`, written once at login | signed out N minutes after login, even with constant activity |
+
+Both anchors live in the Laravel session, not in the JWT
+([`AuthSession`](../../app/Shared/Support/AuthSession.php)), so they survive
+token refreshes but end with the session. A request that carries a token but no
+anchors is treated as **expired**: an expired session cookie must not be
+re-established by a still-refreshable JWT. The cost is one forced sign-in for
+sessions that predate the anchors, which is intended.
+
+Expiry blacklists the JWT, invalidates the session (regenerating the CSRF
+token), expires the JWT cookie, and returns a 401 (JSON) or a guard-aware
+redirect — `central.login` for `admin`, `login` otherwise. Impersonation is
+skipped; god mode is bounded by `impersonation.ttl` instead. The transport
+cookie's max-age is capped at `min(jwt.refresh_ttl, session.absolute_lifetime)`
+in [`JwtCookie`](../../app/Shared/Support/JwtCookie.php).
+
+`RefreshJwtToken` still refreshes a token that expired inside
+`jwt.refresh_ttl`, but only for a session that passes both clocks. The tenant
+claim `ten` is in `persistent_claims` (`config/jwt.php:193`), so it survives a
+refresh and
 [`ValidateTenantToken`](../../app/Shared/Middleware/ValidateTenantToken.php)
 (`jwt.tenant`) can still reject a token that does not belong to the current
 tenant.
-
-**Absolute session lifetime.** Independently of the JWT TTL,
-[`EnsureSessionNotExpired`](../../app/Shared/Middleware/EnsureSessionNotExpired.php)
-(alias `session.expiry`) logs the guard out once
-`now − last_activity` exceeds `session.absolute_lifetime`, returning a 401 (JSON)
-or a **guard-aware redirect** — `central.login` for `admin`, `login` otherwise.
 
 ---
 
@@ -389,7 +446,7 @@ or a **guard-aware redirect** — `central.login` for `admin`, `login` otherwise
 | `jwt.cookie` | `AuthenticateJwtFromCookie` | cookie → bearer header |
 | `jwt.refresh[:guard]` | `RefreshJwtToken` | sliding-window renewal |
 | `auth` / `auth:admin` | `App\Http\Middleware\Authenticate` | guard check (401 for JSON/`/admin/*`) |
-| `session.expiry[:guard]` | `EnsureSessionNotExpired` | absolute lifetime + guard-aware logout |
+| `session.expiry[:guard]` | `EnsureSessionNotExpired` | idle + absolute clocks, blacklist + guard-aware logout |
 | `guest` | `RedirectIfAuthenticated` | keep authenticated users off guest pages |
 
 ---
@@ -403,8 +460,8 @@ or a **guard-aware redirect** — `central.login` for `admin`, `login` otherwise
 - **Refresh keeps `ten`,** so tenant scoping survives renewal.
 - **Rate limit by `email|ip`,** not by IP alone, so one attacker cannot lock out
   every account from a shared NAT.
-- **Absolute lifetime is separate from TTL** so a long-lived refresh window still
-  cannot extend a session indefinitely.
+- **Idle and absolute clocks are separate from TTL,** so a long-lived refresh
+  window still cannot extend a session indefinitely.
 
 ---
 
