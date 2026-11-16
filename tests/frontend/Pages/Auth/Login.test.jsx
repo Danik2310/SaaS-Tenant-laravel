@@ -136,4 +136,19 @@ describe('Login', () => {
         expect(signup).toHaveAttribute('href', 'http://localhost/register');
         expect(screen.getByText(/don't have an account\?/i)).toBeInTheDocument();
     });
+
+    test('confirms a completed password reset above the form', () => {
+        renderLogin({ status: 'Your password has been updated. You can now log in.' });
+
+        const banner = screen.getByTestId('flash-status');
+
+        expect(banner).toHaveTextContent('Your password has been updated. You can now log in.');
+        expect(banner).toHaveAttribute('role', 'status');
+    });
+
+    test('shows no banner when there is no status', () => {
+        renderLogin({ status: null });
+
+        expect(screen.queryByTestId('flash-status')).not.toBeInTheDocument();
+    });
 });
