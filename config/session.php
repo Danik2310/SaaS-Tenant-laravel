@@ -37,12 +37,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Idle Session Lifetime
+    |--------------------------------------------------------------------------
+    |
+    | Maximum number of minutes a session may sit idle before it is revoked,
+    | measured between authenticated requests. Any authenticated request slides
+    | the window; it is independent of the absolute lifetime below. Set to 0 to
+    | disable the idle check.
+    |
+    */
+
+    'idle_lifetime' => (int) env('SESSION_IDLE_LIFETIME', 30),
+
+    /*
+    |--------------------------------------------------------------------------
     | Absolute Session Lifetime
     |--------------------------------------------------------------------------
     |
-    | Hard cap on session age in minutes, regardless of activity. Even if the
-    | user is actively making requests, the session expires after this duration
-    | and forces re-authentication. Set to 0 to disable.
+    | Hard cap on session age in minutes, regardless of activity. The anchor is
+    | written once at login and never updated by requests or JWT refreshes, so
+    | an active session still expires after this duration and forces
+    | re-authentication. Set to 0 to disable.
     |
     | Recommended: 720 (12 hours) for production, 1440 (24 hours) for dev.
     |

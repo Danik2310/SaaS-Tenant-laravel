@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreUserRequest;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Shared\Support\AuthSession;
 use App\Shared\Support\JwtCookie;
 use App\Shared\Support\OAuthCallbackError;
 use App\Shared\Support\OAuthProviderLinks;
@@ -42,6 +43,8 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         $token = Auth::login($user);
+
+        AuthSession::begin();
 
         return redirect(RouteServiceProvider::HOME)->withCookie(JwtCookie::make($token));
     }

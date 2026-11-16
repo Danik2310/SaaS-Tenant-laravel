@@ -185,7 +185,7 @@ Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:ad
 })->name('admin.unauthorized');
 
 // Protected admin routes — only accessible on central domains
-Route::middleware(['central.domain', 'jwt.cookie', 'jwt.refresh:admin', 'auth:admin', 'throttle:100,1', 'session.expiry:admin', 'impersonation.expiry'])->prefix('admin')->group(function () {
+Route::middleware(['central.domain', 'jwt.cookie', 'session.expiry:admin', 'jwt.refresh:admin', 'auth:admin', 'throttle:100,1', 'impersonation.expiry'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Auth-state probe — no permission required; every authenticated admin may

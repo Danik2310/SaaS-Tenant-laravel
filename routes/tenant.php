@@ -114,7 +114,7 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
         ->name('auth.google.complete');
 
     // Authenticated tenant routes
-    Route::middleware(['jwt.cookie', 'impersonation.session', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'session.expiry:web', 'throttle:60,1'])->group(function () {
+    Route::middleware(['jwt.cookie', 'impersonation.session', 'session.expiry:web', 'jwt.refresh:web', 'auth', 'jwt.tenant:web', 'throttle:60,1'])->group(function () {
         // The prompt stays behind auth but NOT verified: it is where an
         // unverified owner resends the link (avoids an infinite redirect loop).
         Route::get('verify-email', EmailVerificationPromptController::class)

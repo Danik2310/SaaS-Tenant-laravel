@@ -5,6 +5,7 @@ namespace App\Shared\Http\Controllers\Admin\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AdminLoginRequest;
 use App\Http\Resources\AdminUserResource;
+use App\Shared\Support\AuthSession;
 use App\Shared\Support\JwtCookie;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -58,6 +59,8 @@ class AdminAuthController extends Controller
         $token = $request->authenticate();
 
         $request->session()->regenerate();
+
+        AuthSession::begin();
 
         return response()->json(['success' => true, 'message' => 'Logged in successfully'])
             ->withCookie(JwtCookie::make($token));

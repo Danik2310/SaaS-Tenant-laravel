@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Shared\Support\AuthSession;
 use App\Shared\Support\JwtCookie;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +41,8 @@ class GoogleOAuthCompleteController extends Controller
         $request->session()->regenerate();
 
         $token = Auth::guard('web')->login($user);
+
+        AuthSession::begin();
 
         return redirect(RouteServiceProvider::HOME)->withCookie(JwtCookie::make($token));
     }

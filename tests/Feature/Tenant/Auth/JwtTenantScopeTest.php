@@ -39,6 +39,7 @@ class JwtTenantScopeTest extends TestCase
         $token = Auth::guard('web')->login($user);
 
         $this->withUnencryptedCookie('token', $token)
+            ->withAuthSession()
             ->get('/dashboard')
             ->assertOk();
     }
@@ -51,6 +52,7 @@ class JwtTenantScopeTest extends TestCase
             ->fromUser($user);
 
         $this->withUnencryptedCookie('token', $token)
+            ->withAuthSession()
             ->get('/dashboard')
             ->assertStatus(401);
     }

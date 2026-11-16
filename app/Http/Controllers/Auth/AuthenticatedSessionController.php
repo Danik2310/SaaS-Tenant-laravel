@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Providers\RouteServiceProvider;
+use App\Shared\Support\AuthSession;
 use App\Shared\Support\CentralSignupUrl;
 use App\Shared\Support\JwtCookie;
 use App\Shared\Support\OAuthCallbackError;
@@ -55,6 +56,8 @@ class AuthenticatedSessionController extends Controller
         $token = $request->authenticate();
 
         $request->session()->regenerate();
+
+        AuthSession::begin();
 
         return redirect()->intended(RouteServiceProvider::HOME)->withCookie(JwtCookie::make($token));
     }

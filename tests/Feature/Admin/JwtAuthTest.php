@@ -4,6 +4,7 @@ namespace Tests\Feature\Admin;
 
 use App\Models\AdminUser;
 use App\Models\User;
+use App\Shared\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Testing\TestResponse;
@@ -59,7 +60,9 @@ class JwtAuthTest extends TestCase
      */
     private function withTokenCookie(string $token): static
     {
-        return $this->withCredentials()->withUnencryptedCookie('token', $token);
+        return $this->withCredentials()
+            ->withUnencryptedCookie('token', $token)
+            ->withAuthSession();
     }
 
     public function test_login_sets_http_only_token_cookie(): void
@@ -232,5 +235,48 @@ class JwtAuthTest extends TestCase
         $this->withTokenCookie($token)
             ->getJson('/admin/api/tenants')
             ->assertStatus(401);
+    }
+
+    public function test_fresh_admin_login_carries_the_session_anchors(): void
+    {
+        $admin = AdminUser::factory()->create([
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $token = $this->loginToken($admin);
+
+        $this->assertNotNull(session(AuthSession::STARTED_AT));
+        $this->assertNotNull(session(AuthSession::LAST_ACTIVITY));
+
+        // The login response wrote the anchors, so a raw token cookie is
+        // accepted without the test seeding them.
+        $this->withCredentials()
+            ->withUnencryptedCookie('token', $token)
+            ->getJson('/admin/user')
+            ->assertOk()
+            ->assertJsonPath('user.email', 'admin@example.com');
+    }
+
+    public function test_idle_admin_session_is_revoked(): void
+    {
+        $admin = AdminUser::factory()->create([
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $token = $this->loginToken($admin);
+
+        $this->travel(31)->minutes();
+
+        $this->withCredentials()
+            ->withUnencryptedCookie('token', $token)
+            ->withAuthSession(
+                now()->subMinutes(31)->timestamp,
+                now()->subMinutes(31)->timestamp,
+            )
+            ->getJson('/admin/user')
+            ->assertStatus(401)
+            ->assertCookieExpired('token');
     }
 }

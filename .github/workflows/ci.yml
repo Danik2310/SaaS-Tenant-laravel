@@ -177,6 +177,7 @@ jobs:
               tests/Feature/Tenant/Auth/AuthenticationTest.php
               tests/Feature/Tenant/Auth/PasswordConfirmationTest.php
               tests/Feature/Tenant/Auth/PasswordResetTest.php
+              tests/Feature/Tenant/Auth/SessionLifetimeTest.php
               tests/Feature/Tenant/Billing/PaymentHistoryTest.php
               tests/Feature/Tenant/CollectTenantMetricsTest.php
               tests/Feature/Tenant/CreateTenantStorageSkeletonTest.php

@@ -5,6 +5,7 @@ namespace Tests;
 use App\Models\Domain;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Shared\Support\AuthSession;
 use Database\Seeders\PlanSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
@@ -274,6 +275,21 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * Seed the login anchors enforced by `session.expiry`.
+     *
+     * Tests that authenticate with a raw token cookie (rather than through a
+     * login controller) still need a session that proves when the login
+     * happened; without it the middleware fails closed.
+     */
+    protected function withAuthSession(?int $startedAt = null, ?int $lastActivity = null): static
+    {
+        return $this->withSession([
+            AuthSession::STARTED_AT => $startedAt ?? now()->timestamp,
+            AuthSession::LAST_ACTIVITY => $lastActivity ?? now()->timestamp,
+        ]);
+    }
+
+    /**
      * Act as a given user, minting a real JWT for tenant users so tenant
      * auth middleware (jwt.tenant) can validate the token's tenant claim.
      */
@@ -284,7 +300,9 @@ abstract class TestCase extends BaseTestCase
             && tenancy()->initialized
         ) {
             $token = Auth::guard('web')->login($user);
-            $this->withCredentials()->withUnencryptedCookie('token', $token);
+            $this->withCredentials()
+                ->withUnencryptedCookie('token', $token)
+                ->withAuthSession();
         }
 
         return parent::actingAs($user, $guard);
