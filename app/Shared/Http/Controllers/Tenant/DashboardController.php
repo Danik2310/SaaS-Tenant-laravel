@@ -5,6 +5,7 @@ namespace App\Shared\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryMovement;
 use App\Models\Order;
+use App\Shared\Support\StockLevels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -34,18 +35,21 @@ class DashboardController extends Controller
         $tag = 'tenant_'.tenant('id');
 
         $current = $this->cachedWithFallback($tag, 'dash_current_counts', 300, function () {
-            return DB::selectOne("
+            return DB::selectOne('
                 SELECT
                     (SELECT COUNT(*) FROM products) AS total_products,
                     (SELECT COUNT(*) FROM products WHERE active = 1) AS active_products,
                     (SELECT COUNT(*) FROM orders) AS total_orders,
-                    (SELECT COUNT(*) FROM customers) AS total_customers,
-                    (SELECT COUNT(*) FROM products p WHERE p.active = 1 AND (
-                        SELECT COALESCE(SUM(CASE WHEN im.type = 'out' THEN -im.quantity ELSE im.quantity END), 0)
-                        FROM inventory_movements im WHERE im.product_id = p.id
-                    ) < 10) AS low_stock_count
-            ");
+                    (SELECT COUNT(*) FROM customers) AS total_customers
+            ');
         });
+
+        $lowStockCount = $this->cachedWithFallback(
+            $tag,
+            'dash_low_stock_count',
+            300,
+            fn () => StockLevels::lowStockCount(),
+        );
 
         $previous = $this->cachedWithFallback($tag, 'dash_previous_counts', 3600, function () {
             return DB::selectOne('
@@ -60,7 +64,6 @@ class DashboardController extends Controller
         $activeProducts = (int) ($current->active_products ?? 0);
         $totalOrders = (int) ($current->total_orders ?? 0);
         $totalCustomers = (int) ($current->total_customers ?? 0);
-        $lowStockCount = (int) ($current->low_stock_count ?? 0);
         $previousActiveProducts = (int) ($previous->prev_active_products ?? 0);
         $previousOrders = (int) ($previous->prev_orders ?? 0);
         $previousCustomers = (int) ($previous->prev_customers ?? 0);
@@ -71,7 +74,7 @@ class DashboardController extends Controller
                 'active_products' => $activeProducts,
                 'total_orders' => $totalOrders,
                 'total_customers' => $totalCustomers,
-                'low_stock_count' => $lowStockCount,
+                'low_stock_count' => (int) $lowStockCount,
             ],
             'trends' => [
                 'active_products' => $previousActiveProducts > 0

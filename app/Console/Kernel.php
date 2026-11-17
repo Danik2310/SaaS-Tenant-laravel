@@ -43,6 +43,10 @@ class Kernel extends ConsoleKernel
         // Collect tenant resource usage metrics hourly
         $schedule->command('tenants:collect-metrics')->hourly();
 
+        // Sweep passwordless accounts and low-stock thresholds daily. Instant
+        // triggers (logins, movements, orders) are handled by observers.
+        $schedule->command('notifications:scan-triggers')->daily();
+
         // Expire trial tenants daily
         $schedule->command('tenants:expire-trials')->daily();
 
