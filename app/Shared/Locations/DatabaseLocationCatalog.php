@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Reference location data backed by the altwaireb/laravel-world tables
+ * Reference location data backed by the nnjeim/world tables
  * (countries / states / cities) on the default connection.
  */
 class DatabaseLocationCatalog implements LocationCatalog
@@ -18,8 +18,7 @@ class DatabaseLocationCatalog implements LocationCatalog
     {
         return Cache::remember('world.countries', 86400, function () {
             return DB::table('countries')
-                ->where('is_active', 1)
-                ->whereNull('deleted_at')
+                ->where('status', 1)
                 ->orderBy('name')
                 ->get(['iso2', 'name'])
                 ->map(fn ($row) => ['code' => $row->iso2, 'name' => $row->name])
@@ -33,10 +32,7 @@ class DatabaseLocationCatalog implements LocationCatalog
         return Cache::remember('world.states.all', 86400, function () {
             return DB::table('states')
                 ->join('countries', 'countries.id', '=', 'states.country_id')
-                ->where('states.is_active', 1)
-                ->whereNull('states.deleted_at')
-                ->where('countries.is_active', 1)
-                ->whereNull('countries.deleted_at')
+                ->where('countries.status', 1)
                 ->orderBy('countries.iso2')
                 ->orderBy('states.name')
                 ->get(['countries.iso2', 'states.name'])
@@ -72,8 +68,6 @@ class DatabaseLocationCatalog implements LocationCatalog
         return Cache::remember($cacheKey, 86400, function () use ($countryId, $stateId) {
             return DB::table('cities')
                 ->where('country_id', $countryId)
-                ->where('is_active', 1)
-                ->whereNull('deleted_at')
                 ->when($stateId !== null, fn ($query) => $query->where('state_id', $stateId))
                 ->orderBy('name')
                 ->limit(5000)
@@ -110,8 +104,6 @@ class DatabaseLocationCatalog implements LocationCatalog
 
         $query = DB::table('cities')
             ->where('country_id', $country->id)
-            ->where('is_active', 1)
-            ->whereNull('deleted_at')
             ->where('name', $cityName);
 
         if ($stateName !== null && $stateName !== '') {
@@ -131,8 +123,7 @@ class DatabaseLocationCatalog implements LocationCatalog
     {
         $id = DB::table('countries')
             ->where('iso2', strtoupper($countryCode))
-            ->where('is_active', 1)
-            ->whereNull('deleted_at')
+            ->where('status', 1)
             ->value('id');
 
         return is_numeric($id) ? (int) $id : null;
@@ -145,8 +136,7 @@ class DatabaseLocationCatalog implements LocationCatalog
     {
         return DB::table('countries')
             ->where('name', $countryName)
-            ->where('is_active', 1)
-            ->whereNull('deleted_at')
+            ->where('status', 1)
             ->first(['id', 'iso2']);
     }
 
@@ -154,8 +144,6 @@ class DatabaseLocationCatalog implements LocationCatalog
     {
         $id = DB::table('states')
             ->where('country_id', $countryId)
-            ->where('is_active', 1)
-            ->whereNull('deleted_at')
             ->where('name', $stateName)
             ->value('id');
 
