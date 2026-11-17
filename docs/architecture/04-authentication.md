@@ -437,6 +437,17 @@ refresh and
 (`jwt.tenant`) can still reject a token that does not belong to the current
 tenant.
 
+Logout revokes the credential, but a browser can also *restore* a page that is
+already rendered: the back-forward cache replays the document (`pageshow` with
+`persisted: true`), and Inertia restores its `history.state` page on `popstate`.
+Neither path sends a request, so no middleware can reject it. The client-side
+[`authenticatedPageRestore`](../../resources/js/utils/authenticatedPageRestore.js)
+guard installed by `resources/js/app.jsx` forces a hard reload on either path;
+the server then re-checks the session and sends a guest to `login`. The logout
+button posts with `replace: true` so its own dashboard entry is replaced rather
+than pushed. This stops stale authenticated pages being displayed again; it
+cannot undo data a user already copied from a page before logging out.
+
 ---
 
 ## 5. Middleware
