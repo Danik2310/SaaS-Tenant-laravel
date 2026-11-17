@@ -130,7 +130,15 @@ builds on:
 - Three canonical tenants (`empresaabc`, `tiendaxyz`, `consultoria123`) replace the previous 30-tenant set.
 - Tenant-facing tables are capped at `records_per_tenant_table` (default 10). A lower plan limit wins, so a Free tenant still gets 2 users, 5 categories and 1 warehouse.
 - Essential system rows are always seeded: plans/features, roles/permissions, staff, global and tenant settings, payment methods and subscriptions.
-- World data is loaded separately with `php artisan world:seeder` and is not part of `DatabaseSeeder`.
+- World data is loaded separately with
+  `php -d memory_limit=1G artisan world:install` (all countries, states and
+  cities) and is not part of `DatabaseSeeder`; run `php artisan optimize:clear`
+  afterwards. The verified catalog contains 250 countries, 5,017 states and
+  150,734 cities, tracked in `world_data_records`; re-running the command is
+  idempotent and does not overwrite the tracked `config/world.php`. Tenant
+  postal codes are validated against the selected country's ISO2 code by
+  `axlon/laravel-postal-code-validation`, resolved from the submitted country
+  name via `LocationCatalog::countryCodeByName()`.
 
 Historical migrations are kept intact. Fresh tenants receive their full schema from the `TenantCreated` pipeline; `TenantSeeder` only migrates existing tenants when `tenancy.seeder_migrate_existing` is true (disabled in tests). Tests clone one pre-migrated tenant schema, so no redundant per-tenant migration runs are added.
 

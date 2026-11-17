@@ -34,7 +34,8 @@ cp .env.example .env
 php artisan key:generate
 php artisan migrate
 php artisan db:seed
-php artisan world:seeder   # run once to populate countries/states/cities
+php -d memory_limit=1G artisan world:install  # all countries/states/cities
+php artisan optimize:clear
 
 # dev servers
 php artisan serve          # Laravel + Vite + Reverb when DEV_STACK=true
@@ -57,6 +58,11 @@ php artisan test tests/Feature/Admin/<TestName>.php
 pnpm exec vitest run
 pnpm run test:coverage
 ```
+
+`php -d memory_limit=1G artisan world:install` is the one-time, idempotent
+world-catalog load; it publishes package seeder/translation files on first run
+but leaves the tracked `config/world.php` untouched. Always run
+`php artisan optimize:clear` after it.
 
 Important CI expectations:
 

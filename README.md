@@ -39,7 +39,19 @@ php artisan migrate
 
 # Seed the database (plans, tenants, payments, etc.)
 php artisan db:seed
+
+# One-time world catalog: 250 countries, 5,017 states, 150,734 cities
+php -d memory_limit=1G artisan world:install
+
+# Refresh cached lookups after the catalog changes
+php artisan optimize:clear
 ```
+
+`world:install` is separate from `db:seed` and is safe to re-run: it adopts
+existing rows by natural key and records source IDs in `world_data_records`.
+On first run it publishes the package seeder and translations, but it does not
+overwrite the tracked `config/world.php`. Do not add the world seeder to
+`DatabaseSeeder`.
 
 ### Environment Variables
 
