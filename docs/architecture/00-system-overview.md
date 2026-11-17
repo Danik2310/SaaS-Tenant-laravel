@@ -123,6 +123,17 @@ builds on:
 - Central tables: `tenants`, `domains`, `admin_users`, `plans`, `subscriptions`, `subscription_payments`, `payment_methods`, `global_settings`, `activity_log`, permissions/roles.
 - Tenant tables: users, customers, products, categories, warehouses, inventory movements, orders, settings.
 
+### 5.1 Seeding profile
+
+`config/seeding.php` defines the lean demo profile used by `db:seed`:
+
+- Three canonical tenants (`empresaabc`, `tiendaxyz`, `consultoria123`) replace the previous 30-tenant set.
+- Tenant-facing tables are capped at `records_per_tenant_table` (default 10). A lower plan limit wins, so a Free tenant still gets 2 users, 5 categories and 1 warehouse.
+- Essential system rows are always seeded: plans/features, roles/permissions, staff, global and tenant settings, payment methods and subscriptions.
+- World data is loaded separately with `php artisan world:seeder` and is not part of `DatabaseSeeder`.
+
+Historical migrations are kept intact. Fresh tenants receive their full schema from the `TenantCreated` pipeline; `TenantSeeder` only migrates existing tenants when `tenancy.seeder_migrate_existing` is true (disabled in tests). Tests clone one pre-migrated tenant schema, so no redundant per-tenant migration runs are added.
+
 ---
 
 ## 6. Front end at a glance
