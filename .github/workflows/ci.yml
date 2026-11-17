@@ -78,8 +78,10 @@ jobs:
       matrix:
         # Shards are balanced by summed per-file time from a full local run.
         # Regenerate with the timings in storage/logs/junit-*.xml (bin-pack
-        # largest-first) whenever classes are added/removed. Shard 1 is a single
-        # file because SubscriptionTest's full-seed test dominates the suite.
+        # largest-first) whenever classes are added/removed. Shard 1 remains a
+        # single file: SubscriptionTest is still the slowest file (~390s) even
+        # after capping the plan limits used by its seeder test; the other
+        # shards are ~300–345s, so moving files would not lower the critical path.
         include:
           - shard: 1
             files: "tests/Feature/SubscriptionTest.php"

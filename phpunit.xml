@@ -31,5 +31,7 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="TENANCY_PATH_IDENTIFICATION" value="true"/>
+        <!-- Tenant provisioning already produces a fully migrated schema in tests. -->
+        <env name="TENANT_SEEDER_MIGRATE_EXISTING" value="false"/>
     </php>
 </phpunit>

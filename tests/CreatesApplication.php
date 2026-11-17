@@ -41,8 +41,7 @@ trait CreatesApplication
      * (see TenantSchemaCloner), so cloned databases are byte-for-byte the same
      * schema MigrateDatabase would have produced. Production is untouched —
      * tests that exercise real migrations (TenantMigrationTest, the admin
-     * migrate endpoint, TenantSeeder's explicit migrateTenant()) bypass this
-     * pipeline entirely.
+     * migrate endpoint, `tenants:migrate`) bypass this pipeline entirely.
      *
      * @see TestCase::createTestTenant()
      */

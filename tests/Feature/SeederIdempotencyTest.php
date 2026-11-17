@@ -18,6 +18,7 @@ use App\Models\Warehouse;
 use Database\Seeders\Tenant\TenantDataSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -168,6 +169,16 @@ class SeederIdempotencyTest extends TestCase
         // Capture baseline counts from key tables
         $firstCounts = $this->captureKeyTableCounts();
         $firstTenantIds = Tenant::withTrashed()->pluck('id')->sort()->values()->all();
+
+        // Fresh tenants must already have the full schema. Regression guard for
+        // removing TenantSeeder's redundant migrateTenant() call — migrations
+        // come from provisioning/the cloned template, not from the seeder.
+        Tenant::where('email', 'contacto@empresaabc.com')->firstOrFail()->run(function () {
+            $this->assertTrue(Schema::hasTable('notifications'),
+                'Fresh seeded tenants should have the notifications table.');
+            $this->assertTrue(Schema::hasColumn('products', 'low_stock_threshold'),
+                'Fresh seeded tenants should have late product-threshold migrations.');
+        });
 
         // Second full seed run — must be idempotent. Regression guard: TenantSeeder
         // used to re-provision every tenant (it looked them up by slug, not domain),

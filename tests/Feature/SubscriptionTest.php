@@ -11,6 +11,7 @@ use App\Models\Tenant;
 use Database\Seeders\TenantSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use Tests\Support\AdminAuthSetup;
 use Tests\TestCase;
 
@@ -485,9 +486,12 @@ class SubscriptionTest extends TestCase
 
     public function test_database_has_subscriptions_after_tenant_seeder(): void
     {
-        Plan::factory()->create(['slug' => 'free', 'max_users' => 10]);
-        Plan::factory()->create(['slug' => 'pro', 'max_users' => 50]);
-        Plan::factory()->create(['slug' => 'enterprise', 'max_users' => 999]);
+        // TenantSeeder derives demo data volume from max_users. Keep the plan
+        // limits near the real PlanSeeder values so seeding 30 tenants stays
+        // fast; this test only cares that each plan produces a subscription.
+        Plan::factory()->create(['slug' => 'free', 'max_users' => 2]);
+        Plan::factory()->create(['slug' => 'pro', 'max_users' => 5]);
+        Plan::factory()->create(['slug' => 'enterprise', 'max_users' => 10]);
 
         $tenant = Tenant::create([
             'id' => 'test-seeder-'.uniqid(),
@@ -514,5 +518,15 @@ class SubscriptionTest extends TestCase
                 'status' => 'active',
             ]);
         }
+
+        // Fresh tenants must arrive with the complete schema. Regression guard
+        // for removing TenantSeeder's redundant migrateTenant() call: the
+        // TenantCreated pipeline (real or cloned) is responsible for migrations.
+        Tenant::where('email', 'contacto@empresaabc.com')->firstOrFail()->run(function () {
+            $this->assertTrue(Schema::hasTable('notifications'),
+                'Fresh seeded tenants should have the notifications table.');
+            $this->assertTrue(Schema::hasColumn('products', 'low_stock_threshold'),
+                'Fresh seeded tenants should have late product-threshold migrations.');
+        });
     }
 }

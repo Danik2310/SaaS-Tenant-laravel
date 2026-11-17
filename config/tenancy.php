@@ -60,6 +60,15 @@ return [
     'tenant_domain_suffix' => env('TENANT_DOMAIN_SUFFIX', 'sasapp'),
 
     /**
+     * Whether TenantSeeder should migrate tenants that already exist.
+     *
+     * Fresh tenants are migrated by the TenantCreated pipeline regardless.
+     * Tests provision fully migrated schemas via TenantSchemaCloner, so they
+     * disable this to avoid re-running every tenant migration on each seed.
+     */
+    'seeder_migrate_existing' => env('TENANT_SEEDER_MIGRATE_EXISTING', true),
+
+    /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
      * Their responsibility is making Laravel features tenant-aware.
      *

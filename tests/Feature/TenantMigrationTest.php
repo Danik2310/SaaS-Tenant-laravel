@@ -431,6 +431,15 @@ class TenantMigrationTest extends TestCase
         $this->assertSame(0, $firstExitCode,
             'First db:seed should exit with code 0. Output: '.Artisan::output());
 
+        // Fresh tenants must already have the full schema; the seeder no longer
+        // re-runs tenant migrations after provisioning.
+        Tenant::where('email', 'contacto@empresaabc.com')->firstOrFail()->run(function () {
+            $this->assertTrue(Schema::hasTable('notifications'),
+                'Fresh seeded tenants should have the notifications table.');
+            $this->assertTrue(Schema::hasColumn('products', 'low_stock_threshold'),
+                'Fresh seeded tenants should have late product-threshold migrations.');
+        });
+
         // Capture baseline counts from key central tables
         $firstPlansCount = Plan::count();
         $firstFeaturesCount = PlanFeature::count();

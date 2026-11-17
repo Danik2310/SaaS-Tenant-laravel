@@ -163,7 +163,14 @@ class TenantSeeder extends Seeder
         $tenant->load('plan');
         $plan = $tenant->plan;
 
-        $tenantManager->migrateTenant($tenant);
+        // Existing tenants are the only ones that need an explicit migration:
+        // re-running the seeder is how deployed migrations reach them. In
+        // tests, provisioning already produces a fully migrated schema, so
+        // skipping this avoids ~30 redundant `tenants:migrate` invocations.
+        if (config('tenancy.seeder_migrate_existing')) {
+            $tenantManager->migrateTenant($tenant);
+        }
+
         $this->seedTenantData($tenant, $config['email'], $plan);
 
         if ($config['status'] === 'Suspended') {
@@ -191,7 +198,12 @@ class TenantSeeder extends Seeder
         ];
 
         $tenant = $tenantManager->provision($data);
-        $tenantManager->migrateTenant($tenant);
+
+        // provision() dispatches TenantCreated, whose pipeline already creates
+        // and migrates the database (real MigrateDatabase in production, a
+        // cloned pre-migrated schema in tests). Migrating again here re-ran
+        // every tenant migration for each of the ~30 seeded tenants and
+        // dominated test runtime.
         $tenant->load('plan');
         $plan = $tenant->plan;
 
