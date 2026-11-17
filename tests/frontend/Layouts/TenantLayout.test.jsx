@@ -90,4 +90,17 @@ describe('TenantLayout', () => {
     expect(screen.queryByTestId('god-mode-indicator')).not.toBeInTheDocument();
     expect(screen.getByText('Tenant Content')).toBeInTheDocument();
   });
+
+  test('logging out replaces the current dashboard history entry', () => {
+    renderWithProviders(
+      <TenantLayout>
+        <div>Tenant Content</div>
+      </TenantLayout>
+    );
+
+    // The mobile and desktop sidebars are both mounted; either one is fine.
+    fireEvent.click(screen.getAllByLabelText('Logout')[0]);
+
+    expect(routerPost).toHaveBeenCalledWith('/__route/logout', {}, { replace: true });
+  });
 });

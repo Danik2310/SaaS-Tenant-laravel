@@ -70,7 +70,9 @@ class SessionLifetimeTest extends TestCase
         $this->actingAs(User::factory()->create());
 
         $this->travel(29)->minutes();
-        $this->get('/dashboard')->assertOk();
+        $this->get('/dashboard')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private');
 
         // The previous request slid `last_activity`, so another 29 minutes
         // still leaves the session inside the 30-minute window.
@@ -140,7 +142,8 @@ class SessionLifetimeTest extends TestCase
 
         $this->withUnencryptedCookie('token', $token)
             ->post('/logout')
-            ->assertRedirect('/');
+            ->assertRedirect('/')
+            ->assertCookieExpired('token');
 
         // A fresh session with the old token must still be rejected: the token
         // itself was blacklisted server-side, not just removed from the browser.
