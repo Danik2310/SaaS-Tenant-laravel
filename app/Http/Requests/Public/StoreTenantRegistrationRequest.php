@@ -8,6 +8,8 @@ use App\Models\Plan;
 use App\Models\Tenant;
 use App\Shared\Contracts\LocationCatalog;
 use App\Tenants\Support\PendingOAuthSignup;
+use Axlon\PostalCodeValidation\Support\Facades\PostalCodes;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
@@ -84,6 +86,23 @@ class StoreTenantRegistrationRequest extends FormRequest
                 'string',
                 'max:20',
                 'regex:/^[A-Za-z0-9][A-Za-z0-9 -]*$/',
+                function ($attribute, $value, Closure $fail): void {
+                    $country = (string) $this->input('country', '');
+
+                    if ($value === null || $value === '' || $country === '') {
+                        return;
+                    }
+
+                    $countryCode = $this->locations->countryCodeByName($country);
+
+                    if ($countryCode === null) {
+                        return;
+                    }
+
+                    if (! PostalCodes::passes($countryCode, (string) $value)) {
+                        $fail('The postal code format is not valid for the selected country.');
+                    }
+                },
             ],
             'country' => [
                 'nullable',
