@@ -41,9 +41,11 @@ sequenceDiagram
 2. The level and title come from [`NotificationTypes::definition()`](../../app/Shared/Constants/NotificationTypes.php) `:69`.
    The catalog also declares the permissions required to receive each type, so
    recipients follow the same Spatie grants that gate the underlying screens.
-3. [`RecipientResolver::resolve()`](../../app/Shared/Notifications/RecipientResolver.php) `:20`
+3. [`RecipientResolver::resolve()`](../../app/Shared/Notifications/RecipientResolver.php) `:22`
    returns either one explicitly addressed user (passwordless account) or every
-   user holding any declared permission.
+   user holding any declared permission **that exists in the tenant permission
+   table**. Bare or partially seeded tenants simply yield no recipients instead
+   of failing the triggering business action.
 4. [`NotificationDispatcher::alreadyNotified()`](../../app/Shared/Notifications/NotificationDispatcher.php) `:67`
    suppresses a repeat of the same `(user, type, dedupe_key)` inside 24 hours.
 5. One row is inserted per recipient, their cached unread count is forgotten,

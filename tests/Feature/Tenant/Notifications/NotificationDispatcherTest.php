@@ -8,12 +8,15 @@ use App\Models\Notification;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Shared\Constants\NotificationTypes;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\NotificationDispatcherInterface;
 use App\Shared\Events\NotificationCreated;
 use Database\Seeders\TenantUserRolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Spatie\Permission\Guard;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -132,6 +135,32 @@ class NotificationDispatcherTest extends TestCase
                 && $event->broadcastAs() === 'notification.created'
                 && array_keys($event->broadcastWith()) === ['id', 'type', 'level'];
         });
+    }
+
+    public function test_broadcast_without_seeded_permissions_is_a_noop(): void
+    {
+        User::factory()->create();
+
+        $this->assertSame(0, $this->dispatcher->dispatch(NotificationTypes::LARGE_ORDER));
+        $this->assertSame(0, Notification::count());
+    }
+
+    public function test_missing_one_of_two_permissions_still_notifies_granted_users(): void
+    {
+        // LARGE_ORDER declares manage orders OR manage payments. Only the
+        // first row exists here; users holding it must still be recipients.
+        Permission::create([
+            'name' => PermissionNames::MANAGE_ORDERS,
+            'guard_name' => Guard::getDefaultName(User::class),
+        ]);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::factory()->create();
+        $user->givePermissionTo(PermissionNames::MANAGE_ORDERS);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->assertSame(1, $this->dispatcher->dispatch(NotificationTypes::LARGE_ORDER));
+        $this->assertTrue(Notification::where('user_id', $user->id)->exists());
     }
 
     public function test_unknown_type_is_rejected(): void
