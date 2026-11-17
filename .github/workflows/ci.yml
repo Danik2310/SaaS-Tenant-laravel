@@ -142,6 +142,9 @@ jobs:
               tests/Feature/Tenant/ExpireTrialsCommandTest.php
               tests/Feature/Tenant/Impersonation/EnsureImpersonationValidTest.php
               tests/Feature/Tenant/Impersonation/GodModeDashboardAccessTest.php
+              tests/Feature/Tenant/Notifications/NotificationDispatcherTest.php
+              tests/Feature/Tenant/Notifications/NotificationEndpointsTest.php
+              tests/Feature/Tenant/Notifications/NotificationTriggersTest.php
               tests/Feature/Tenant/Products/ProductManagementTest.php
               tests/Feature/Tenant/PruneOrphanTenantsCommandTest.php
               tests/Feature/Tenant/TenantBuilderTest.php
