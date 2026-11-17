@@ -9,6 +9,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import GodModeIndicator from '@/Components/GodModeIndicator';
+import NotificationsBell from '@/Components/NotificationsBell';
 
 const navItems = [
     { id: 'tenant.dashboard', label: 'Dashboard', icon: <DashboardIcon />, section: 'Main' },
@@ -41,6 +42,13 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
     const handleNav = useCallback((routeName) => {
         router.visit(route(routeName));
         setMobileOpen(false);
+    }, []);
+
+    const handleLogout = useCallback(() => {
+        // An open socket is not revoked by the server-side logout: disconnect
+        // explicitly so no further notifications arrive after the token dies.
+        window.Echo?.disconnect?.();
+        router.post(route('logout'), {}, { replace: true });
     }, []);
 
     const sidebarWidth = collapsed ? 64 : 260;
@@ -145,7 +153,7 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
                     </>
                 )}
                 <button
-                    onClick={() => router.post(route('logout'), {}, { replace: true })}
+                    onClick={handleLogout}
                     aria-label="Logout"
                     style={{
                         display: 'flex', alignItems: 'center', gap: 8, width: '100%',
@@ -214,6 +222,9 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
             {/* Main content */}
             <main style={{ flex: 1, minWidth: 0, padding: '16px 32px' }}>
                 <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                        <NotificationsBell />
+                    </div>
                     {children}
                 </div>
             </main>

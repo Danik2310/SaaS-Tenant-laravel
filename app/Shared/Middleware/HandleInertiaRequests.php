@@ -2,8 +2,10 @@
 
 namespace App\Shared\Middleware;
 
+use App\Models\Notification;
 use App\Models\Tenant;
 use App\Plans\Support\FeatureFlagCatalog;
+use App\Shared\Support\NotificationCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -66,6 +68,36 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Unread count and a short preview for the layout's notification bell.
+     *
+     * Skipped for guests, central requests and impersonation so a privileged
+     * admin never picks up a tenant user's notification rows.
+     *
+     * @return array{unread_count: int, recent: array<int, array<string, mixed>>}
+     */
+    private function notificationData(Request $request, bool $impersonating): array
+    {
+        if ($impersonating || tenant('id') === null || $request->user() === null) {
+            return ['unread_count' => 0, 'recent' => []];
+        }
+
+        $userId = (int) $request->user()->id;
+
+        return [
+            'unread_count' => NotificationCache::unreadCount(
+                $userId,
+                fn () => Notification::query()->where('user_id', $userId)->unread()->count(),
+            ),
+            'recent' => Notification::query()
+                ->where('user_id', $userId)
+                ->latest()
+                ->limit(5)
+                ->get(['id', 'type', 'level', 'title', 'body', 'data', 'read_at', 'created_at'])
+                ->toArray(),
+        ];
+    }
+
+    /**
      * Build the shared prop set for the current request.
      *
      * @return array<string, mixed>
@@ -106,6 +138,10 @@ class HandleInertiaRequests extends Middleware
             'feature_definitions' => FeatureFlagCatalog::definitions(),
             'plan' => $planData,
             'tenant_domain_suffix' => (string) config('tenancy.tenant_domain_suffix', 'sasapp'),
+            'notifications' => $this->notificationData($request, (bool) $impersonation),
+            'notification_channel' => ! $impersonation && $currentTenant instanceof Tenant
+                ? 'tenant-notifications.'.$currentTenant->id
+                : null,
         ];
     }
 }

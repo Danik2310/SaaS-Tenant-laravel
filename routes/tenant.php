@@ -22,6 +22,8 @@ use App\Products\Http\Controllers\Tenant\WarehouseController;
 use App\Shared\Constants\PermissionNames;
 use App\Shared\Http\Controllers\Tenant\DashboardController;
 use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
+use App\Shared\Http\Controllers\Tenant\NotificationController;
+use App\Shared\Http\Controllers\Tenant\NotificationSettingsController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
@@ -148,6 +150,27 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             // Dashboard
             Route::get('/dashboard', [DashboardController::class, 'index'])
                 ->name('tenant.dashboard');
+
+            // Notifications — every tenant user sees only their own rows.
+            // Literal /settings paths must precede the {notification} binding.
+            Route::prefix('notifications')->name('tenant.notifications.')->group(function () {
+                Route::middleware([PermissionNames::middleware([PermissionNames::MANAGE_SETTINGS], 'web')])->group(function () {
+                    Route::get('/settings', [NotificationSettingsController::class, 'edit'])
+                        ->name('settings');
+
+                    Route::put('/settings', [NotificationSettingsController::class, 'update'])
+                        ->name('settings.update');
+                });
+
+                Route::post('/read-all', [NotificationController::class, 'markAllRead'])
+                    ->name('read-all');
+
+                Route::get('/', [NotificationController::class, 'index'])
+                    ->name('index');
+
+                Route::patch('/{notification}', [NotificationController::class, 'markRead'])
+                    ->name('read');
+            });
 
             // Billing — plan catalogue and invoices are financial data, so they
             // are gated behind the tenant `manage payments` permission.
