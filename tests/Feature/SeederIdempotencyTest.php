@@ -14,6 +14,7 @@ use App\Models\PlanFeature;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Models\Warehouse;
 use Database\Seeders\Tenant\TenantDataSeeder;
 use Illuminate\Support\Facades\Artisan;
@@ -495,6 +496,7 @@ class SeederIdempotencyTest extends TestCase
         $seeder->run($tenantEmail, $plan);
 
         // Capture baseline counts
+        $firstUsers = User::count();
         $firstCustomers = Customer::count();
         $firstCategories = Category::count();
         $firstProducts = Product::count();
@@ -510,10 +512,26 @@ class SeederIdempotencyTest extends TestCase
         $this->assertGreaterThan(0, $firstWarehouses, 'Warehouses should exist after first seed');
         $this->assertGreaterThan(0, $firstSettings, 'Settings should exist after first seed');
 
+        // The demo profile keeps tenant-facing tables at the configured cap.
+        // This plan has no limits, so every capped table should be exactly 10.
+        $cap = (int) config('seeding.demo.records_per_tenant_table');
+        foreach ([
+            'users' => $firstUsers,
+            'customers' => $firstCustomers,
+            'categories' => $firstCategories,
+            'warehouses' => $firstWarehouses,
+            'products' => $firstProducts,
+            'inventory_movements' => $firstInventoryMovements,
+            'orders' => $firstOrders,
+        ] as $table => $count) {
+            $this->assertSame($cap, $count, "{$table} should be capped at {$cap} rows in the demo profile");
+        }
+
         // Second run
         $seeder->run($tenantEmail, $plan);
 
         // Assert counts are identical
+        $this->assertSame($firstUsers, User::count(), 'User count should not change after re-running');
         $this->assertSame($firstCustomers, Customer::count(), 'Customer count should not change after re-running');
         $this->assertSame($firstCategories, Category::count(), 'Category count should not change after re-running');
         $this->assertSame($firstProducts, Product::count(), 'Product count should not change after re-running');
@@ -522,6 +540,39 @@ class SeederIdempotencyTest extends TestCase
         $this->assertSame($firstInventoryMovements, InventoryMovement::count(),
             'InventoryMovement count should not change after re-running');
         $this->assertSame($firstOrders, Order::count(), 'Order count should not change after re-running');
+
+        $this->forgetTenant();
+    }
+
+    /**
+     * ✅ Test: Plan limits lower than the demo cap are still honored.
+     */
+    public function test_tenant_data_seed_respects_plan_limits_below_demo_cap(): void
+    {
+        Artisan::call('db:seed', [
+            '--env' => 'testing',
+            '--class' => 'Database\\Seeders\\PlanSeeder',
+        ]);
+
+        $plan = Plan::on('mysql_central')->where('slug', 'free')->firstOrFail();
+
+        $tenant = $this->createTestTenant();
+        $this->initializeTenant($tenant);
+
+        Artisan::call('db:seed', [
+            '--env' => 'testing',
+            '--class' => 'Database\\Seeders\\TenantUserRolePermissionSeeder',
+        ]);
+
+        app(TenantDataSeeder::class)->run('limited@test-tenant.com', $plan);
+
+        $this->assertSame(2, User::count(), 'Free plan should seed only 2 users');
+        $this->assertSame(5, Category::count(), 'Free plan should seed only 5 categories');
+        $this->assertSame(1, Warehouse::count(), 'Free plan should seed only 1 warehouse');
+        $this->assertSame(10, Product::count(), 'Products should still reach the demo cap');
+        $this->assertSame(10, Customer::count(), 'Customers should reach the demo cap');
+        $this->assertSame(10, InventoryMovement::count(), 'Inventory should follow the product cap');
+        $this->assertSame(10, Order::count(), 'Orders should reach the demo cap');
 
         $this->forgetTenant();
     }

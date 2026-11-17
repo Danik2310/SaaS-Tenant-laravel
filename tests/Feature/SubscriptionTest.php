@@ -486,9 +486,8 @@ class SubscriptionTest extends TestCase
 
     public function test_database_has_subscriptions_after_tenant_seeder(): void
     {
-        // TenantSeeder derives demo data volume from max_users. Keep the plan
-        // limits near the real PlanSeeder values so seeding 30 tenants stays
-        // fast; this test only cares that each plan produces a subscription.
+        // TenantSeeder only needs these slugs. The lean demo profile caps each
+        // tenant table at 10 records and plan limits no longer drive volume.
         Plan::factory()->create(['slug' => 'free', 'max_users' => 2]);
         Plan::factory()->create(['slug' => 'pro', 'max_users' => 5]);
         Plan::factory()->create(['slug' => 'enterprise', 'max_users' => 10]);

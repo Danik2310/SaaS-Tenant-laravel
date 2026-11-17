@@ -423,7 +423,8 @@ class TenantMigrationTest extends TestCase
             '--class' => 'Database\\Seeders\\PlanSeeder',
         ]);
 
-        // First run of the full DatabaseSeeder (provisions real tenant databases).
+        // First run of the full DatabaseSeeder (provisions the three canonical
+        // tenants with the lean demo profile).
         $firstExitCode = Artisan::call('db:seed', [
             '--env' => 'testing',
         ]);
