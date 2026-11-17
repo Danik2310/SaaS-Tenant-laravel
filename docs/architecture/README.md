@@ -35,8 +35,9 @@ Each flow doc follows the same shape:
 | [`06-impersonation-god-mode.md`](06-impersonation-god-mode.md) | God-mode handoff token, entry/exit, read-only guard |
 | [`07-jobs-events-observers.md`](07-jobs-events-observers.md) | Queue jobs, export pipeline, activity log, resource-usage observers |
 | [`08-console-and-scheduled.md`](08-console-and-scheduled.md) | Console kernel schedule and artisan commands |
+| [`09-notifications.md`](09-notifications.md) | In-app notification types, recipients, thresholds, Reverb delivery and routes |
 
-Docs `00`–`08` cover the **general (cross-cutting) layer**. Domain modules
+Docs `00`–`09` cover the **general (cross-cutting) layer**. Domain modules
 (Tenants, Billing, Plans, Products) and the React/Inertia front end are
 documented in later passes.
 

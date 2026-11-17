@@ -21,7 +21,7 @@ Kernel stays thin:
 
 | Provider | Commands |
 |----------|----------|
-| [`SharedServiceProvider::boot()`](../../app/Shared/SharedServiceProvider.php) `:66` | `AssignStaffRole`, `AssignSuperAdminRole`, `CheckAdminPermissions`, `CheckPermissionsData`, `GenerateTenantReferenceIds` |
+| [`SharedServiceProvider::boot()`](../../app/Shared/SharedServiceProvider.php) `:70` | `AssignStaffRole`, `AssignSuperAdminRole`, `CheckAdminPermissions`, `CheckPermissionsData`, `GenerateTenantReferenceIds`, `ScanNotificationTriggersCommand` |
 | [`TenantServiceProvider`](../../app/Tenants/TenantServiceProvider.php) `:48` | `CollectTenantMetricsCommand`, `ExpireTrialsCommand`, `PruneOrphanTenantsCommand` |
 | [`BillingServiceProvider::boot()`](../../app/Billing/BillingServiceProvider.php) `:50` (console only) | `ExpireSubscriptionsCommand`, `SyncTenantSubscriptions`, `UpdatePaymentMethod` |
 
@@ -36,6 +36,7 @@ Kernel stays thin:
 | daily | `tenants:expire-trials` | Move lapsed trials out of `Trial` |
 | daily | `tenants:expire-subscriptions` | Expire lapsed subscriptions + suspend tenants |
 | daily | `tenants:prune-orphans --force` | Drop tenant databases whose tenant row is gone |
+| daily | `notifications:scan-triggers` | Dispatch `ScanTenantNotifications` for passwordless accounts and low stock (`09`) |
 
 All tasks are **idempotent** — safe to re-run. In production a single cron entry
 runs `php artisan schedule:run` every minute.
@@ -56,6 +57,7 @@ until it is force-deleted, and `--delete-rows` is deliberately left off the sche
 | `tenants:prune-orphans [--force] [--delete-rows]` | Report tenant/database drift; `--force` drops orphan schemas, `--delete-rows` (requires `--force`) removes rows with no schema |
 | `tenants:collect-metrics [--tenant=*]` | Dispatch `CollectTenantMetrics` for each selected tenant |
 | `tenants:generate-reference-ids [--dry-run]` | Backfill `reference_id` on tenants (incl. trashed) |
+| `notifications:scan-triggers [--tenant=*]` | Dispatch `ScanTenantNotifications` for each selected (or active) tenant |
 
 ### Billing (`App\Billing`)
 

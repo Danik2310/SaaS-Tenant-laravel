@@ -12,8 +12,8 @@
 ## 1. Model observers
 
 Observers are registered in
-[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:71`.
-Event auto-discovery is **off** (`shouldDiscoverEvents()` `:129`) — every observer
+[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:73`.
+Event auto-discovery is **off** (`shouldDiscoverEvents()` `:132`) — every observer
 is explicit.
 
 ### 1.1 Activity log
@@ -55,6 +55,7 @@ counters incremental (no COUNT queries on the hot path):
 | [`ProductImageObserver`](../../app/Observers/Tenant/ProductImageObserver.php) | `storage_kb` |
 | [`CategoryObserver`](../../app/Observers/Tenant/CategoryObserver.php) | `categories_count` |
 | [`WarehouseObserver`](../../app/Observers/Tenant/WarehouseObserver.php) | `warehouses_count` |
+| [`InventoryMovementObserver`](../../app/Observers/Tenant/InventoryMovementObserver.php) | — (dispatches `low_stock` alerts; see [`09-notifications.md`](09-notifications.md)) |
 
 Every observer **no-ops outside tenant context** (`tenant('id') === null`).
 [`ProductObserver::deleted()`](../../app/Observers/Tenant/ProductObserver.php) `:35`
@@ -72,6 +73,7 @@ product.
 | `PlanChanged` | `HandlePlanChange` | billing provider |
 | `TenantSuspended` | `HandleTenantSuspension` | `TenancyServiceProvider` |
 | `TenantReactivated` | `HandleTenantReactivation` | `TenancyServiceProvider` |
+| `NotificationCreated` | Reverb private channel (no listener) | `NotificationDispatcher` (see [`09-notifications.md`](09-notifications.md)) |
 | stancl tenancy events | bootstrap/revert + provisioning pipeline | `TenancyServiceProvider` (see `03`) |
 
 - [`HandlePlanChange`](../../app/Billing/Listeners/HandlePlanChange.php) `:23`
@@ -109,6 +111,10 @@ Anything that must run inside a tenant's context extends
 runs `execute()`, and always ends tenancy in a `finally` keyed on the package's
 `initialized` flag so a bootstrapper failure cannot leak context into the next
 job on a long-lived worker.
+
+[`ScanTenantNotifications`](../../app/Shared/Jobs/ScanTenantNotifications.php)
+uses that base for the nightly passwordless/low-stock sweep; see
+[`09-notifications.md`](09-notifications.md) §2.
 
 ### 3.2 Export pipeline
 
