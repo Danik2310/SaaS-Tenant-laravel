@@ -327,6 +327,38 @@ class TenantRegistrationTest extends TestCase
         $this->assertSame(0, Tenant::count());
     }
 
+    public function test_postal_code_is_validated_against_the_selected_country(): void
+    {
+        $this->post('/register', $this->payload([
+            'postal_code' => 'ABC',
+            'country' => 'United States',
+        ]))
+            ->assertSessionHasErrors('postal_code');
+
+        $this->assertSame(0, Tenant::count());
+    }
+
+    public function test_country_specific_postal_code_formats_are_accepted(): void
+    {
+        foreach (['United States' => '95014', 'Italy' => '00144', 'Canada' => 'H3Z 2Y7'] as $country => $postalCode) {
+            $email = 'postal-'.strtolower(str_replace(' ', '-', $country)).'@acme.test';
+
+            $this->post('/register', $this->payload([
+                'company_name' => $country.' Corp',
+                'email' => $email,
+                'postal_code' => $postalCode,
+                'country' => $country,
+            ]))->assertRedirect();
+
+            $tenant = Tenant::where('email', $email)->firstOrFail();
+
+            $this->assertSame($postalCode, $tenant->postal_code);
+            $this->assertSame($country, $tenant->country);
+
+            $this->createdTenantDbNames[] = $tenant->database()->getName();
+        }
+    }
+
     public function test_guest_can_register_a_workspace_with_free_plan(): void
     {
         $response = $this->post('/register', $this->payload(['plan' => 'free']));
