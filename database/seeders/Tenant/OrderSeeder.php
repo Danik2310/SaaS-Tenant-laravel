@@ -38,7 +38,7 @@ class OrderSeeder extends Seeder
                 'total' => 0,
             ]);
 
-            $itemCount = rand(1, 5);
+            $itemCount = rand(1, 2);
             $total = 0;
 
             $selectedProducts = $products->count() >= $itemCount

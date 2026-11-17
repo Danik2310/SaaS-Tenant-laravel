@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
      * │    ⚡ Requires ADMIN_PASSWORD env variable               │
      * │ 4. GlobalSettingSeeder — system-level settings           │
      * │ 5. PaymentMethodSeeder — Stripe, PayPal, Transfer        │
-     * │ 6. TenantSeeder — provisions N tenants, each triggers:  │
+     * │ 6. TenantSeeder — provisions 3 canonical tenants, each:  │
      * │      a. CreateDatabase / MigrateDatabase / SeedDatabase │
      * │         (TenantUserRolePermissionSeeder — tenant roles)  │
      * │      b. TenantDataSeeder → User, Customer, Product, etc. │

@@ -34,15 +34,23 @@ class TenantSeeder extends Seeder
 
         $tenantManager = app(TenantManagerInterface::class);
 
-        $plans = Plan::pluck('slug', 'slug')->toArray();
+        $configs = $this->buildAllConfigs();
 
-        if (empty($plans)) {
+        if ($configs === []) {
             throw new \RuntimeException(
-                'No plans found. Ensure PlanSeeder has run before TenantSeeder.'
+                'No demo tenants configured. Check config/seeding.php.'
             );
         }
 
-        $configs = $this->buildAllConfigs($plans);
+        $availablePlans = Plan::pluck('slug', 'slug')->toArray();
+        $missingPlans = array_diff(array_column($configs, 'plan'), array_keys($availablePlans));
+
+        if ($missingPlans !== []) {
+            throw new \RuntimeException(
+                'Missing plans for TenantSeeder: '.implode(', ', array_unique($missingPlans))
+                .'. Ensure PlanSeeder has run before TenantSeeder.'
+            );
+        }
 
         foreach ($configs as $config) {
             $existing = $this->resolveExisting($config);
@@ -73,71 +81,21 @@ class TenantSeeder extends Seeder
             ?? Tenant::withTrashed()->where('email', $config['email'])->first();
     }
 
-    private function buildAllConfigs(array $plans): array
+    private function buildAllConfigs(): array
     {
-        $original = [
-            [
-                'id' => 'empresa-abc',
-                'name' => 'Empresa ABC',
-                'email' => 'contacto@empresaabc.com',
-                'domain' => 'empresaabc.'.config('tenancy.tenant_domain_suffix'),
-                'plan' => 'free',
-                'status' => 'Active',
+        $suffix = config('tenancy.tenant_domain_suffix');
+
+        return array_map(
+            fn (array $config): array => [
+                'key' => $config['key'],
+                'name' => $config['name'],
+                'email' => $config['email'],
+                'domain' => $config['domain'].'.'.$suffix,
+                'plan' => $config['plan'],
+                'status' => $config['status'],
             ],
-            [
-                'id' => 'tienda-xyz',
-                'name' => 'Tienda XYZ',
-                'email' => 'admin@tiendaxyz.com',
-                'domain' => 'tiendaxyz.'.config('tenancy.tenant_domain_suffix'),
-                'plan' => 'pro',
-                'status' => 'Active',
-            ],
-            [
-                'id' => 'consultoria-123',
-                'name' => 'Consultoría 123',
-                'email' => 'info@consultoria123.com',
-                'domain' => 'consultoria123.'.config('tenancy.tenant_domain_suffix'),
-                'plan' => 'enterprise',
-                'status' => 'Active',
-            ],
-        ];
-
-        $plansList = array_keys($plans);
-        $statusCycle = ['Active', 'Active', 'Active', 'Active', 'Suspended', 'Trial', 'Deleted', 'Active', 'Active', 'Active'];
-
-        $companies = [
-            'Tech Solutions MX', 'Distribuidora del Norte', 'Farmacias Unidas',
-            'Taller Mecánico Rápido', 'Papelería La Pluma', 'Restaurante El Sazón',
-            'Constructora Horizonte', 'Consultoría Estratégica', 'Clínica Dental Care',
-            'Abarrotes Don Juan', 'Mueblería El Hogar', 'Ferretería El Tornillo',
-            'Lavandería EcoClean', 'Estética Glamour', 'Tienda Deportiva Fit',
-            'Panadería El Trigo', 'Veterinaria Mascotas', 'Óptica Visión Clara',
-            'Florería Los Girasoles', 'Cafetería El Aroma', 'Gimnasio PowerFit',
-            'Librería El Saber', 'Zapatería Cómoda', 'Pastelería Dulce Tentación',
-            'Taller de Costura Creativa', 'Agencia de Viajes Aventura', 'Estudio de Yoga Zen',
-        ];
-
-        $additional = [];
-
-        foreach ($companies as $i => $company) {
-            $slug = strtolower(str_replace(
-                [' ', 'á', 'é', 'í', 'ó', 'ú', 'ñ', 'ç'],
-                ['-', 'a', 'e', 'i', 'o', 'u', 'n', 'c'],
-                $company
-            ));
-            $slug = preg_replace('/[^a-z0-9-]/', '', $slug);
-
-            $additional[] = [
-                'id' => $slug,
-                'name' => $company,
-                'email' => 'contacto@'.$slug.'.com',
-                'domain' => $slug.'.'.config('tenancy.tenant_domain_suffix'),
-                'plan' => $plansList[array_rand($plansList)],
-                'status' => $statusCycle[$i % count($statusCycle)],
-            ];
-        }
-
-        return array_merge($original, $additional);
+            config('seeding.demo.tenants', [])
+        );
     }
 
     private function handleExisting(Tenant $tenant, array $config, TenantManagerInterface $tenantManager): void
@@ -166,7 +124,8 @@ class TenantSeeder extends Seeder
         // Existing tenants are the only ones that need an explicit migration:
         // re-running the seeder is how deployed migrations reach them. In
         // tests, provisioning already produces a fully migrated schema, so
-        // skipping this avoids ~30 redundant `tenants:migrate` invocations.
+        // skipping this avoids redundant `tenants:migrate` invocations for
+        // every seeded tenant.
         if (config('tenancy.seeder_migrate_existing')) {
             $tenantManager->migrateTenant($tenant);
         }
@@ -202,8 +161,8 @@ class TenantSeeder extends Seeder
         // provision() dispatches TenantCreated, whose pipeline already creates
         // and migrates the database (real MigrateDatabase in production, a
         // cloned pre-migrated schema in tests). Migrating again here re-ran
-        // every tenant migration for each of the ~30 seeded tenants and
-        // dominated test runtime.
+        // every tenant migration for each seeded tenant and dominated test
+        // runtime.
         $tenant->load('plan');
         $plan = $tenant->plan;
 
