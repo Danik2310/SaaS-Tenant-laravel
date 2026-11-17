@@ -18,12 +18,14 @@ class Product extends Model
         'price',
         'cost',
         'active',
+        'low_stock_threshold',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'cost' => 'decimal:2',
         'active' => 'boolean',
+        'low_stock_threshold' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

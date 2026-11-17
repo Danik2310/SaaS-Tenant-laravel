@@ -72,6 +72,7 @@ class ProductController extends Controller
                 'price' => $product->price,
                 'cost' => $product->cost,
                 'active' => $product->active,
+                'low_stock_threshold' => $product->low_stock_threshold,
                 'category' => $product->category?->only(['id', 'name']),
                 'images' => $product->images,
             ],

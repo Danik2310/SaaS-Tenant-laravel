@@ -15,6 +15,7 @@ export default function ProductForm({ product, categories }) {
         cost: product?.cost || '',
         category_id: product?.category_id || '',
         active: product?.active ?? true,
+        low_stock_threshold: product?.low_stock_threshold ?? '',
         image: null,
     });
 
@@ -81,6 +82,11 @@ export default function ProductForm({ product, categories }) {
                                 <option key={cat.id} value={cat.id}>{cat.name}</option>
                             ))}
                         </SelectInput>
+                    </FormInput>
+
+                    <FormInput label="Low stock threshold" hint="Leave blank to use the tenant-wide setting" error={errors.low_stock_threshold}>
+                        <input type="number" min="0" step="1" value={data.low_stock_threshold}
+                            onChange={(e) => setData('low_stock_threshold', e.target.value)} placeholder="Tenant default" />
                     </FormInput>
 
                     <FormInput label="Image" error={errors.image}>
