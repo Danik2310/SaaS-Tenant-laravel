@@ -9,13 +9,16 @@ use App\Shared\Console\Commands\AssignSuperAdminRole;
 use App\Shared\Console\Commands\CheckAdminPermissions;
 use App\Shared\Console\Commands\CheckPermissionsData;
 use App\Shared\Console\Commands\GenerateTenantReferenceIds;
+use App\Shared\Console\Commands\ScanNotificationTriggersCommand;
 use App\Shared\Contracts\ExchangeRateServiceInterface;
 use App\Shared\Contracts\ExportServiceInterface;
 use App\Shared\Contracts\LocationCatalog;
+use App\Shared\Contracts\NotificationDispatcherInterface;
 use App\Shared\Contracts\PermissionServiceInterface;
 use App\Shared\Contracts\RoleServiceInterface;
 use App\Shared\Contracts\ServerDiskInfo;
 use App\Shared\Locations\DatabaseLocationCatalog;
+use App\Shared\Notifications\NotificationDispatcher;
 use App\Shared\Services\CloudServerDiskInfo;
 use App\Shared\Services\ExchangeRateService;
 use App\Shared\Services\ExportService;
@@ -55,6 +58,7 @@ class SharedServiceProvider extends ServiceProvider
         $this->app->singleton(ExportServiceInterface::class, ExportService::class);
         $this->app->singleton(ExchangeRateServiceInterface::class, ExchangeRateService::class);
         $this->app->singleton(LocationCatalog::class, DatabaseLocationCatalog::class);
+        $this->app->singleton(NotificationDispatcherInterface::class, NotificationDispatcher::class);
 
         $this->app->singleton(ServerDiskInfo::class, function () {
             return config('filesystems.server_disk_driver', 'local') === 's3'
@@ -71,6 +75,7 @@ class SharedServiceProvider extends ServiceProvider
             CheckAdminPermissions::class,
             CheckPermissionsData::class,
             GenerateTenantReferenceIds::class,
+            ScanNotificationTriggersCommand::class,
         ]);
 
         $this->app->forgetInstance(PermissionRegistrar::class);
