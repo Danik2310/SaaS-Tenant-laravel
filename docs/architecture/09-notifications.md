@@ -94,7 +94,7 @@ sequenceDiagram
 - `GET/PUT /notifications/settings` are gated by the `manage settings`
   permission, matching the threshold form in `Pages/Tenant/Notifications/Settings`.
   Per-product overrides are edited in `Pages/Tenant/Products/Form`.
-- [`HandleInertiaRequests::notificationData()`](../../app/Shared/Middleware/HandleInertiaRequests.php) `:78`
+- [`HandleInertiaRequests::notificationData()`](../../app/Shared/Middleware/HandleInertiaRequests.php) `:85`
   shares a scoped unread count and five-item preview on every response. Guests,
   central requests and impersonated sessions receive an empty payload, and the
   `notification_channel` prop is `null` for impersonators.
