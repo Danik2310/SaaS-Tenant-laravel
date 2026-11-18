@@ -5,11 +5,18 @@ declare(strict_types=1);
 namespace App\Plans\Services;
 
 use App\Models\Plan;
+use App\Shared\Contracts\CurrencySettingsInterface;
+use App\Shared\Contracts\PlanPriceResolverInterface;
 use App\Shared\Contracts\PublicPlanCatalogInterface;
 use Illuminate\Database\Eloquent\Collection;
 
 class PublicPlanCatalog implements PublicPlanCatalogInterface
 {
+    public function __construct(
+        private CurrencySettingsInterface $settings,
+        private PlanPriceResolverInterface $prices,
+    ) {}
+
     /**
      * Slug used whenever the requested plan cannot be assigned without payment.
      */
@@ -17,19 +24,25 @@ class PublicPlanCatalog implements PublicPlanCatalogInterface
 
     public function allSignupPlans(): array
     {
-        $currency = (string) config('currency.base_currency', 'USD');
+        $currency = $this->settings->publicCurrency();
+        $base = $this->settings->base();
         $copy = (array) config('plan_copy', []);
 
         return $this->activePlans()
-            ->map(function (Plan $plan) use ($currency, $copy) {
+            ->map(function (Plan $plan) use ($currency, $base, $copy) {
                 $planCopy = $copy[$plan->slug] ?? [];
+                $displayPrice = $this->prices->resolve($plan, $currency);
 
                 return [
                     'slug' => (string) $plan->slug,
                     'name' => (string) $plan->name,
                     'status' => (string) $plan->status,
-                    'price' => (string) $plan->price,
-                    'currency' => $currency,
+                    'price' => $displayPrice->amount,
+                    'currency' => $displayPrice->currency,
+                    'formatted_price' => $displayPrice->formatted,
+                    'price_source' => $displayPrice->source,
+                    'base_price' => (string) $plan->price,
+                    'billing_currency' => $base,
                     'duration_months' => $plan->duration_months !== null ? (int) $plan->duration_months : null,
                     'can_signup' => $this->isEligibleForPublicSignup($plan),
                     'limits' => [
@@ -92,7 +105,7 @@ class PublicPlanCatalog implements PublicPlanCatalogInterface
     private function activePlans()
     {
         return Plan::query()
-            ->with('featureGates')
+            ->with(['featureGates', 'prices'])
             ->where('status', 'active')
             ->orderByRaw('CASE WHEN slug = ? THEN 0 ELSE 1 END', [self::FALLBACK_SLUG])
             ->orderBy('price')

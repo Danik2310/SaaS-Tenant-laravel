@@ -59,13 +59,15 @@ class PlanController extends Controller
     {
         $data = $request->validated();
         $features = $data['features'] ?? [];
-        unset($data['features']);
+        $prices = $data['prices'] ?? [];
+        unset($data['features'], $data['prices']);
 
         $plan = Plan::create($data);
 
         $this->syncFeatures($plan, $features);
+        $this->syncPrices($plan, $prices);
 
-        $plan->load('featureGates');
+        $plan->load(['featureGates', 'prices']);
 
         Log::info('Plan created', ['plan_id' => $plan->id, 'plan_name' => $plan->name]);
 
@@ -81,7 +83,7 @@ class PlanController extends Controller
      */
     public function show(string $id)
     {
-        $plan = Plan::with('featureGates')->findOrFail($id);
+        $plan = Plan::with(['featureGates', 'prices'])->findOrFail($id);
 
         return response()->json(['plan' => new PlanResource($plan)]);
     }
@@ -99,22 +101,66 @@ class PlanController extends Controller
     {
         $data = $request->validated();
         $features = $data['features'] ?? [];
-        unset($data['features']);
+        $hasPrices = array_key_exists('prices', $data);
+        $prices = $data['prices'] ?? [];
+        unset($data['features'], $data['prices']);
 
         $plan = Plan::findOrFail($id);
         $plan->update($data);
 
         $this->syncFeatures($plan, $features);
 
+        if ($hasPrices) {
+            $this->syncPrices($plan, $prices);
+        } else {
+            $this->ensureBasePrice($plan);
+        }
+
         // Plan name/price/limits/features are cached per tenant for an hour;
         // flush the tenants on this plan so the change is visible immediately.
         TenantPlanCache::forgetForPlan($plan->id);
 
-        $plan->load('featureGates');
+        $plan->load(['featureGates', 'prices']);
 
         Log::info('Plan updated', ['plan_id' => $plan->id, 'plan_name' => $plan->name]);
 
         return response()->json(['message' => 'Plan updated successfully', 'plan' => new PlanResource($plan)]);
+    }
+
+    /**
+     * Replace the per-currency overrides, always keeping the canonical base row.
+     */
+    private function syncPrices(Plan $plan, array $prices): void
+    {
+        $base = strtoupper((string) config('currency.base_currency', 'USD'));
+        $rows = collect($prices)->mapWithKeys(function (array $price) {
+            $code = strtoupper((string) ($price['currency_code'] ?? ''));
+
+            return [$code => ['currency_code' => $code, 'amount' => (float) ($price['amount'] ?? 0)]];
+        });
+
+        if (! $rows->has($base)) {
+            $rows->put($base, ['currency_code' => $base, 'amount' => (float) $plan->price]);
+        }
+
+        foreach ($rows as $row) {
+            $plan->prices()->updateOrCreate(
+                ['currency_code' => $row['currency_code']],
+                ['amount' => $row['amount']]
+            );
+        }
+
+        $plan->prices()->whereNotIn('currency_code', $rows->keys()->all())->delete();
+    }
+
+    private function ensureBasePrice(Plan $plan): void
+    {
+        $base = strtoupper((string) config('currency.base_currency', 'USD'));
+
+        $plan->prices()->updateOrCreate(
+            ['currency_code' => $base],
+            ['amount' => (float) $plan->price]
+        );
     }
 
     /**

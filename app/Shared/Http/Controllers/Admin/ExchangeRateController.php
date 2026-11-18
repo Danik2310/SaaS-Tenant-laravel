@@ -3,6 +3,7 @@
 namespace App\Shared\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Shared\Contracts\CurrencySettingsInterface;
 use App\Shared\Contracts\ExchangeRateServiceInterface;
 
 /**
@@ -23,11 +24,13 @@ class ExchangeRateController extends Controller
      *
      * @authenticated
      */
-    public function index(ExchangeRateServiceInterface $service)
+    public function index(ExchangeRateServiceInterface $service, CurrencySettingsInterface $settings)
     {
         return response()->json([
-            'base' => config('currency.base_currency'),
-            'display_currency' => $service->displayCurrency(),
+            'base' => $settings->base(),
+            'display_currency' => $settings->adminCurrency(),
+            'public_currency' => $settings->publicCurrency(),
+            'tenant_currencies' => $settings->tenantCurrencies(),
             'rates' => $service->rates(),
             'currencies' => $service->currencies(),
             'updated_at' => $service->updatedAt(),

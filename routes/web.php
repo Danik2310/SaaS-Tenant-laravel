@@ -9,9 +9,11 @@ use App\Http\Controllers\Auth\GoogleOAuthController;
 use App\Plans\Http\Controllers\Admin\FeatureFlagController;
 use App\Plans\Http\Controllers\Admin\PlanController;
 use App\Shared\Constants\PermissionNames;
+use App\Shared\Contracts\PublicPlanCatalogInterface;
 use App\Shared\Http\Controllers\Admin\ActivityLogController;
 use App\Shared\Http\Controllers\Admin\AdminProfileController;
 use App\Shared\Http\Controllers\Admin\Auth\AdminAuthController;
+use App\Shared\Http\Controllers\Admin\CurrencyController;
 use App\Shared\Http\Controllers\Admin\DashboardController;
 use App\Shared\Http\Controllers\Admin\ExchangeRateController;
 use App\Shared\Http\Controllers\Admin\ExportController;
@@ -66,8 +68,10 @@ use Inertia\Inertia;
 // component change.
 foreach ((array) config('tenancy.central_domains', []) as $index => $centralDomain) {
     Route::domain($centralDomain)->middleware(['central.domain'])->group(function () use ($index) {
-        Route::get('/', function () {
-            return Inertia::render('Welcome');
+        Route::get('/', function (PublicPlanCatalogInterface $publicPlans) {
+            return Inertia::render('Welcome', [
+                'public_plans' => $publicPlans->allSignupPlans(),
+            ]);
         });
 
         // Names must be unique for route:cache, so only the first central
@@ -312,6 +316,7 @@ Route::middleware(['central.domain', 'jwt.cookie', 'session.expiry:admin', 'jwt.
     Route::middleware([PermissionNames::middleware([PermissionNames::VIEW_SETTINGS], 'admin')])->group(function () {
         Route::get('/api/settings', [SettingController::class, 'index']);
         Route::get('/api/settings/{key}', [SettingController::class, 'get']);
+        Route::get('/api/currencies', [CurrencyController::class, 'index']);
     });
     Route::put('/api/settings', [SettingController::class, 'update'])->middleware(PermissionNames::middleware([PermissionNames::EDIT_SETTINGS], 'admin'));
 

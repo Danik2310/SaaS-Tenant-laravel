@@ -2,6 +2,8 @@
 
 namespace App\Http\Resources;
 
+use App\Shared\Contracts\CurrencySettingsInterface;
+use App\Shared\Contracts\PlanPriceResolverInterface;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class PlanResource extends JsonResource
@@ -14,6 +16,24 @@ class PlanResource extends JsonResource
             'slug' => $this->slug,
             'status' => $this->status,
             'price' => $this->price,
+            'base_currency' => config('currency.base_currency'),
+            'prices' => $this->whenLoaded('prices'),
+            'price_display' => $this->when(
+                $this->relationLoaded('prices'),
+                fn () => app(PlanPriceResolverInterface::class)
+                    ->resolve($this->resource, app(CurrencySettingsInterface::class)->adminCurrency())
+                    ->formatted
+            ),
+            'price_currency' => $this->when(
+                $this->relationLoaded('prices'),
+                fn () => app(CurrencySettingsInterface::class)->adminCurrency()
+            ),
+            'price_source' => $this->when(
+                $this->relationLoaded('prices'),
+                fn () => app(PlanPriceResolverInterface::class)
+                    ->resolve($this->resource, app(CurrencySettingsInterface::class)->adminCurrency())
+                    ->source
+            ),
             'duration_months' => $this->duration_months,
             'max_users' => $this->max_users,
             'max_storage' => $this->max_storage,

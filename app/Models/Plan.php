@@ -42,6 +42,11 @@ class Plan extends Model
         return $this->hasMany(PlanFeature::class);
     }
 
+    public function prices(): HasMany
+    {
+        return $this->hasMany(PlanPrice::class);
+    }
+
     public function getFeaturesAttribute(): array
     {
         if ($this->relationLoaded('featureGates')) {

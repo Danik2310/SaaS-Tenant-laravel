@@ -4,38 +4,41 @@ declare(strict_types=1);
 
 namespace App\Shared\Contracts;
 
-use Brick\Money\Money;
+use Akaunting\Money\Money;
 
 interface ExchangeRateServiceInterface
 {
     /**
-     * Supported currencies as [code => ['name' => string, 'symbol' => string]].
+     * Currency catalog as [code => ['name' => string, 'symbol' => string, ...]].
+     *
+     * @return array<string, array<string, mixed>>
      */
     public function currencies(): array;
 
     /**
-     * Cached USD -> currency rates, always including the base currency at 1.0.
+     * Cached base-currency -> currency rates, always including the base at 1.0.
+     *
+     * @return array<string, float>
      */
     public function rates(): array;
 
-    /**
-     * Whether the cached rates were fetched from the live API.
-     */
     public function isLive(): bool;
 
-    /**
-     * ISO-8601 timestamp of the last successful API fetch, null when fallback.
-     */
     public function updatedAt(): ?string;
 
     /**
-     * Convert a USD amount into the given currency using brick/money.
+     * Convert a base-currency amount into the given currency using Akaunting Money.
      */
-    public function convert(float $amountUsd, string $currencyCode): Money;
+    public function convert(float $amountBase, string $currencyCode): Money;
 
     /**
      * Admin display currency from the global settings, validated against the
-     * supported list and falling back to the base currency.
+     * currency catalog and falling back to the base currency.
      */
     public function displayCurrency(): string;
+
+    /**
+     * Forget the cached exchange-rate snapshot.
+     */
+    public function forgetCache(): void;
 }

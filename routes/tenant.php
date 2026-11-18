@@ -24,6 +24,7 @@ use App\Shared\Http\Controllers\Tenant\DashboardController;
 use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
 use App\Shared\Http\Controllers\Tenant\NotificationController;
 use App\Shared\Http\Controllers\Tenant\NotificationSettingsController;
+use App\Shared\Http\Controllers\Tenant\TenantCurrencyController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
@@ -170,6 +171,18 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
 
                 Route::patch('/{notification}', [NotificationController::class, 'markRead'])
                     ->name('read');
+            });
+
+            // Display-only tenant currency preference. The whitelist is owned
+            // by central settings; tenants can only select from it.
+            Route::prefix('settings')->name('tenant.currency.')->group(function () {
+                Route::middleware([PermissionNames::middleware([PermissionNames::MANAGE_SETTINGS], 'web')])->group(function () {
+                    Route::get('/currency', [TenantCurrencyController::class, 'edit'])
+                        ->name('settings');
+
+                    Route::put('/currency', [TenantCurrencyController::class, 'update'])
+                        ->name('settings.update');
+                });
             });
 
             // Billing — plan catalogue and invoices are financial data, so they

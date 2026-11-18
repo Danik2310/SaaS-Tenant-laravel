@@ -6,6 +6,7 @@ use App\Plans\Support\FeatureFlagCatalog;
 use App\Shared\Constants\PermissionNames;
 use App\Shared\Contracts\ServerDiskInfo;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdatePlanRequest extends FormRequest
 {
@@ -30,6 +31,15 @@ class UpdatePlanRequest extends FormRequest
             'max_categories' => 'nullable|integer|min:1',
             'max_products' => 'nullable|integer|min:1',
             'features' => $this->featureFlagsRule(),
+            'prices' => 'sometimes|array',
+            'prices.*.currency_code' => [
+                'required',
+                'string',
+                'size:3',
+                'distinct',
+                Rule::exists(config('tenancy.central_connection').'.currencies', 'code')->where('active', true),
+            ],
+            'prices.*.amount' => 'required|numeric|min:0',
         ];
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tenants;
 
+use App\Shared\Contracts\TenantCurrencyResolverInterface;
 use App\Shared\Contracts\TenantLifecycleInterface;
 use App\Tenants\Builders\TenantBuilder;
 use App\Tenants\Console\Commands\CollectTenantMetricsCommand;
@@ -17,6 +18,7 @@ use App\Tenants\Decorators\CachedTenantRepository;
 use App\Tenants\Repositories\TenantRepository;
 use App\Tenants\Services\DatabaseService;
 use App\Tenants\States\TenantLifecycle;
+use App\Tenants\Support\TenantCurrencyResolver;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -46,6 +48,7 @@ class TenantServiceProvider extends ServiceProvider
         $this->app->bind(TenantBuilderInterface::class, TenantBuilder::class);
         $this->app->bind(DatabaseServiceInterface::class, DatabaseService::class);
         $this->app->singleton(TenantLifecycleInterface::class, TenantLifecycle::class);
+        $this->app->singleton(TenantCurrencyResolverInterface::class, TenantCurrencyResolver::class);
     }
 
     public function boot(): void

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateSettingsRequest;
 use App\Http\Resources\SettingResource;
 use App\Models\GlobalSetting;
+use App\Shared\Contracts\ExchangeRateServiceInterface;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -43,15 +44,24 @@ class SettingController extends Controller
      * @bodyParam settings.*.key string required Setting key.
      * @bodyParam settings.*.value string required Setting value.
      */
-    public function update(UpdateSettingsRequest $request)
+    public function update(UpdateSettingsRequest $request, ExchangeRateServiceInterface $exchangeRates)
     {
         $validated = $request->validated();
+        $touchesCurrency = false;
 
         foreach ($validated['settings'] as $setting) {
             GlobalSetting::set($setting['key'], $setting['value']);
+            $touchesCurrency = $touchesCurrency || str_starts_with((string) $setting['key'], 'currency')
+                || str_starts_with((string) $setting['key'], 'tenant_currency')
+                || in_array($setting['key'], ['enabled_currencies', 'tenant_currencies'], true);
         }
 
         Cache::forget('global_settings');
+
+        if ($touchesCurrency) {
+            $exchangeRates->forgetCache();
+        }
+
         activity()->log('Updated global settings');
 
         return response()->json([

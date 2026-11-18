@@ -5,6 +5,8 @@ namespace App\Shared\Middleware;
 use App\Models\Notification;
 use App\Models\Tenant;
 use App\Plans\Support\FeatureFlagCatalog;
+use App\Shared\Contracts\CurrencySettingsInterface;
+use App\Shared\Contracts\TenantCurrencyResolverInterface;
 use App\Shared\Support\NotificationCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -24,6 +26,11 @@ use Inertia\Middleware;
 class HandleInertiaRequests extends Middleware
 {
     protected $rootView = 'app';
+
+    public function __construct(
+        private CurrencySettingsInterface $currencySettings,
+        private TenantCurrencyResolverInterface $tenantCurrency,
+    ) {}
 
     /**
      * Asset version string used by Inertia for cache-busting.
@@ -136,6 +143,15 @@ class HandleInertiaRequests extends Middleware
                 'started_at' => $impersonation['started_at'] ?? null,
             ] : ['active' => false],
             'feature_definitions' => FeatureFlagCatalog::definitions(),
+            'currency' => [
+                'base' => $this->currencySettings->base(),
+                'admin' => $this->currencySettings->adminCurrency(),
+                'public' => $this->currencySettings->publicCurrency(),
+                'tenant' => $currentTenant instanceof Tenant
+                    ? ($this->tenantCurrency->currentCode() ?? $this->currencySettings->base())
+                    : $this->currencySettings->base(),
+                'tenant_allowed' => $this->currencySettings->tenantCurrencies(),
+            ],
             'plan' => $planData,
             'tenant_domain_suffix' => (string) config('tenancy.tenant_domain_suffix', 'sasapp'),
             'notifications' => $this->notificationData($request, (bool) $impersonation),

@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace App\Shared\Services;
 
-use App\Models\GlobalSetting;
+use Akaunting\Money\Currency as MoneyCurrency;
+use Akaunting\Money\Money;
+use App\Shared\Contracts\CurrencyCatalogInterface;
+use App\Shared\Contracts\CurrencySettingsInterface;
 use App\Shared\Contracts\ExchangeRateServiceInterface;
-use Brick\Math\BigRational;
-use Brick\Math\RoundingMode;
-use Brick\Money\Currency;
-use Brick\Money\CurrencyConverter;
-use Brick\Money\ExchangeRateProvider\ConfigurableProvider;
-use Brick\Money\Money;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
+use Swap\Swap;
 use Throwable;
 
 class ExchangeRateService implements ExchangeRateServiceInterface
 {
+    public function __construct(
+        private Swap $swap,
+        private CurrencyCatalogInterface $catalog,
+        private CurrencySettingsInterface $settings,
+    ) {}
+
     public function currencies(): array
     {
-        return config('currency.currencies');
+        return $this->catalog->active();
     }
 
     public function rates(): array
@@ -30,7 +33,7 @@ class ExchangeRateService implements ExchangeRateServiceInterface
 
     public function isLive(): bool
     {
-        return $this->snapshot()['is_live'];
+        return (bool) $this->snapshot()['is_live'];
     }
 
     public function updatedAt(): ?string
@@ -38,93 +41,98 @@ class ExchangeRateService implements ExchangeRateServiceInterface
         return $this->snapshot()['updated_at'];
     }
 
-    public function convert(float $amountUsd, string $currencyCode): Money
+    public function convert(float $amountBase, string $currencyCode): Money
     {
-        $currency = Currency::of(strtoupper($currencyCode));
+        $base = $this->settings->base();
+        $code = strtoupper($currencyCode);
+        $catalog = $this->catalog->active();
 
-        $provider = new ConfigurableProvider;
-        $provider->setExchangeRate($this->base(), $currency->getCurrencyCode(), BigRational::of('1'));
-
-        foreach ($this->rates() as $code => $rate) {
-            $provider->setExchangeRate($this->base(), $code, BigRational::of((string) $rate));
+        if (! isset($catalog[$code])) {
+            $code = $base;
         }
 
-        $converter = new CurrencyConverter($provider);
+        $rate = $code === $base ? 1.0 : ($this->rates()[$code] ?? 1.0);
+        $currency = new MoneyCurrency($code);
 
-        return $converter->convert(
-            Money::of((string) $amountUsd, $this->base()),
-            $currency,
-            roundingMode: RoundingMode::HalfUp
-        );
+        return new Money($amountBase * $rate, $currency, true);
     }
 
     public function displayCurrency(): string
     {
-        $code = strtoupper((string) GlobalSetting::get('currency', $this->base()));
-
-        return array_key_exists($code, $this->currencies()) ? $code : $this->base();
+        return $this->settings->adminCurrency();
     }
 
-    private function base(): string
+    public function forgetCache(): void
     {
-        return config('currency.base_currency');
+        Cache::forget((string) config('currency.cache_key'));
     }
 
     private function snapshot(): array
     {
         return Cache::remember(
-            config('currency.cache_key'),
-            config('currency.cache_ttl'),
-            fn () => $this->fetch()
+            (string) config('currency.cache_key'),
+            (int) config('currency.cache_ttl', 86400),
+            fn (): array => $this->fetch()
         );
     }
 
     private function fetch(): array
     {
-        try {
-            $response = Http::timeout(config('currency.api_timeout'))
-                ->get(config('currency.api_url'));
+        $base = $this->settings->base();
+        $rates = [$base => 1.0];
+        $updatedAt = null;
+        $successes = 0;
 
-            $data = $response->json();
-
-            if ($response->ok()
-                && ($data['result'] ?? '') === 'success'
-                && ($data['base_code'] ?? null) === $this->base()
-                && is_array($data['rates'] ?? null)) {
-                $rates = array_intersect_key($data['rates'], $this->currencies());
-                $rates = array_filter($rates, fn ($rate) => is_numeric($rate) && (float) $rate > 0);
-
-                if ($rates !== []) {
-                    return [
-                        'rates' => $this->normalizeRates($rates),
-                        'updated_at' => isset($data['time_last_update_unix'])
-                            ? date('c', (int) $data['time_last_update_unix'])
-                            : now()->toIso8601String(),
-                        'is_live' => true,
-                    ];
-                }
+        foreach (array_keys($this->catalog->active()) as $code) {
+            if ($code === $base) {
+                continue;
             }
-        } catch (Throwable) {
-            // Fall through to the offline fallback table.
+
+            try {
+                $rate = $this->swap->latest("{$base}/{$code}");
+                $value = $rate->getValue();
+
+                if ($value > 0) {
+                    $rates[$code] = (float) $value;
+                    $successes++;
+                    $updatedAt ??= $rate->getDate()->format('c');
+                }
+            } catch (Throwable) {
+                // Fall back to the static table below.
+            }
+        }
+
+        if ($successes === 0) {
+            return [
+                'rates' => $this->fallbackRates($base),
+                'updated_at' => null,
+                'is_live' => false,
+            ];
         }
 
         return [
-            'rates' => config('currency.fallback_rates'),
-            'updated_at' => null,
-            'is_live' => false,
+            'rates' => $rates,
+            'updated_at' => $updatedAt,
+            'is_live' => true,
         ];
     }
 
-    private function normalizeRates(array $rates): array
+    /**
+     * @return array<string, float>
+     */
+    private function fallbackRates(string $base): array
     {
-        $normalized = [];
+        $fallback = (array) config('currency.fallback_rates', []);
+        $rates = [];
 
-        foreach ($rates as $code => $rate) {
-            $normalized[$code] = (float) $rate;
+        foreach (array_keys($this->catalog->active()) as $code) {
+            if (isset($fallback[$code]) && is_numeric($fallback[$code])) {
+                $rates[$code] = (float) $fallback[$code];
+            }
         }
 
-        $normalized[$this->base()] = 1.0;
+        $rates[$base] = 1.0;
 
-        return $normalized;
+        return $rates;
     }
 }

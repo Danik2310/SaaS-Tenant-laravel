@@ -58,7 +58,9 @@ class SubscriptionPayment extends Model
 
         $this->plan_name = $subscription->plan->name;
         $this->plan_price ??= $subscription->plan->price;
-        $this->currency ??= strtoupper((string) GlobalSetting::get('currency', 'USD'));
+        // Payment snapshots keep the accounting currency, never the admin or
+        // tenant display currency. Existing rows are never rewritten.
+        $this->currency ??= strtoupper((string) config('currency.base_currency', 'USD'));
     }
 
     public function subscription(): BelongsTo
