@@ -3,6 +3,7 @@ import React from 'react';
 import { renderWithProviders, screen, fireEvent, waitFor } from '../test-utils';
 import Plans from '@/modules/billing/Plans';
 import { resetMoneyCache } from '@/shared/money';
+import { resetCurrencyCatalog } from '@/shared/currencies';
 
 const mockApi = vi.hoisted(() => ({
   get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn(),
@@ -67,6 +68,7 @@ describe('Plans', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resetMoneyCache();
+    resetCurrencyCatalog();
     useAuthContextMock.mockReturnValue({
       permissions: ['view tenants', 'view plans', 'create plans', 'edit plans', 'delete plans', 'manage feature flags'],
     });
@@ -181,22 +183,33 @@ describe('Plans', () => {
     });
   });
 
-  test('shows and submits plan prices in the display currency', async () => {
+  test('edits the canonical base price and keeps currency overrides', async () => {
+    const planWithPrices = {
+      ...mockPlans[1],
+      prices: [
+        { currency_code: 'USD', amount: 29.99 },
+        { currency_code: 'EUR', amount: 27.59 },
+      ],
+    };
+    const pricedListResponse = {
+      ...listResponse,
+      data: { ...listResponse.data, plans: [mockPlans[0], planWithPrices] },
+    };
+
     mockApi.get.mockImplementation((url) => {
-      if (String(url).includes('/admin/api/exchange-rates')) {
+      if (String(url).includes('/admin/api/currencies')) {
         return Promise.resolve({
           data: {
             base: 'USD',
-            display_currency: 'EUR',
-            rates: { USD: 1, EUR: 0.92 },
-            currencies: [],
-            updated_at: null,
-            is_live: false,
+            currencies: [
+              { code: 'USD', name: 'US Dollar', symbol: '$', active: true, allow_tenant: true, allow_public: true },
+              { code: 'EUR', name: 'Euro', symbol: '€', active: true, allow_tenant: true, allow_public: true },
+            ],
           },
         });
       }
       if (String(url).includes('/admin/api/resource-usage/summary')) return Promise.resolve(summaryResponse);
-      if (String(url).includes('/admin/api/plans')) return Promise.resolve(listResponse);
+      if (String(url).includes('/admin/api/plans')) return Promise.resolve(pricedListResponse);
       return Promise.reject(new Error('Unexpected request: ' + url));
     });
 
@@ -206,18 +219,26 @@ describe('Plans', () => {
     fireEvent.click(screen.getAllByLabelText('Edit')[1]);
 
     await screen.findByText('Edit Plan');
-    const priceInput = screen.getByLabelText(/^Price \(EUR\)/);
+    const basePriceInput = screen.getByLabelText(/^Base price \(USD\)/);
+    const overrideInput = screen.getByLabelText('EUR override');
     await waitFor(() => {
-      expect(priceInput).toHaveValue(27.59);
+      expect(basePriceInput).toHaveValue(29.99);
+      expect(overrideInput).toHaveValue(27.59);
     });
 
-    fireEvent.change(priceInput, { target: { value: '30' } });
+    fireEvent.change(basePriceInput, { target: { value: '30' } });
     fireEvent.click(screen.getByText('Save Changes'));
 
     await waitFor(() => {
       expect(mockApi.put).toHaveBeenCalledWith(
         '/admin/api/plans/2',
-        expect.objectContaining({ price: 32.61 }),
+        expect.objectContaining({
+          price: 30,
+          prices: expect.arrayContaining([
+            { currency_code: 'USD', amount: 30 },
+            { currency_code: 'EUR', amount: 27.59 },
+          ]),
+        }),
       );
     });
   });

@@ -355,7 +355,7 @@ class SeederIdempotencyTest extends TestCase
     }
 
     /**
-     * ✅ Test: GlobalSettingSeeder uses updateOrCreate so it is idempotent (8 settings).
+     * ✅ Test: GlobalSettingSeeder uses updateOrCreate so it is idempotent (17 settings including currency defaults).
      */
     public function test_global_setting_seeder_is_idempotent(): void
     {
@@ -365,7 +365,7 @@ class SeederIdempotencyTest extends TestCase
             '--class' => 'Database\\Seeders\\Central\\GlobalSettingSeeder',
         ]);
         $this->assertSame(0, $firstExitCode, 'First GlobalSettingSeeder run should exit with code 0');
-        $this->assertSame(8, GlobalSetting::count(), 'Should have exactly 8 global settings after first seed');
+        $this->assertSame(17, GlobalSetting::count(), 'Should have exactly 17 global settings after first seed');
 
         // Second run
         $secondExitCode = Artisan::call('db:seed', [
@@ -373,7 +373,7 @@ class SeederIdempotencyTest extends TestCase
             '--class' => 'Database\\Seeders\\Central\\GlobalSettingSeeder',
         ]);
         $this->assertSame(0, $secondExitCode, 'Second GlobalSettingSeeder run should exit with code 0');
-        $this->assertSame(8, GlobalSetting::count(), 'Global setting count should remain 8 after re-running');
+        $this->assertSame(17, GlobalSetting::count(), 'Global setting count should remain 17 after re-running');
     }
 
     /**

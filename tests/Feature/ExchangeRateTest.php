@@ -4,8 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\GlobalSetting;
 use App\Models\Permission;
+use App\Models\Plan;
+use App\Models\PlanPrice;
 use App\Models\Role;
 use App\Shared\Contracts\ExchangeRateServiceInterface;
+use App\Shared\Contracts\PlanPriceResolverInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -21,6 +24,7 @@ class ExchangeRateTest extends TestCase
         parent::setUp();
         $this->setUpAdminAuth();
         $this->grantManageSettings();
+        app(ExchangeRateServiceInterface::class)->forgetCache();
         DB::connection('mysql_central')->beginTransaction();
     }
 
@@ -68,6 +72,8 @@ class ExchangeRateTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('base', 'USD')
             ->assertJsonPath('display_currency', 'USD')
+            ->assertJsonPath('public_currency', 'USD')
+            ->assertJsonStructure(['tenant_currencies'])
             ->assertJsonPath('is_live', true)
             ->assertJsonPath('updated_at', date('c', 1780500000))
             ->assertJsonPath('rates.EUR', 0.9)
@@ -75,6 +81,23 @@ class ExchangeRateTest extends TestCase
                 'currencies' => [
                     'EUR' => ['name', 'symbol'],
                 ],
+            ]);
+    }
+
+    /**
+     * 🧪 Test: The admin catalog endpoint exposes searchable catalog data.
+     */
+    public function test_admin_currency_catalog_endpoint_returns_catalog_and_presets(): void
+    {
+        $this->getJson('/admin/api/currencies')
+            ->assertStatus(200)
+            ->assertJsonStructure([
+                'base',
+                'settings' => ['mode', 'preset', 'enabled_currencies', 'scopes', 'admin_currency', 'public_currency', 'tenant_currencies'],
+                'currencies' => [['code', 'name', 'symbol', 'active', 'allow_tenant', 'allow_public']],
+                'active',
+                'presets' => ['global_common' => ['name', 'currencies']],
+                'scopes',
             ]);
     }
 
@@ -107,16 +130,41 @@ class ExchangeRateTest extends TestCase
     }
 
     /**
-     * 🧪 Test: Convert uses brick/money with proper rounding.
+     * 🧪 Test: Convert uses Akaunting Money metadata with proper rounding.
      */
-    public function test_convert_uses_brick_money_with_rounding(): void
+    public function test_convert_uses_akaunting_money_with_rounding(): void
     {
         $this->fakeLiveApi();
         $service = app(ExchangeRateServiceInterface::class);
 
-        $this->assertSame('€90.00', $service->convert(100, 'EUR')->formatTo('en_US'));
-        $this->assertSame('¥15,000', $service->convert(100, 'JPY')->formatTo('en_US'));
-        $this->assertSame('MX$1,850.00', $service->convert(100, 'MXN')->formatTo('en_US'));
+        $this->assertSame('€90.00', $service->convert(100, 'EUR')->format());
+        $this->assertSame('¥15,000', $service->convert(100, 'JPY')->format());
+        $this->assertSame('MX$1,850.00', $service->convert(100, 'MXN')->format());
+    }
+
+    /**
+     * 🧪 Test: Plan prices resolve overrides before converted base prices.
+     */
+    public function test_plan_price_resolver_prefers_overrides_then_conversion(): void
+    {
+        $this->fakeLiveApi();
+        $plan = Plan::factory()->create(['price' => '100.00']);
+        $resolver = app(PlanPriceResolverInterface::class);
+
+        $converted = $resolver->resolve($plan, 'EUR');
+        $this->assertSame('converted', $converted->source);
+        $this->assertSame('EUR', $converted->currency);
+        $this->assertSame('90.00', $converted->amount);
+
+        PlanPrice::create([
+            'plan_id' => $plan->id,
+            'currency_code' => 'EUR',
+            'amount' => '95.00',
+        ]);
+
+        $override = $resolver->resolve($plan->fresh(), 'EUR');
+        $this->assertSame('override', $override->source);
+        $this->assertSame('95.00', $override->amount);
     }
 
     /**
@@ -127,6 +175,10 @@ class ExchangeRateTest extends TestCase
         $this->putJson('/admin/api/settings', [
             'settings' => [
                 ['key' => 'currency', 'value' => 'EUR'],
+                ['key' => 'currency_mode', 'value' => 'custom'],
+                ['key' => 'enabled_currencies', 'value' => json_encode(['USD', 'EUR', 'MXN'])],
+                ['key' => 'currency_scope', 'value' => json_encode(['admin_dashboard', 'public_plans'])],
+                ['key' => 'tenant_currencies', 'value' => json_encode(['USD', 'EUR'])],
                 ['key' => 'app_description', 'value' => 'SaaS platform'],
                 ['key' => 'tenant_db_prefix', 'value' => 'tenant_'],
                 ['key' => 'allow_registration', 'value' => 'true'],
@@ -135,6 +187,10 @@ class ExchangeRateTest extends TestCase
         ])->assertStatus(200);
 
         $this->assertSame('EUR', GlobalSetting::get('currency'));
+        $this->assertSame('custom', GlobalSetting::get('currency_mode'));
+        $this->assertSame('["USD","EUR","MXN"]', GlobalSetting::get('enabled_currencies'));
+        $this->assertSame('["admin_dashboard","public_plans"]', GlobalSetting::get('currency_scope'));
+        $this->assertSame('["USD","EUR"]', GlobalSetting::get('tenant_currencies'));
         $this->assertSame('SaaS platform', GlobalSetting::get('app_description'));
         $this->assertSame('tenant_', GlobalSetting::get('tenant_db_prefix'));
         $this->assertSame('true', GlobalSetting::get('allow_registration'));
@@ -154,6 +210,37 @@ class ExchangeRateTest extends TestCase
             ->assertJsonValidationErrors(['settings.0.value']);
 
         $this->assertSame('USD', GlobalSetting::get('currency'));
+    }
+
+    /**
+     * 🧪 Test: Tenant whitelist rejects currencies that are disabled or not tenant-approved.
+     */
+    public function test_settings_update_enforces_currency_availability_flags(): void
+    {
+        DB::connection('mysql_central')->table('currencies')->where('code', 'MXN')->update([
+            'active' => false,
+            'allow_tenant' => false,
+        ]);
+
+        $this->putJson('/admin/api/settings', [
+            'settings' => [
+                ['key' => 'enabled_currencies', 'value' => json_encode(['USD', 'MXN'])],
+                ['key' => 'tenant_currencies', 'value' => json_encode(['USD', 'MXN'])],
+            ],
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['settings.0.value', 'settings.1.value']);
+
+        DB::connection('mysql_central')->table('currencies')->where('code', 'MXN')->update([
+            'active' => true,
+            'allow_tenant' => false,
+        ]);
+
+        $this->putJson('/admin/api/settings', [
+            'settings' => [
+                ['key' => 'tenant_currencies', 'value' => json_encode(['USD', 'MXN'])],
+            ],
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['settings.0.value']);
     }
 
     /**
