@@ -5,7 +5,7 @@ import ConfirmDialog from '@/Components/ConfirmDialog';
 import FeatureFlagPicker from '@/modules/billing/FeatureFlagPicker';
 import FeatureFlags from '@/modules/billing/FeatureFlags';
 import { useAuthContext } from '@/context/AuthContext';
-import { useMoney, currencySymbol } from '@/shared/money';
+import { currenciesForScope, loadCurrencyCatalog } from '@/shared/currencies';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -43,15 +43,20 @@ function slugify(text) {
     return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 }
 
-function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
-    const money = useMoney();
+function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency = 'USD', onSubmit, onCancel }) {
     const { permissions = [] } = useAuthContext();
     const canViewResourceUsage = permissions.includes('view tenants') || permissions.includes('view plans');
-    const [priceTouched, setPriceTouched] = useState(false);
+
+    const initialOverrides = Object.fromEntries(
+        (plan?.prices || [])
+            .filter((price) => price.currency_code !== baseCurrency)
+            .map((price) => [price.currency_code, String(price.amount)])
+    );
+
     const [form, setForm] = useState({
         name: plan?.name || '',
         slug: plan?.slug || '',
-        price: plan ? String(money.convertFromBase(plan.price)) : '',
+        price: plan ? String(plan.price ?? '') : '',
         status: plan?.status || 'active',
         duration_months: plan?.duration_months || '',
         max_users: plan?.max_users || '',
@@ -60,6 +65,7 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
         max_categories: plan?.max_categories || '',
         max_products: plan?.max_products || '',
         features: Array.isArray(plan?.features) ? plan.features : [],
+        overrides: initialOverrides,
     });
     const [errors, setErrors] = useState({});
     const [submitting, setSubmitting] = useState(false);
@@ -72,14 +78,8 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
             .catch(() => {});
     }, [canViewResourceUsage]);
 
-    useEffect(() => {
-        if (!plan || priceTouched || !money.ready) return;
-        setForm(prev => ({ ...prev, price: String(money.convertFromBase(plan.price)) }));
-    }, [money.ready, money.displayCurrency, plan, priceTouched]);
-
     const handleChange = (field) => (e) => {
         const value = e.target.value;
-        if (field === 'price') setPriceTouched(true);
         setForm(prev => {
             const next = { ...prev, [field]: value };
             if (field === 'name' && !plan) {
@@ -95,19 +95,22 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
         setSubmitting(true);
         setErrors({});
         try {
-            let priceValue;
-            if (priceTouched) {
-                priceValue = money.convertToBase(parseFloat(form.price));
-            } else if (plan) {
-                priceValue = parseFloat(plan.price);
-            } else {
-                priceValue = parseFloat(form.price);
-            }
+            const priceValue = parseFloat(form.price);
+            const prices = [{ currency_code: baseCurrency, amount: priceValue }];
 
+            Object.entries(form.overrides || {}).forEach(([code, amount]) => {
+                const value = parseFloat(amount);
+                if (!Number.isNaN(value)) {
+                    prices.push({ currency_code: code, amount: value });
+                }
+            });
+
+            const { overrides, ...formValues } = form;
             const payload = {
-                ...form,
+                ...formValues,
                 slug: form.slug || slugify(form.name),
                 price: priceValue,
+                prices,
             };
             if (form.duration_months) payload.duration_months = parseInt(form.duration_months, 10);
             if (form.max_users) payload.max_users = parseInt(form.max_users, 10);
@@ -156,14 +159,13 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
             <Box sx={{ display: 'flex', gap: 3 }}>
                 <TextField
                     size="small"
-                    label={`Price (${money.displayCurrency})`}
+                    label={`Base price (${baseCurrency})`}
                     type="number"
                     value={form.price}
                     onChange={handleChange('price')}
                     inputProps={{ min: 0, step: '0.01' }}
-                    InputProps={{ startAdornment: <Typography variant="body2" sx={{ mr: 0.5 }}>{currencySymbol(money.displayCurrency)}</Typography> }}
                     error={!!errors.price}
-                    helperText={errors.price?.[0] || (money.displayCurrency !== money.base ? 'Entered in your display currency; stored in USD.' : undefined)}
+                    helperText={errors.price?.[0] || 'Canonical price used for billing and conversions.'}
                     required
                     fullWidth
                 />
@@ -188,6 +190,36 @@ function PlanForm({ plan, featureDefinitions, onSubmit, onCancel }) {
                     fullWidth
                 />
             </Box>
+
+            {currencyOptions.filter((currency) => currency.code !== baseCurrency).length > 0 && (
+                <Box>
+                    <Typography variant="subtitle2" sx={{ color: '#0f172a', fontWeight: 600, mb: 1 }}>
+                        Price overrides
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                        Leave blank to convert the base price using the current rate. Overrides win over converted values.
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                        {currencyOptions
+                            .filter((currency) => currency.code !== baseCurrency)
+                            .map((currency) => (
+                                <TextField
+                                    key={currency.code}
+                                    size="small"
+                                    label={`${currency.code} override`}
+                                    type="number"
+                                    value={form.overrides?.[currency.code] ?? ''}
+                                    onChange={(event) => setForm(prev => ({
+                                        ...prev,
+                                        overrides: { ...(prev.overrides || {}), [currency.code]: event.target.value },
+                                    }))}
+                                    inputProps={{ min: 0, step: '0.01' }}
+                                    sx={{ width: 180 }}
+                                />
+                            ))}
+                    </Box>
+                </Box>
+            )}
 
             {summary && (
                 <Box sx={{ bgcolor: '#f8fafc', borderRadius: 1, border: '1px solid #e2e8f0', p: 2 }}>
@@ -325,7 +357,8 @@ export default function Plans() {
     const [total, setTotal] = useState(0);
     const [error, setError] = useState(null);
     const [featureDefs, setFeatureDefs] = useState({});
-    const { formatMoney } = useMoney();
+    const [currencyOptions, setCurrencyOptions] = useState([]);
+    const [baseCurrency, setBaseCurrency] = useState('USD');
     const { permissions = [] } = useAuthContext();
     const canCreate = permissions.includes('create plans');
     const canEdit = permissions.includes('edit plans');
@@ -382,6 +415,18 @@ export default function Plans() {
         fetchPlans();
     }, [fetchPlans]);
 
+    useEffect(() => {
+        let active = true;
+        loadCurrencyCatalog().then((catalog) => {
+            if (!active) return;
+            setBaseCurrency(catalog.base || 'USD');
+            setCurrencyOptions(currenciesForScope(catalog, null));
+        }).catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
+
     const handleCreatePlan = async (formData) => {
         await api.post('/admin/api/plans', formData);
         toast.success('Plan created successfully');
@@ -422,10 +467,17 @@ export default function Plans() {
             accessorKey: 'price',
             header: 'Price',
             enableColumnFilter: false,
-            Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#166534' }}>
-                    {formatMoney(cell.getValue())}
-                </Typography>
+            Cell: ({ row }) => (
+                <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#166534' }}>
+                        {row.original.price_display || `${row.original.price} ${row.original.base_currency || baseCurrency}`}
+                    </Typography>
+                    {row.original.price_source && (
+                        <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 10, textTransform: 'capitalize' }}>
+                            {row.original.price_source}
+                        </Typography>
+                    )}
+                </Box>
             ),
         },
         {
@@ -494,7 +546,7 @@ export default function Plans() {
                 </Typography>
             ),
         },
-    ], [featureDefs, formatMoney]);
+    ], [featureDefs, baseCurrency]);
 
     return (
         <Box>
@@ -527,6 +579,8 @@ export default function Plans() {
                         </Typography>
                         <PlanForm
                             featureDefinitions={featureDefs}
+                            currencyOptions={currencyOptions}
+                            baseCurrency={baseCurrency}
                             onSubmit={handleCreatePlan}
                             onCancel={() => setMode('list')}
                         />
@@ -650,15 +704,19 @@ export default function Plans() {
             <Dialog open={!!editingPlan} onClose={() => setEditingPlan(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Edit Plan
-                    <IconButton onClick={() => setEditingPlan(null)} size="small">
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
+                    <Tooltip title="Close">
+                        <IconButton onClick={() => setEditingPlan(null)} size="small" aria-label="Close">
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     {editingPlan && (
                         <PlanForm
                             plan={editingPlan}
                             featureDefinitions={featureDefs}
+                            currencyOptions={currencyOptions}
+                            baseCurrency={baseCurrency}
                             onSubmit={handleEditPlan}
                             onCancel={() => setEditingPlan(null)}
                         />

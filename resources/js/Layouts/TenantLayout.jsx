@@ -6,6 +6,7 @@ import CategoryIcon from '@mui/icons-material/Category';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MoveUpIcon from '@mui/icons-material/MoveUp';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import PaymentsIcon from '@mui/icons-material/Payments';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import GodModeIndicator from '@/Components/GodModeIndicator';
@@ -18,6 +19,7 @@ const navItems = [
     { id: 'tenant.warehouses.index', label: 'Warehouses', icon: <WarehouseIcon />, section: 'Inventory', permission: 'manage inventory' },
     { id: 'tenant.inventory.index', label: 'Movements', icon: <MoveUpIcon />, section: 'Inventory', permission: 'manage inventory' },
     { id: 'billing.payments.index', label: 'Payments', icon: <ReceiptLongIcon />, section: 'Billing', permission: 'manage payments' },
+    { id: 'tenant.currency.settings', label: 'Currency', icon: <PaymentsIcon />, section: 'System', permission: 'manage settings' },
 ];
 
 const sectionLabels = { Main: 'Main', Inventory: 'Inventory', Billing: 'Billing', System: 'System' };

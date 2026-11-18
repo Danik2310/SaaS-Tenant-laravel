@@ -57,6 +57,10 @@ export default function PlanCard({
 
             {cadence && <p className={`mt-1.5 text-xs leading-4 tabular-nums ${t.footnote}`}>{cadence}</p>}
 
+            {plan.billing_currency && plan.currency !== plan.billing_currency && (
+                <p className={`mt-1.5 text-xs ${t.footnote}`}>Billed in {plan.billing_currency}</p>
+            )}
+
             {plan.summary && <p className={`mt-3 text-sm leading-relaxed ${t.summary}`}>{plan.summary}</p>}
 
             <div className="mt-5">

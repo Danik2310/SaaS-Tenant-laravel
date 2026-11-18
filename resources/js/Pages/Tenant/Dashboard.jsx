@@ -1,5 +1,6 @@
 import TenantLayout from '@/Layouts/TenantLayout';
 import { Head, usePage } from '@inertiajs/react';
+import { useMoney } from '@/shared/money';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -100,6 +101,7 @@ function LazyTable({ data, loading, emptyMessage, columns, renderRow }) {
 
 export default function Dashboard({ stats, trends, recentOrders, recentMovements }) {
     const page = usePage();
+    const { formatMoney } = useMoney('tenant');
     const { palette } = useTheme();
     const ordersLoading = page.props.recentOrders === undefined || typeof page.props.recentOrders === 'function';
     const movementsLoading = page.props.recentMovements === undefined || typeof page.props.recentMovements === 'function';
@@ -169,7 +171,7 @@ export default function Dashboard({ stats, trends, recentOrders, recentMovements
                                     ) : recentOrders.map((order) => (
                                         <TableRow key={order.id} sx={{ '&:hover': { bgcolor: hoverBg } }}>
                                             <TableCell sx={{ fontWeight: 600, fontSize: 13 }}>{order.customer_name}</TableCell>
-                                            <TableCell sx={{ fontSize: 13 }}>${Number(order.total).toFixed(2)}</TableCell>
+                                            <TableCell sx={{ fontSize: 13 }}>{formatMoney(order.total)}</TableCell>
                                             <TableCell>
                                                 <Chip label={order.status} size="small"
                                                     sx={{

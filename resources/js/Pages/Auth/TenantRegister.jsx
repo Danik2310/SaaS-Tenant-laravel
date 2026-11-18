@@ -121,7 +121,7 @@ export default function TenantRegister({
         () => plans.find((plan) => plan.slug === data.plan) ?? null,
         [plans, data.plan]
     );
-    const isPaidPlan = Boolean(selectedPlan?.price > 0);
+    const isPaidPlan = Boolean(Number(selectedPlan?.base_price ?? selectedPlan?.price) > 0);
 
     // Live match feedback only, never a submit gate: the request stays the
     // source of truth (`required|confirmed|min:8`), and both fields empty is

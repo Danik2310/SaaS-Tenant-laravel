@@ -20,11 +20,13 @@ function money(amount, currency) {
 }
 
 export function formatAmount(plan) {
+    if (plan.formatted_price) return plan.formatted_price;
+
     return money(Number(plan.price), plan.currency);
 }
 
 export function isFree(plan) {
-    return Number(plan.price) === 0;
+    return Number(plan.base_price ?? plan.price) === 0;
 }
 
 export function isTrial(plan) {

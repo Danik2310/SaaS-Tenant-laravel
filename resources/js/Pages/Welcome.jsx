@@ -22,8 +22,11 @@ import Footer from '@/Components/Marketing/Footer';
 // To revisit: split it only if the component ever grows past ~15kB gzip or the
 // page gains several more below-the-fold widgets.
 
-export default function Welcome({ auth, tenant_domain_suffix = 'sasapp' }) {
+export default function Welcome({ auth, tenant_domain_suffix = 'sasapp', public_plans = [] }) {
     const canonicalUrl = typeof window !== 'undefined' ? window.location.href : 'https://shoppingli.example';
+    const paidPlans = public_plans.filter((plan) => Number(plan.base_price ?? plan.price) > 0);
+    const prices = paidPlans.map((plan) => Number(plan.price)).filter(Number.isFinite);
+    const displayCurrency = paidPlans[0]?.currency || 'USD';
 
     const structuredData = {
         '@context': 'https://schema.org',
@@ -36,8 +39,8 @@ export default function Welcome({ auth, tenant_domain_suffix = 'sasapp' }) {
         offers: {
             '@type': 'AggregateOffer',
             lowPrice: '0',
-            highPrice: '99',
-            priceCurrency: 'USD',
+            highPrice: prices.length ? String(Math.max(...prices)) : '99',
+            priceCurrency: displayCurrency,
         },
     };
 
@@ -78,7 +81,7 @@ export default function Welcome({ auth, tenant_domain_suffix = 'sasapp' }) {
                     <Features />
                     <InventoryDemo />
                     <HowItWorks />
-                    <Pricing />
+                    <Pricing plans={public_plans} />
                     <Testimonial />
                     <Faq />
                     <FinalCta />

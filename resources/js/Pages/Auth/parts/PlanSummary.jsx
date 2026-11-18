@@ -50,6 +50,10 @@ export default function PlanSummary({ plan, variant = 'rail', trialDays = 14 }) 
                 <p className={`mt-1.5 text-xs leading-4 tabular-nums ${t.footnote}`}>{cadenceNote(plan)}</p>
             )}
 
+            {plan.billing_currency && plan.currency !== plan.billing_currency && (
+                <p className={`mt-1.5 text-xs ${t.footnote}`}>Billed in {plan.billing_currency}</p>
+            )}
+
             {plan.summary && (
                 <p className={`mt-3 text-sm leading-relaxed ${t.summary}`}>{plan.summary}</p>
             )}

@@ -49,6 +49,8 @@ export const CURRENCIES = [
     { code: 'BDT', name: 'Bangladeshi Taka', symbol: '৳' },
 ];
 
+import api from '@/services/api';
+
 export const FALLBACK_RATES = {
     USD: 1,
     EUR: 0.92,
@@ -99,3 +101,61 @@ export const FALLBACK_RATES = {
     PKR: 278,
     BDT: 118,
 };
+
+let catalogCache = null;
+let catalogInFlight = null;
+
+/** Load the administrator-managed catalog once per page session. */
+export function loadCurrencyCatalog({ force = false } = {}) {
+    if (!force && catalogCache) return Promise.resolve(catalogCache);
+    if (!force && catalogInFlight) return catalogInFlight;
+
+    catalogInFlight = api
+        .get('/admin/api/currencies', { bypass403Redirect: true })
+        .then((res) => {
+            catalogCache = res.data || {};
+            return catalogCache;
+        })
+        .finally(() => {
+            catalogInFlight = null;
+        });
+
+    return catalogInFlight;
+}
+
+export function resetCurrencyCatalog() {
+    catalogCache = null;
+    catalogInFlight = null;
+}
+
+export function currenciesForScope(catalog, scope) {
+    const currencies = catalog?.currencies || CURRENCIES.map((currency) => ({
+        ...currency,
+        active: true,
+        allow_tenant: true,
+        allow_public: true,
+        popular: false,
+    }));
+
+    return currencies.filter((currency) => {
+        if (!currency.active) return false;
+        if (scope === 'tenant') return currency.allow_tenant;
+        if (scope === 'public') return currency.allow_public;
+        return true;
+    });
+}
+
+export function filterCurrencies(currencies, search = '') {
+    const needle = String(search || '').trim().toLowerCase();
+    if (!needle) return currencies;
+
+    return currencies.filter((currency) =>
+        String(currency.code || '').toLowerCase().includes(needle)
+        || String(currency.name || '').toLowerCase().includes(needle)
+    );
+}
+
+export function currencyLabel(code, catalog) {
+    const entry = (catalog?.currencies || []).find((currency) => currency.code === code);
+    return entry ? `${entry.code} — ${entry.name}` : code;
+}

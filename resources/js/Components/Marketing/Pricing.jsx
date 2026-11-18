@@ -2,7 +2,22 @@ import { Link } from '@inertiajs/react';
 import Reveal from './Reveal';
 import { PLANS } from './content';
 
-export default function Pricing() {
+export default function Pricing({ plans = [] }) {
+    const livePlans = new Map(plans.map((plan) => [plan.name, plan]));
+    const displayPlans = PLANS.map((plan) => {
+        const live = livePlans.get(plan.name);
+        if (!live) return plan;
+
+        return {
+            ...plan,
+            name: live.name,
+            price: live.formatted_price || `${live.currency || 'USD'} ${live.price}`,
+            currency: live.currency,
+            billingCurrency: live.billing_currency,
+            priceSource: live.price_source,
+        };
+    });
+
     return (
         <section id="pricing" className="scroll-mt-24 border-t border-ink/10 bg-gray-50 py-24 text-ink lg:py-32">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -28,7 +43,7 @@ export default function Pricing() {
                 </Reveal>
 
                 <div className="mt-14 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-                    {PLANS.map((plan, index) => (
+                    {displayPlans.map((plan, index) => (
                         <Reveal key={plan.name} delay={index * 80} className="h-full">
                             <article
                                 className={`relative flex h-full flex-col rounded-sm border p-7 transition-colors duration-150 ease-out ${
@@ -61,6 +76,12 @@ export default function Pricing() {
                                 <p className={`mt-1 text-sm ${plan.highlight ? 'text-white/60' : 'text-ink/60'}`}>
                                     {plan.note}
                                 </p>
+
+                                {plan.billingCurrency && plan.currency !== plan.billingCurrency && (
+                                    <p className={`mt-1 text-xs ${plan.highlight ? 'text-white/50' : 'text-ink/50'}`}>
+                                        Billed in {plan.billingCurrency}
+                                    </p>
+                                )}
 
                                 <ul className={`mt-5 space-y-2.5 text-sm ${plan.highlight ? 'text-white/80' : 'text-ink/75'}`}>
                                     {plan.features.map((feature) => (
