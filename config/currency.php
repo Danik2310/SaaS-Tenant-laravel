@@ -18,6 +18,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Currency presets
+    |--------------------------------------------------------------------------
+    |
+    | Admin-selectable shortcuts for the currency catalog. The effective codes
+    | are stored in the `currency_sets` table and can be edited without a deploy.
+    |
+    */
+
+    'presets' => [
+        'global_common' => ['USD', 'EUR', 'GBP', 'JPY', 'CHF', 'CAD', 'AUD', 'NZD', 'CNY', 'MXN', 'BRL'],
+        'latin_america' => ['MXN', 'BRL', 'ARS', 'CLP', 'COP', 'PEN', 'UYU'],
+        'europe' => ['EUR', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'UAH', 'TRY', 'RUB'],
+        'asia_pacific' => ['JPY', 'CNY', 'HKD', 'SGD', 'INR', 'KRW', 'THB', 'MYR', 'IDR', 'PHP', 'VND', 'AUD', 'NZD'],
+        'all_supported' => [],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Live exchange rate API
     |--------------------------------------------------------------------------
     |

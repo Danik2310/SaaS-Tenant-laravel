@@ -6,8 +6,10 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "akaunting/laravel-money": "^6.1",
         "axlon/laravel-postal-code-validation": "^3.10",
         "brick/money": "^0.11",
+        "florianv/laravel-swap": "^2.5",
         "guzzlehttp/guzzle": "^7.2",
         "inertiajs/inertia-laravel": "^2.0",
         "knuckleswtf/scribe": "^5.8",
@@ -17,6 +19,7 @@
         "laravel/socialite": "^5.32",
         "laravel/tinker": "^2.9",
         "nnjeim/world": "^2.0",
+        "nyholm/psr7": "^1.8",
         "openspout/openspout": "4.24",
         "php-open-source-saver/jwt-auth": "2.9.2",
         "spatie/laravel-activitylog": "^4.12",
@@ -24,6 +27,7 @@
         "spatie/laravel-permission": "^6.24",
         "stancl/tenancy": "^3.9",
         "stripe/stripe-php": "21.3",
+        "symfony/http-client": "^7.4",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
