@@ -44,6 +44,24 @@ class JwtTenantScopeTest extends TestCase
             ->assertOk();
     }
 
+    public function test_tenant_token_exposes_only_minimal_claims(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Tenant Owner',
+            'email' => 'owner@example.com',
+        ]);
+
+        $token = Auth::guard('web')->login($user);
+        $claims = Auth::guard('web')->setToken($token)->getPayload()->toArray();
+
+        $this->assertSame((string) $user->getKey(), (string) $claims['sub']);
+        $this->assertSame((string) $this->tenant->id, (string) $claims['ten']);
+
+        foreach (['email', 'name', 'password', 'roles', 'permissions'] as $claim) {
+            $this->assertArrayNotHasKey($claim, $claims);
+        }
+    }
+
     public function test_token_for_another_tenant_is_rejected(): void
     {
         $user = User::factory()->create();

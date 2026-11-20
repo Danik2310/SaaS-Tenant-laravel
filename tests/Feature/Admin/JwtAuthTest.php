@@ -4,11 +4,13 @@ namespace Tests\Feature\Admin;
 
 use App\Models\AdminUser;
 use App\Models\User;
+use App\Shared\Providers\JwtServiceProvider;
 use App\Shared\Support\AuthSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Testing\TestResponse;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\Manager;
+use PHPOpenSourceSaver\JWTAuth\Providers\JWT\Lcobucci;
 use Symfony\Component\HttpFoundation\Cookie;
 use Tests\TestCase;
 
@@ -38,7 +40,19 @@ class JwtAuthTest extends TestCase
 
     private function mintToken(AdminUser $admin, array $claims = []): string
     {
-        return app('tymon.jwt.manager')
+        // The package's default manager is bound to the `web` guard. Once the
+        // admin guard has its own secret, admin tokens must be signed with it.
+        $manager = new Manager(
+            new Lcobucci(
+                (string) config('jwt.guard_secrets.admin'),
+                (string) config('jwt.algo'),
+                config('jwt.keys')
+            ),
+            app('tymon.jwt.blacklist'),
+            app('tymon.jwt.payload.factory')
+        );
+
+        return $manager
             ->encode(
                 app('tymon.jwt.payload.factory')
                     ->setRefreshFlow(true)
@@ -162,8 +176,9 @@ class JwtAuthTest extends TestCase
     {
         $admin = AdminUser::factory()->create();
 
-        $token = JWTAuth::fromUser($admin);
-        JWTAuth::setToken($token)->invalidate();
+        $token = Auth::guard('admin')->login($admin);
+        Auth::guard('admin')->setToken($token)->invalidate();
+        Auth::forgetGuards();
 
         $this->withTokenCookie($token)
             ->getJson('/admin/api/tenants')
@@ -216,6 +231,89 @@ class JwtAuthTest extends TestCase
         $this->withTokenCookie($token)
             ->getJson('/admin/api/tenants')
             ->assertStatus(401);
+    }
+
+    public function test_production_rejects_missing_jwt_secret(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('the web secret is missing');
+
+        JwtServiceProvider::assertSecureConfiguration('web', null, 'HS256', true);
+    }
+
+    public function test_production_rejects_short_hmac_secret(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('at least 32 bytes');
+
+        JwtServiceProvider::assertSecureConfiguration('web', 'too-short', 'HS256', true);
+    }
+
+    public function test_production_rejects_shared_tenant_and_admin_secrets(): void
+    {
+        $secret = 'a-very-long-tenant-secret-0123456789abcdef';
+        config(['jwt.guard_secrets.web' => $secret]);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('must be distinct');
+
+        JwtServiceProvider::assertSecureConfiguration('admin', $secret, 'HS256', true);
+    }
+
+    public function test_disallowed_algorithm_is_rejected_even_outside_production(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('not allowed');
+
+        JwtServiceProvider::assertSecureConfiguration('web', str_repeat('a', 64), 'none', false);
+    }
+
+    public function test_admin_token_contains_no_sensitive_claims(): void
+    {
+        $admin = AdminUser::factory()->create([
+            'email' => 'admin@example.com',
+            'password' => bcrypt('password'),
+        ]);
+
+        $token = $this->loginToken($admin);
+        $claims = Auth::guard('admin')->setToken($token)->getPayload()->toArray();
+
+        $this->assertSame((string) $admin->getKey(), (string) $claims['sub']);
+        $this->assertSame([], $admin->getJWTCustomClaims());
+
+        foreach (['email', 'name', 'password', 'roles', 'permissions'] as $claim) {
+            $this->assertArrayNotHasKey($claim, $claims);
+        }
+    }
+
+    public function test_refresh_blacklists_the_previous_token(): void
+    {
+        $admin = AdminUser::factory()->create();
+        $token = $this->mintToken($admin, [
+            'exp' => now()->subMinute()->timestamp,
+        ]);
+
+        $response = $this->withTokenCookie($token)
+            ->getJson('/admin/user')
+            ->assertOk();
+
+        $refreshedToken = $this->tokenCookie($response)->getValue();
+
+        $this->assertNotSame($token, $refreshedToken);
+
+        // The refresh resolved and cached the admin user; reset the guards so
+        // the replay request is evaluated from the cookie alone.
+        Auth::forgetGuards();
+
+        $this->withTokenCookie($token)
+            ->getJson('/admin/api/tenants')
+            ->assertStatus(401);
+
+        Auth::forgetGuards();
+
+        $this->withTokenCookie($refreshedToken)
+            ->getJson('/admin/user')
+            ->assertOk();
     }
 
     public function test_logout_blacklists_token(): void
