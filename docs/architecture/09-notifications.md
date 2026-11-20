@@ -14,7 +14,7 @@
 ```mermaid
 sequenceDiagram
     autonumber
-    participant T as Trigger (observer / sweep)
+    participant T as Trigger (login listener / observer / sweep)
     participant D as NotificationDispatcher
     participant C as NotificationTypes catalog
     participant R as RecipientResolver
@@ -35,7 +35,8 @@ sequenceDiagram
     I-->>W: fresh unread count + preview
 ```
 
-1. A trigger calls [`NotificationDispatcher::dispatch()`](../../app/Shared/Notifications/NotificationDispatcher.php) `:35`.
+1. A trigger — a login listener, a model observer or the sweep job — calls
+   [`NotificationDispatcher::dispatch()`](../../app/Shared/Notifications/NotificationDispatcher.php) `:35`.
    All writes go through this single path; no controller or observer inserts a
    `notifications` row directly.
 2. The level and title come from [`NotificationTypes::definition()`](../../app/Shared/Constants/NotificationTypes.php) `:69`.
@@ -62,10 +63,16 @@ sequenceDiagram
 
 | Type | Trigger | Recipients |
 |------|---------|------------|
-| `password_not_set` | nightly sweep over users with `password = null` | that user |
+| `password_not_set` | tenant `web` login with `password = null` (typically Google sign-in), or nightly sweep | that user |
 | `low_stock` | new inventory movement, or nightly sweep | `manage inventory` / `manage products` |
 | `large_order` | new order above the absolute threshold or a multiple of the 30-day average | `manage orders` / `manage payments` |
 
+- [`NotifyPasswordlessUserOnLogin::handle()`](../../app/Shared/Notifications/NotifyPasswordlessUserOnLogin.php) `:25`
+  listens for tenant-user `Login` events and targets passwordless users — in
+  practice the Google handoff. JWTGuard reports `tymon.jwt` for both guards, so
+  the user model class identifies tenant users. It uses `password:<id>`, the
+  same key as the sweep, so both paths share the 24-hour dedupe. `Authenticated`
+  is deliberately not used because the JWT guard fires it on every token parse.
 - [`InventoryMovementObserver::created()`](../../app/Observers/Tenant/InventoryMovementObserver.php) `:21`
   compares the current stock with [`StockLevels::effectiveThreshold()`](../../app/Shared/Support/StockLevels.php) `:34`
   (per-product override → tenant setting → default 10) and uses `product:<id>`
@@ -74,9 +81,9 @@ sequenceDiagram
   skips backfilled orders older than five minutes. The absolute threshold of
   zero disables that rule; the multiplier rule still applies.
 - [`ScanTenantNotifications::execute()`](../../app/Shared/Jobs/ScanTenantNotifications.php) `:21`
-  covers conditions that no event can catch — an account created without a
-  password before this feature existed, and stock that became low because an
-  admin lowered a threshold. It is dispatched by
+  covers conditions that events cannot catch — a passwordless account that has
+  not signed in again, and stock that became low because an admin lowered a
+  threshold. It is dispatched by
   [`ScanNotificationTriggersCommand::handle()`](../../app/Shared/Console/Commands/ScanNotificationTriggersCommand.php) `:24`
   daily. Re-running is a no-op thanks to the dedupe keys.
 

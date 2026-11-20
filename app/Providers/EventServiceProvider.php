@@ -29,10 +29,12 @@ use App\Observers\Tenant\ProductImageObserver;
 use App\Observers\Tenant\ProductObserver;
 use App\Observers\Tenant\UserObserver;
 use App\Observers\Tenant\WarehouseObserver;
+use App\Shared\Notifications\NotifyPasswordlessUserOnLogin;
 use App\Shared\Observers\ActivityLogObserver;
 use App\Shared\Support\ImpersonatedAdmin;
 use App\Tenants\Listeners\BroadcastTenantEmailVerified;
 use App\Tenants\Listeners\SendTenantVerificationEmail;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Database\Eloquent\Model;
@@ -45,8 +47,8 @@ use Stancl\Tenancy\Database\Models\Domain;
  * Central event and model-observer registration.
  *
  * Flow:
- *  1. `$listen` binds the framework's `Registered` event to the tenant-aware
- *     email verification listener.
+ *  1. `$listen` binds the framework's `Login` event to the passwordless-user
+ *     prompt and `Registered` to the tenant-aware email verification listener.
  *  2. `boot()` attaches observers:
  *     - every central model and tenant model → {@see ActivityLogObserver}, which
  *       is tenant-context aware and records create/update/delete to the activity
@@ -62,6 +64,9 @@ use Stancl\Tenancy\Database\Models\Domain;
 class EventServiceProvider extends ServiceProvider
 {
     protected $listen = [
+        Login::class => [
+            NotifyPasswordlessUserOnLogin::class,
+        ],
         Registered::class => [
             SendTenantVerificationEmail::class,
         ],

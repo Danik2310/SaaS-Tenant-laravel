@@ -12,8 +12,8 @@
 ## 1. Model observers
 
 Observers are registered in
-[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:73`.
-Event auto-discovery is **off** (`shouldDiscoverEvents()` `:132`) — every observer
+[`EventServiceProvider::boot()`](../../app/Providers/EventServiceProvider.php) `:78`.
+Event auto-discovery is **off** (`shouldDiscoverEvents()` `:137`) — every observer
 is explicit.
 
 ### 1.1 Activity log

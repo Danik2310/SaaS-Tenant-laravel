@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Tenant\Notifications;
 
+use App\Models\AdminUser;
 use App\Models\InventoryMovement;
 use App\Models\Notification;
 use App\Models\Order;
@@ -16,7 +17,9 @@ use App\Shared\Constants\NotificationTypes;
 use App\Shared\Jobs\ScanTenantNotifications;
 use App\Shared\Support\StockLevels;
 use Database\Seeders\TenantUserRolePermissionSeeder;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -159,5 +162,37 @@ class NotificationTriggersTest extends TestCase
         $this->assertSame(1, Notification::where('type', NotificationTypes::PASSWORD_NOT_SET)
             ->where('user_id', $passwordless->id)->count());
         $this->assertSame(1, Notification::where('type', NotificationTypes::LOW_STOCK)->count());
+    }
+
+    public function test_passwordless_login_prompts_once_and_shares_the_sweep_dedupe_key(): void
+    {
+        $this->initializeTenant($this->tenant);
+        $passwordless = User::factory()->create(['password' => null]);
+        $withPassword = User::factory()->create();
+
+        Auth::guard('web')->login($passwordless);
+
+        $this->assertSame(1, Notification::where('type', NotificationTypes::PASSWORD_NOT_SET)
+            ->where('user_id', $passwordless->id)->count());
+        $this->assertSame(0, Notification::where('type', NotificationTypes::PASSWORD_NOT_SET)
+            ->where('user_id', $withPassword->id)->count());
+
+        Auth::guard('web')->login($passwordless);
+
+        $this->forgetTenant();
+        (new ScanTenantNotifications($this->tenant))->handle();
+        $this->initializeTenant($this->tenant);
+
+        $this->assertSame(1, Notification::where('type', NotificationTypes::PASSWORD_NOT_SET)
+            ->where('user_id', $passwordless->id)->count());
+    }
+
+    public function test_admin_login_does_not_prompt(): void
+    {
+        $this->initializeTenant($this->tenant);
+
+        event(new Login('admin', new AdminUser, false));
+
+        $this->assertSame(0, Notification::where('type', NotificationTypes::PASSWORD_NOT_SET)->count());
     }
 }

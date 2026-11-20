@@ -7,6 +7,7 @@ namespace Tests\Feature\Tenant\Auth;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
+use App\Shared\Constants\NotificationTypes;
 use App\Shared\Constants\OAuthProvider;
 use App\Shared\Support\OAuthCallbackError;
 use Illuminate\Auth\Events\Registered;
@@ -380,6 +381,21 @@ class GoogleOAuthTest extends TestCase
             ->assertCookie((string) config('jwt.cookie_key_name', 'token'));
 
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_signed_handoff_prompts_a_passwordless_user_to_set_a_password(): void
+    {
+        $user = User::factory()->create(['email' => 'ada@example.com', 'password' => null]);
+
+        $url = URL::temporarySignedRoute('auth.google.complete', now()->addMinute(), ['user' => $user->id]);
+
+        $this->get($url)->assertRedirect(RouteServiceProvider::HOME);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $user->id,
+            'type' => NotificationTypes::PASSWORD_NOT_SET,
+            'dedupe_key' => 'password:'.$user->id,
+        ], 'tenant');
     }
 
     public function test_handoff_is_rejected_without_a_valid_signature(): void
