@@ -124,10 +124,11 @@ class Kernel extends HttpKernel
      * Middleware listed here is sorted ahead of unlisted middleware. The custom
      * JWT-cookie, impersonation and refresh middleware must run before
      * `Authenticate` (which joins this list via the AuthenticatesRequests
-     * interface) so the bearer token is promoted out of the cookie and the
-     * impersonated identity is injected before the auth guard is evaluated.
-     * Without this the `auth` middleware runs first and tenant JWT auth,
-     * god-mode impersonation and token refresh all fail.
+     * interface) so the bearer token is promoted out of the cookie, the
+     * impersonated identity is injected, and idle/absolute session expiry is
+     * enforced before a refresh can extend the token. Without this the `auth`
+     * middleware runs first and tenant JWT auth, god-mode impersonation and
+     * token refresh all fail.
      *
      * Tenancy middleware is prepended ahead of this list by
      * {@see TenancyServiceProvider::makeTenancyMiddlewareHighestPriority()}.
@@ -142,6 +143,7 @@ class Kernel extends HttpKernel
         ShareErrorsFromSession::class,
         AuthenticateJwtFromCookie::class,
         EnsureImpersonationValid::class,
+        EnsureSessionNotExpired::class,
         RefreshJwtToken::class,
         AuthenticatesRequests::class,
         ThrottleRequests::class,
