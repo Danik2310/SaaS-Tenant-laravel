@@ -10,7 +10,7 @@ description: Guides correct test writing for the multi-tenant SaaS platform. Act
 - PHP tests: PHPUnit via `php artisan test` — suites in `tests/Unit` and `tests/Feature`
 - JS tests: Vitest with jsdom environment — setup file at `tests/setup.js`, globals enabled
 - Factories: Laravel model factories for both central and tenant models
-- Auth: Sanctum (tenants), `auth:admin` guard (central)
+- Auth: JWT guards — `web` (tenants), `admin` (central)
 - Permissions: `spatie/laravel-permission`
 - Multi-tenancy: `stancl/tenancy` v3 — tenant context must be initialized manually in tests
 

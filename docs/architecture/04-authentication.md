@@ -24,9 +24,30 @@ by the other guard even if it is somehow presented
 (`config/jwt.php:38`).
 
 The `jwt` driver is registered by
-[`JwtServiceProvider::boot()`](../../app/Shared/Providers/JwtServiceProvider.php) `:33`,
+[`JwtServiceProvider::boot()`](../../app/Shared/Providers/JwtServiceProvider.php) `:88`,
 which resolves `jwt.guard_secrets.{guard}` and builds a `Manager` + `JWT` +
 `JWTGuard` per guard.
+
+### 1.1 Configuration invariants
+
+Before a guard is built,
+[`JwtServiceProvider::assertSecureConfiguration()`](../../app/Shared/Providers/JwtServiceProvider.php)
+fails closed in production when:
+
+- the algorithm is outside `jwt.allowed_algorithms` (`none` is never allowed;
+  HMAC secrets must be at least 32 bytes);
+- a guard secret is missing;
+- the `admin` secret equals the `web` secret.
+
+Non-production logs a warning instead, so a fresh checkout can boot before its
+secrets are generated. The default access TTL is 15 minutes; the 780-minute
+refresh window slightly exceeds `session.absolute_lifetime` (720 minutes) so
+the session clocks, not the JWT window, decide when a session ends. The cookie
+itself is still capped at `session.absolute_lifetime`.
+
+No personal data is embedded in the token. The only custom claim is `ten` for
+tenant users; admins have none. `sub`, `prv`, `iss`, timestamps and `jti` are the
+remaining claims.
 
 ---
 
@@ -431,7 +452,7 @@ in [`JwtCookie`](../../app/Shared/Support/JwtCookie.php).
 
 `RefreshJwtToken` still refreshes a token that expired inside
 `jwt.refresh_ttl`, but only for a session that passes both clocks. The tenant
-claim `ten` is in `persistent_claims` (`config/jwt.php:193`), so it survives a
+claim `ten` is in `persistent_claims` (`config/jwt.php:210`), so it survives a
 refresh and
 [`ValidateTenantToken`](../../app/Shared/Middleware/ValidateTenantToken.php)
 (`jwt.tenant`) can still reject a token that does not belong to the current
@@ -473,6 +494,10 @@ cannot undo data a user already copied from a page before logging out.
   every account from a shared NAT.
 - **Idle and absolute clocks are separate from TTL,** so a long-lived refresh
   window still cannot extend a session indefinitely.
+- **Secrets and algorithms are validated per guard,** so a shared or weak
+  secret can never silently weaken production isolation.
+- **JWT claims stay minimal:** identifiers and timestamps only, never profile
+  data, roles or permissions.
 
 ---
 

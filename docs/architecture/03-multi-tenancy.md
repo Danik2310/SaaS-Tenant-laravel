@@ -22,7 +22,7 @@ There is one codebase and two contexts:
 | Host | a `config('tenancy.central_domains')` host | any non-central host (usually `<slug>.<tenant_domain_suffix>`) |
 | Routes | `routes/web.php` (`central.domain` middleware) | `routes/tenant.php` (`InitializeTenancyByDomain`) |
 | Database | the default `mysql` connection | a `tenant<id>` database |
-| Auth guard | `admin` (JWT cookie) | `web` (session) |
+| Auth guard | `admin` (JWT cookie) | `web` (JWT cookie) |
 
 In **local dev** both `mysql` and `mysql_central` point at the same database
 (`config/database.php`), so connection switching is effectively a no-op;

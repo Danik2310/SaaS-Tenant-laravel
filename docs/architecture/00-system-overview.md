@@ -20,8 +20,8 @@ tenants plus one central administration panel.
 | Build | Vite 5 (port 5174, `strictPort`) |
 | Multi-tenancy | `stancl/tenancy` v3 — database-per-tenant, domain-based identification |
 | Admin auth | JWT (cookie-borne) via a custom `jwt` guard driver |
-| Tenant auth | Session (`web` guard) |
-| API auth | Sanctum |
+| Tenant auth | JWT (cookie-borne) via the `web` guard |
+| API auth | JWT (cookie-borne) via the `admin` guard |
 | Permissions | `spatie/laravel-permission` v6 (guards: `admin`, `web`) |
 | Testing | PHPUnit 11 (PHP), Vitest 4 (JS) |
 | API docs | Scribe v5 |
@@ -37,7 +37,7 @@ The single most important split in the system is **central vs tenant**.
 | Served on | `config('tenancy.central_domains')` (e.g. `saas-app.test`) | the tenant's own domain(s) |
 | Database | the central DB (`tenants`, admin users, plans, subscriptions, payments) | the tenant's own DB (`tenant{id}`) |
 | Routes | `routes/web.php` (`/`, `/register`, `/central/*`, `/admin/*`) | `routes/tenant.php` (all tenant-facing routes) |
-| Auth guard | `admin` (JWT cookie) | `web` (session) |
+| Auth guard | `admin` (JWT cookie) | `web` (JWT cookie) |
 | Front end entry | `resources/js/landlord/app.jsx` | `resources/js/app.jsx` |
 | Purpose | manage tenants, plans, staff, billing, settings | the tenant's own products/inventory/billing |
 

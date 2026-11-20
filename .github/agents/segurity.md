@@ -9,7 +9,7 @@ description: Audits and enforces security for the multi-tenant SaaS platform. Ac
 
 - Laravel 10 + PHP 8.1+
 - Multi-tenancy: `stancl/tenancy` v3 (domain-based, `InitializeTenancyByDomain`)
-- Auth: Sanctum (tenants) + `auth:admin` guard (central panel)
+- Auth: JWT guards via `php-open-source-saver/jwt-auth` — `web` (tenants), `admin` (central), both cookie-borne
 - Permissions: `spatie/laravel-permission`
 - Frontend: React 18 + Inertia.js — PHP→JS data shared via `Inertia::share()`
 
@@ -24,9 +24,9 @@ description: Audits and enforces security for the multi-tenant SaaS platform. Ac
 ### 2. Guards and authentication
 
 - Routes in `routes/web.php` (central panel) → `auth:admin` middleware.
-- Routes in `routes/tenant.php` → `auth` middleware (Sanctum).
+- Routes in `routes/tenant.php` → `auth` middleware (`web` JWT guard).
 - Never mix guards between central and tenant contexts.
-- `config/sanctum.php` → `stateful_domains` must list only valid tenant domains, never open wildcards.
+- `config/cors.php` → `allowed_origins` must come from `FRONTEND_URL` (fail-closed), never a wildcard.
 
 ### 3. Authorization in controllers
 
@@ -102,7 +102,7 @@ Do not ignore `high` or `critical` vulnerabilities. Update or replace the packag
 | `Inertia::share('user', auth()->user())` with full model | Share only needed fields: `->only(['id','name','email'])` |
 | Missing `authorize()` in `FormRequest` | Always implement it, default to `false`, allow explicitly |
 | Tokens in Inertia props | Use HttpOnly cookies or avoid exposing to JS |
-| `'stateful_domains' => ['*']` in Sanctum | List explicit domains |
+| `allowed_origins => ['*']` in CORS | Use explicit `FRONTEND_URL` allowlist |
 
 ---
 
