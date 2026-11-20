@@ -30,8 +30,9 @@ return [
     | "web" guard) cannot be validated by another context (e.g. central
     | admins via the "admin" guard) even if it reaches that guard.
     |
-    | Falls back to the shared `secret` when a per-guard secret is unset,
-    | preserving existing tokens during rollout.
+    | Outside production a missing per-guard secret falls back to the shared
+    | `secret` with a warning. Production fails closed and requires distinct
+    | secrets for every guard.
     |
     */
 
@@ -112,7 +113,7 @@ return [
     |
     */
 
-    'ttl' => (int) env('JWT_TTL', 60),
+    'ttl' => (int) env('JWT_TTL', 15),
 
     /*
     |--------------------------------------------------------------------------
@@ -141,7 +142,7 @@ return [
     */
 
     'refresh_iat' => env('JWT_REFRESH_IAT', false),
-    'refresh_ttl' => (int) env('JWT_REFRESH_TTL', 1440),
+    'refresh_ttl' => (int) env('JWT_REFRESH_TTL', 780),
 
     /*
     |--------------------------------------------------------------------------
@@ -156,6 +157,22 @@ return [
     */
 
     'algo' => env('JWT_ALGO', 'HS256'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed JWT Algorithms
+    |--------------------------------------------------------------------------
+    |
+    | Explicit allowlist validated by JwtServiceProvider whenever a guard is
+    | resolved. `none` is never accepted, and HMAC algorithms require a secret
+    | of at least 32 bytes in production.
+    |
+    */
+    'allowed_algorithms' => [
+        'HS256', 'HS384', 'HS512',
+        'RS256', 'RS384', 'RS512',
+        'ES256', 'ES384', 'ES512',
+    ],
 
     /*
     |--------------------------------------------------------------------------
