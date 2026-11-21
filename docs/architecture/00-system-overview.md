@@ -142,6 +142,8 @@ builds on:
 
 Historical migrations are kept intact. Fresh tenants receive their full schema from the `TenantCreated` pipeline; `TenantSeeder` only migrates existing tenants when `tenancy.seeder_migrate_existing` is true (disabled in tests). Tests clone one pre-migrated tenant schema, so no redundant per-tenant migration runs are added.
 
+When a new tenant migration ships, run `php artisan tenants:migrate` against existing tenant databases **before** deploying code that reads or writes the new schema. Fresh provisioning and template-cloned tests both pick up the latest migrations automatically, so neither reveals a stale existing tenant.
+
 ---
 
 ## 6. Front end at a glance
