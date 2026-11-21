@@ -7,6 +7,7 @@ import WarehouseIcon from '@mui/icons-material/Warehouse';
 import MoveUpIcon from '@mui/icons-material/MoveUp';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import PaymentsIcon from '@mui/icons-material/Payments';
+import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuOpenIcon from '@mui/icons-material/MenuOpen';
 import GodModeIndicator from '@/Components/GodModeIndicator';
@@ -19,6 +20,7 @@ const navItems = [
     { id: 'tenant.warehouses.index', label: 'Warehouses', icon: <WarehouseIcon />, section: 'Inventory', permission: 'manage inventory' },
     { id: 'tenant.inventory.index', label: 'Movements', icon: <MoveUpIcon />, section: 'Inventory', permission: 'manage inventory' },
     { id: 'billing.payments.index', label: 'Payments', icon: <ReceiptLongIcon />, section: 'Billing', permission: 'manage payments' },
+    { id: 'tenant.settings.index', label: 'Settings', icon: <SettingsIcon />, section: 'System', activePattern: 'tenant.settings' },
     { id: 'tenant.currency.settings', label: 'Currency', icon: <PaymentsIcon />, section: 'System', permission: 'manage settings' },
 ];
 
@@ -40,6 +42,8 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
             return false;
         }
     };
+
+    const isItemActive = (item) => isActive(item.activePattern ?? item.id);
 
     const handleNav = useCallback((routeName) => {
         router.visit(route(routeName));
@@ -103,19 +107,19 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
                                 key={item.id}
                                 onClick={() => handleNav(item.id)}
                                 aria-label={item.label}
-                                aria-current={isActive(item.id) ? 'page' : undefined}
+                                aria-current={isItemActive(item) ? 'page' : undefined}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 10,
                                     width: '100%',
                                     padding: collapsed ? '10px' : '10px 12px',
-                                    background: isActive(item.id) ? '#3b82f6' : 'transparent',
-                                    color: isActive(item.id) ? 'white' : '#94a3b8',
+                                    background: isItemActive(item) ? '#3b82f6' : 'transparent',
+                                    color: isItemActive(item) ? 'white' : '#94a3b8',
                                     border: 'none',
                                     borderRadius: 8,
                                     cursor: 'pointer',
-                                    fontWeight: isActive(item.id) ? 600 : 500,
+                                    fontWeight: isItemActive(item) ? 600 : 500,
                                     fontSize: 13,
                                     textAlign: 'left',
                                     marginBottom: 2,
@@ -123,13 +127,13 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
                                     transition: 'all 0.15s ease',
                                 }}
                                 onMouseEnter={(e) => {
-                                    if (!isActive(item.id)) {
+                                    if (!isItemActive(item)) {
                                         e.currentTarget.style.background = '#1e293b';
                                         e.currentTarget.style.color = '#e2e8f0';
                                     }
                                 }}
                                 onMouseLeave={(e) => {
-                                    if (!isActive(item.id)) {
+                                    if (!isItemActive(item)) {
                                         e.currentTarget.style.background = 'transparent';
                                         e.currentTarget.style.color = '#94a3b8';
                                     }

@@ -25,6 +25,7 @@ use App\Shared\Http\Controllers\Tenant\ImpersonationEntryController;
 use App\Shared\Http\Controllers\Tenant\NotificationController;
 use App\Shared\Http\Controllers\Tenant\NotificationSettingsController;
 use App\Shared\Http\Controllers\Tenant\TenantCurrencyController;
+use App\Shared\Http\Controllers\Tenant\TenantSettingsController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
@@ -143,6 +144,14 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
             Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
             Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+            // Account settings hub — personal account and security first.
+            // Workspace, domain and database pages will join the same hub later.
+            Route::get('/settings', [TenantSettingsController::class, 'index'])
+                ->name('tenant.settings.index');
+
+            Route::get('/settings/security', [TenantSettingsController::class, 'security'])
+                ->name('tenant.settings.security');
 
             // God mode exit
             Route::post('/god-mode/stop', [ImpersonationEntryController::class, 'stop'])

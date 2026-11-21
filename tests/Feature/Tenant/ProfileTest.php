@@ -6,6 +6,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -39,6 +40,26 @@ class ProfileTest extends TestCase
             ->get('/profile');
 
         $response->assertOk();
+    }
+
+    public function test_settings_hub_is_displayed(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/settings')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Tenant/Settings/Index'));
+    }
+
+    public function test_security_settings_page_is_displayed(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/settings/security')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->component('Tenant/Settings/Security'));
     }
 
     public function test_profile_information_can_be_updated(): void
