@@ -56,6 +56,20 @@ final class OAuthHandoffUrl
     }
 
     /**
+     * Signed tenant URL that returns a settings connect result to the user who
+     * started it. The user id stops a leaked result from being replayed by a
+     * different signed-in member of the same workspace.
+     */
+    public static function connectResultFor(Tenant $tenant, int $userId, string $code): ?string
+    {
+        return self::tenantUrl($tenant, static fn (): string => URL::temporarySignedRoute(
+            'tenant.settings.connected-accounts.connect-result',
+            now()->addSeconds(self::EXPIRY_SECONDS),
+            ['user' => $userId, 'code' => $code],
+        ));
+    }
+
+    /**
      * @param  callable(): string  $callback
      */
     private static function tenantUrl(Tenant $tenant, callable $callback): ?string

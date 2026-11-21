@@ -16,7 +16,7 @@ export default function SettingsIndex() {
     const accountCards = [
         {
             title: 'Personal information',
-            description: 'Update your name and email address, and manage email verification.',
+            description: 'Update your name and email address, review connected sign-in methods, and manage email verification.',
             href: route('profile.edit'),
             icon: <PersonOutlineIcon />,
             testId: 'settings-personal-card',

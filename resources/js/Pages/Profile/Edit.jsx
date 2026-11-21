@@ -1,12 +1,14 @@
+import ConnectedAccountsCard from '@/Components/ConnectedAccountsCard';
 import TenantLayout from '@/Layouts/TenantLayout';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import { Head, Link } from '@inertiajs/react';
 
-export default function Edit({ mustVerifyEmail, status }) {
+export default function Edit({ mustVerifyEmail, status, connectedAccounts = [], hasPassword = true, canConnect = true }) {
     return (
         <TenantLayout>
             <Head title="Personal Information" />
@@ -31,6 +33,15 @@ export default function Edit({ mustVerifyEmail, status }) {
                     status={status}
                 />
             </Paper>
+
+            <Box sx={{ mt: 3, maxWidth: 720 }}>
+                <ConnectedAccountsCard
+                    accounts={connectedAccounts}
+                    hasPassword={hasPassword}
+                    canConnect={canConnect}
+                    setPasswordHref={route('tenant.settings.security')}
+                />
+            </Box>
         </TenantLayout>
     );
 }

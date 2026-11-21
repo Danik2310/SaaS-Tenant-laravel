@@ -177,6 +177,11 @@ Route::middleware(['central.domain', 'throttle:20,1'])->group(function () {
     Route::get('/auth/google/redirect', [GoogleOAuthController::class, 'redirect'])
         ->name('oauth.google.redirect');
 
+    // Settings-initiated connect. Signed because it carries the tenant user id.
+    Route::get('/auth/google/connect', [GoogleOAuthController::class, 'connect'])
+        ->middleware('signed')
+        ->name('oauth.google.connect');
+
     Route::get('/auth/google/callback', [GoogleOAuthController::class, 'callback'])
         ->name('oauth.google.callback');
 });

@@ -32,6 +32,12 @@ class OAuthAccountRejectedException extends RuntimeException
      */
     public const NO_ACCOUNT = 'no_account';
 
+    /** The user deliberately unlinked this provider identity. */
+    public const UNLINKED = 'unlinked';
+
+    /** A connect request tried to claim an identity owned by another user. */
+    public const ALREADY_LINKED = 'already_linked';
+
     public function __construct(public readonly string $reason)
     {
         parent::__construct("OAuth sign-in rejected: {$reason}");

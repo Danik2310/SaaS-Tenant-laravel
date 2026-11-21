@@ -35,11 +35,28 @@ class OAuthAccount extends Model
         'provider_user_id',
         'provider_email',
         'avatar_url',
+        'unlinked_at',
+    ];
+
+    /** @var array<string, string> */
+    protected $casts = [
+        'unlinked_at' => 'datetime',
     ];
 
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Only live links count as connected sign-in methods.
+     *
+     * Revoked rows stay in the table as tombstones keyed by provider + subject
+     * id, so Google cannot silently re-link the same identity by email.
+     */
+    public function scopeLinked($query)
+    {
+        return $query->whereNull('unlinked_at');
     }
 }

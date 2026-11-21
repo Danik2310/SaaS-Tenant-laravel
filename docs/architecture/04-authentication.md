@@ -261,6 +261,7 @@ loopback). The same two endpoints serve three entry kinds:
 |---|---|---|---|
 | Tenant login | tenant `/login` → `?tenant=…&intent=login` | `oauth.tenant`, `oauth.intent=login` | **Never** — an unknown Google email is refused |
 | Tenant join | tenant `/register` → `?tenant=…&intent=register` | `oauth.tenant`, `oauth.intent=register` | Yes, within the plan's user quota |
+| Settings connect | tenant `/settings/security` → signed central `/auth/google/connect` | `oauth.tenant`, `oauth.intent=connect`, `oauth.connect_user` | **Never** — links only the signed-in user |
 | New workspace | central `/register` → `?flow=signup` | `oauth.flow=signup` | No tenant is provisioned during OAuth at all |
 
 The tenant id — and the fact that *this browser* started the flow — are carried
@@ -290,11 +291,13 @@ sequenceDiagram
     T-->>B: 302 /dashboard + JWT cookie
 ```
 
-- Entry point and callback:
-  [`GoogleOAuthController::redirect()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:67`
-  and [`GoogleOAuthController::callback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:96`.
-  Registered once as `oauth.google.redirect` / `oauth.google.callback` behind
-  `central.domain` — `routes/web.php` :148. Deliberately **no `guest`**: these
+- Entry points and callback:
+  [`GoogleOAuthController::redirect()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:75`,
+  [`GoogleOAuthController::connect()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:110`
+  and [`GoogleOAuthController::callback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:150`.
+  Registered once as `oauth.google.redirect`, `oauth.google.connect` (signed)
+  and `oauth.google.callback` behind `central.domain` — `routes/web.php` :178.
+  Deliberately **no `guest`**: these
   are central routes with no tenant session to protect, and `guest` would bounce
   a visitor who is already signed in instead of letting them switch accounts.
 - Tenant end:
@@ -302,7 +305,7 @@ sequenceDiagram
   route `auth.google.complete` with `signed` and `throttle:10,1`, outside both
   `auth` and `guest` — `routes/tenant.php` :112.
 - Account resolution:
-  [`OAuthAccountLinker::loginOrRegister()`](../../app/Shared/Support/OAuthAccountLinker.php) `:41`.
+  [`OAuthAccountLinker::loginOrRegister()`](../../app/Shared/Support/OAuthAccountLinker.php) `:43`.
 - Handoff URL:
   [`OAuthHandoffUrl::for()`](../../app/Tenants/Support/OAuthHandoffUrl.php) `:34`
   (`EXPIRY_SECONDS = 60`).
@@ -332,8 +335,21 @@ sequenceDiagram
      sends the verification mail that Google has already made redundant.
    - the **central signup** flow never reaches the linker; it parks the identity
      and lets the normal `POST /register` provision a brand-new workspace.
+4. A deliberately disconnected identity is refused first. The `oauth_accounts`
+   row stays in place with `unlinked_at` set, so verified-email matching cannot
+   silently recreate the same link on the next Google sign-in. Disconnect
+   requires a local password; the current session stays signed in.
+5. **Connect / reconnect** is a separate, signed intent. The tenant settings
+   page mints a 60-second signed central URL carrying tenant, user and provider;
+   `signed` middleware validates it before Google is involved. The callback
+   links only that exact user — no email matching, no user creation, no new JWT —
+   and keeps the current session. An existing password is required so Google is
+   never the only sign-in method. Only the same user may clear their own
+   `unlinked_at` tombstone; an identity owned by another user is refused. The
+   result returns as a signed `code` to
+   `tenant.settings.connected-accounts.connect-result`.
 
-Refusal order is `inactive` → `unverified` → `no_account`: an unverified
+Refusal order is `unlinked` → `inactive` → `unverified` → `no_account`: an unverified
 identity that also has no account still reports `unverified`, because the
 untrusted address is the reason it cannot be used.
 
@@ -344,12 +360,15 @@ tenant host with a **signed** `?oauth_error=<code>` because a cross-host session
 flash is unreadable on the other host
 ([`OAuthCallbackError`](../../app/Shared/Support/OAuthCallbackError.php) owns the
 codes and the copy: `cancelled`, `failed`, `expired`, `inactive`, `unverified`,
-`user_limit`, `no_account`, `account_exists`).
+`user_limit`, `no_account`, `account_exists`, `unlinked`). Settings connect
+returns its own signed `code` values: `connected`, `cancelled`, `failed`,
+`expired`, `already_linked`, `unverified`
+([`OAuthConnectResult`](../../app/Shared/Support/OAuthConnectResult.php)).
 
 **Google-first workspace signup.** The central `/register` button points at the
 same redirect with `flow=signup`; `redirect()` forgets the tenant keys and stores
 `oauth.flow=signup`. After consent,
-[`GoogleOAuthController::signupCallback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:175`
+[`GoogleOAuthController::signupCallback()`](../../app/Http/Controllers/Auth/GoogleOAuthController.php) `:306`
 stays on the central host and:
 
 1. refuses a cancelled or failed consent (`oauth_error=cancelled|failed`);
@@ -390,7 +409,7 @@ typed.
 
 Because both ends of the signup flow are on the central host, its errors are
 plain same-host `?oauth_error=` values resolved with
-[`OAuthCallbackError::fromCode()`](../../app/Shared/Support/OAuthCallbackError.php) `:69`
+[`OAuthCallbackError::fromCode()`](../../app/Shared/Support/OAuthCallbackError.php) `:73`
 — no signature is needed, and the fixed map means an unknown code renders
 nothing. The tenant flow keeps its **signed** `?oauth_error=` handoff, since a
 flash cannot cross hosts.

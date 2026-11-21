@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Shared\Support;
 
 use App\Models\Tenant;
+use App\Models\User;
 use App\Shared\Constants\OAuthProvider;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Builds the "Continue with …" links rendered on the tenant login/register
@@ -23,6 +25,9 @@ use App\Shared\Constants\OAuthProvider;
  */
 final class OAuthProviderLinks
 {
+    /** Long enough to follow one redirect, short enough to resist replay. */
+    private const CONNECT_EXPIRY_SECONDS = 60;
+
     /**
      * @return array<int, array{id: string, label: string, url: string}>
      */
@@ -54,6 +59,36 @@ final class OAuthProviderLinks
         }
 
         return [self::link(['flow' => 'signup'])];
+    }
+
+    /**
+     * Signed central entry for the settings "Connect" action.
+     *
+     * The signature binds the flow to this tenant and this user. A plain link
+     * would let a crafted URL connect a Google identity to the wrong account.
+     */
+    public static function connectUrlFor(User $user, string $provider = OAuthProvider::GOOGLE): ?string
+    {
+        $tenant = tenant();
+
+        if (! $tenant instanceof Tenant
+            || $provider !== OAuthProvider::GOOGLE
+            || ! self::googleIsConfigured()) {
+            return null;
+        }
+
+        $root = ForcedUrlRoot::centralRoot();
+        $scheme = parse_url($root, PHP_URL_SCHEME) ?: 'https';
+
+        return ForcedUrlRoot::run($root, $scheme, static fn (): string => URL::temporarySignedRoute(
+            'oauth.google.connect',
+            now()->addSeconds(self::CONNECT_EXPIRY_SECONDS),
+            [
+                'tenant' => $tenant->getTenantKey(),
+                'user' => $user->getKey(),
+                'provider' => $provider,
+            ],
+        ));
     }
 
     /**

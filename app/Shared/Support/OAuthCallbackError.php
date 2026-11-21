@@ -48,6 +48,9 @@ final class OAuthCallbackError
     /** A Google signup address that already owns a workspace. */
     public const ACCOUNT_EXISTS = 'account_exists';
 
+    /** The Google identity was deliberately unlinked by the user. */
+    public const UNLINKED = 'unlinked';
+
     /** @var array<string, string> */
     private const MESSAGES = [
         self::CANCELLED => 'Google sign-in was cancelled. You can try again or log in with your email.',
@@ -58,6 +61,7 @@ final class OAuthCallbackError
         self::USER_LIMIT => 'This workspace has reached its user limit. Ask an administrator to upgrade the plan.',
         self::NO_ACCOUNT => 'No account exists for that Google email. Ask your workspace administrator for an account.',
         self::ACCOUNT_EXISTS => 'An account already exists for that email. Log in to your existing workspace instead.',
+        self::UNLINKED => 'That Google account has been unlinked. Sign in with your password.',
     ];
 
     /**

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Tenant\Auth;
 
+use App\Models\OAuthAccount;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Providers\RouteServiceProvider;
 use App\Shared\Constants\NotificationTypes;
 use App\Shared\Constants\OAuthProvider;
 use App\Shared\Support\OAuthCallbackError;
+use App\Shared\Support\OAuthConnectResult;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -211,6 +213,178 @@ class GoogleOAuthTest extends TestCase
             'provider' => OAuthProvider::GOOGLE,
             'provider_user_id' => 'google-123',
         ], 'tenant');
+    }
+
+    public function test_known_google_identity_signs_in_after_a_profile_email_change_and_syncs_provider_email(): void
+    {
+        $user = User::factory()->create(['email' => 'new-local@example.com']);
+
+        OAuthAccount::query()->create([
+            'user_id' => $user->id,
+            'provider' => OAuthProvider::GOOGLE,
+            'provider_user_id' => 'google-123',
+            'provider_email' => 'old-google@example.com',
+        ]);
+
+        $this->fakeGoogleProvider($this->googleIdentity(email: 'current-google@example.com'));
+
+        $this->runCallback()->assertRedirectContains($this->tenant->domain.'/auth/google/complete');
+
+        $this->inspectTenantDatabase();
+
+        $this->assertSame(1, DB::connection('tenant')->table('users')->count());
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'new-local@example.com',
+        ], 'tenant');
+        $this->assertDatabaseHas('oauth_accounts', [
+            'user_id' => $user->id,
+            'provider' => OAuthProvider::GOOGLE,
+            'provider_user_id' => 'google-123',
+            'provider_email' => 'current-google@example.com',
+        ], 'tenant');
+    }
+
+    public function test_unlinked_identity_is_refused_even_when_the_email_matches_a_local_account(): void
+    {
+        $user = User::factory()->create(['email' => 'ada@example.com']);
+
+        $account = OAuthAccount::query()->create([
+            'user_id' => $user->id,
+            'provider' => OAuthProvider::GOOGLE,
+            'provider_user_id' => 'google-123',
+            'provider_email' => 'ada@example.com',
+            'unlinked_at' => now(),
+        ]);
+
+        // Without the tombstone this identity would miss the live-link lookup
+        // and silently re-link through verified-email matching.
+        $this->fakeGoogleProvider($this->googleIdentity());
+
+        $this->runCallback()->assertRedirectContains('oauth_error='.OAuthCallbackError::UNLINKED);
+
+        $this->inspectTenantDatabase();
+
+        $this->assertSame(1, DB::connection('tenant')->table('oauth_accounts')->count());
+        $this->assertNotNull(
+            DB::connection('tenant')->table('oauth_accounts')->where('id', $account->id)->value('unlinked_at')
+        );
+    }
+
+    public function test_unlinked_identity_is_refused_for_register_intent_too(): void
+    {
+        $user = User::factory()->create(['email' => 'ada@example.com']);
+
+        OAuthAccount::query()->create([
+            'user_id' => $user->id,
+            'provider' => OAuthProvider::GOOGLE,
+            'provider_user_id' => 'google-123',
+            'provider_email' => 'ada@example.com',
+            'unlinked_at' => now(),
+        ]);
+
+        $this->fakeGoogleProvider($this->googleIdentity());
+
+        $this->runCallback([], 'register')->assertRedirectContains('oauth_error='.OAuthCallbackError::UNLINKED);
+
+        $this->inspectTenantDatabase();
+
+        $this->assertSame(1, DB::connection('tenant')->table('users')->count());
+        $this->assertSame(1, DB::connection('tenant')->table('oauth_accounts')->count());
+    }
+
+    public function test_connect_callback_links_the_identity_to_the_intended_user(): void
+    {
+        $user = User::factory()->create(['email' => 'member@example.com']);
+
+        $this->fakeGoogleProvider($this->googleIdentity(
+            email: 'google-different@example.com',
+            providerUserId: 'google-connect-1',
+        ));
+
+        $this->runConnectCallback($user)
+            ->assertRedirectContains('code='.OAuthConnectResult::CONNECTED);
+
+        $this->inspectTenantDatabase();
+
+        $row = DB::connection('tenant')->table('oauth_accounts')->first();
+        $this->assertSame(1, DB::connection('tenant')->table('oauth_accounts')->count());
+        $this->assertSame($user->id, (int) $row->user_id);
+        $this->assertSame('google-connect-1', $row->provider_user_id);
+        $this->assertSame('google-different@example.com', $row->provider_email);
+        $this->assertNull($row->unlinked_at);
+    }
+
+    public function test_connect_callback_reconnects_a_disconnected_identity_for_its_owner(): void
+    {
+        $user = User::factory()->create(['email' => 'member@example.com']);
+
+        $account = OAuthAccount::query()->create([
+            'user_id' => $user->id,
+            'provider' => OAuthProvider::GOOGLE,
+            'provider_user_id' => 'google-reconnect',
+            'provider_email' => 'old-google@example.com',
+            'unlinked_at' => now(),
+        ]);
+
+        $this->fakeGoogleProvider($this->googleIdentity(
+            email: 'new-google@example.com',
+            providerUserId: 'google-reconnect',
+        ));
+
+        $this->runConnectCallback($user)
+            ->assertRedirectContains('code='.OAuthConnectResult::CONNECTED);
+
+        $this->inspectTenantDatabase();
+
+        $row = DB::connection('tenant')->table('oauth_accounts')->where('id', $account->id)->first();
+        $this->assertSame(1, DB::connection('tenant')->table('oauth_accounts')->count());
+        $this->assertNull($row->unlinked_at);
+        $this->assertSame('new-google@example.com', $row->provider_email);
+    }
+
+    public function test_connect_callback_refuses_an_identity_owned_by_another_user(): void
+    {
+        $owner = User::factory()->create(['email' => 'owner@example.com']);
+        $other = User::factory()->create(['email' => 'other@example.com']);
+
+        OAuthAccount::query()->create([
+            'user_id' => $owner->id,
+            'provider' => OAuthProvider::GOOGLE,
+            'provider_user_id' => 'google-shared',
+            'provider_email' => 'owner-google@example.com',
+        ]);
+
+        $this->fakeGoogleProvider($this->googleIdentity(
+            email: 'shared-google@example.com',
+            providerUserId: 'google-shared',
+        ));
+
+        $this->runConnectCallback($other)
+            ->assertRedirectContains('code='.OAuthConnectResult::ALREADY_LINKED);
+
+        $this->inspectTenantDatabase();
+
+        $row = DB::connection('tenant')->table('oauth_accounts')->first();
+        $this->assertSame($owner->id, (int) $row->user_id);
+        $this->assertNull($row->unlinked_at);
+    }
+
+    public function test_connect_callback_refuses_an_unverified_email(): void
+    {
+        $user = User::factory()->create(['email' => 'member@example.com']);
+
+        $this->fakeGoogleProvider($this->googleIdentity(
+            emailVerified: false,
+            providerUserId: 'google-unverified',
+        ));
+
+        $this->runConnectCallback($user)
+            ->assertRedirectContains('code='.OAuthConnectResult::UNVERIFIED);
+
+        $this->inspectTenantDatabase();
+
+        $this->assertSame(0, DB::connection('tenant')->table('oauth_accounts')->count());
     }
 
     public function test_callback_refuses_an_unverified_email_for_an_existing_account(): void
@@ -472,6 +646,23 @@ class GoogleOAuthTest extends TestCase
 
         return $this->withSession(['oauth.tenant' => $this->tenant->id, 'oauth.intent' => $intent])
             ->get(self::CENTRAL.'/auth/google/callback?'.http_build_query($query));
+    }
+
+    /**
+     * Run the callback with a settings connect intent for `$user`.
+     *
+     * @param  array<string, string>  $query
+     */
+    private function runConnectCallback(User $user, array $query = []): TestResponse
+    {
+        $query += ['code' => 'fake-code', 'state' => 'fake-state'];
+
+        return $this->withSession([
+            'oauth.tenant' => $this->tenant->id,
+            'oauth.intent' => 'connect',
+            'oauth.connect_user' => $user->getKey(),
+            'oauth.connect_provider' => OAuthProvider::GOOGLE,
+        ])->get(self::CENTRAL.'/auth/google/callback?'.http_build_query($query));
     }
 
     /**

@@ -153,6 +153,18 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             Route::get('/settings/security', [TenantSettingsController::class, 'security'])
                 ->name('tenant.settings.security');
 
+            Route::delete('/settings/security/connected-accounts/{provider}', [TenantSettingsController::class, 'destroy'])
+                ->middleware('throttle:10,1')
+                ->name('tenant.settings.connected-accounts.destroy');
+
+            Route::post('/settings/security/connected-accounts/{provider}/connect', [TenantSettingsController::class, 'connect'])
+                ->middleware('throttle:10,1')
+                ->name('tenant.settings.connected-accounts.connect');
+
+            Route::get('/settings/security/connected-accounts/connect-result', [TenantSettingsController::class, 'connectResult'])
+                ->middleware(['signed', 'throttle:10,1'])
+                ->name('tenant.settings.connected-accounts.connect-result');
+
             // God mode exit
             Route::post('/god-mode/stop', [ImpersonationEntryController::class, 'stop'])
                 ->name('god-mode.stop');

@@ -60,6 +60,9 @@ export default function UpdateProfileInformation({ mustVerifyEmail, status, clas
                     />
 
                     <InputError className="mt-2" message={errors.email} />
+                    <p className="mt-1 text-xs text-gray-500">
+                        Changing your email address does not change the Google account you use to sign in.
+                    </p>
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (
