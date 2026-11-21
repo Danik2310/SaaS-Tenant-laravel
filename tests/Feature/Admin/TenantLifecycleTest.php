@@ -274,7 +274,9 @@ class TenantLifecycleTest extends TestCase
         $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
         Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
 
-        $response = $this->delete("/admin/api/tenants/{$tenant->id}");
+        $response = $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ]);
 
         $response->assertStatus(204);
 
@@ -308,6 +310,28 @@ class TenantLifecycleTest extends TestCase
             DB::table('activity_log')->where('description', 'like', 'Restored tenant%')->count(),
             'TenantController::restore() must not write its own activity entry.'
         );
+    }
+
+    public function test_delete_requires_matching_workspace_name(): void
+    {
+        $this->setUpAdminAuth();
+
+        $plan = Plan::factory()->create();
+        $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
+
+        foreach ([
+            [],
+            ['workspace_name' => 'not-'.$tenant->name],
+        ] as $payload) {
+            $response = $this->delete("/admin/api/tenants/{$tenant->id}", $payload);
+
+            $response->assertStatus(422)
+                ->assertJsonValidationErrors('workspace_name');
+        }
+
+        $tenant->refresh();
+        $this->assertNull($tenant->deleted_at);
+        $this->assertEquals('Active', $tenant->status);
     }
 
     public function test_can_change_tenant_plan(): void
@@ -1016,7 +1040,10 @@ class TenantLifecycleTest extends TestCase
     {
         $plan = Plan::factory()->create();
         $tenant = $this->createTestTenant();
-        $tenant->update(['plan_id' => $plan->id]);
+        $tenant->update([
+            'name' => 'Workspace To Disable',
+            'plan_id' => $plan->id,
+        ]);
         $dbName = $tenant->database()->getName();
         $this->createdTenantDbNames[] = $dbName;
 
@@ -1029,7 +1056,9 @@ class TenantLifecycleTest extends TestCase
         $user->assignRole('super-admin');
         $this->actingAs($user, 'admin');
 
-        $this->delete("/admin/api/tenants/{$tenant->id}");
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ]);
         $tenant->refresh();
         $this->assertSoftDeleted('tenants', ['id' => $tenant->id]);
 
@@ -1044,7 +1073,10 @@ class TenantLifecycleTest extends TestCase
     {
         $plan = Plan::factory()->create();
         $tenant = $this->createTestTenant();
-        $tenant->update(['plan_id' => $plan->id]);
+        $tenant->update([
+            'name' => 'Workspace To Disable',
+            'plan_id' => $plan->id,
+        ]);
         $this->createdTenantDbNames[] = $tenant->database()->getName();
 
         $subscription = Subscription::factory()->create([
@@ -1059,7 +1091,9 @@ class TenantLifecycleTest extends TestCase
         $user->assignRole('super-admin');
         $this->actingAs($user, 'admin');
 
-        $this->delete("/admin/api/tenants/{$tenant->id}");
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ]);
         $tenant->refresh();
         Tenant::withoutEvents(fn () => $tenant->forceDelete());
 

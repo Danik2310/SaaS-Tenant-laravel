@@ -14,7 +14,8 @@ export const createTenant = (data) => api.post('/admin/api/tenants', data);
 
 export const updateTenant = (id, data) => api.put(`/admin/api/tenants/${id}`, data);
 
-export const deleteTenant = (id) => api.delete(`/admin/api/tenants/${id}`);
+export const deleteTenant = (id, workspaceName) =>
+  api.delete(`/admin/api/tenants/${id}`, { data: { workspace_name: workspaceName } });
 
 export const restoreTenant = (id) => api.patch(`/admin/api/tenants/${id}/restore`);
 

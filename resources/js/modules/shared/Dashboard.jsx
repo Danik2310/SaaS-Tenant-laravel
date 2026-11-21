@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import api from '@/services/api';
+import { deleteTenant } from '@/repositories/TenantRepository';
 import Navbar from '@/Components/Navbar';
 import DataTable from '@/Components/DataTable';
 import BlockIcon from '@mui/icons-material/Block';
@@ -68,6 +69,7 @@ export default function Dashboard() {
     const [bulkPlanChangeOpen, setBulkPlanChangeOpen] = useState(false);
     const [activateTrialTenants, setActivateTrialTenants] = useState(null);
     const [deleteConfirmTenant, setDeleteConfirmTenant] = useState(null);
+    const [deleteWorkspaceName, setDeleteWorkspaceName] = useState('');
     const [restoreConfirmId, setRestoreConfirmId] = useState(null);
     const [impersonateConfirmTenant, setImpersonateConfirmTenant] = useState(null);
     const [paymentMethods, setPaymentMethods] = useState([]);
@@ -149,21 +151,25 @@ export default function Dashboard() {
 
     const handleDeleteTenant = async (tenant) => {
         setDeleteConfirmTenant(tenant);
+        setDeleteWorkspaceName('');
     };
 
     const confirmDeleteTenant = async () => {
         if (!deleteConfirmTenant) return;
+        if (deleteWorkspaceName.trim() !== deleteConfirmTenant.name) return;
+
         try {
-            await api.delete(`/admin/api/tenants/${deleteConfirmTenant.id}`);
-            toast.success('Tenant soft-deleted successfully');
+            await deleteTenant(deleteConfirmTenant.id, deleteWorkspaceName);
+            toast.success('Tenant disabled. Data is preserved and it can be restored.');
             fetchTenants();
             incrementRefreshTrigger();
         } catch (err) {
-            const message = 'Failed to delete tenant';
+            const message = 'Failed to disable tenant';
             toast.error(message);
             setError(message);
         } finally {
             setDeleteConfirmTenant(null);
+            setDeleteWorkspaceName('');
         }
     };
 
@@ -622,10 +628,16 @@ export default function Dashboard() {
                         <ConfirmDialog
                             open={!!deleteConfirmTenant}
                             title="Delete Tenant"
-                            message="This will soft-delete the tenant. The data will be preserved and can be restored later. Continue?"
+                            message="This will disable the tenant. The data will be preserved and can be restored later."
                             confirmLabel="Delete"
+                            confirmationTarget={deleteConfirmTenant?.name}
+                            confirmationValue={deleteWorkspaceName}
+                            onConfirmationChange={setDeleteWorkspaceName}
                             onConfirm={confirmDeleteTenant}
-                            onCancel={() => setDeleteConfirmTenant(null)}
+                            onCancel={() => {
+                                setDeleteConfirmTenant(null);
+                                setDeleteWorkspaceName('');
+                            }}
                         />
 
                         <ConfirmDialog

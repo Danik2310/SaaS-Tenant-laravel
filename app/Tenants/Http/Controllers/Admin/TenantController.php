@@ -5,6 +5,7 @@ namespace App\Tenants\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\BulkTenantOperationRequest;
 use App\Http\Requests\Admin\ChangeTenantPlanRequest;
+use App\Http\Requests\Admin\DeleteTenantRequest;
 use App\Http\Requests\Admin\StoreTenantRequest;
 use App\Http\Requests\Admin\UpdateTenantRequest;
 use App\Http\Resources\TenantResource;
@@ -232,11 +233,13 @@ class TenantController extends Controller
      *
      * @urlParam id string required The tenant ID.
      *
+     * @bodyParam workspace_name string required Exact workspace name confirming the disable action. Example: danikcompani
+     *
      * @response 204 No content.
      *
-     * @throws 422 If the tenant cannot be deleted in its current state.
+     * @throws 422 If the workspace name does not match or the tenant cannot be deleted.
      */
-    public function destroy(string $id)
+    public function destroy(DeleteTenantRequest $request, string $id)
     {
         $tenant = Tenant::findOrFail($id);
 

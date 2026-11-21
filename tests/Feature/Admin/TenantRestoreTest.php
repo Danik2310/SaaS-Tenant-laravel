@@ -60,7 +60,9 @@ class TenantRestoreTest extends TestCase
         $this->assertEquals($planB->id, $tenant->plan_id);
 
         // Delete — cancels Plan B subscription
-        $this->delete("/admin/api/tenants/{$tenant->id}")->assertStatus(204);
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ])->assertStatus(204);
 
         // Restore — should find and reactivate Plan B subscription
         $this->patch("/admin/api/tenants/{$tenant->id}/restore")->assertOk();
@@ -92,7 +94,9 @@ class TenantRestoreTest extends TestCase
         Subscription::factory()->for($tenant)->for($planA)->create(['status' => 'active']);
 
         $this->put("/admin/api/tenants/{$tenant->id}/plan", ['plan_id' => $planB->id])->assertOk();
-        $this->delete("/admin/api/tenants/{$tenant->id}")->assertStatus(204);
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ])->assertStatus(204);
         $this->patch("/admin/api/tenants/{$tenant->id}/restore")->assertOk();
 
         // Plan A subscription should still be cancelled
@@ -125,7 +129,9 @@ class TenantRestoreTest extends TestCase
         $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
         // No subscription created — this is the "no match" scenario
 
-        $this->delete("/admin/api/tenants/{$tenant->id}")->assertStatus(204);
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ])->assertStatus(204);
 
         $tenant->refresh();
         $this->assertEquals('Deleted', $tenant->status);
@@ -160,7 +166,9 @@ class TenantRestoreTest extends TestCase
         $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
         Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
 
-        $this->delete("/admin/api/tenants/{$tenant->id}")->assertStatus(204);
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ])->assertStatus(204);
 
         // Hard-delete the plan
         Plan::where('id', $plan->id)->forceDelete();
@@ -228,7 +236,9 @@ class TenantRestoreTest extends TestCase
         ]);
 
         // Delete tenant — cancels Plan B subscription
-        $this->delete("/admin/api/tenants/{$tenant->id}")->assertStatus(204);
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ])->assertStatus(204);
 
         // Verify Plan B sub is now cancelled
         $planBSub = DB::table('subscriptions')
@@ -308,7 +318,9 @@ class TenantRestoreTest extends TestCase
         Subscription::factory()->for($tenant)->for($plan)->create(['status' => 'active']);
 
         // Delete
-        $this->delete("/admin/api/tenants/{$tenant->id}")->assertStatus(204);
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ])->assertStatus(204);
 
         // First restore — should succeed
         $this->patch("/admin/api/tenants/{$tenant->id}/restore")->assertOk();
@@ -334,7 +346,9 @@ class TenantRestoreTest extends TestCase
         $tenant = Tenant::factory()->create(['status' => 'Active', 'plan_id' => $plan->id]);
         Subscription::factory()->expired()->for($tenant)->for($plan)->create();
 
-        $this->delete("/admin/api/tenants/{$tenant->id}")->assertStatus(204);
+        $this->delete("/admin/api/tenants/{$tenant->id}", [
+            'workspace_name' => $tenant->name,
+        ])->assertStatus(204);
 
         $response = $this->patch("/admin/api/tenants/{$tenant->id}/restore");
         $response->assertOk();
