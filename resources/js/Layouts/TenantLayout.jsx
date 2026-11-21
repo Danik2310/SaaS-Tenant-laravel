@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
+import useTenantLogout from '@/hooks/useTenantLogout';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -50,12 +51,7 @@ const TenantLayout = React.memo(function TenantLayout({ children }) {
         setMobileOpen(false);
     }, []);
 
-    const handleLogout = useCallback(() => {
-        // An open socket is not revoked by the server-side logout: disconnect
-        // explicitly so no further notifications arrive after the token dies.
-        window.Echo?.disconnect?.();
-        router.post(route('logout'), {}, { replace: true });
-    }, []);
+    const handleLogout = useTenantLogout();
 
     const sidebarWidth = collapsed ? 64 : 260;
 
