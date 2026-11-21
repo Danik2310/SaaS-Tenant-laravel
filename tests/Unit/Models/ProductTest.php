@@ -10,7 +10,7 @@ class ProductTest extends TenantTestCase
 {
     public function test_product_has_required_fillable_attributes(): void
     {
-        $fillable = ['name', 'description', 'sku', 'category_id', 'price', 'cost', 'active'];
+        $fillable = ['name', 'description', 'sku', 'category_id', 'price', 'cost', 'active', 'low_stock_threshold'];
         $this->assertEquals($fillable, (new Product)->getFillable());
     }
 
