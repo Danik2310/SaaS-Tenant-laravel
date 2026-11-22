@@ -23,7 +23,7 @@ Kernel stays thin:
 |----------|----------|
 | [`SharedServiceProvider::boot()`](../../app/Shared/SharedServiceProvider.php) `:85` | `AssignStaffRole`, `AssignSuperAdminRole`, `CheckAdminPermissions`, `CheckPermissionsData`, `GenerateTenantReferenceIds`, `ScanNotificationTriggersCommand` |
 | [`TenantServiceProvider`](../../app/Tenants/TenantServiceProvider.php) `:48` | `CollectTenantMetricsCommand`, `ExpireTrialsCommand`, `PruneOrphanTenantsCommand` |
-| [`BillingServiceProvider::boot()`](../../app/Billing/BillingServiceProvider.php) `:50` (console only) | `ExpireSubscriptionsCommand`, `SyncTenantSubscriptions`, `UpdatePaymentMethod` |
+| [`BillingServiceProvider::boot()`](../../app/Billing/BillingServiceProvider.php) `:66` (console only) | `ExpireSubscriptionsCommand`, `SyncTenantSubscriptions`, `UpdatePaymentMethod` |
 
 ---
 
