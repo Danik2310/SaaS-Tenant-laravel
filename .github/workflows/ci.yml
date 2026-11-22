@@ -109,6 +109,7 @@ jobs:
               tests/Feature/Tenant/Auth/JwtTenantScopeTest.php
               tests/Feature/Tenant/Auth/PasswordUpdateTest.php
               tests/Feature/Tenant/Auth/UserEmailUniquenessTest.php
+              tests/Feature/Tenant/BillingSettingsTest.php
               tests/Feature/Tenant/BillingUpgradeTest.php
               tests/Feature/Tenant/DeleteTenantStorageSkeletonTest.php
               tests/Feature/Tenant/Impersonation/EntryTest.php
@@ -183,6 +184,7 @@ jobs:
               tests/Feature/Tenant/Auth/PasswordConfirmationTest.php
               tests/Feature/Tenant/Auth/PasswordResetTest.php
               tests/Feature/Tenant/Auth/SessionLifetimeTest.php
+              tests/Feature/Billing/StripeWebhookTest.php
               tests/Feature/Tenant/Billing/PaymentHistoryTest.php
               tests/Feature/Tenant/CollectTenantMetricsTest.php
               tests/Feature/Tenant/CreateTenantStorageSkeletonTest.php
