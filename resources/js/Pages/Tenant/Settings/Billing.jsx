@@ -12,6 +12,14 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 
+const SUBSCRIPTION_STATUS_COLORS = {
+    active: 'success',
+    trial: 'info',
+    pending: 'warning',
+    cancelled: 'default',
+    expired: 'default',
+};
+
 const TEXT_FIELDS = [
     { name: 'company_name', label: 'Company name', testId: 'billing-company-input' },
     { name: 'first_name', label: 'First name', testId: 'billing-first-name-input' },
@@ -28,6 +36,7 @@ const TEXT_FIELDS = [
 
 export default function BillingSettings({
     billing = {},
+    subscription = null,
     cards = [],
     cardsEnabled = false,
     cardError = null,
@@ -99,6 +108,36 @@ export default function BillingSettings({
                     <Alert severity="info" data-testid="billing-portal-cancelled-alert">
                         Card management was cancelled. No changes were made.
                     </Alert>
+                )}
+
+                {subscription && (
+                    <Paper variant="outlined" data-testid="billing-subscription-card" sx={{ p: 3, borderColor: 'divider', boxShadow: 1 }}>
+                        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>
+                                    Current plan
+                                </Typography>
+                                <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 600 }} data-testid="billing-subscription-plan">
+                                    {subscription.plan_name}
+                                </Typography>
+                            </Box>
+                            <Chip
+                                label={subscription.status}
+                                color={SUBSCRIPTION_STATUS_COLORS[subscription.status] ?? 'default'}
+                                size="small"
+                                data-testid="billing-subscription-status"
+                            />
+                        </Stack>
+                        <Divider sx={{ my: 2 }} />
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.5, sm: 4 }}>
+                            <Typography variant="body2" color="text.secondary">
+                                Started {subscription.starts_at ?? '—'}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" data-testid="billing-subscription-end">
+                                {subscription.ends_at ? `Ends ${subscription.ends_at}` : 'No scheduled end date'}
+                            </Typography>
+                        </Stack>
+                    </Paper>
                 )}
 
                 <Paper variant="outlined" data-testid="billing-details-card" sx={{ p: 3, borderColor: 'divider', boxShadow: 1 }}>

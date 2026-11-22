@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Tenant;
 
+use App\Models\Plan;
+use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Shared\Constants\PermissionNames;
@@ -79,6 +81,24 @@ class BillingSettingsTest extends TestCase
                 ->where('cards.0.is_default', true)
                 ->missing('cards.0.number')
                 ->missing('cards.0.cvc'));
+    }
+
+    public function test_billing_page_exposes_subscription_summary(): void
+    {
+        $user = $this->billingUser();
+        $plan = Plan::factory()->create(['name' => 'Pro Plan', 'slug' => 'pro-summary']);
+        $startsAt = now()->subMonth();
+        $endsAt = now()->addMonth();
+        Subscription::createForTenant($this->tenant, $plan, 'active', $endsAt, $startsAt);
+
+        $this->actingAs($user)->get('/settings/billing')
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Tenant/Settings/Billing')
+                ->where('subscription.plan_name', 'Pro Plan')
+                ->where('subscription.status', 'active')
+                ->where('subscription.starts_at', $startsAt->toFormattedDateString())
+                ->where('subscription.ends_at', $endsAt->toFormattedDateString()));
     }
 
     public function test_user_without_manage_payments_is_forbidden(): void

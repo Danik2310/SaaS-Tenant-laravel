@@ -24,7 +24,7 @@ const mockPlans = [
     features: ['basic_reports'], created_at: '2026-07-01T00:00:00.000000Z',
   },
   {
-    id: 2, name: 'Pro', slug: 'pro', price: 29.99, status: 'active',
+    id: 2, name: 'Pro', slug: 'pro', stripe_price_id: 'price_pro', price: 29.99, status: 'active',
     duration_months: 12, max_users: 50, max_storage: 1024, max_warehouses: 5,
     max_categories: 50, max_products: 1000,
     features: ['advanced', 'custom_domain'], created_at: '2026-07-02T00:00:00.000000Z',
@@ -101,6 +101,28 @@ describe('Plans', () => {
 
     expect(await screen.findByText('Edit Plan')).toBeInTheDocument();
     expect(screen.getByLabelText(/^Plan Name/)).toHaveValue('Free');
+  });
+
+  test('prefills and submits the Stripe price mapping', async () => {
+    mockApi.put.mockResolvedValueOnce({ data: { plan: mockPlans[1] } });
+
+    renderWithProviders(<Plans />);
+
+    await screen.findByText('Free');
+    fireEvent.click(screen.getAllByLabelText('Edit')[1]);
+
+    await screen.findByText('Edit Plan');
+    expect(screen.getByLabelText(/^Stripe price ID/)).toHaveValue('price_pro');
+
+    fireEvent.change(screen.getByLabelText(/^Stripe price ID/), { target: { value: 'price_pro_v2' } });
+    fireEvent.click(screen.getByText('Save Changes'));
+
+    await waitFor(() => {
+      expect(mockApi.put).toHaveBeenCalledWith(
+        '/admin/api/plans/2',
+        expect.objectContaining({ stripe_price_id: 'price_pro_v2' }),
+      );
+    });
   });
 
   test('submits edits for an existing plan', async () => {

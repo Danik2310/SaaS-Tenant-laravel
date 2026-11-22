@@ -110,4 +110,24 @@ describe('Tenant billing settings', () => {
         expect(screen.getByTestId('no-cards-message')).toBeInTheDocument();
         expect(screen.getByTestId('manage-cards-button')).toBeDisabled();
     });
+
+    it('shows the current subscription summary when present', () => {
+        renderWithProviders(
+            <BillingSettings
+                billing={billing}
+                cards={cards}
+                cardsEnabled
+                subscription={{
+                    plan_name: 'Pro Plan',
+                    status: 'active',
+                    starts_at: 'Oct 22, 2026',
+                    ends_at: 'Nov 22, 2026',
+                }}
+            />,
+        );
+
+        expect(screen.getByTestId('billing-subscription-plan')).toHaveTextContent('Pro Plan');
+        expect(screen.getByTestId('billing-subscription-status')).toHaveTextContent('active');
+        expect(screen.getByTestId('billing-subscription-end')).toHaveTextContent('Ends Nov 22, 2026');
+    });
 });

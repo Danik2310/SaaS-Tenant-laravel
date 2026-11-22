@@ -22,6 +22,12 @@ class UpdatePlanRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:'.config('tenancy.central_connection').'.plans,slug,'.$planId,
+            'stripe_price_id' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique(config('tenancy.central_connection').'.plans', 'stripe_price_id')->ignore($planId),
+            ],
             'status' => 'sometimes|required|string|in:active,inactive',
             'price' => 'required|numeric|min:0',
             'duration_months' => 'sometimes|required|integer|min:1',

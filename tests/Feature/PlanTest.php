@@ -26,6 +26,7 @@ class PlanTest extends TestCase
         $data = [
             'name' => 'Basic Plan',
             'slug' => 'basic',
+            'stripe_price_id' => 'price_basic',
             'price' => 9.99,
             'status' => 'active',
             'duration_months' => 12,
@@ -41,6 +42,7 @@ class PlanTest extends TestCase
         $plan = Plan::where('slug', 'basic')->first();
         $this->assertNotNull($plan);
         $this->assertSame('Basic Plan', $plan->name);
+        $this->assertSame('price_basic', $plan->stripe_price_id);
         $this->assertSame(9.99, (float) $plan->price);
         $this->assertSame(5, $plan->max_users);
         $this->assertEquals(['api_access', 'custom_domain'], $plan->features);
@@ -124,6 +126,7 @@ class PlanTest extends TestCase
         $updateData = [
             'name' => 'Updated Plan',
             'slug' => 'updated',
+            'stripe_price_id' => 'price_updated',
             'price' => 15.99,
             'max_users' => 10,
             'features' => 'advanced, api_access',
@@ -136,6 +139,7 @@ class PlanTest extends TestCase
 
         $updatedPlan = Plan::find($plan->id);
         $this->assertSame('Updated Plan', $updatedPlan->name);
+        $this->assertSame('price_updated', $updatedPlan->stripe_price_id);
         $this->assertSame(15.99, (float) $updatedPlan->price);
         $this->assertSame(10, $updatedPlan->max_users);
         $this->assertEquals(['advanced', 'api_access'], $updatedPlan->features);

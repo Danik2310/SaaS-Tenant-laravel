@@ -20,6 +20,12 @@ class StorePlanRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:'.config('tenancy.central_connection').'.plans,slug',
+            'stripe_price_id' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique(config('tenancy.central_connection').'.plans', 'stripe_price_id'),
+            ],
             'status' => 'required|string|in:active,inactive',
             'price' => 'required|numeric|min:0',
             'duration_months' => 'required|integer|min:1',

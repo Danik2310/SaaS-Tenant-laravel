@@ -42,6 +42,7 @@ class BillingSettingsController extends Controller
 
         return Inertia::render('Tenant/Settings/Billing', [
             'billing' => $this->billingProps($tenant),
+            'subscription' => $this->subscriptionProps($tenant),
             'cards' => $cards,
             'cardsEnabled' => (string) config('services.stripe.secret_key') !== '',
             'cardError' => $cardError,
@@ -129,6 +130,30 @@ class BillingSettingsController extends Controller
         }
 
         return $tenant;
+    }
+
+    /**
+     * @return array{plan_name: string, status: string, starts_at: string|null, ends_at: string|null}|null
+     */
+    private function subscriptionProps(Tenant $tenant): ?array
+    {
+        $subscription = $tenant->activeSubscription()
+            ->with('plan')
+            ->first() ?? $tenant->subscriptions()
+            ->with('plan')
+            ->orderByDesc('starts_at')
+            ->first();
+
+        if ($subscription === null) {
+            return null;
+        }
+
+        return [
+            'plan_name' => $subscription->plan?->name ?? 'Unknown plan',
+            'status' => (string) $subscription->status,
+            'starts_at' => $subscription->starts_at?->toFormattedDateString(),
+            'ends_at' => $subscription->ends_at?->toFormattedDateString(),
+        ];
     }
 
     /**

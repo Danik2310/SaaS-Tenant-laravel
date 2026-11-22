@@ -56,6 +56,7 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
     const [form, setForm] = useState({
         name: plan?.name || '',
         slug: plan?.slug || '',
+        stripe_price_id: plan?.stripe_price_id || '',
         price: plan ? String(plan.price ?? '') : '',
         status: plan?.status || 'active',
         duration_months: plan?.duration_months || '',
@@ -109,6 +110,7 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
             const payload = {
                 ...formValues,
                 slug: form.slug || slugify(form.name),
+                stripe_price_id: String(form.stripe_price_id || '').trim() || null,
                 price: priceValue,
                 prices,
             };
@@ -152,6 +154,19 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
                     error={!!errors.slug}
                     helperText={errors.slug?.[0]}
                     required
+                    fullWidth
+                />
+            </Box>
+
+            <Box sx={{ display: 'flex', gap: 3 }}>
+                <TextField
+                    size="small"
+                    label="Stripe price ID"
+                    placeholder="price_..."
+                    value={form.stripe_price_id}
+                    onChange={handleChange('stripe_price_id')}
+                    error={!!errors.stripe_price_id}
+                    helperText={errors.stripe_price_id?.[0] || 'Recurring Stripe price mapped to this plan.'}
                     fullWidth
                 />
             </Box>
