@@ -1,5 +1,6 @@
 <?php
 
+use App\Billing\Http\Controllers\Webhook\StripeWebhookController;
 use App\Http\Resources\AdminUserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -28,3 +29,11 @@ Route::middleware(['jwt.cookie', 'auth:admin', 'throttle:api'])->get('/user', fu
         'user' => new AdminUserResource($request->user('admin')),
     ]);
 });
+
+// Stripe posts signed card-change events here on the central host. The api
+// group deliberately has no CSRF or session middleware; the webhook signature
+// is the credential. The route name is registered once, outside the central
+// domain foreach in routes/web.php, to keep route:cache names unique.
+Route::post('/webhooks/stripe', StripeWebhookController::class)
+    ->middleware(['central.domain', 'throttle:30,1'])
+    ->name('webhooks.stripe');

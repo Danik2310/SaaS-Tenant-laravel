@@ -94,6 +94,7 @@ abstract class TestCase extends BaseTestCase
             'plan_features',
             'plans',
             'payment_methods',
+            'stripe_webhook_events',
             'feature_flags',
             'global_settings',
             'domains',
