@@ -36,10 +36,11 @@ Each flow doc follows the same shape:
 | [`07-jobs-events-observers.md`](07-jobs-events-observers.md) | Queue jobs, export pipeline, activity log, resource-usage observers |
 | [`08-console-and-scheduled.md`](08-console-and-scheduled.md) | Console kernel schedule and artisan commands |
 | [`09-notifications.md`](09-notifications.md) | In-app notification types, recipients, thresholds, Reverb delivery and routes |
+| [`10-billing-and-stripe.md`](10-billing-and-stripe.md) | Tenant billing profile, Stripe Customer Portal, signed webhooks and card-change emails |
 
-Docs `00`–`09` cover the **general (cross-cutting) layer**. Domain modules
-(Tenants, Billing, Plans, Products) and the React/Inertia front end are
-documented in later passes.
+Docs `00`–`09` cover the **general (cross-cutting) layer**; `10` covers the
+tenant billing flow. Other domain modules (Tenants, Plans, Products) and the
+React/Inertia front end are documented in later passes.
 
 ---
 
