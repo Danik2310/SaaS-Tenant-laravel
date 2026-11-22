@@ -64,9 +64,12 @@ interface PaymentGatewayInterface
 
     /**
      * Verify a provider webhook signature and normalize the event for the
-     * idempotent card-change notifier.
+     * idempotent card-change notifier and Cashier subscription sync.
      *
-     * @return array{id: string, type: string, object: array<string, mixed>, previous: array<string, mixed>}
+     * `payload` is the full provider event and is optional for gateways that
+     * only support card notifications.
+     *
+     * @return array{id: string, type: string, object: array<string, mixed>, previous: array<string, mixed>, payload?: array<string, mixed>}
      */
     public function verifyWebhookEvent(string $payload, string $signature): array;
 }

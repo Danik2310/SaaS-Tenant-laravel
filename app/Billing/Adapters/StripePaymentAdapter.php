@@ -174,6 +174,7 @@ class StripePaymentAdapter implements PaymentGatewayInterface
             'type' => (string) $event->type,
             'object' => $this->toArray($event->data->object ?? []),
             'previous' => $this->toArray($event->data->previous_attributes ?? []),
+            'payload' => $this->toArray($event),
         ];
     }
 

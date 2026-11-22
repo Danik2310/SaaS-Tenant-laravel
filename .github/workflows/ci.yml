@@ -126,6 +126,7 @@ jobs:
               tests/Feature/Admin/ImpersonationTest.php
               tests/Feature/Admin/StaffPermissionAssignmentTest.php
               tests/Feature/Admin/TenantAuxiliaryEndpointsTest.php
+              tests/Feature/Billing/CashierIntegrationTest.php
               tests/Feature/CheckTenantStateTest.php
               tests/Feature/ExampleTest.php
               tests/Feature/ExportControllerTest.php
@@ -184,7 +185,9 @@ jobs:
               tests/Feature/Tenant/Auth/PasswordConfirmationTest.php
               tests/Feature/Tenant/Auth/PasswordResetTest.php
               tests/Feature/Tenant/Auth/SessionLifetimeTest.php
+              tests/Feature/Billing/CashierWebhookTest.php
               tests/Feature/Billing/StripeWebhookTest.php
+              tests/Feature/Billing/SubscriptionProjectionTest.php
               tests/Feature/Tenant/Billing/PaymentHistoryTest.php
               tests/Feature/Tenant/CollectTenantMetricsTest.php
               tests/Feature/Tenant/CreateTenantStorageSkeletonTest.php

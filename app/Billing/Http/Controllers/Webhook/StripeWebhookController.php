@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Billing\Http\Controllers\Webhook;
 
 use App\Billing\Notifications\PaymentMethodChanged;
+use App\Billing\Projectors\LocalSubscriptionProjector;
+use App\Billing\Webhooks\CashierSubscriptionWebhookAdapter;
 use App\Http\Controllers\Controller;
 use App\Models\StripeWebhookEvent;
 use App\Models\Tenant;
@@ -16,15 +18,20 @@ use Illuminate\Support\Facades\Notification;
 use Throwable;
 
 /**
- * Central Stripe webhook receiver for card-change confirmations.
+ * Central Stripe webhook receiver for card-change confirmations and Cashier
+ * subscription state.
  *
  * The signature is verified before the event is recorded, and the event id is
- * used as an idempotency key so Stripe retries never send duplicate emails.
+ * used as an idempotency key so Stripe retries never send duplicate emails or
+ * replay subscription transitions.
  */
 class StripeWebhookController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        CashierSubscriptionWebhookAdapter $cashier,
+        LocalSubscriptionProjector $projector,
+    ): JsonResponse {
         $gateway = null;
 
         try {
@@ -42,6 +49,7 @@ class StripeWebhookController extends Controller
             return response()->json(['message' => 'Invalid webhook signature.'], 400);
         }
 
+        /** @var array{id: string, type: string, object: array<string, mixed>, previous: array<string, mixed>, payload?: array<string, mixed>} $event */
         $eventId = (string) ($event['id'] ?? '');
 
         if ($eventId === '') {
@@ -64,11 +72,23 @@ class StripeWebhookController extends Controller
             report($exception);
         }
 
+        if ($cashier->handles((string) ($event['type'] ?? ''))) {
+            try {
+                $cashier->handle($event);
+                $projector->handle($event);
+            } catch (Throwable $exception) {
+                report($exception);
+                $record->delete();
+
+                return response()->json(['message' => 'Webhook processing failed; retry requested.'], 500);
+            }
+        }
+
         return response()->json(['received' => true]);
     }
 
     /**
-     * @param  array{id: string, type: string, object: array<string, mixed>, previous: array<string, mixed>}  $event
+     * @param  array{id: string, type: string, object: array<string, mixed>, previous: array<string, mixed>, payload?: array<string, mixed>}  $event
      */
     private function notifyCardChange(array $event, PaymentGatewayInterface $gateway): void
     {

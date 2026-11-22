@@ -30,6 +30,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'company_name',
         'tax_id',
         'stripe_customer_id',
+        'stripe_id',
+        'pm_type',
+        'pm_last_four',
+        'registration_trial_ends_at',
         'first_name',
         'last_name',
         'phone',
@@ -43,6 +47,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     protected $casts = [
         'trial_ends_at' => 'datetime',
+        'registration_trial_ends_at' => 'datetime',
         'owner_email_verified_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
@@ -54,6 +59,17 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         static::creating(function (self $tenant) {
             if (empty($tenant->reference_id)) {
                 $tenant->reference_id = self::generateReferenceId();
+            }
+        });
+
+        // Cashier reads/writes `stripe_id`; the existing app uses
+        // `stripe_customer_id`. Keep both columns mirroring each other until the
+        // contract migration drops the legacy name in a later phase.
+        static::saving(function (self $tenant) {
+            if ($tenant->isDirty('stripe_customer_id') && ! $tenant->isDirty('stripe_id')) {
+                $tenant->stripe_id = $tenant->stripe_customer_id;
+            } elseif ($tenant->isDirty('stripe_id') && ! $tenant->isDirty('stripe_customer_id')) {
+                $tenant->stripe_customer_id = $tenant->stripe_id;
             }
         });
     }
@@ -125,6 +141,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'company_name',
             'tax_id',
             'stripe_customer_id',
+            'stripe_id',
+            'pm_type',
+            'pm_last_four',
+            'registration_trial_ends_at',
             'first_name',
             'last_name',
             'phone',
