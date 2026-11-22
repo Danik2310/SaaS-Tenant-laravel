@@ -33,4 +33,29 @@ class MercadoPagoAdapter implements PaymentGatewayInterface
     {
         throw new BadMethodCallException('MercadoPago hosted checkout is not implemented.');
     }
+
+    public function createCustomer(array $params): array
+    {
+        throw new BadMethodCallException('MercadoPago customer management is not implemented.');
+    }
+
+    public function updateCustomer(string $customerId, array $params): array
+    {
+        throw new BadMethodCallException('MercadoPago customer management is not implemented.');
+    }
+
+    public function createCustomerPortalSession(string $customerId, array $params): array
+    {
+        throw new BadMethodCallException('MercadoPago customer portal is not implemented.');
+    }
+
+    public function listPaymentMethods(string $customerId): array
+    {
+        throw new BadMethodCallException('MercadoPago saved cards are not implemented.');
+    }
+
+    public function verifyWebhookEvent(string $payload, string $signature): array
+    {
+        throw new BadMethodCallException('MercadoPago webhook verification is not implemented.');
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileDeleteRequest;
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Support\OAuthProviderLinks;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
@@ -26,6 +27,7 @@ class ProfileController extends Controller
             'connectedAccounts' => $request->user()->connectedAccounts(),
             'hasPassword' => $request->user()->password !== null,
             'canConnect' => OAuthProviderLinks::googleIsConfigured(),
+            'canManageBilling' => $request->user()->can(PermissionNames::MANAGE_PAYMENTS),
         ]);
     }
 

@@ -28,4 +28,45 @@ interface PaymentGatewayInterface
      * @return array{id: string, payment_status: string, customer_email: string, metadata: array<string, string>}
      */
     public function retrieveCheckoutSession(string $sessionId): array;
+
+    /**
+     * Create the provider customer that owns the tenant's saved cards.
+     *
+     * @param  array{email?: string|null, name?: string|null, phone?: string|null, metadata?: array<string, scalar>}  $params
+     * @return array{id: string}
+     */
+    public function createCustomer(array $params): array;
+
+    /**
+     * Update the provider customer's contact details after an explicit billing
+     * profile save.
+     *
+     * @param  array{email?: string|null, name?: string|null, phone?: string|null}  $params
+     * @return array{id: string}
+     */
+    public function updateCustomer(string $customerId, array $params): array;
+
+    /**
+     * Create a hosted, short-lived customer-portal session. The app never
+     * renders or stores raw card numbers.
+     *
+     * @param  array{return_url: string}  $params
+     * @return array{id: string, url: string}
+     */
+    public function createCustomerPortalSession(string $customerId, array $params): array;
+
+    /**
+     * Return masked, display-ready card metadata for a customer.
+     *
+     * @return array<int, array{id: string, brand: string, last4: string, exp_month: int, exp_year: int, is_default: bool}>
+     */
+    public function listPaymentMethods(string $customerId): array;
+
+    /**
+     * Verify a provider webhook signature and normalize the event for the
+     * idempotent card-change notifier.
+     *
+     * @return array{id: string, type: string, object: array<string, mixed>, previous: array<string, mixed>}
+     */
+    public function verifyWebhookEvent(string $payload, string $signature): array;
 }

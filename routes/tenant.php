@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Billing\Http\Controllers\Tenant\BillingController;
+use App\Billing\Http\Controllers\Tenant\BillingSettingsController;
 use App\Billing\Http\Controllers\Tenant\SubscriptionPaymentController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
@@ -164,6 +165,20 @@ Route::middleware(array_merge(['web'], $tenancyMiddleware, ['tenant.state']))->g
             Route::get('/settings/security/connected-accounts/connect-result', [TenantSettingsController::class, 'connectResult'])
                 ->middleware(['signed', 'throttle:10,1'])
                 ->name('tenant.settings.connected-accounts.connect-result');
+
+            // Billing settings are financial data and use the existing payments
+            // permission. Cards themselves are managed in Stripe's portal.
+            Route::middleware([PermissionNames::middleware([PermissionNames::MANAGE_PAYMENTS], 'web')])->group(function () {
+                Route::get('/settings/billing', [BillingSettingsController::class, 'edit'])
+                    ->name('tenant.billing.settings');
+
+                Route::put('/settings/billing', [BillingSettingsController::class, 'update'])
+                    ->name('tenant.settings.billing.update');
+
+                Route::post('/settings/billing/portal', [BillingSettingsController::class, 'portal'])
+                    ->middleware('throttle:10,1')
+                    ->name('tenant.settings.billing.portal');
+            });
 
             // God mode exit
             Route::post('/god-mode/stop', [ImpersonationEntryController::class, 'stop'])

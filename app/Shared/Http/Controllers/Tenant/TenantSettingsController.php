@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\ConnectOAuthAccountRequest;
 use App\Http\Requests\Tenant\UnlinkOAuthAccountRequest;
 use App\Shared\Constants\OAuthProvider;
+use App\Shared\Constants\PermissionNames;
 use App\Shared\Support\OAuthConnectResult;
 use App\Shared\Support\OAuthProviderLinks;
 use Illuminate\Http\RedirectResponse;
@@ -24,9 +25,11 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
  */
 class TenantSettingsController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        return Inertia::render('Tenant/Settings/Index');
+        return Inertia::render('Tenant/Settings/Index', [
+            'canManageBilling' => $request->user()->can(PermissionNames::MANAGE_PAYMENTS),
+        ]);
     }
 
     public function security(Request $request): Response

@@ -1,5 +1,6 @@
 import TenantLayout from '@/Layouts/TenantLayout';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import Avatar from '@mui/material/Avatar';
@@ -11,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { Head, Link, usePage } from '@inertiajs/react';
 
-export default function SettingsIndex() {
+export default function SettingsIndex({ canManageBilling = false }) {
     const user = usePage().props.auth?.user;
     const accountCards = [
         {
@@ -29,6 +30,17 @@ export default function SettingsIndex() {
             testId: 'settings-security-card',
         },
     ];
+
+    if (canManageBilling) {
+        accountCards.push({
+            title: 'Billing',
+            description: 'Update billing details and manage payment cards securely through Stripe.',
+            href: route('tenant.billing.settings'),
+            icon: <CreditCardIcon />,
+            testId: 'settings-billing-card',
+        });
+    }
+
     const initials = (user?.name ?? 'U')
         .split(' ')
         .filter(Boolean)

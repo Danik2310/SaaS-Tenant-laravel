@@ -8,7 +8,7 @@ import Typography from '@mui/material/Typography';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import { Head, Link } from '@inertiajs/react';
 
-export default function Edit({ mustVerifyEmail, status, connectedAccounts = [], hasPassword = true, canConnect = true }) {
+export default function Edit({ mustVerifyEmail, status, connectedAccounts = [], hasPassword = true, canConnect = true, canManageBilling = false }) {
     return (
         <TenantLayout>
             <Head title="Personal Information" />
@@ -33,6 +33,28 @@ export default function Edit({ mustVerifyEmail, status, connectedAccounts = [], 
                     status={status}
                 />
             </Paper>
+
+            {canManageBilling && (
+                <Box sx={{ mt: 3, maxWidth: 720 }} data-testid="billing-settings-link-card">
+                    <Paper variant="outlined" sx={{ p: 3, borderColor: 'divider', boxShadow: 1 }}>
+                        <Typography component="h2" variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                            Billing information
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Billing details and payment cards are managed separately from your personal profile.
+                        </Typography>
+                        <Button
+                            component={Link}
+                            href={route('tenant.billing.settings')}
+                            size="small"
+                            sx={{ mt: 1.5 }}
+                            data-testid="billing-settings-link"
+                        >
+                            Open billing settings
+                        </Button>
+                    </Paper>
+                </Box>
+            )}
 
             <Box sx={{ mt: 3, maxWidth: 720 }}>
                 <ConnectedAccountsCard
