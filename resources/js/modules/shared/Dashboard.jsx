@@ -14,10 +14,12 @@ import RestoreIcon from '@mui/icons-material/Restore';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { toast } from 'sonner';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
+import LogoutIcon from '@mui/icons-material/Logout';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -42,6 +44,21 @@ const MigrationModal = lazy(() => import('@/modules/shared/modals/MigrationModal
 const DomainModal = lazy(() => import('@/modules/shared/modals/DomainModal'));
 const ChangePlanModal = lazy(() => import('@/modules/billing/modals/ChangePlanModal'));
 const ActivateTrialModal = lazy(() => import('@/modules/billing/modals/ActivateTrialModal'));
+
+const VIEW_TITLES = {
+    overview: 'Dashboard Overview',
+    'resource-usage': 'Resource Usage',
+    tenants: 'Tenant Management',
+    staff: 'Staff Management',
+    roles: 'Roles & Permissions',
+    subscriptions: 'Subscriptions',
+    'payment-methods': 'Payment Methods',
+    plans: 'Infrastructure & Plans',
+    activity: 'Activity Logs',
+    settings: 'System Settings',
+    profile: 'My Profile',
+    impersonate: 'God Mode',
+};
 
 export default function Dashboard() {
     const { user, permissions = [] } = useAuthContext();
@@ -359,46 +376,76 @@ export default function Dashboard() {
                     component="header"
                     sx={{
                         bgcolor: 'background.paper',
-                        px: 4,
-                        py: 2,
+                        px: { xs: 2, md: 4 },
+                        py: { xs: 1.5, md: 2 },
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
+                        gap: 2,
                         borderBottom: 1,
                         borderColor: 'divider',
                     }}
                 >
-                    <Box>
-                        <Typography variant="h5" component="h1">
-                            {view === 'overview' && 'Dashboard Overview'}
-                            {view === 'resource-usage' && 'Resource Usage'}
-                            {view === 'tenants' && 'Tenant Management'}
-                            {view === 'staff' && 'Staff Management'}
-                            {view === 'roles' && 'Roles & Permissions'}
-                            {view === 'subscriptions' && 'Subscriptions'}
-                            {view === 'payment-methods' && 'Payment Methods'}
-                            {view === 'plans' && 'Infrastructure & Plans'}
-                            {view === 'activity' && 'Activity Logs'}
-                            {view === 'settings' && 'System Settings'}
-                            {view === 'profile' && 'My Profile'}
-                            {view === 'impersonate' && 'God Mode'}
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: 'text.secondary',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.08em',
+                            }}
+                        >
+                            ShoppingLi / Admin
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                            {user?.name}
+                        <Typography variant="h5" component="h1" sx={{ mt: 0.25 }}>
+                            {VIEW_TITLES[view] ?? 'Dashboard'}
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        color="error"
-                        size="small"
-                        onClick={handleLogout}
-                    >
-                        Logout
-                    </Button>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+                        <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1.25 }}>
+                            <Avatar
+                                sx={{
+                                    width: 34,
+                                    height: 34,
+                                    bgcolor: 'primary.main',
+                                    color: 'primary.contrastText',
+                                    fontSize: 14,
+                                }}
+                            >
+                                {(user?.name || 'A').trim().charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Box sx={{ minWidth: 0 }}>
+                                <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                                    {user?.name}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" noWrap>
+                                    {user?.email}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            size="small"
+                            startIcon={<LogoutIcon fontSize="small" />}
+                            onClick={handleLogout}
+                            sx={{
+                                borderColor: 'divider',
+                                color: 'text.primary',
+                                '&:hover': {
+                                    borderColor: 'primary.main',
+                                    bgcolor: 'action.hover',
+                                },
+                            }}
+                        >
+                            Logout
+                        </Button>
+                    </Box>
                 </Box>
 
-                <Box component="main" sx={{ px: 4, py: 3 }}>
-                    <Box sx={{ maxWidth: 1280, mx: 'auto' }}>
+                <Box component="main" sx={{ px: { xs: 2, md: 4 }, py: { xs: 2, md: 3 } }}>
+                    <Box sx={{ maxWidth: 1440, mx: 'auto' }}>
                         <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>}>
                         {error && (
                             <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2.5 }}>

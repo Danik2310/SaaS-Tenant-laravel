@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource/archivo-black';
 import '@fontsource/dm-sans/400.css';
 import '@fontsource/dm-sans/500.css';
+import '@fontsource/dm-sans/600.css';
 import '@fontsource/dm-sans/700.css';
 import { ThemeProvider } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';

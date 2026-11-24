@@ -1,5 +1,12 @@
-import React from 'react';
-import { useAuthContext } from '../context/AuthContext';
+import React, { useState } from 'react';
+import { alpha, useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import Box from '@mui/material/Box';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import GroupIcon from '@mui/icons-material/Group';
@@ -12,6 +19,8 @@ import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
 import HistoryIcon from '@mui/icons-material/History';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
+import Wordmark from '@/Components/BrandLogo';
+import { useAuthContext } from '../context/AuthContext';
 
 const permissionMap = {
     overview: null,
@@ -45,118 +54,183 @@ const views = [
 
 export default function Navbar({ view, setView }) {
     const { user, permissions = [] } = useAuthContext();
-    const filtered = views.filter(v => {
-        const required = permissionMap[v.id];
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+    const [mobileOpen, setMobileOpen] = useState(false);
+
+    const line = alpha(theme.palette.common.white, 0.08);
+    const hover = alpha(theme.palette.common.white, 0.06);
+    const label = alpha(theme.palette.common.white, 0.38);
+    const muted = alpha(theme.palette.common.white, 0.52);
+
+    const filtered = views.filter((item) => {
+        const required = permissionMap[item.id];
         if (!required) return true;
-        return required.some(p => permissions.includes(p));
+        return required.some((permission) => permissions.includes(permission));
     });
-    const grouped = filtered.reduce((acc, v) => {
-        if (!acc[v.section]) acc[v.section] = [];
-        acc[v.section].push(v);
+
+    const grouped = filtered.reduce((acc, item) => {
+        if (!acc[item.section]) acc[item.section] = [];
+        acc[item.section].push(item);
         return acc;
     }, {});
 
+    const handleSelect = (id) => {
+        setView(id);
+        setMobileOpen(false);
+    };
+
+    const navContent = (
+        <Box
+            sx={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                bgcolor: 'ink.main',
+                color: 'common.white',
+            }}
+        >
+            <Box sx={{ px: 2.5, py: 2.25, borderBottom: '1px solid', borderColor: line }}>
+                <Wordmark />
+                <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: muted }}>
+                    Management Console
+                </Typography>
+            </Box>
+
+            <Box sx={{ px: 2.5, py: 1.5 }}>
+                <Typography
+                    variant="caption"
+                    sx={{ color: label, textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                >
+                    Signed in as
+                </Typography>
+                <Typography variant="body2" noWrap sx={{ mt: 0.25, fontWeight: 600 }}>
+                    {user?.name || 'Admin'}
+                </Typography>
+            </Box>
+
+            <Box
+                component="nav"
+                aria-label="Admin navigation"
+                sx={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    px: 1.5,
+                    py: 1,
+                    scrollbarWidth: 'none',
+                    '&::-webkit-scrollbar': { display: 'none' },
+                }}
+            >
+                {Object.entries(grouped).map(([section, items]) => (
+                    <Box key={section} sx={{ mb: 2.5 }}>
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                display: 'block',
+                                px: 1,
+                                mb: 0.75,
+                                color: label,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.08em',
+                            }}
+                        >
+                            {section}
+                        </Typography>
+                        {items.map((item) => {
+                            const active = view === item.id;
+                            return (
+                                <Box
+                                    key={item.id}
+                                    component="button"
+                                    type="button"
+                                    onClick={() => handleSelect(item.id)}
+                                    aria-current={active ? 'page' : undefined}
+                                    aria-label={item.label}
+                                    data-testid={`nav-${item.id}`}
+                                    sx={{
+                                        width: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.25,
+                                        px: 1.5,
+                                        py: 1.25,
+                                        mb: 0.25,
+                                        appearance: 'none',
+                                        border: 0,
+                                        borderRadius: 1,
+                                        font: 'inherit',
+                                        textAlign: 'left',
+                                        cursor: 'pointer',
+                                        color: active ? 'common.white' : muted,
+                                        bgcolor: active ? 'primary.main' : 'transparent',
+                                        transition: 'background-color 150ms ease-out, color 150ms ease-out',
+                                        '&:hover': {
+                                            bgcolor: active ? 'primary.dark' : hover,
+                                            color: 'common.white',
+                                        },
+                                        '&:focus-visible': {
+                                            outline: 'none',
+                                            boxShadow: `0 0 0 2px ${theme.palette.primary.main}`,
+                                        },
+                                    }}
+                                >
+                                    {React.cloneElement(item.icon, { fontSize: 'small', sx: { fontSize: 18 } })}
+                                    <Typography component="span" variant="body2" sx={{ fontWeight: active ? 700 : 500 }}>
+                                        {item.label}
+                                    </Typography>
+                                </Box>
+                            );
+                        })}
+                    </Box>
+                ))}
+            </Box>
+
+            <Box sx={{ px: 2.5, py: 1.5, borderTop: '1px solid', borderColor: line }}>
+                <Typography variant="caption" sx={{ color: alpha(theme.palette.common.white, 0.3) }}>
+                    ShoppingLi Ops · v0.2
+                </Typography>
+            </Box>
+        </Box>
+    );
+
     return (
         <>
-        <style>{`nav::-webkit-scrollbar { display: none; }`}</style>
-        <aside style={{
-            width: '260px',
-            background: '#0f172a',
-            color: 'white',
-            height: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            padding: '0',
-            borderRight: '1px solid #1e293b',
-        }}>
-            <div style={{ padding: '24px 20px', borderBottom: '1px solid #1e293b' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '10px',
-                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: 800,
-                        fontSize: '18px',
-                    }}>
-                        S
-                    </div>
-                    <div>
-                        <div style={{ fontWeight: 700, fontSize: '16px' }}>SaaS Admin</div>
-                        <div style={{ fontSize: '11px', opacity: 0.6 }}>Management Console</div>
-                    </div>
-                </div>
-            </div>
+            {!isDesktop && (
+                <Tooltip title="Open navigation">
+                    <IconButton
+                        aria-label="Open navigation"
+                        onClick={() => setMobileOpen(true)}
+                        sx={{
+                            position: 'fixed',
+                            top: 12,
+                            left: 12,
+                            zIndex: 1300,
+                            bgcolor: 'ink.main',
+                            color: 'common.white',
+                            '&:hover': { bgcolor: 'ink.soft' },
+                        }}
+                    >
+                        <MenuIcon />
+                    </IconButton>
+                </Tooltip>
+            )}
 
-            <div style={{ padding: '16px 12px 8px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', padding: '0 8px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {user?.name}
-                </div>
-            </div>
+            <Box
+                component="aside"
+                sx={{ width: 260, flexShrink: 0, height: '100vh', display: { xs: 'none', md: 'block' } }}
+            >
+                {navContent}
+            </Box>
 
-            <nav style={{ flex: 1, padding: '8px 12px', overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {Object.entries(grouped).map(([section, items]) => (
-                    <div key={section} style={{ marginBottom: '20px' }}>
-                        <div style={{
-                            fontSize: '10px',
-                            fontWeight: 600,
-                            color: '#475569',
-                            padding: '0 8px',
-                            marginBottom: '6px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.08em',
-                        }}>
-                            {section}
-                        </div>
-                        {items.map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => setView(item.id)}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    background: view === item.id ? '#3b82f6' : 'transparent',
-                                    color: view === item.id ? 'white' : '#94a3b8',
-                                    border: 'none',
-                                    borderRadius: '8px',
-                                    cursor: 'pointer',
-                                    fontWeight: view === item.id ? 600 : 500,
-                                    fontSize: '13px',
-                                    textAlign: 'left',
-                                    marginBottom: '2px',
-                                    transition: 'all 0.15s ease',
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (view !== item.id) {
-                                        e.currentTarget.style.background = '#1e293b';
-                                        e.currentTarget.style.color = '#e2e8f0';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (view !== item.id) {
-                                        e.currentTarget.style.background = 'transparent';
-                                        e.currentTarget.style.color = '#94a3b8';
-                                    }
-                                }}
-                            >
-                                {React.cloneElement(item.icon, { fontSize: 'small' })}
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
-                ))}
-            </nav>
-
-            <div style={{ padding: '16px 20px', borderTop: '1px solid #1e293b', fontSize: '11px', color: '#475569' }}>
-                v0.2
-            </div>
-        </aside>
+            <Drawer
+                open={mobileOpen}
+                onClose={() => setMobileOpen(false)}
+                ModalProps={{ keepMounted: true }}
+                PaperProps={{ sx: { width: 280, bgcolor: 'ink.main' } }}
+                sx={{ display: { md: 'none' } }}
+            >
+                {navContent}
+            </Drawer>
         </>
     );
 }
