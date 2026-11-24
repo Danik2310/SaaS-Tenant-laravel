@@ -1,40 +1,26 @@
 import React, { useState } from 'react';
+import { alpha } from '@mui/material/styles';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { toast } from 'sonner';
 import api from '../../services/api';
 import Wordmark from '../../Components/BrandLogo';
 
-const glowStyle = (size, color, opacity, position) => ({
-    position: 'absolute',
-    ...position,
-    width: size,
-    height: size,
-    borderRadius: '50%',
-    backgroundColor: color,
-    opacity,
-    filter: 'blur(96px)',
-    pointerEvents: 'none',
-});
-
-const fieldStyle = (focused) => ({
-    width: '100%',
-    padding: '12px 16px',
-    border: focused ? '1px solid #F97316' : '1px solid #E5E7EB',
-    borderRadius: '10px',
-    fontSize: '14px',
-    boxSizing: 'border-box',
-    fontFamily: 'inherit',
-    outline: 'none',
-    boxShadow: focused ? '0 0 0 3px rgba(249,115,22,0.18)' : 'none',
-    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-    backgroundColor: '#FFFFFF',
-});
-
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [focus, setFocus] = useState({ email: false, password: false });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -48,8 +34,7 @@ export default function Login() {
             });
 
             if (response.data.success) {
-                // Redirect to dashboard or refresh to get the updated user
-                window.location.href = '/admin/dashboard';
+                window.location.assign('/admin/dashboard');
             }
         } catch (err) {
             const message = err.response?.data?.errors?.email?.[0]
@@ -63,129 +48,175 @@ export default function Login() {
     };
 
     return (
-        <div
-            style={{
+        <Box
+            component="main"
+            sx={{
                 minHeight: '100vh',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'relative',
                 overflow: 'hidden',
-                backgroundColor: '#0A0A0A',
-                fontFamily: "'DM Sans', sans-serif",
-                padding: '16px',
+                bgcolor: 'ink.main',
+                px: 2,
+                py: 4,
             }}
         >
-            <div aria-hidden="true" style={glowStyle('384px', '#F97316', 0.2, { top: '-96px', right: '-96px' })} />
-            <div aria-hidden="true" style={glowStyle('320px', '#EA580C', 0.12, { bottom: '-128px', left: '-96px' })} />
+            <Box
+                aria-hidden="true"
+                sx={{
+                    position: 'absolute',
+                    top: -96,
+                    right: -96,
+                    width: { xs: 280, sm: 384 },
+                    height: { xs: 280, sm: 384 },
+                    borderRadius: '50%',
+                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.2),
+                    filter: 'blur(96px)',
+                    pointerEvents: 'none',
+                }}
+            />
+            <Box
+                aria-hidden="true"
+                sx={{
+                    position: 'absolute',
+                    bottom: -128,
+                    left: -96,
+                    width: { xs: 260, sm: 320 },
+                    height: { xs: 260, sm: 320 },
+                    borderRadius: '50%',
+                    bgcolor: (theme) => alpha(theme.palette.primary.dark, 0.16),
+                    filter: 'blur(96px)',
+                    pointerEvents: 'none',
+                }}
+            />
 
-            <div
-                style={{
+            <Box
+                component="section"
+                aria-labelledby="admin-login-title"
+                sx={{
                     position: 'relative',
-                    background: 'white',
-                    padding: '40px 32px',
-                    borderRadius: '20px',
-                    boxShadow: '0 24px 80px rgba(0, 0, 0, 0.5)',
                     width: '100%',
-                    maxWidth: '400px',
+                    maxWidth: 420,
+                    bgcolor: 'background.paper',
+                    px: { xs: 3, sm: 4 },
+                    py: { xs: 4, sm: 5 },
+                    borderRadius: 2.5,
+                    boxShadow: 24,
                 }}
             >
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <Wordmark />
-                </div>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Wordmark dark={false} />
+                </Box>
 
-                <h1
-                    style={{
-                        textAlign: 'center',
-                        margin: '20px 0 4px',
-                        color: '#0A0A0A',
-                        fontFamily: "'Archivo Black', sans-serif",
-                        fontWeight: 400,
-                        fontSize: '22px',
-                        letterSpacing: '-0.02em',
-                    }}
-                >
+                <Typography id="admin-login-title" component="h1" variant="h5" sx={{ textAlign: 'center', mt: 2.5 }}>
                     Admin
-                </h1>
-                <p style={{ textAlign: 'center', color: '#6B7280', marginBottom: '28px', fontSize: '14px' }}>
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 3.5 }}>
                     Manage the ShoppingLi platform
-                </p>
+                </Typography>
 
                 {error && (
-                    <div
-                        style={{
-                            background: '#FEF2F2',
-                            color: '#B91C1C',
-                            padding: '12px 15px',
-                            borderRadius: '10px',
-                            marginBottom: '20px',
-                            fontSize: '14px',
-                        }}
-                    >
+                    <Alert severity="error" variant="filled" sx={{ mb: 3, borderRadius: 1 }}>
                         {error}
-                    </div>
+                    </Alert>
                 )}
 
-                <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#0A0A0A', fontWeight: '500', fontSize: '14px' }}>
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onFocus={() => setFocus((f) => ({ ...f, email: true }))}
-                            onBlur={() => setFocus((f) => ({ ...f, email: false }))}
-                            placeholder="admin@example.com"
-                            style={fieldStyle(focus.email)}
-                            required
-                        />
-                    </div>
+                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                    <TextField
+                        id="admin-email"
+                        name="email"
+                        label="Email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="admin@example.com"
+                        autoComplete="username"
+                        autoFocus
+                        required
+                        fullWidth
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 1.25,
+                                transition: 'border-color 150ms ease-out, box-shadow 150ms ease-out',
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'text.secondary',
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: 2,
+                                },
+                            },
+                            '& .MuiFormLabel-root.Mui-focused': {
+                                color: 'primary.main',
+                            },
+                        }}
+                    />
 
-                    <div style={{ marginBottom: '28px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#0A0A0A', fontWeight: '500', fontSize: '14px' }}>
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            onFocus={() => setFocus((f) => ({ ...f, password: true }))}
-                            onBlur={() => setFocus((f) => ({ ...f, password: false }))}
-                            placeholder="Enter your password"
-                            style={fieldStyle(focus.password)}
-                            required
-                        />
-                    </div>
+                    <TextField
+                        id="admin-password"
+                        name="password"
+                        label="Password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your password"
+                        autoComplete="current-password"
+                        required
+                        fullWidth
+                        slotProps={{
+                            input: {
+                                endAdornment: (
+                                    <InputAdornment position="end">
+                                        <Tooltip title={showPassword ? 'Hide password' : 'Show password'}>
+                                            <IconButton
+                                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                                aria-pressed={showPassword}
+                                                onClick={() => setShowPassword((visible) => !visible)}
+                                                edge="end"
+                                                size="small"
+                                            >
+                                                {showPassword
+                                                    ? <VisibilityOffIcon fontSize="small" />
+                                                    : <VisibilityIcon fontSize="small" />}
+                                            </IconButton>
+                                        </Tooltip>
+                                    </InputAdornment>
+                                ),
+                            },
+                        }}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 1.25,
+                                transition: 'border-color 150ms ease-out, box-shadow 150ms ease-out',
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'text.secondary',
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: 2,
+                                },
+                            },
+                            '& .MuiFormLabel-root.Mui-focused': {
+                                color: 'primary.main',
+                            },
+                        }}
+                    />
 
-                    <button
+                    <Button
                         type="submit"
+                        variant="contained"
+                        color="primary"
+                        size="large"
+                        fullWidth
                         disabled={loading}
-                        style={{
-                            width: '100%',
-                            padding: '12px',
-                            borderRadius: '999px',
-                            backgroundColor: '#F97316',
-                            color: 'white',
-                            border: 'none',
-                            fontSize: '15px',
-                            fontWeight: '600',
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            transition: 'background-color 0.15s ease',
-                            opacity: loading ? 0.7 : 1,
-                        }}
-                        onMouseEnter={(e) => {
-                            if (!loading) e.target.style.backgroundColor = '#EA580C';
-                        }}
-                        onMouseLeave={(e) => {
-                            if (!loading) e.target.style.backgroundColor = '#F97316';
-                        }}
+                        startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+                        sx={{ py: 1.25 }}
                     >
                         {loading ? 'Logging in...' : 'Log In'}
-                    </button>
-                </form>
-            </div>
-        </div>
+                    </Button>
+                </Box>
+            </Box>
+        </Box>
     );
 }
