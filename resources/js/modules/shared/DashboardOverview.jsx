@@ -31,6 +31,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
 import {
     Chart as ChartJS,
     ArcElement,
@@ -45,36 +46,46 @@ import { Doughnut, Line } from 'react-chartjs-2';
 
 ChartJS.register(ArcElement, CategoryScale, Filler, LinearScale, LineElement, PointElement, ChartTooltip);
 
-const StatCard = ({ title, value, icon, color, subtitle, trend }) => {
+const StatCard = ({ title, value, icon, color, subtitle, trend, invertTrend = false, testId }) => {
+    const direction = trend?.direction ?? 'flat';
+    const TrendIcon = direction === 'up' ? TrendingUpIcon : direction === 'down' ? TrendingDownIcon : TrendingFlatIcon;
+    const favorable = invertTrend ? direction === 'down' : direction === 'up';
+    const trendColor = direction === 'flat' ? 'text.secondary' : favorable ? 'success.main' : 'error.main';
+    const trendText = trend?.percentage === null
+        ? (direction === 'up' ? 'new' : '0%')
+        : `${trend?.percentage ?? 0}%`;
+
     return (
         <Card
+            data-testid={testId ? `kpi-${testId}` : undefined}
             sx={{
                 height: '100%',
-                boxShadow: 1,
-                borderLeft: '4px solid',
-                borderColor: color,
-                borderRadius: 1,
-                transition: 'box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1), transform 300ms cubic-bezier(0.22, 1, 0.36, 1)',
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1.5,
+                boxShadow: 'none',
+                transition: 'box-shadow 180ms ease-out, transform 180ms ease-out',
                 '&:hover': {
-                    boxShadow: 4,
+                    boxShadow: 2,
                     transform: 'translateY(-2px)',
                 },
             }}
         >
-            <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 3 }}>
+            <CardContent sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.75, p: 2.5, '&:last-child': { pb: 2.5 } }}>
                 <Avatar
                     sx={{
                         bgcolor: alpha(color, 0.12),
                         color,
-                        width: 48,
-                        height: 48,
+                        width: 44,
+                        height: 44,
+                        flexShrink: 0,
                     }}
                 >
                     {icon}
                 </Avatar>
-                <Box sx={{ minWidth: 0 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <Typography variant="h4" sx={{ color: 'text.primary', lineHeight: 1.2 }}>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, flexWrap: 'wrap' }}>
+                        <Typography variant="h4" sx={{ color: 'text.primary', lineHeight: 1.15, fontSize: 30, fontVariantNumeric: 'tabular-nums' }}>
                             {value}
                         </Typography>
                         {trend && (
@@ -84,28 +95,28 @@ const StatCard = ({ title, value, icon, color, subtitle, trend }) => {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: 0.25,
-                                    color: trend.direction === 'up' ? 'success.main' : 'error.main',
+                                    color: trendColor,
                                     fontSize: 12,
                                     fontWeight: 700,
+                                    whiteSpace: 'nowrap',
+                                    fontVariantNumeric: 'tabular-nums',
                                 }}
                             >
-                                {trend.direction === 'up'
-                                    ? <TrendingUpIcon sx={{ fontSize: 14 }} />
-                                    : <TrendingDownIcon sx={{ fontSize: 14 }} />}
-                                {trend.percentage}%
+                                <TrendIcon sx={{ fontSize: 14 }} />
+                                {trendText}
                             </Box>
                         )}
                     </Box>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, fontWeight: 600 }}>
                         {title}
                     </Typography>
-                    {trend && (
+                    {trend?.label && (
                         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
-                            vs last month
+                            {trend.label}
                         </Typography>
                     )}
-                    {subtitle && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: trend ? 0 : 0.25 }}>
+                    {subtitle && !trend?.label && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
                             {subtitle}
                         </Typography>
                     )}
@@ -115,6 +126,20 @@ const StatCard = ({ title, value, icon, color, subtitle, trend }) => {
     );
 };
 
+const AttentionItem = ({ label, value, color, testId }) => (
+    <Box data-testid={testId} sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+        <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" component="span" sx={{ fontSize: 18, fontWeight: 700, fontFamily: 'inherit' }}>
+                {value}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.2 }}>
+                {label}
+            </Typography>
+        </Box>
+    </Box>
+);
+
 export default function DashboardOverview() {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -123,12 +148,14 @@ export default function DashboardOverview() {
     const canViewStats = permissions.includes('view tenants');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState(null);
+    const [trends, setTrends] = useState({});
     const [recentTenants, setRecentTenants] = useState([]);
     const [tenantsByMonth, setTenantsByMonth] = useState([]);
     const [statusDistribution, setStatusDistribution] = useState([]);
     const [page, setPage] = useState(0);
     const [rowsPerPage] = useState(5);
     const [showDeleted, setShowDeleted] = useState(false);
+    const chartHeight = isMobile ? 220 : isTablet ? 260 : 300;
 
     useEffect(() => {
         if (!canViewStats) {
@@ -143,6 +170,7 @@ export default function DashboardOverview() {
             const params = showDeleted ? '?trashed=1' : '';
             const res = await api.get(`/admin/api/dashboard-stats${params}`);
             setStats(res.data.stats);
+            setTrends(res.data.trends ?? {});
             setRecentTenants(res.data.recent_tenants);
             setTenantsByMonth(res.data.tenants_by_month);
             setStatusDistribution(res.data.status_distribution);
@@ -169,19 +197,22 @@ export default function DashboardOverview() {
     if (loading) {
         return (
             <Box>
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    {[1, 2, 3, 4, 5].map((i) => (
-                        <Grid item xs={12} sm={6} md={4} lg={2.4} key={i}>
-                            <Skeleton variant="rounded" height={96} />
+                <Grid container spacing={2} sx={{ mb: 4 }}>
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
+                            <Skeleton variant="rounded" height={112} />
                         </Grid>
                     ))}
+                    <Grid item xs={12} sm={12} md={6} lg={6}>
+                        <Skeleton variant="rounded" height={112} />
+                    </Grid>
                 </Grid>
                 <Grid container spacing={3}>
                     <Grid item xs={12} sm={12} md={8} lg={8}>
-                        <Skeleton variant="rounded" height={320} />
+                        <Skeleton variant="rounded" height={chartHeight + 72} />
                     </Grid>
                     <Grid item xs={12} sm={12} md={4} lg={4}>
-                        <Skeleton variant="rounded" height={320} />
+                        <Skeleton variant="rounded" height={chartHeight + 72} />
                     </Grid>
                 </Grid>
             </Box>
@@ -200,8 +231,6 @@ export default function DashboardOverview() {
             Tenants: item.count,
         };
     });
-
-    const chartHeight = isMobile ? 220 : isTablet ? 260 : 300;
 
     const CHART_COLORS = [
         theme.palette.primary.main,
@@ -338,59 +367,107 @@ export default function DashboardOverview() {
     return (
         <Box>
             <Grid container spacing={2} sx={{ mb: 4 }}>
-                <Grid item xs={6} sm={6} md={4} lg={2.4}>
+                <Grid item xs={12} sm={6} md={4} lg={3}>
                     <StatCard
                         title="Total Tenants"
                         value={stats?.total_tenants ?? 0}
                         icon={<PeopleIcon />}
                         color={theme.palette.primary.main}
                         subtitle="All workspaces"
+                        trend={trends.total_tenants}
+                        testId="total-tenants"
                     />
                 </Grid>
-                <Grid item xs={6} sm={6} md={4} lg={2.4}>
+                <Grid item xs={12} sm={6} md={4} lg={3}>
                     <StatCard
                         title="Active Tenants"
                         value={stats?.active_tenants ?? 0}
                         icon={<CheckCircleIcon />}
                         color={theme.palette.success.main}
                         subtitle="Currently serving"
+                        trend={trends.active_tenants}
+                        testId="active-tenants"
                     />
                 </Grid>
-                <Grid item xs={6} sm={6} md={4} lg={2.4}>
+                <Grid item xs={12} sm={6} md={4} lg={3}>
                     <StatCard
                         title="Suspended"
                         value={stats?.suspended_tenants ?? 0}
                         icon={<BlockIcon />}
                         color={theme.palette.error.main}
                         subtitle="Needs attention"
+                        trend={trends.suspended_tenants}
+                        invertTrend
+                        testId="suspended-tenants"
                     />
                 </Grid>
-                <Grid item xs={6} sm={6} md={4} lg={2.4}>
+                <Grid item xs={12} sm={6} md={4} lg={3}>
                     <StatCard
                         title="Deleted"
                         value={stats?.deleted_tenants ?? 0}
                         icon={<DeleteIcon />}
                         color={theme.palette.text.secondary}
                         subtitle="Data preserved"
+                        trend={trends.deleted_tenants}
+                        invertTrend
+                        testId="deleted-tenants"
                     />
                 </Grid>
-                <Grid item xs={6} sm={6} md={4} lg={2.4}>
+                <Grid item xs={12} sm={6} md={4} lg={3}>
                     <StatCard
                         title="Staff"
                         value={stats?.total_staff ?? 0}
                         icon={<GroupIcon />}
                         color={theme.palette.warning.main}
                         subtitle={`${stats?.active_staff ?? 0} active`}
+                        trend={trends.total_staff}
+                        testId="staff"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={4} lg={2.4}>
+                <Grid item xs={12} sm={6} md={4} lg={3}>
                     <StatCard
                         title="Plans"
                         value={stats?.total_plans ?? 0}
                         icon={<AssignmentIcon />}
                         color={theme.palette.secondary.main}
                         subtitle="Configured"
+                        trend={trends.total_plans}
+                        testId="plans"
                     />
+                </Grid>
+                <Grid item xs={12} sm={12} md={6} lg={6}>
+                    <Paper
+                        data-testid="kpi-attention"
+                        sx={{
+                            height: '100%',
+                            p: 2.5,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1.5,
+                            boxShadow: 'none',
+                        }}
+                    >
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                            Needs attention
+                        </Typography>
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 1.75 }}>
+                            <AttentionItem
+                                label="In trial"
+                                value={stats?.trial_tenants ?? 0}
+                                color={theme.palette.warning.main}
+                                testId="attention-trial"
+                            />
+                            <AttentionItem
+                                label="Suspended"
+                                value={stats?.suspended_tenants ?? 0}
+                                color={theme.palette.error.main}
+                                testId="attention-suspended"
+                            />
+                        </Box>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
+                            Status mix compares current workspace states with 30 days ago.
+                        </Typography>
+                    </Paper>
                 </Grid>
             </Grid>
 
@@ -398,15 +475,26 @@ export default function DashboardOverview() {
                 <Grid item xs={12} sm={12} md={8} lg={8}>
                     <Paper sx={{
                         p: 3,
-                        boxShadow: 1,
-                        borderTop: '3px solid',
-                        borderColor: 'primary.main',
-                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1.5,
+                        boxShadow: 'none',
+                        height: '100%',
                     }}>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
-                            Tenant Growth
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 700, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'primary.main' }} />
+                                Tenant Growth
+                            </Typography>
+                            <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                                <Typography component="span" sx={{ fontSize: 20, fontWeight: 700, lineHeight: 1 }}>
+                                    {formattedMonthlyData[formattedMonthlyData.length - 1]?.Tenants ?? 0}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                                    new this month
+                                </Typography>
+                            </Box>
+                        </Box>
                         {tenantsByMonth.length === 0 ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: chartHeight }}>
                                 <Typography variant="body2" color="text.secondary">
@@ -427,10 +515,10 @@ export default function DashboardOverview() {
                 <Grid item xs={12} sm={12} md={4} lg={4}>
                     <Paper sx={{
                         p: 3,
-                        boxShadow: 1,
-                        borderTop: '3px solid',
-                        borderColor: 'success.main',
-                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1.5,
+                        boxShadow: 'none',
                         height: '100%',
                     }}>
                         <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -451,10 +539,25 @@ export default function DashboardOverview() {
                                     aria-label="Distribution of tenants by status"
                                 >
                                     <Doughnut data={statusChartData} options={statusChartOptions} />
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            inset: 0,
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            pointerEvents: 'none',
+                                        }}
+                                    >
+                                        <Typography component="span" sx={{ fontSize: 24, fontWeight: 700, lineHeight: 1.1 }}>
+                                            {`${stats?.total_tenants ?? 0} tenants`}
+                                        </Typography>
+                                    </Box>
                                 </Box>
-                                <Box sx={{ display: 'flex', gap: 3, mt: 1 }}>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1.5, mt: 1.25 }}>
                                     {statusDistribution.map((item, index) => (
-                                        <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                                             <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: CHART_COLORS[index % CHART_COLORS.length] }} />
                                             <Typography variant="caption" color="text.secondary">
                                                 {item.name} ({item.value})
@@ -469,10 +572,10 @@ export default function DashboardOverview() {
             </Grid>
 
             <Paper sx={{
-                boxShadow: 1,
-                borderTop: '3px solid',
-                borderColor: 'secondary.main',
-                borderRadius: 1,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1.5,
+                boxShadow: 'none',
                 overflow: 'hidden',
             }}>
                 <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -486,8 +589,8 @@ export default function DashboardOverview() {
                         sx={{ mr: 0 }}
                     />
                 </Box>
-                <TableContainer>
-                    <Table size="small">
+                <TableContainer sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                    <Table size="small" sx={{ minWidth: 520 }}>
                         <TableHead>
                             <TableRow sx={{ bgcolor: 'background.default', borderBottom: `1px solid ${theme.palette.divider}` }}>
                                 <TableCell sx={{ fontWeight: 700, fontSize: '11px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Name</TableCell>
@@ -507,6 +610,7 @@ export default function DashboardOverview() {
                                 paginatedTenants.map((tenant) => (
                                     <TableRow
                                         key={tenant.domain}
+                                        data-testid="recent-tenant-row"
                                         sx={{
                                             '&:last-child td, &:last-child th': { border: 0 },
                                             transition: 'background-color 0.15s ease',
@@ -540,7 +644,7 @@ export default function DashboardOverview() {
                                                 />
                                             )}
                                         </TableCell>
-                                        <TableCell sx={{ color: 'text.secondary', fontSize: 13 }}>
+                                        <TableCell sx={{ color: 'text.secondary', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>
                                             {tenant.created_at}
                                         </TableCell>
                                     </TableRow>

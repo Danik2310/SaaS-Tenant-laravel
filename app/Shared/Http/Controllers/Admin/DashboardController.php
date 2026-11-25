@@ -40,7 +40,9 @@ class DashboardController extends Controller
             Cache::forget($cacheKey);
         }
 
-        [$totalTenants, $activeTenants, $trialTenants, $suspendedTenants, $deletedTenants, $staffCount, $activeStaff, $plansCount, $recentTenants, $tenantsByMonth] = Cache::remember($cacheKey, 300, function () {
+        $snapshot = Cache::remember($cacheKey, 300, function () {
+            $comparisonDate = now()->subDays(30);
+
             $totalTenants = Tenant::withTrashed()->count();
             $activeTenants = Tenant::where('status', 'Active')->count();
             $trialTenants = Tenant::where('status', 'Trial')->count();
@@ -51,6 +53,55 @@ class DashboardController extends Controller
             $activeStaff = AdminUser::where('is_active', true)->count();
 
             $plansCount = Plan::count();
+
+            $existingTenantsAt = function () use ($comparisonDate) {
+                return Tenant::withTrashed()
+                    ->where('created_at', '<=', $comparisonDate)
+                    ->where(function ($query) use ($comparisonDate) {
+                        $query->whereNull('deleted_at')
+                            ->orWhere('deleted_at', '>', $comparisonDate);
+                    });
+            };
+
+            $totalTenantsAtDate = $existingTenantsAt()->count();
+            $deletedTenantsAtDate = Tenant::onlyTrashed()
+                ->where('created_at', '<=', $comparisonDate)
+                ->where('deleted_at', '<=', $comparisonDate)
+                ->count();
+
+            $statusAtDate = function (string $status) use ($existingTenantsAt) {
+                return $existingTenantsAt()->where('status', $status)->count();
+            };
+
+            $staffAtDate = AdminUser::where('created_at', '<=', $comparisonDate)->count();
+            $plansAtDate = Plan::where('created_at', '<=', $comparisonDate)->count();
+
+            $makeTrend = function (int $current, int $previous, string $label = 'vs last 30 days'): array {
+                if ($previous === 0) {
+                    return [
+                        'direction' => $current > 0 ? 'up' : 'flat',
+                        'percentage' => null,
+                        'label' => $current > 0 ? 'new in last 30 days' : $label,
+                    ];
+                }
+
+                $change = (($current - $previous) / $previous) * 100;
+
+                return [
+                    'direction' => $change > 0 ? 'up' : ($change < 0 ? 'down' : 'flat'),
+                    'percentage' => (int) round(abs($change)),
+                    'label' => $label,
+                ];
+            };
+
+            $trends = [
+                'total_tenants' => $makeTrend($totalTenants, $totalTenantsAtDate),
+                'active_tenants' => $makeTrend($activeTenants, $statusAtDate('Active'), 'status mix vs 30d ago'),
+                'suspended_tenants' => $makeTrend($suspendedTenants, $statusAtDate('Suspended'), 'status mix vs 30d ago'),
+                'deleted_tenants' => $makeTrend($deletedTenants, $deletedTenantsAtDate),
+                'total_staff' => $makeTrend($staffCount, $staffAtDate),
+                'total_plans' => $makeTrend($plansCount, $plansAtDate),
+            ];
 
             $tenantQuery = request()->boolean('trashed')
                 ? Tenant::withTrashed()
@@ -79,29 +130,37 @@ class DashboardController extends Controller
                 ->get()
                 ->toArray();
 
-            return [$totalTenants, $activeTenants, $trialTenants, $suspendedTenants, $deletedTenants, $staffCount, $activeStaff, $plansCount, $recentTenants, $tenantsByMonth];
+            return [
+                'stats' => [
+                    'total_tenants' => $totalTenants,
+                    'active_tenants' => $activeTenants,
+                    'trial_tenants' => $trialTenants,
+                    'suspended_tenants' => $suspendedTenants,
+                    'deleted_tenants' => $deletedTenants,
+                    'total_staff' => $staffCount,
+                    'active_staff' => $activeStaff,
+                    'total_plans' => $plansCount,
+                ],
+                'trends' => $trends,
+                'recent_tenants' => $recentTenants,
+                'tenants_by_month' => $tenantsByMonth,
+            ];
         });
 
+        $stats = $snapshot['stats'];
+
         $statusDistribution = [
-            ['name' => 'Active', 'value' => $activeTenants],
-            ['name' => 'Trial', 'value' => $trialTenants],
-            ['name' => 'Suspended', 'value' => $suspendedTenants],
-            ['name' => 'Deleted', 'value' => $deletedTenants],
+            ['name' => 'Active', 'value' => $stats['active_tenants']],
+            ['name' => 'Trial', 'value' => $stats['trial_tenants']],
+            ['name' => 'Suspended', 'value' => $stats['suspended_tenants']],
+            ['name' => 'Deleted', 'value' => $stats['deleted_tenants']],
         ];
 
         return response()->json([
-            'stats' => [
-                'total_tenants' => $totalTenants,
-                'active_tenants' => $activeTenants,
-                'trial_tenants' => $trialTenants,
-                'suspended_tenants' => $suspendedTenants,
-                'deleted_tenants' => $deletedTenants,
-                'total_staff' => $staffCount,
-                'active_staff' => $activeStaff,
-                'total_plans' => $plansCount,
-            ],
-            'recent_tenants' => $recentTenants,
-            'tenants_by_month' => $tenantsByMonth,
+            'stats' => $stats,
+            'trends' => $snapshot['trends'],
+            'recent_tenants' => $snapshot['recent_tenants'],
+            'tenants_by_month' => $snapshot['tenants_by_month'],
             'status_distribution' => $statusDistribution,
         ]);
     }
