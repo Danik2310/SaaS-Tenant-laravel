@@ -41,6 +41,10 @@ class BillingCustomer extends Model
         'stripe_id',
         'pm_type',
         'pm_last_four',
+        'pm_exp_month',
+        'pm_exp_year',
+        'pm_card_count',
+        'pm_synced_at',
         'trial_ends_at',
         'registration_trial_ends_at',
         'phone',
@@ -56,6 +60,10 @@ class BillingCustomer extends Model
         'trial_ends_at' => 'datetime',
         'registration_trial_ends_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'pm_exp_month' => 'integer',
+        'pm_exp_year' => 'integer',
+        'pm_card_count' => 'integer',
+        'pm_synced_at' => 'datetime',
     ];
 
     protected static function boot(): void

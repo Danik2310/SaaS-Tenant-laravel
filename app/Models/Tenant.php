@@ -33,6 +33,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'stripe_id',
         'pm_type',
         'pm_last_four',
+        'pm_exp_month',
+        'pm_exp_year',
+        'pm_card_count',
+        'pm_synced_at',
         'registration_trial_ends_at',
         'first_name',
         'last_name',
@@ -50,6 +54,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'registration_trial_ends_at' => 'datetime',
         'owner_email_verified_at' => 'datetime',
         'deleted_at' => 'datetime',
+        'pm_exp_month' => 'integer',
+        'pm_exp_year' => 'integer',
+        'pm_card_count' => 'integer',
+        'pm_synced_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -144,6 +152,10 @@ class Tenant extends BaseTenant implements TenantWithDatabase
             'stripe_id',
             'pm_type',
             'pm_last_four',
+            'pm_exp_month',
+            'pm_exp_year',
+            'pm_card_count',
+            'pm_synced_at',
             'registration_trial_ends_at',
             'first_name',
             'last_name',

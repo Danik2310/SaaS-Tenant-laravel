@@ -117,6 +117,7 @@ jobs:
               tests/Feature/TenantPermissionIsolationTest.php
               tests/Unit/Billing/PaymentGatewayFactoryTest.php
               tests/Unit/Billing/ResourceEnforcementStrategiesTest.php
+              tests/Unit/Billing/TenantPaymentCardProjectorTest.php
               tests/Unit/Models/CategoryTest.php
               tests/Unit/PaymentMethodModelTest.php
           - shard: 3

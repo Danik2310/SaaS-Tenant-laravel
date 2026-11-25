@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Billing\Http\Controllers\Admin\PaymentMethodController;
 use App\Billing\Http\Controllers\Admin\SubscriptionController;
 use App\Billing\Http\Controllers\Admin\SubscriptionPaymentController;
+use App\Billing\Http\Controllers\Admin\TenantPaymentCardController;
 use App\Http\Controllers\Auth\GoogleOAuthController;
 use App\Plans\Http\Controllers\Admin\FeatureFlagController;
 use App\Plans\Http\Controllers\Admin\PlanController;
@@ -280,6 +281,14 @@ Route::middleware(['central.domain', 'jwt.cookie', 'session.expiry:admin', 'jwt.
         Route::patch('/api/payment-methods/{id}/toggle-active', [PaymentMethodController::class, 'toggleActive']);
     });
     Route::delete('/api/payment-methods/{id}', [PaymentMethodController::class, 'destroy'])->middleware(PermissionNames::middleware([PermissionNames::DELETE_PAYMENT_METHODS], 'admin'), 'payment.rate.limit');
+
+    // Tenant registry card projection - masked summary only; cards stay in Stripe.
+    Route::middleware([PermissionNames::middleware([PermissionNames::EDIT_PAYMENT_METHODS], 'admin'), 'payment.rate.limit'])->group(function () {
+        Route::post('/api/tenants/{tenant}/payment-methods/refresh', [TenantPaymentCardController::class, 'refresh'])
+            ->name('admin.tenants.payment-card.refresh');
+        Route::post('/api/tenants/{tenant}/billing-portal', [TenantPaymentCardController::class, 'portal'])
+            ->name('admin.tenants.payment-card.portal');
+    });
 
     // Impersonation (God Mode) - requires 'impersonate tenants' permission
     Route::middleware([PermissionNames::middleware([PermissionNames::IMPERSONATE_TENANTS], 'admin'), 'impersonation.expiry'])->group(function () {

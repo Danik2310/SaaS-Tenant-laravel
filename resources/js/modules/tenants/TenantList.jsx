@@ -25,6 +25,8 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import InboxIcon from '@mui/icons-material/Inbox';
 import ScienceIcon from '@mui/icons-material/Science';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
+import SyncIcon from '@mui/icons-material/Sync';
 import { toast } from 'sonner';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 
@@ -47,6 +49,8 @@ export default function TenantList({
     onRestore,
     onSelectionChange,
     rowMenuActions = [],
+    onRefreshPaymentCard,
+    onManagePaymentCard,
     onBulkAction,
     bulkLoading = false,
     initialSearch = '',
@@ -58,6 +62,7 @@ export default function TenantList({
     const canDelete = permissions.includes('delete tenants');
     const canRestore = permissions.includes('restore tenants');
     const canImpersonate = permissions.includes('impersonate tenants');
+    const canManagePaymentCard = permissions.includes('edit payment methods');
 
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -194,7 +199,7 @@ export default function TenantList({
             header: 'ID',
             enableColumnFilter: false,
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, color: '#64748b', fontWeight: 600 }}>
+                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontSize: 13, color: 'text.secondary', fontWeight: 600 }}>
                     {cell.getValue() || cell.row.original.id}
                 </Typography>
             ),
@@ -228,7 +233,7 @@ export default function TenantList({
                 const isDeleted = row.original.is_deleted;
                 if (isDeleted) {
                     return (
-                        <Chip label="Deleted" size="small" sx={{ bgcolor: '#f1f5f9', color: '#64748b', fontWeight: 600, fontStyle: 'italic' }} />
+                        <Chip label="Deleted" size="small" sx={{ bgcolor: 'background.default', color: 'text.secondary', fontWeight: 600, fontStyle: 'italic' }} />
                     );
                 }
                 const status = cell.getValue();
@@ -254,7 +259,7 @@ export default function TenantList({
                             <Chip
                                 label={status + (daysLeft !== null && daysLeft >= 0 ? ` \u00b7 ${daysLeft}d left` : '')}
                                 size="small"
-                                sx={{ bgcolor: '#fef9c3', color: '#854d0e', fontWeight: 600 }}
+                                sx={{ bgcolor: 'warning.main', color: 'warning.contrastText', fontWeight: 600 }}
                             />
                         </Tooltip>
                     );
@@ -265,8 +270,8 @@ export default function TenantList({
                             label={status}
                             size="small"
                             sx={{
-                                bgcolor: status === 'Active' ? '#dcfce7' : '#fee2e2',
-                                color: status === 'Active' ? '#166534' : '#991b1b',
+                                bgcolor: status === 'Active' ? 'success.main' : 'error.main',
+                                color: status === 'Active' ? 'success.contrastText' : 'error.contrastText',
                                 fontWeight: 600,
                             }}
                         />
@@ -284,7 +289,7 @@ export default function TenantList({
                 const isDeleted = row.original.is_deleted;
                 if (!planName || isDeleted) {
                     return (
-                        <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                        <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>
                             {isDeleted ? '—' : 'No Plan'}
                         </Typography>
                     );
@@ -294,8 +299,56 @@ export default function TenantList({
                         icon={<WorkspacePremiumIcon sx={{ fontSize: 14 }} />}
                         label={planName}
                         size="small"
-                        sx={{ bgcolor: '#f0f9ff', color: '#0369a1', fontWeight: 600, border: '1px solid #bae6fd' }}
+                        sx={{ bgcolor: 'action.hover', color: 'primary.dark', fontWeight: 600, border: '1px solid', borderColor: 'primary.light' }}
                     />
+                );
+            },
+        },
+        {
+            accessorKey: 'payment_card',
+            header: 'Payment card',
+            enableColumnFilter: false,
+            enableSorting: false,
+            Cell: ({ cell, row }) => {
+                const card = cell.getValue() || {};
+                const isDeleted = row.original.is_deleted;
+
+                let label = '\u2014';
+                if (!isDeleted) {
+                    if (!card.linked) label = 'Not linked';
+                    else if (!card.last4) label = 'No card';
+                    else label = `${card.brand || 'Card'} \u2022\u2022\u2022\u2022 ${card.last4}`;
+                }
+
+                const expiry = card.exp_month && card.exp_year
+                    ? `${String(card.exp_month).padStart(2, '0')}/${card.exp_year}`
+                    : '';
+                const detail = isDeleted
+                    ? 'Tenant deleted'
+                    : !card.linked
+                        ? 'No Stripe customer yet'
+                        : !card.last4
+                            ? 'No card saved in Stripe'
+                            : [
+                                'Default saved card',
+                                expiry ? `expires ${expiry}` : null,
+                                card.card_count > 1 ? `${card.card_count} cards on file` : null,
+                                card.synced_at ? `synced ${new Date(card.synced_at).toLocaleString()}` : null,
+                            ].filter(Boolean).join(' \u00b7 ');
+
+                return (
+                    <Tooltip title={detail}>
+                        <Box data-testid="tenant-payment-card" sx={{ display: 'inline-flex', flexDirection: 'column', gap: 0.25 }}>
+                            <Typography variant="body2" sx={{ fontSize: 13, color: isDeleted || !card.last4 ? 'text.disabled' : 'text.primary', fontWeight: card.last4 ? 600 : 400 }}>
+                                {label}
+                            </Typography>
+                            {!isDeleted && card.linked && card.last4 && card.card_count > 1 && (
+                                <Typography variant="caption" sx={{ fontSize: 11, color: 'text.secondary' }}>
+                                    +{card.card_count - 1} more
+                                </Typography>
+                            )}
+                        </Box>
+                    </Tooltip>
                 );
             },
         },
@@ -324,7 +377,7 @@ export default function TenantList({
 
                 if (isDeleted || !hasActive) {
                     return (
-                        <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                        <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>
                             {'\u2014'}
                         </Typography>
                     );
@@ -333,11 +386,11 @@ export default function TenantList({
                     return (
                         <Tooltip title={`Subscription has no end date - ongoing${planInfo ? ` (${planInfo})` : ''}`}>
                             <Box>
-                                <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                                <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>
                                     Ongoing
                                 </Typography>
                                 {planInfo && (
-                                    <Typography variant="caption" sx={{ color: '#64748b', fontSize: 11, display: 'block' }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 11, display: 'block' }}>
                                         {planInfo}
                                     </Typography>
                                 )}
@@ -350,12 +403,12 @@ export default function TenantList({
                         <Box>
                             <Typography
                                 variant="body2"
-                                sx={{ color: isExpired ? '#b45309' : '#334155', fontWeight: isExpired ? 600 : 400, fontSize: 13 }}
+                                sx={{ color: isExpired ? 'warning.dark' : 'text.primary', fontWeight: isExpired ? 600 : 400, fontSize: 13 }}
                             >
                                 {formatDate(validEnd)}
                             </Typography>
                             {planInfo && (
-                                <Typography variant="caption" sx={{ color: '#64748b', fontSize: 11, display: 'block' }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 11, display: 'block' }}>
                                     {planInfo}
                                 </Typography>
                             )}
@@ -369,7 +422,7 @@ export default function TenantList({
             header: 'Created',
             filterVariant: 'date-range',
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>
                     {new Date(cell.getValue()).toLocaleDateString()}
                 </Typography>
             ),
@@ -405,14 +458,14 @@ export default function TenantList({
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                     Tenant Management
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                     <FormControlLabel
                         control={<Switch size="small" checked={showDeleted} onChange={handleToggleDeleted} />}
-                        label={<Typography variant="caption" sx={{ color: '#64748b' }}>Show deleted</Typography>}
+                        label={<Typography variant="caption" sx={{ color: 'text.secondary' }}>Show deleted</Typography>}
                         sx={{ mr: 0 }}
                     />
                     {canCreate && (
@@ -421,8 +474,8 @@ export default function TenantList({
                             size="small"
                             onClick={onAdd}
                             sx={{
-                                bgcolor: '#22c55e',
-                                '&:hover': { bgcolor: '#16a34a' },
+                                bgcolor: 'primary.main',
+                                '&:hover': { bgcolor: 'primary.dark' },
                                 fontWeight: 600,
                                 fontSize: '13px',
                             }}
@@ -451,6 +504,7 @@ export default function TenantList({
                 onSortingChange={setSorting}
                 onRowSelectionChange={setRowSelection}
                 enableRowSelection
+                enableRowActions
                 getRowId={(row) => String(row.id)}
                 enableGlobalFilter
                 enableColumnFilters
@@ -495,8 +549,8 @@ export default function TenantList({
                     if (bulkButtons.length === 0) return null;
 
                     return (
-                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 2 }}>
-                            <Typography variant="body2" sx={{ color: '#64748b', fontWeight: 500 }}>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mr: 2, flexWrap: 'wrap' }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
                                 {selected.length} selected
                             </Typography>
                             {bulkButtons.map((btn, i) => (
@@ -523,6 +577,22 @@ export default function TenantList({
                         : [
                             ...(canEdit ? [{ icon: <EditIcon fontSize="small" />, label: 'Edit', onClick: () => onEdit(tenant) }] : []),
                             ...(canEdit ? [{ icon: <BlockIcon fontSize="small" />, label: tenant.status === 'Active' ? 'Suspend' : 'Activate', onClick: () => tenant.status === 'Trial' && onActivateTrial ? onActivateTrial([tenant]) : onToggleStatus(tenant) }] : []),
+                            ...(canManagePaymentCard ? [
+                                {
+                                    icon: <SyncIcon fontSize="small" />,
+                                    label: 'Refresh payment card',
+                                    testId: 'tenant-card-refresh',
+                                    disabled: !tenant.payment_card?.linked,
+                                    onClick: () => onRefreshPaymentCard?.(tenant),
+                                },
+                                {
+                                    icon: <CreditCardIcon fontSize="small" />,
+                                    label: 'Manage payment card',
+                                    testId: 'tenant-card-manage',
+                                    disabled: !tenant.payment_card?.linked,
+                                    onClick: () => onManagePaymentCard?.(tenant),
+                                },
+                            ] : []),
                             ...(canDelete ? [{ icon: <DeleteIcon fontSize="small" />, label: 'Delete', onClick: () => handleRowDelete(row) }] : []),
                           ];
 
@@ -532,12 +602,16 @@ export default function TenantList({
                                 <Tooltip key={i} title={action.label}>
                                     <Box
                                         component="button"
-                                        onClick={(e) => { e.stopPropagation(); action.onClick(); }}
+                                        data-testid={action.testId}
+                                        disabled={action.disabled}
+                                        onClick={(e) => { e.stopPropagation(); if (!action.disabled) action.onClick(); }}
                                         sx={{
                                             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            border: 'none', bgcolor: 'transparent', cursor: 'pointer',
+                                            border: 'none', bgcolor: 'transparent',
+                                            cursor: action.disabled ? 'not-allowed' : 'pointer',
+                                            opacity: action.disabled ? 0.4 : 1,
                                             p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                            '&:hover': { bgcolor: 'action.hover' },
+                                            '&:hover': action.disabled ? {} : { bgcolor: 'action.hover' },
                                         }}
                                     >
                                         {action.icon}
@@ -545,17 +619,22 @@ export default function TenantList({
                                 </Tooltip>
                             ))}
                             {!tenant.is_deleted && (
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(tenant); }}
-                                    sx={{
-                                        color: canImpersonate ? 'text.secondary' : 'text.disabled',
-                                        ...(canImpersonate ? { '&:hover': { bgcolor: 'action.hover' } } : {}),
-                                    }}
-                                    disabled={!canImpersonate}
-                                >
-                                    <MoreVertIcon fontSize="small" />
-                                </IconButton>
+                                <Tooltip title="More actions">
+                                    <span>
+                                        <IconButton
+                                            size="small"
+                                            aria-label="More actions"
+                                            onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(tenant); }}
+                                            sx={{
+                                                color: canImpersonate ? 'text.secondary' : 'text.disabled',
+                                                ...(canImpersonate ? { '&:hover': { bgcolor: 'action.hover' } } : {}),
+                                            }}
+                                            disabled={!canImpersonate}
+                                        >
+                                            <MoreVertIcon fontSize="small" />
+                                        </IconButton>
+                                    </span>
+                                </Tooltip>
                             )}
                         </Box>
                     );

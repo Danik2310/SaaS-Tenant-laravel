@@ -46,6 +46,15 @@ class TenantResource extends JsonResource
             'state' => $this->state,
             'postal_code' => $this->postal_code,
             'country' => $this->country,
+            'payment_card' => [
+                'linked' => $this->stripe_customer_id !== null && $this->stripe_customer_id !== '',
+                'brand' => $this->pm_type,
+                'last4' => $this->pm_last_four,
+                'exp_month' => $this->pm_exp_month,
+                'exp_year' => $this->pm_exp_year,
+                'card_count' => (int) ($this->pm_card_count ?? 0),
+                'synced_at' => $this->pm_synced_at?->toISOString(),
+            ],
         ];
     }
 

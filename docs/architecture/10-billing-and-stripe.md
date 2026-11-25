@@ -3,10 +3,11 @@
 ## Scope
 
 Covers the tenant-facing Billing settings page, the Stripe Customer Portal
-handoff, the central webhook that sends card-change confirmation emails, and
-the Cashier-backed sync of Stripe subscription state into the local plan
-projection. It does **not** cover plan checkout, subscription invoices, or the
-admin gateway/API-key configuration screen.
+handoff, the central webhook that sends card-change confirmation emails and
+refreshes the admin registry's masked card projection, and the Cashier-backed
+sync of Stripe subscription state into the local plan projection. It does
+**not** cover plan checkout, subscription invoices, or the admin gateway/API-key
+configuration screen.
 
 ## Flow
 
@@ -20,6 +21,9 @@ sequenceDiagram
     participant Webhook as StripeWebhookController
     participant Cashier as Cashier webhook adapter
     participant Projector as LocalSubscriptionProjector
+    participant Cards as TenantPaymentCardProjector
+    participant Registry as Central tenants row
+    participant Admin as Admin tenant registry
     participant Mail as PaymentMethodChanged
 
     User->>UI: Open Settings -> Billing
@@ -37,11 +41,19 @@ sequenceDiagram
     Stripe->>Webhook: POST /api/v1/webhooks/stripe (signed)
     Webhook->>Gateway: verifyWebhookEvent(payload, signature)
     Webhook->>Webhook: Record event id (idempotency)
+    Webhook->>Cards: payment_method.* / customer.updated
+    Cards->>Gateway: listPaymentMethods(customer id)
+    Gateway-->>Cards: Masked card metadata only
+    Cards->>Registry: Upsert pm_* projection
     Webhook->>Mail: Notify billing email + owner email (card events)
     Webhook->>Cashier: customer.subscription.* payload
     Cashier->>Cashier: Cashier-owned subscription tables
     Webhook->>Projector: Same event after Cashier sync
     Projector->>Projector: Upsert local plan projection
+
+    Admin->>Registry: GET /admin/api/tenants (no Stripe call per row)
+    Admin->>Cards: POST refresh (on demand)
+    Admin->>Gateway: POST billing-portal (hosted handoff)
 ```
 
 ## Step-by-step
@@ -62,17 +74,25 @@ sequenceDiagram
    generated per request, so it carries the current tenant host.
 6. Stripe posts signed `payment_method.attached`, `payment_method.detached`,
    and `customer.updated` events to the central webhook. `customer.updated`
-   only produces an email when the default payment method actually changes.
+   only syncs and notifies when the default payment method actually changes.
 7. The webhook verifies the signature, records the Stripe event id in
    `stripe_webhook_events`, and resolves the tenant by
    `stripe_customer_id`. Retried deliveries are acknowledged without a second
-   notification.
-8. One on-demand `PaymentMethodChanged` notification is routed to both the
-   billing email and the owner email. Its content contains only masked card
-   metadata.
- 9. Subscription events are passed to Cashier's own webhook handler first, then
+   projection or notification.
+8. `TenantPaymentCardProjector` writes `pm_type`, `pm_last_four`,
+   `pm_exp_month`, `pm_exp_year`, `pm_card_count`, and `pm_synced_at` on the
+   central tenant row. `payment_method.attached`/`detached` apply the signed
+   event's masked payload without a gateway call; `customer.updated` recomputes
+   the full card list from Stripe. Both paths are idempotent.
+9. One on-demand `PaymentMethodChanged` notification is routed to both the
+   billing email and the owner email. It reuses the freshly projected masked
+   card metadata, so no second gateway call is made.
+10. Subscription events are passed to Cashier's own webhook handler first, then
     to `LocalSubscriptionProjector`. If either step throws, the ledger row is
     deleted and the webhook returns 500 so Stripe can retry.
+11. Card projection and notification failures follow the same retry contract:
+    the ledger row is deleted and the endpoint returns 500, so Stripe redelivers
+    instead of leaving a stale registry summary.
 
 ## Cashier Phase 1 — foundation (expand-only)
 
@@ -132,6 +152,30 @@ The central webhook now handles the full Stripe event for
 - Admin plan create/edit exposes `stripe_price_id`; the tenant Billing page
   shows a read-only subscription summary sourced from the local projection.
 
+## Admin tenant registry card projection
+
+The admin tenant registry displays a masked card summary without calling Stripe
+for every row:
+
+- `TenantPaymentCardProjector` applies the signed `payment_method.attached` /
+  `detached` payload immediately, and recomputes the full list via
+  `PaymentGatewayInterface::listPaymentMethods()` on `customer.updated` and on
+  demand. It stores only `pm_type`, `pm_last_four`, `pm_exp_month`,
+  `pm_exp_year`, `pm_card_count`, and `pm_synced_at` on the central tenant row.
+- `TenantResource` exposes the summary as `payment_card`, including a `linked`
+  flag so the UI can distinguish "no Stripe customer" from "no saved card".
+  The tenant list reads this projection only — no Stripe call per row.
+- `POST /admin/api/tenants/{tenant}/payment-methods/refresh` re-syncs one tenant
+  if a webhook was missed or Stripe changed outside the portal.
+- `POST /admin/api/tenants/{tenant}/billing-portal` creates a short-lived Stripe
+  Customer Portal session and returns its URL. The admin browser is redirected
+  to Stripe; the app never edits a card itself.
+- Both endpoints reuse the existing `edit payment methods` admin permission and
+  the `payment.rate.limit` middleware. Tenants must be active and already linked
+  to a Stripe customer.
+- This is separate from the admin **Payment methods** screen, which stores
+  gateway/API credentials. The two concepts must not be merged.
+
 ## Stripe setup
 
 1. Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in the environment.
@@ -149,7 +193,11 @@ The central webhook now handles the full Stripe event for
    destinations. The app supplies `return_url` when it creates each session;
    an allow-listed portal configuration is still required by Stripe.
 4. Grant the existing `manage payments` permission to any tenant role that
-   should see the Billing card and manage cards.
+   should see the Billing card and manage cards. Admin users need the existing
+   `edit payment methods` permission to refresh the registry projection or open
+   the Stripe portal for a tenant.
+5. Allow the central admin domain as a Stripe portal return destination as well;
+   the registry portal action returns to `/admin/dashboard?view=tenants`.
 
 ## Key decisions & invariants
 

@@ -6,6 +6,7 @@ namespace App\Billing\Http\Controllers\Webhook;
 
 use App\Billing\Notifications\PaymentMethodChanged;
 use App\Billing\Projectors\LocalSubscriptionProjector;
+use App\Billing\Projectors\TenantPaymentCardProjector;
 use App\Billing\Webhooks\CashierSubscriptionWebhookAdapter;
 use App\Http\Controllers\Controller;
 use App\Models\StripeWebhookEvent;
@@ -31,6 +32,7 @@ class StripeWebhookController extends Controller
         Request $request,
         CashierSubscriptionWebhookAdapter $cashier,
         LocalSubscriptionProjector $projector,
+        TenantPaymentCardProjector $cardProjector,
     ): JsonResponse {
         $gateway = null;
 
@@ -66,13 +68,21 @@ class StripeWebhookController extends Controller
             return response()->json(['received' => true, 'duplicate' => true]);
         }
 
-        try {
-            $this->notifyCardChange($event, $gateway);
-        } catch (Throwable $exception) {
-            report($exception);
+        $eventType = (string) ($event['type'] ?? '');
+
+        if ($cardProjector->handles($eventType) && $cardProjector->isCardChange($event)) {
+            try {
+                $cardProjector->handle($event);
+                $this->notifyCardChange($event, $cardProjector->customerIdFromEvent($event));
+            } catch (Throwable $exception) {
+                report($exception);
+                $record->delete();
+
+                return response()->json(['message' => 'Webhook processing failed; retry requested.'], 500);
+            }
         }
 
-        if ($cashier->handles((string) ($event['type'] ?? ''))) {
+        if ($cashier->handles($eventType)) {
             try {
                 $cashier->handle($event);
                 $projector->handle($event);
@@ -90,35 +100,14 @@ class StripeWebhookController extends Controller
     /**
      * @param  array{id: string, type: string, object: array<string, mixed>, previous: array<string, mixed>, payload?: array<string, mixed>}  $event
      */
-    private function notifyCardChange(array $event, PaymentGatewayInterface $gateway): void
+    private function notifyCardChange(array $event, ?string $customerId): void
     {
-        $type = (string) ($event['type'] ?? '');
-        $object = (array) ($event['object'] ?? []);
-        $previous = (array) ($event['previous'] ?? []);
-
-        $action = null;
-        $card = [];
-        $customerId = null;
-
-        if ($type === 'payment_method.attached' || $type === 'payment_method.detached') {
-            $customerId = $this->identifier($object['customer'] ?? null);
-            $action = $type === 'payment_method.attached' ? 'added' : 'removed';
-            $card = $this->cardFromPaymentMethod($object);
-        } elseif ($type === 'customer.updated') {
-            $customerId = $this->identifier($object['id'] ?? null);
-            $currentDefault = $this->defaultPaymentMethodId($object);
-            $previousDefault = $this->defaultPaymentMethodId($previous);
-
-            if ($currentDefault === null || $currentDefault === $previousDefault) {
-                return;
-            }
-
-            $action = 'default_changed';
-            $card = $this->cardFromPaymentMethod(
-                collect($gateway->listPaymentMethods((string) $customerId))
-                    ->first(fn (array $item): bool => $item['id'] === $currentDefault) ?? []
-            );
-        }
+        $action = match ((string) ($event['type'] ?? '')) {
+            'payment_method.attached' => 'added',
+            'payment_method.detached' => 'removed',
+            'customer.updated' => 'default_changed',
+            default => null,
+        };
 
         if ($action === null || $customerId === null) {
             return;
@@ -129,6 +118,15 @@ class StripeWebhookController extends Controller
         if ($tenant === null) {
             return;
         }
+
+        // The projector already refreshed these masked fields from the signed
+        // event or Stripe, so the notification never needs a gateway call.
+        $card = [
+            'brand' => (string) ($tenant->pm_type ?? ''),
+            'last4' => (string) ($tenant->pm_last_four ?? ''),
+            'exp_month' => (int) ($tenant->pm_exp_month ?? 0),
+            'exp_year' => (int) ($tenant->pm_exp_year ?? 0),
+        ];
 
         $recipients = array_values(array_unique(array_filter(
             [$tenant->billing_email, $tenant->email],
@@ -142,44 +140,5 @@ class StripeWebhookController extends Controller
         Notification::route('mail', $recipients)->notify(
             new PaymentMethodChanged($tenant, $action, $card),
         );
-    }
-
-    /**
-     * @param  array<string, mixed>  $paymentMethod
-     * @return array{brand?: string, last4?: string, exp_month?: int, exp_year?: int}
-     */
-    private function cardFromPaymentMethod(array $paymentMethod): array
-    {
-        $card = (array) ($paymentMethod['card'] ?? []);
-
-        return [
-            'brand' => (string) ($card['brand'] ?? ''),
-            'last4' => (string) ($card['last4'] ?? ''),
-            'exp_month' => (int) ($card['exp_month'] ?? 0),
-            'exp_year' => (int) ($card['exp_year'] ?? 0),
-        ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function defaultPaymentMethodId(array $data): ?string
-    {
-        $settings = (array) ($data['invoice_settings'] ?? []);
-
-        return $this->identifier($settings['default_payment_method'] ?? null);
-    }
-
-    private function identifier(mixed $value): ?string
-    {
-        if (is_array($value)) {
-            return isset($value['id']) ? (string) $value['id'] : null;
-        }
-
-        if (is_object($value)) {
-            return isset($value->id) ? (string) $value->id : null;
-        }
-
-        return is_scalar($value) && $value !== '' ? (string) $value : null;
     }
 }

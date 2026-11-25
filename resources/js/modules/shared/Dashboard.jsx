@@ -313,6 +313,29 @@ export default function Dashboard() {
         setView('subscriptions');
     };
 
+    const handleRefreshPaymentCard = async (tenant) => {
+        try {
+            const response = await api.post(`/admin/api/tenants/${tenant.id}/payment-methods/refresh`);
+            toast.success(response.data?.message || 'Payment card refreshed.');
+            incrementRefreshTrigger();
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to refresh payment card');
+        }
+    };
+
+    const handleManagePaymentCard = async (tenant) => {
+        try {
+            const response = await api.post(`/admin/api/tenants/${tenant.id}/billing-portal`);
+            if (response.data?.url) {
+                window.location.assign(response.data.url);
+                return;
+            }
+            toast.error('No Stripe portal URL was returned');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to open Stripe portal');
+        }
+    };
+
     const handleBulkAction = async (action, ids) => {
         if (!ids || ids.length === 0) return;
 
@@ -376,7 +399,8 @@ export default function Dashboard() {
                     component="header"
                     sx={{
                         bgcolor: 'background.paper',
-                        px: { xs: 2, md: 4 },
+                        pl: { xs: 7, sm: 9, md: 4 },
+                        pr: { xs: 2, md: 4 },
                         py: { xs: 1.5, md: 2 },
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -387,17 +411,12 @@ export default function Dashboard() {
                     }}
                 >
                     <Box sx={{ minWidth: 0 }}>
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                color: 'text.secondary',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.08em',
-                            }}
-                        >
-                            ShoppingLi / Admin
-                        </Typography>
-                        <Typography variant="h5" component="h1" sx={{ mt: 0.25 }}>
+                        <Box component="nav" aria-label="Breadcrumb" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
+                            <Typography variant="caption" component="span">ShoppingLi</Typography>
+                            <Typography variant="caption" component="span" aria-hidden="true">/</Typography>
+                            <Typography variant="caption" component="span" aria-current="page">Admin</Typography>
+                        </Box>
+                        <Typography variant="h5" component="h1" noWrap sx={{ mt: 0.25 }}>
                             {VIEW_TITLES[view] ?? 'Dashboard'}
                         </Typography>
                     </Box>
@@ -493,6 +512,8 @@ export default function Dashboard() {
                                 onSelectionChange={setSelectedTenantIds}
                                 onToggleStatus={handleToggleActive}
                                 onActivateTrial={handleOpenActivateTrial}
+                                onRefreshPaymentCard={handleRefreshPaymentCard}
+                                onManagePaymentCard={handleManagePaymentCard}
                                 rowMenuActions={(tenant) => {
                                     if (tenant.is_deleted) {
                                         return [
