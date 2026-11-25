@@ -7,6 +7,7 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import MenuIcon from '@mui/icons-material/Menu';
+import CloseIcon from '@mui/icons-material/Close';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import GroupIcon from '@mui/icons-material/Group';
@@ -90,11 +91,25 @@ export default function Navbar({ view, setView }) {
                 color: 'common.white',
             }}
         >
-            <Box sx={{ px: 2.5, py: 2.25, borderBottom: '1px solid', borderColor: line }}>
-                <Wordmark />
-                <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: muted }}>
-                    Management Console
-                </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, px: 2.5, py: 2.25, borderBottom: '1px solid', borderColor: line }}>
+                <Box sx={{ minWidth: 0 }}>
+                    <Wordmark />
+                    <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: muted }}>
+                        Management Console
+                    </Typography>
+                </Box>
+                {!isDesktop && (
+                    <Tooltip title="Close navigation">
+                        <IconButton
+                            aria-label="Close navigation"
+                            onClick={() => setMobileOpen(false)}
+                            size="small"
+                            sx={{ color: 'common.white', mt: '-2px', mr: '-6px' }}
+                        >
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                )}
             </Box>
 
             <Box sx={{ px: 2.5, py: 1.5 }}>

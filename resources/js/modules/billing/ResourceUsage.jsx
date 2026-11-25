@@ -18,7 +18,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DnsIcon from '@mui/icons-material/Dns';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { alpha } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -78,17 +78,21 @@ function UsageBar({ current, limit, label, color = 'primary.main' }) {
     );
 }
 
-function Sparkline({ data, dataKey = 'storage_kb', color = '#6366f1' }) {
+function Sparkline({ data, dataKey = 'storage_kb', color }) {
+    const theme = useTheme();
+
     if (!data || data.length < 2) {
         return null;
     }
+
+    const strokeColor = color ?? theme.palette.primary.main;
 
     const chartData = {
         labels: data.map((point) => point.snapshot_date ?? ''),
         datasets: [
             {
                 data: data.map((point) => point[dataKey] ?? 0),
-                borderColor: color,
+                borderColor: strokeColor,
                 borderWidth: 1.5,
                 pointRadius: 0,
                 pointHoverRadius: 3,
@@ -101,8 +105,8 @@ function Sparkline({ data, dataKey = 'storage_kb', color = '#6366f1' }) {
                         return 'transparent';
                     }
                     const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                    gradient.addColorStop(0.05, alpha(color, 0.2));
-                    gradient.addColorStop(0.95, alpha(color, 0));
+                    gradient.addColorStop(0.05, alpha(strokeColor, 0.2));
+                    gradient.addColorStop(0.95, alpha(strokeColor, 0));
                     return gradient;
                 },
             },
@@ -138,7 +142,11 @@ function Sparkline({ data, dataKey = 'storage_kb', color = '#6366f1' }) {
             <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 500, display: 'block', mb: 0.5 }}>
                 Storage trend (30d)
             </Typography>
-            <Box sx={{ position: 'relative', height: 60 }}>
+            <Box
+                sx={{ position: 'relative', height: 60 }}
+                role="img"
+                aria-label="Storage usage trend over the last 30 days"
+            >
                 <Line data={chartData} options={chartOptions} />
             </Box>
         </Box>
@@ -170,19 +178,22 @@ function UsageSparklineCard({ tenantId }) {
                 <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 500 }}>
                     Usage history
                 </Typography>
-                <IconButton
-                    size="small"
-                    onClick={() => setOpen(!open)}
-                    sx={{ p: 0.2 }}
-                >
-                    {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                </IconButton>
+                <Tooltip title={open ? 'Hide usage history' : 'Show usage history'}>
+                    <IconButton
+                        size="small"
+                        aria-label={open ? 'Hide usage history' : 'Show usage history'}
+                        onClick={() => setOpen(!open)}
+                        sx={{ p: 0.2 }}
+                    >
+                        {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                    </IconButton>
+                </Tooltip>
             </Box>
             <Collapse in={open}>
                 {history === null ? (
                     <Skeleton variant="rounded" height={60} sx={{ mt: 1 }} />
                 ) : (
-                    <Sparkline data={history} dataKey="storage_kb" color="#6366f1" />
+                    <Sparkline data={history} dataKey="storage_kb" />
                 )}
             </Collapse>
         </Box>

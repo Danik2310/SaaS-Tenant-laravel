@@ -172,8 +172,8 @@ export default function StaffList() {
                                     px: 0.75,
                                     py: 0.25,
                                     borderRadius: 0.75,
-                                    bgcolor: '#ccfbf1',
-                                    color: '#0f766e',
+                                    bgcolor: 'action.hover',
+                                    color: 'primary.dark',
                                     fontSize: 10,
                                     fontWeight: 700,
                                     letterSpacing: '0.04em',
@@ -202,7 +202,7 @@ export default function StaffList() {
                 const roles = cell.getValue();
                 if (!roles || roles.length === 0) {
                     return (
-                        <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                        <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>
                             No roles
                         </Typography>
                     );
@@ -220,7 +220,7 @@ export default function StaffList() {
             enableColumnFilter: false,
             enableSorting: false,
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ fontSize: 13, color: '#64748b' }}>
+                <Typography variant="body2" sx={{ fontSize: 13, color: 'text.secondary' }}>
                     {cell.getValue()} permissions
                 </Typography>
             ),
@@ -241,8 +241,8 @@ export default function StaffList() {
                             label={isActive ? 'Active' : 'Inactive'}
                             size="small"
                             sx={{
-                                bgcolor: isActive ? '#dcfce7' : '#fee2e2',
-                                color: isActive ? '#166534' : '#991b1b',
+                                bgcolor: isActive ? 'success.main' : 'error.main',
+                                color: isActive ? 'success.contrastText' : 'error.contrastText',
                                 fontWeight: 600,
                             }}
                         />
@@ -255,7 +255,7 @@ export default function StaffList() {
             header: 'Created',
             filterVariant: 'date-range',
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>
                     {new Date(cell.getValue()).toLocaleDateString()}
                 </Typography>
             ),
@@ -272,7 +272,7 @@ export default function StaffList() {
                 if (protectedAccount) {
                     return (
                         <Tooltip title="Protected system administrator — cannot be modified">
-                            <Box sx={{ display: 'inline-flex', alignItems: 'center', p: 0.5, color: '#94a3b8' }}>
+                            <Box sx={{ display: 'inline-flex', alignItems: 'center', p: 0.5, color: 'text.disabled' }}>
                                 <LockIcon fontSize="small" />
                             </Box>
                         </Tooltip>
@@ -352,8 +352,8 @@ export default function StaffList() {
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                     Staff Management
                 </Typography>
                 {canCreate && (
@@ -362,8 +362,8 @@ export default function StaffList() {
                         size="small"
                         onClick={() => setShowCreateDialog(true)}
                         sx={{
-                            bgcolor: '#22c55e',
-                            '&:hover': { bgcolor: '#16a34a' },
+                            bgcolor: 'primary.main',
+                            '&:hover': { bgcolor: 'primary.dark' },
                             fontWeight: 600,
                             fontSize: '13px',
                         }}

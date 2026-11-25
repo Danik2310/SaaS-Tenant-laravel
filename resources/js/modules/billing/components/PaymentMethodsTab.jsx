@@ -102,7 +102,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
             accessorKey: 'name',
             header: 'Name',
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: 'text.primary' }}>
                     {cell.getValue()}
                 </Typography>
             ),
@@ -111,7 +111,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
             accessorKey: 'provider',
             header: 'Provider',
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>
                     {cell.getValue()}
                 </Typography>
             ),
@@ -122,8 +122,8 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
             Cell: ({ cell }) => {
                 const value = cell.getValue();
                 const style = value === 'live'
-                    ? { bgcolor: '#dcfce7', color: '#166534' }
-                    : { bgcolor: '#f1f5f9', color: '#64748b' };
+                    ? { bgcolor: 'success.main', color: 'success.contrastText' }
+                    : { bgcolor: 'background.default', color: 'text.secondary' };
                 return (
                     <Chip label={value} size="small" sx={{ fontWeight: 600, ...style }} />
                 );
@@ -145,7 +145,7 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                             sx={{
                                 '& .MuiSwitch-switchBase.Mui-checked': {
                                     color: 'success.main',
-                                    '&:hover': { bgcolor: 'rgba(5, 150, 105, 0.08)' },
+                                    '&:hover': { bgcolor: 'action.hover' },
                                 },
                                 '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
                                     bgcolor: 'success.main',
@@ -162,8 +162,8 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                     Payment Gateways
                 </Typography>
                 {canCreate && (
@@ -175,8 +175,8 @@ export default function PaymentMethodsTab({ paymentMethods, fetchPaymentMethods,
                             setPaymentModalOpen(true);
                         }}
                         sx={{
-                            bgcolor: '#22c55e',
-                            '&:hover': { bgcolor: '#16a34a' },
+                            bgcolor: 'primary.main',
+                            '&:hover': { bgcolor: 'primary.dark' },
                             fontWeight: 600,
                             fontSize: '13px',
                         }}

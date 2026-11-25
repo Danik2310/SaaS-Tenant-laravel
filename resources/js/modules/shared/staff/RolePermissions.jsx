@@ -231,7 +231,7 @@ export default function RolePermissions() {
             enableColumnFilter: false,
             enableSorting: false,
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ fontSize: 13, color: '#64748b' }}>
+                <Typography variant="body2" sx={{ fontSize: 13, color: 'text.secondary' }}>
                     {cell.getValue()} permissions
                 </Typography>
             ),
@@ -252,8 +252,8 @@ export default function RolePermissions() {
                             label={isActive ? 'Active' : 'Inactive'}
                             size="small"
                             sx={{
-                                bgcolor: isActive ? '#dcfce7' : '#fee2e2',
-                                color: isActive ? '#166534' : '#991b1b',
+                                bgcolor: isActive ? 'success.main' : 'error.main',
+                                color: isActive ? 'success.contrastText' : 'error.contrastText',
                                 fontWeight: 600,
                             }}
                         />
@@ -331,8 +331,8 @@ export default function RolePermissions() {
                             label={isActive ? 'Active' : 'Inactive'}
                             size="small"
                             sx={{
-                                bgcolor: isActive ? '#dcfce7' : '#fee2e2',
-                                color: isActive ? '#166534' : '#991b1b',
+                                bgcolor: isActive ? 'success.main' : 'error.main',
+                                color: isActive ? 'success.contrastText' : 'error.contrastText',
                                 fontWeight: 600,
                             }}
                         />
@@ -752,7 +752,7 @@ function RoleForm({ role = null, onSubmit, onCancel, embedded = false }) {
     if (embedded) return formContent;
 
     return (
-        <Box sx={{ background: '#f8f9fa', p: 3, borderRadius: '8px' }}>
+        <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 1.5 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>{role ? 'Edit Role' : 'Create Role'}</Typography>
             {formContent}
         </Box>
@@ -815,7 +815,7 @@ function PermissionForm({ permission = null, onSubmit, onCancel, embedded = fals
     if (embedded) return formContent;
 
     return (
-        <Box sx={{ background: '#f8f9fa', p: 3, borderRadius: '8px' }}>
+        <Box sx={{ bgcolor: 'background.default', p: 3, borderRadius: 1.5 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>{permission ? 'Edit Permission' : 'Create Permission'}</Typography>
             {formContent}
         </Box>

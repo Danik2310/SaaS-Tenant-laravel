@@ -21,11 +21,11 @@ const STATUS_OPTIONS = [
 ];
 
 const TENANT_STATUS_STYLES = {
-    Active:    { bgcolor: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd' },
-    Suspended: { bgcolor: '#fee2e2', color: '#991b1b' },
-    Trial:     { bgcolor: '#fef9c3', color: '#854d0e' },
-    Cancelled: { bgcolor: '#f1f5f9', color: '#64748b' },
-    Deleted:   { bgcolor: '#f1f5f9', color: '#64748b', fontStyle: 'italic' },
+    Active:    { bgcolor: 'action.hover', color: 'primary.dark', border: '1px solid', borderColor: 'primary.light' },
+    Suspended: { bgcolor: 'error.main', color: 'error.contrastText' },
+    Trial:     { bgcolor: 'warning.main', color: 'warning.contrastText' },
+    Cancelled: { bgcolor: 'background.default', color: 'text.secondary' },
+    Deleted:   { bgcolor: 'background.default', color: 'text.secondary', fontStyle: 'italic' },
 };
 
 function formatPeriod(value) {
@@ -47,7 +47,7 @@ function TenantCell({ cell, row }) {
 
     if (!status) {
         return (
-            <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+            <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>
                 {name || '\u2014'}
             </Typography>
         );
@@ -157,11 +157,11 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
             Cell: ({ cell }) => {
                 const val = cell.getValue();
                 return val ? (
-                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#0369a1' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: 'primary.dark' }}>
                         {val}
                     </Typography>
                 ) : (
-                    <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>No Plan</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>No Plan</Typography>
                 );
             },
         },
@@ -173,7 +173,7 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
             Cell: ({ cell }) => {
                 const price = cell.getValue();
                 return (
-                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#166534' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: 'success.dark' }}>
                         {formatMoney(price)}
                     </Typography>
                 );
@@ -187,10 +187,10 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
             Cell: ({ cell }) => {
                 const status = cell.getValue();
                 const styles = {
-                    active:    { bgcolor: '#dcfce7', color: '#166534' },
-                    pending:   { bgcolor: '#fef9c3', color: '#854d0e' },
-                    cancelled: { bgcolor: '#fee2e2', color: '#991b1b' },
-                    expired:   { bgcolor: '#f1f5f9', color: '#64748b' },
+                    active:    { bgcolor: 'success.main', color: 'success.contrastText' },
+                    pending:   { bgcolor: 'warning.main', color: 'warning.contrastText' },
+                    cancelled: { bgcolor: 'error.main', color: 'error.contrastText' },
+                    expired:   { bgcolor: 'background.default', color: 'text.secondary' },
                 };
                 const s = styles[status] || styles.expired;
                 return (
@@ -215,18 +215,18 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
                 const duration = row.original.duration_days;
                 if (!starts) {
                     return (
-                        <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>
+                        <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>
                             {'\u2014'}
                         </Typography>
                     );
                 }
                 return (
                     <Box>
-                        <Typography variant="body2" sx={{ color: '#334155', fontSize: 13 }}>
+                        <Typography variant="body2" sx={{ color: 'text.primary', fontSize: 13 }}>
                             {formatPeriod(starts)} {'\u2192'} {ends ? formatPeriod(ends) : 'Present'}
                         </Typography>
                         {duration !== null && duration !== undefined && (
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>
                                 {duration}d
                             </Typography>
                         )}
@@ -239,7 +239,7 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
             header: 'Created',
             enableColumnFilter: false,
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>
                     {cell.getValue() ? new Date(cell.getValue()).toLocaleDateString() : '\u2014'}
                 </Typography>
             ),
@@ -249,7 +249,7 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
     return (
         <Box>
             <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                     Subscriptions
                 </Typography>
             </Box>
@@ -309,7 +309,7 @@ export default function Subscriptions({ initialSearch = '', onViewTenant }) {
                                         disabled={!canView}
                                         sx={{
                                             ...iconButtonSx,
-                                            color: canView ? '#0369a1' : '#cbd5e1',
+                                            color: canView ? 'primary.dark' : 'text.disabled',
                                             cursor: canView ? 'pointer' : 'default',
                                         }}
                                     >

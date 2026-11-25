@@ -208,10 +208,10 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
 
             {currencyOptions.filter((currency) => currency.code !== baseCurrency).length > 0 && (
                 <Box>
-                    <Typography variant="subtitle2" sx={{ color: '#0f172a', fontWeight: 600, mb: 1 }}>
+                    <Typography variant="subtitle2" sx={{ color: 'text.primary', fontWeight: 600, mb: 1 }}>
                         Price overrides
                     </Typography>
-                    <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
                         Leave blank to convert the base price using the current rate. Overrides win over converted values.
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
@@ -237,69 +237,69 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
             )}
 
             {summary && (
-                <Box sx={{ bgcolor: '#f8fafc', borderRadius: 1, border: '1px solid #e2e8f0', p: 2 }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b', mb: 1.5, display: 'block' }}>
+                <Box sx={{ bgcolor: 'background.default', borderRadius: 1.5, border: '1px solid', borderColor: 'divider', p: 2 }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1.5, display: 'block' }}>
                         System-wide usage (for reference)
                     </Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5, mb: 2 }}>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Tenants</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.total_tenants}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Tenants</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.total_tenants}</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Avg Users</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.avg_users}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Avg Users</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.avg_users}</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Max Users</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.max_users}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Max Users</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.max_users}</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Total Storage</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.total_storage_mb} MB</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Total Storage</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.total_storage_mb} MB</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Avg Storage</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.avg_storage_mb} MB</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Avg Storage</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.avg_storage_mb} MB</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Max Storage</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.max_storage_mb} MB</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Max Storage</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.max_storage_mb} MB</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Avg Products</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.avg_products}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Avg Products</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.avg_products}</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Max Products</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.max_products}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Max Products</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.max_products}</Typography>
                         </Box>
                         <Box>
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>Total Products</Typography>
-                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#0f172a' }}>{summary.total_products}</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>Total Products</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>{summary.total_products}</Typography>
                         </Box>
                     </Box>
 
-                    <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 1.5 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#64748b', mb: 1, display: 'block' }}>
+                    <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 1.5 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1, display: 'block' }}>
                             Server disk — {summary.server_disk_label ?? 'Unknown'}
                         </Typography>
                         {summary.server_disk_total_gb != null ? (
                             <Box sx={{ display: 'flex', gap: 2, alignItems: 'baseline' }}>
                                 <Box sx={{ flex: 1 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                        <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>
                                             {summary.server_disk_used_gb} GB used of {summary.server_disk_total_gb} GB
                                         </Typography>
-                                        <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>
+                                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>
                                             {summary.server_disk_free_gb} GB free
                                         </Typography>
                                     </Box>
                                     {summary.server_disk_pct != null && (
-                                        <Box sx={{ width: '100%', bgcolor: '#e2e8f0', borderRadius: 1, height: 6, overflow: 'hidden' }}>
+                                        <Box sx={{ width: '100%', bgcolor: 'divider', borderRadius: 1, height: 6, overflow: 'hidden' }}>
                                             <Box sx={{
                                                 width: `${Math.min(summary.server_disk_pct, 100)}%`,
-                                                bgcolor: summary.server_disk_pct > 85 ? '#ef4444' : summary.server_disk_pct > 65 ? '#f59e0b' : '#22c55e',
+                                                bgcolor: summary.server_disk_pct > 85 ? 'error.main' : summary.server_disk_pct > 65 ? 'warning.main' : 'success.main',
                                                 height: 6,
                                                 borderRadius: 1,
                                                 transition: 'width 0.3s',
@@ -309,7 +309,7 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
                                 </Box>
                             </Box>
                         ) : (
-                            <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 12 }}>
+                            <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 12 }}>
                                 Usage tracking available — no capacity limit configured.
                             </Typography>
                         )}
@@ -317,11 +317,11 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
                 </Box>
             )}
 
-            <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 2 }}>
-                <Typography variant="subtitle2" sx={{ color: '#0f172a', fontWeight: 600, mb: 2 }}>
+            <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: 'text.primary', fontWeight: 600, mb: 2 }}>
                     Resource Limits
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
                     Set maximum limits per tenant. Leave blank for unlimited.
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 3 }}>
@@ -336,11 +336,11 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
                 </Box>
             </Box>
 
-            <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 2 }}>
-                <Typography variant="subtitle2" sx={{ color: '#0f172a', fontWeight: 600, mb: 1 }}>
+            <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: 'text.primary', fontWeight: 600, mb: 1 }}>
                     Feature Flags
                 </Typography>
-                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
                     Select the features to enable for this plan.
                 </Typography>
                 <FeatureFlagPicker
@@ -473,7 +473,7 @@ export default function Plans() {
             accessorKey: 'name',
             header: 'Name',
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: 'text.primary' }}>
                     {cell.getValue()}
                 </Typography>
             ),
@@ -484,11 +484,11 @@ export default function Plans() {
             enableColumnFilter: false,
             Cell: ({ row }) => (
                 <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: '#166534' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: 13, color: 'success.dark' }}>
                         {row.original.price_display || `${row.original.price} ${row.original.base_currency || baseCurrency}`}
                     </Typography>
                     {row.original.price_source && (
-                        <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 10, textTransform: 'capitalize' }}>
+                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 10, textTransform: 'capitalize' }}>
                             {row.original.price_source}
                         </Typography>
                     )}
@@ -503,8 +503,8 @@ export default function Plans() {
             Cell: ({ cell }) => {
                 const status = cell.getValue();
                 const s = status === 'active'
-                    ? { bgcolor: '#dcfce7', color: '#166534' }
-                    : { bgcolor: '#f1f5f9', color: '#64748b' };
+                    ? { bgcolor: 'success.main', color: 'success.contrastText' }
+                    : { bgcolor: 'background.default', color: 'text.secondary' };
                 return (
                     <Chip label={status} size="small" sx={{ fontWeight: 600, textTransform: 'capitalize', ...s }} />
                 );
@@ -517,7 +517,7 @@ export default function Plans() {
             Cell: ({ cell }) => {
                 const months = cell.getValue();
                 return (
-                    <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13, fontWeight: 500 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13, fontWeight: 500 }}>
                         {months ? `${months} mo` : '—'}
                     </Typography>
                 );
@@ -528,7 +528,7 @@ export default function Plans() {
             header: 'Users',
             enableColumnFilter: false,
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>
                     {cell.getValue() ?? 'Unlimited'}
                 </Typography>
             ),
@@ -541,7 +541,7 @@ export default function Plans() {
             Cell: ({ cell }) => {
                 const features = cell.getValue();
                 if (!features || !features.length) {
-                    return <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13 }}>None</Typography>;
+                    return <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13 }}>None</Typography>;
                 }
                 const labels = features.map(f => featureDefs?.[f]?.label ?? f);
                 return (
@@ -556,7 +556,7 @@ export default function Plans() {
             header: 'Created',
             enableColumnFilter: false,
             Cell: ({ cell }) => (
-                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>
                     {cell.getValue() ? new Date(cell.getValue()).toLocaleDateString() : '—'}
                 </Typography>
             ),
@@ -583,13 +583,13 @@ export default function Plans() {
                             variant="text"
                             size="small"
                             onClick={() => setMode('list')}
-                            sx={{ textTransform: 'none', fontWeight: 500, color: '#64748b', '&:hover': { bgcolor: 'transparent', color: '#0f172a' } }}
+                            sx={{ textTransform: 'none', fontWeight: 500, color: 'text.secondary', '&:hover': { bgcolor: 'transparent', color: 'text.primary' } }}
                         >
                             ← Back to Plans
                         </Button>
                     </Box>
-                    <Box sx={{ bgcolor: '#fff', borderRadius: 2, border: '1px solid #e2e8f0', p: 3 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 600, color: '#0f172a', mb: 3 }}>
+                    <Box sx={{ bgcolor: 'background.paper', borderRadius: 1.5, border: '1px solid', borderColor: 'divider', p: 3 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600, color: 'text.primary', mb: 3 }}>
                             Create New Plan
                         </Typography>
                         <PlanForm
@@ -604,7 +604,7 @@ export default function Plans() {
             ) : (
             <Box>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: '#0f172a' }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'text.primary' }}>
                     Plans
                 </Typography>
                 {canCreate && (
@@ -613,8 +613,8 @@ export default function Plans() {
                         size="small"
                         onClick={() => setMode('create')}
                         sx={{
-                            bgcolor: '#22c55e',
-                            '&:hover': { bgcolor: '#16a34a' },
+                            bgcolor: 'primary.main',
+                            '&:hover': { bgcolor: 'primary.dark' },
                             fontWeight: 600,
                             fontSize: '13px',
                         }}
