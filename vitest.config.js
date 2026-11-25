@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -7,6 +7,9 @@ export default defineConfig({
         environment: 'jsdom',
         setupFiles: ['./tests/setup.js'],
         globals: true,
+        // Playwright specs live under tests/e2e and are run by Playwright, not
+        // Vitest (Vitest's default include also matches **/*.spec.js).
+        exclude: [...configDefaults.exclude, 'tests/e2e/**'],
         // Isolate each test file in its own module registry/environment.
         // `isolate: false` is markedly faster but leaked state between files
         // (e.g. tests/frontend/hooks/usePlan.test.js passed alone but failed

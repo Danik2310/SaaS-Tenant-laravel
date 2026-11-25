@@ -31,3 +31,7 @@ AGENTS.md
 /force_*.php
 /tenancy-audit-report.md
 /repomix-output.xml
+/tests/e2e/.auth/*
+!/tests/e2e/.auth/.gitkeep
+/playwright-report/
+/test-results/
