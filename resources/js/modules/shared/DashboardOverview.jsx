@@ -93,18 +93,27 @@ const TrendBadge = ({ trend, invertTrend = false }) => {
 };
 
 const SectionHeading = ({ index, title, aside }) => (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+    <Box
+        sx={{
+            display: 'flex',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexWrap: 'wrap',
+            columnGap: 1.5,
+            rowGap: 0.75,
+            mb: 2,
+        }}
+    >
         <Typography
             component="span"
-            sx={{ color: 'primary.main', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', lineHeight: 1 }}
+            sx={{ color: 'primary.main', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', lineHeight: 1, flexShrink: 0 }}
         >
             {index}
         </Typography>
-        <Typography variant="subtitle2" sx={{ color: 'text.primary', fontWeight: 700, whiteSpace: 'nowrap' }}>
+        <Typography variant="subtitle2" sx={{ color: 'text.primary', fontWeight: 700, minWidth: 0 }}>
             {title}
         </Typography>
-        <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-        {aside}
+        <Box sx={{ flex: '1 1 48px', minWidth: 32, height: '1px', bgcolor: 'divider' }} />
+        {aside && <Box sx={{ minWidth: 0, maxWidth: { xs: '100%', sm: 'auto' } }}>{aside}</Box>}
     </Box>
 );
 
@@ -113,7 +122,7 @@ const HeroMetric = ({ title, value, icon, color, subtitle, trend, invertTrend = 
         data-testid={testId ? `kpi-${testId}` : undefined}
         sx={{
             position: 'relative',
-            height: '100%',
+            minWidth: 0,
             overflow: 'hidden',
             border: '1px solid',
             borderColor: 'divider',
@@ -138,31 +147,61 @@ const HeroMetric = ({ title, value, icon, color, subtitle, trend, invertTrend = 
             },
         }}
     >
-        <CardContent sx={{ p: { xs: 2, md: 2.5 }, '&:last-child': { pb: { xs: 2, md: 2.5 } } }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1.5 }}>
+        <CardContent sx={{ p: { xs: 1.75, sm: 2, md: 2.5 }, '&:last-child': { pb: { xs: 1.75, sm: 2, md: 2.5 } } }}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: { xs: 1, sm: 1.5 } }}>
                 <Box sx={{ minWidth: 0 }}>
                     <Typography
                         variant="overline"
-                        sx={{ display: 'block', color: 'text.secondary', fontSize: 10, letterSpacing: '0.12em', lineHeight: 1.5 }}
+                        sx={{
+                            display: 'block',
+                            color: 'text.secondary',
+                            fontSize: 10,
+                            letterSpacing: '0.12em',
+                            lineHeight: 1.5,
+                            minWidth: 0,
+                        }}
                     >
                         {title}
                     </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'baseline',
+                            columnGap: 0.75,
+                            rowGap: 0.5,
+                            mt: 0.5,
+                            flexWrap: 'wrap',
+                            minWidth: 0,
+                        }}
+                    >
                         <Typography
                             variant="h4"
                             component="span"
-                            sx={{ fontSize: { xs: 32, md: 38 }, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}
+                            sx={{
+                                fontSize: { xs: 28, sm: 32, md: 38 },
+                                lineHeight: 1.1,
+                                fontVariantNumeric: 'tabular-nums',
+                            }}
                         >
                             {value}
                         </Typography>
                         <TrendBadge trend={trend} invertTrend={invertTrend} />
                     </Box>
                 </Box>
-                <Avatar sx={{ bgcolor: alpha(color, 0.12), color, width: 38, height: 38, flexShrink: 0 }}>
+                <Avatar
+                    sx={{
+                        bgcolor: alpha(color, 0.12),
+                        color,
+                        width: { xs: 32, sm: 34, md: 38 },
+                        height: { xs: 32, sm: 34, md: 38 },
+                        flexShrink: 0,
+                        '& svg': { fontSize: { xs: 18, md: 20 } },
+                    }}
+                >
                     {icon}
                 </Avatar>
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25, minWidth: 0, lineHeight: 1.35 }}>
                 {trend?.label ?? subtitle}
             </Typography>
         </CardContent>
@@ -174,11 +213,12 @@ const PulseItem = ({ title, value, icon, color, subtitle, trend, invertTrend = f
         data-testid={testId ? `kpi-${testId}` : undefined}
         sx={{
             display: 'flex',
-            alignItems: 'center',
-            gap: 1.25,
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexWrap: 'wrap',
+            columnGap: { xs: 1, sm: 1.25 },
+            rowGap: { xs: 0.5, sm: 0 },
             minWidth: 0,
-            height: '100%',
-            px: 1.75,
+            px: { xs: 1.5, sm: 1.75 },
             py: 1.5,
             border: '1px solid',
             borderColor: 'divider',
@@ -188,26 +228,60 @@ const PulseItem = ({ title, value, icon, color, subtitle, trend, invertTrend = f
             '&:hover': { bgcolor: 'background.default' },
         }}
     >
-        <Avatar sx={{ bgcolor: alpha(color, 0.1), color, width: 34, height: 34, flexShrink: 0 }}>
+        <Avatar
+            sx={{
+                bgcolor: alpha(color, 0.1),
+                color,
+                width: { xs: 30, sm: 34 },
+                height: { xs: 30, sm: 34 },
+                flexShrink: 0,
+                '& svg': { fontSize: { xs: 17, sm: 20 } },
+            }}
+        >
             {icon}
         </Avatar>
-        <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Box sx={{ minWidth: 0, flex: '1 1 120px' }}>
             <Typography
                 variant="caption"
                 color="text.secondary"
-                sx={{ display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}
+                sx={{ display: 'block', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3 }}
             >
                 {title}
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
-                <Typography component="span" sx={{ fontSize: 19, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    columnGap: 0.75,
+                    rowGap: 0.25,
+                    flexWrap: 'wrap',
+                    minWidth: 0,
+                }}
+            >
+                <Typography
+                    component="span"
+                    sx={{ fontSize: { xs: 18, sm: 19 }, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}
+                >
                     {value}
                 </Typography>
                 <TrendBadge trend={trend} invertTrend={invertTrend} />
             </Box>
         </Box>
         {subtitle && (
-            <Typography variant="caption" color="text.secondary" noWrap sx={{ flexShrink: 0 }}>
+            <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                    flex: { xs: '1 1 100%', sm: '0 1 auto' },
+                    pl: { xs: 5, sm: 0 },
+                    minWidth: 0,
+                    maxWidth: { sm: 120 },
+                    whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                    overflow: { sm: 'hidden' },
+                    textOverflow: { sm: 'ellipsis' },
+                    lineHeight: 1.2,
+                }}
+            >
                 {subtitle}
             </Typography>
         )}
@@ -215,8 +289,11 @@ const PulseItem = ({ title, value, icon, color, subtitle, trend, invertTrend = f
 );
 
 const AttentionItem = ({ label, value, color, testId }) => (
-    <Box data-testid={testId} sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0 }} />
+    <Box
+        data-testid={testId}
+        sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 0.75, sm: 1 }, minWidth: 0, flex: '1 1 auto' }}
+    >
+        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color, flexShrink: 0, mt: { xs: '3px', sm: 0 } }} />
         <Box sx={{ minWidth: 0 }}>
             <Typography component="span" sx={{ fontSize: 18, fontWeight: 700, fontFamily: 'inherit' }}>
                 {value}
@@ -287,23 +364,23 @@ export default function DashboardOverview() {
             <Box>
                 <Grid container spacing={2} sx={{ mb: 3 }}>
                     {[1, 2, 3].map((i) => (
-                        <Grid item xs={12} sm={6} md={4} key={i}>
-                            <Skeleton variant="rounded" height={132} />
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+                            <Skeleton variant="rounded" sx={{ height: { xs: 140, sm: 132 } }} />
                         </Grid>
                     ))}
                 </Grid>
                 <Grid container spacing={1.5} sx={{ mb: 4 }}>
                     {[1, 2, 3].map((i) => (
-                        <Grid item xs={12} sm={6} md={4} key={i}>
-                            <Skeleton variant="rounded" height={72} />
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={i}>
+                            <Skeleton variant="rounded" sx={{ height: { xs: 84, sm: 72 } }} />
                         </Grid>
                     ))}
                 </Grid>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} sm={12} md={8} lg={8}>
+                    <Grid size={{ xs: 12, md: 8 }}>
                         <Skeleton variant="rounded" height={chartHeight + 72} />
                     </Grid>
-                    <Grid item xs={12} sm={12} md={4} lg={4}>
+                    <Grid size={{ xs: 12, md: 4 }}>
                         <Skeleton variant="rounded" height={chartHeight + 72} />
                     </Grid>
                 </Grid>
@@ -473,7 +550,16 @@ export default function DashboardOverview() {
 
     return (
         <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 2, mb: 3 }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'flex-start', sm: 'flex-end' },
+                    flexWrap: 'wrap',
+                    gap: { xs: 1, md: 2 },
+                    mb: 3,
+                }}
+            >
                 <Box sx={{ minWidth: 0 }}>
                     <Typography variant="overline" sx={{ color: 'primary.main', fontSize: 10, letterSpacing: '0.16em' }}>
                         Portfolio snapshot
@@ -482,7 +568,7 @@ export default function DashboardOverview() {
                         Operations at a glance
                     </Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right', flexShrink: 0 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: { xs: 'left', sm: 'right' }, flexShrink: 0 }}>
                     {formattedMonthlyData.length > 0
                         ? `${formattedMonthlyData.length}-month view`
                         : 'Awaiting first data point'}
@@ -495,7 +581,7 @@ export default function DashboardOverview() {
                 aside={<Typography variant="caption" color="text.secondary">Current workspace health</Typography>}
             />
             <Grid container spacing={2} sx={{ mb: 1.75 }}>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <HeroMetric
                         title="Total Tenants"
                         value={stats?.total_tenants ?? 0}
@@ -507,7 +593,7 @@ export default function DashboardOverview() {
                         index={0}
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <HeroMetric
                         title="Active Tenants"
                         value={stats?.active_tenants ?? 0}
@@ -519,7 +605,7 @@ export default function DashboardOverview() {
                         index={1}
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <HeroMetric
                         title="Suspended"
                         value={stats?.suspended_tenants ?? 0}
@@ -535,7 +621,7 @@ export default function DashboardOverview() {
             </Grid>
 
             <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <PulseItem
                         title="Staff"
                         value={stats?.total_staff ?? 0}
@@ -546,7 +632,7 @@ export default function DashboardOverview() {
                         testId="staff"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <PulseItem
                         title="Plans"
                         value={stats?.total_plans ?? 0}
@@ -557,7 +643,7 @@ export default function DashboardOverview() {
                         testId="plans"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid size={{ xs: 12, sm: 6, md: 4 }}>
                     <PulseItem
                         title="Deleted"
                         value={stats?.deleted_tenants ?? 0}
@@ -574,15 +660,16 @@ export default function DashboardOverview() {
             <Paper
                 data-testid="kpi-attention"
                 sx={{
-                    p: 2.25,
+                    p: { xs: 1.75, sm: 2.25 },
                     border: '1px solid',
                     borderColor: 'divider',
                     borderRadius: 1.5,
                     boxShadow: 'none',
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'flex-start', sm: 'center' },
                     justifyContent: 'space-between',
-                    gap: 2,
+                    gap: { xs: 1.5, sm: 2 },
                     flexWrap: 'wrap',
                     mb: 4,
                 }}
@@ -595,7 +682,7 @@ export default function DashboardOverview() {
                         Status mix compares current workspace states with 30 days ago.
                     </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2, sm: 3 }, width: { xs: '100%', sm: 'auto' } }}>
                     <AttentionItem
                         label="In trial"
                         value={stats?.trial_tenants ?? 0}
@@ -617,20 +704,29 @@ export default function DashboardOverview() {
                 aside={<Typography variant="caption" color="text.secondary">Growth and distribution</Typography>}
             />
             <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={12} md={8} lg={8}>
+                <Grid size={{ xs: 12, md: 8 }} sx={{ display: 'flex' }}>
                     <Paper sx={{
                         p: { xs: 2, md: 3 },
                         border: '1px solid',
                         borderColor: 'divider',
                         borderRadius: 2,
                         boxShadow: 'none',
-                        height: '100%',
+                        flex: 1,
                         position: 'relative',
                         overflow: 'hidden',
                         '&::before': { content: '""', position: 'absolute', inset: '0 0 auto', height: 2, bgcolor: 'primary.main' },
                     }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                            <Box>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: { xs: 'flex-start', sm: 'center' },
+                                flexWrap: 'wrap',
+                                gap: { xs: 1, sm: 2 },
+                                mb: 2,
+                            }}
+                        >
+                            <Box sx={{ minWidth: 0 }}>
                                 <Typography variant="overline" sx={{ color: 'text.secondary', fontSize: 10, letterSpacing: '0.12em' }}>
                                     Tenant Growth
                                 </Typography>
@@ -638,7 +734,7 @@ export default function DashboardOverview() {
                                     New workspaces over time
                                 </Typography>
                             </Box>
-                            <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+                            <Box sx={{ textAlign: { xs: 'left', sm: 'right' }, flexShrink: 0 }}>
                                 <Typography component="span" sx={{ fontSize: 22, fontWeight: 700, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
                                     {formattedMonthlyData[formattedMonthlyData.length - 1]?.Tenants ?? 0}
                                 </Typography>
@@ -664,14 +760,14 @@ export default function DashboardOverview() {
                         )}
                     </Paper>
                 </Grid>
-                <Grid item xs={12} sm={12} md={4} lg={4}>
+                <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex' }}>
                     <Paper sx={{
                         p: { xs: 2, md: 3 },
                         border: '1px solid',
                         borderColor: 'divider',
                         borderRadius: 2,
                         boxShadow: 'none',
-                        height: '100%',
+                        flex: 1,
                         position: 'relative',
                         overflow: 'hidden',
                         '&::before': { content: '""', position: 'absolute', inset: '0 0 auto', height: 2, bgcolor: 'success.main' },
@@ -689,9 +785,23 @@ export default function DashboardOverview() {
                                 </Typography>
                             </Box>
                         ) : (
-                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 2 }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    flexDirection: { xs: 'column', lg: 'row' },
+                                    alignItems: { xs: 'flex-start', lg: 'center' },
+                                    gap: 2,
+                                }}
+                            >
                                 <Box
-                                    sx={{ position: 'relative', flex: '0 0 55%', width: '100%', height: chartHeight * 0.7 }}
+                                    sx={{
+                                        position: 'relative',
+                                        flex: { xs: '0 0 auto', lg: '0 0 52%' },
+                                        width: { xs: '100%', lg: 'auto' },
+                                        maxWidth: { xs: 260, lg: 'none' },
+                                        height: chartHeight * 0.7,
+                                        alignSelf: { xs: 'center', lg: 'auto' },
+                                    }}
                                     role="img"
                                     aria-label="Distribution of tenants by status"
                                 >
@@ -707,16 +817,25 @@ export default function DashboardOverview() {
                                             pointerEvents: 'none',
                                         }}
                                     >
-                                        <Typography component="span" sx={{ fontSize: 22, fontWeight: 700, lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>
+                                        <Typography
+                                            component="span"
+                                            sx={{
+                                                fontSize: { xs: 18, lg: 22 },
+                                                fontWeight: 700,
+                                                lineHeight: 1.1,
+                                                fontVariantNumeric: 'tabular-nums',
+                                                whiteSpace: 'nowrap',
+                                            }}
+                                        >
                                             {`${stats?.total_tenants ?? 0} tenants`}
                                         </Typography>
                                     </Box>
                                 </Box>
-                                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', gap: 1 }}>
                                     {statusDistribution.map((item, index) => (
-                                        <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                                        <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                                             <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: CHART_COLORS[index % CHART_COLORS.length], flexShrink: 0 }} />
-                                            <Typography variant="caption" color="text.secondary">
+                                            <Typography variant="caption" color="text.secondary" sx={{ minWidth: 0 }}>
                                                 {item.name} ({item.value})
                                             </Typography>
                                         </Box>
@@ -740,8 +859,18 @@ export default function DashboardOverview() {
                 boxShadow: 'none',
                 overflow: 'hidden',
             }}>
-                <Box sx={{ p: { xs: 2, md: 3 }, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
-                    <Box>
+                <Box
+                    sx={{
+                        p: { xs: 2, md: 3 },
+                        pb: 1,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: { xs: 'flex-start', sm: 'center' },
+                        flexWrap: 'wrap',
+                        gap: { xs: 1, sm: 2 },
+                    }}
+                >
+                    <Box sx={{ minWidth: 0 }}>
                         <Typography variant="overline" sx={{ color: 'text.secondary', fontSize: 10, letterSpacing: '0.12em' }}>
                             Recent Tenants
                         </Typography>
@@ -752,7 +881,7 @@ export default function DashboardOverview() {
                     <FormControlLabel
                         control={<Switch size="small" checked={showDeleted} onChange={() => setShowDeleted(s => !s)} />}
                         label={<Typography variant="caption" sx={{ color: 'text.secondary' }}>Show deleted</Typography>}
-                        sx={{ mr: 0 }}
+                        sx={{ mr: 0, flexShrink: 0 }}
                     />
                 </Box>
                 <TableContainer sx={{ maxWidth: '100%', overflowX: 'auto' }}>
