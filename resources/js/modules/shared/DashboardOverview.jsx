@@ -449,6 +449,8 @@ export default function DashboardOverview() {
         Deleted: theme.palette.text.disabled,
     };
 
+    const getStatusColor = (name, index) => statusDotColor[name] ?? CHART_COLORS[index % CHART_COLORS.length];
+
     const growthChartData = {
         labels: formattedMonthlyData.map((item) => item.name),
         datasets: [
@@ -513,7 +515,7 @@ export default function DashboardOverview() {
         datasets: [
             {
                 data: statusDistribution.map((item) => item.value),
-                backgroundColor: statusDistribution.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]),
+                backgroundColor: statusDistribution.map((item, index) => getStatusColor(item.name, index)),
                 borderColor: theme.palette.background.paper,
                 borderWidth: 4,
             },
@@ -788,19 +790,18 @@ export default function DashboardOverview() {
                             <Box
                                 sx={{
                                     display: 'flex',
-                                    flexDirection: { xs: 'column', lg: 'row' },
-                                    alignItems: { xs: 'flex-start', lg: 'center' },
-                                    gap: 2,
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: { xs: 1.5, lg: 2 },
                                 }}
                             >
                                 <Box
                                     sx={{
                                         position: 'relative',
-                                        flex: { xs: '0 0 auto', lg: '0 0 52%' },
-                                        width: { xs: '100%', lg: 'auto' },
-                                        maxWidth: { xs: 260, lg: 'none' },
+                                        flex: '0 0 auto',
+                                        width: '100%',
+                                        maxWidth: { xs: 260, lg: 240 },
                                         height: chartHeight * 0.7,
-                                        alignSelf: { xs: 'center', lg: 'auto' },
                                     }}
                                     role="img"
                                     aria-label="Distribution of tenants by status"
@@ -831,10 +832,26 @@ export default function DashboardOverview() {
                                         </Typography>
                                     </Box>
                                 </Box>
-                                <Box sx={{ flex: 1, minWidth: 0, width: { xs: '100%', lg: 'auto' }, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <Box
+                                    data-testid="tenant-status-legend"
+                                    sx={{
+                                        width: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'row',
+                                        flexWrap: 'wrap',
+                                        alignItems: 'center',
+                                        justifyContent: { xs: 'flex-start', lg: 'center' },
+                                        columnGap: { xs: 1.5, sm: 2 },
+                                        rowGap: 0.75,
+                                    }}
+                                >
                                     {statusDistribution.map((item, index) => (
-                                        <Box key={item.name} sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: CHART_COLORS[index % CHART_COLORS.length], flexShrink: 0 }} />
+                                        <Box
+                                            key={item.name}
+                                            data-testid={`tenant-status-legend-${item.name.toLowerCase()}`}
+                                            sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}
+                                        >
+                                            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: getStatusColor(item.name, index), flexShrink: 0 }} />
                                             <Typography variant="caption" color="text.secondary" sx={{ minWidth: 0 }}>
                                                 {item.name} ({item.value})
                                             </Typography>
