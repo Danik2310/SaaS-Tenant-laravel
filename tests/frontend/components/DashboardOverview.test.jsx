@@ -1,17 +1,21 @@
 import { vi } from 'vitest';
 import React from 'react';
-import { renderWithProviders, screen } from '../test-utils';
+import { renderWithProviders, screen, userEvent } from '../test-utils';
 import DashboardOverview from '@/modules/shared/DashboardOverview';
 
 const mockApi = vi.hoisted(() => ({
   get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn(),
 }));
 const { useAuthContextMock } = vi.hoisted(() => ({ useAuthContextMock: vi.fn() }));
+const { lineProps } = vi.hoisted(() => ({ lineProps: { current: null } }));
 
 vi.mock('@/services/api', () => ({ default: mockApi }));
 vi.mock('@/context/AuthContext', () => ({ useAuthContext: () => useAuthContextMock() }));
 vi.mock('react-chartjs-2', () => ({
-  Line: () => null,
+  Line: (props) => {
+    lineProps.current = props;
+    return null;
+  },
   Doughnut: () => null,
 }));
 
@@ -32,9 +36,22 @@ const statsResponse = {
   },
 };
 
+const monthlyStatsResponse = {
+  data: {
+    ...statsResponse.data,
+    tenants_by_month: [
+      { month: '2026-01', count: 1 },
+      { month: '2026-02', count: 2 },
+      { month: '2026-03', count: 3 },
+      { month: '2026-04', count: 4 },
+    ],
+  },
+};
+
 describe('DashboardOverview', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lineProps.current = null;
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: vi.fn().mockImplementation((query) => ({
@@ -101,5 +118,25 @@ describe('DashboardOverview', () => {
     expect(await screen.findByText(/Trial \(2\)/)).toBeInTheDocument();
     expect(screen.getByText('Acme Corp')).toBeInTheDocument();
     expect(screen.getByText('Trial')).toBeInTheDocument();
+  });
+
+  test('filters tenant growth by time range without refetching stats', async () => {
+    useAuthContextMock.mockReturnValue({ permissions: ['view tenants'] });
+    mockApi.get.mockResolvedValue(monthlyStatsResponse);
+    const user = userEvent.setup();
+
+    renderWithProviders(<DashboardOverview />);
+
+    expect(await screen.findByText('12')).toBeInTheDocument();
+    expect(lineProps.current.data.labels).toEqual(['Jan 26', 'Feb 26', 'Mar 26', 'Apr 26']);
+    expect(mockApi.get).toHaveBeenCalledTimes(1);
+
+    const filter = screen.getByRole('combobox', { name: 'Filter tenant growth by time period' });
+    await user.click(filter);
+    await user.click(await screen.findByRole('option', { name: 'Last 1 month' }));
+
+    expect(lineProps.current.data.labels).toEqual(['Apr 26']);
+    expect(lineProps.current.data.datasets[0].data).toEqual([4]);
+    expect(mockApi.get).toHaveBeenCalledTimes(1);
   });
 });

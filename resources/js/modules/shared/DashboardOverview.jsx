@@ -21,6 +21,8 @@ import TableRow from '@mui/material/TableRow';
 import TablePagination from '@mui/material/TablePagination';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { alpha, useTheme } from '@mui/material/styles';
 import PeopleIcon from '@mui/icons-material/People';
@@ -57,6 +59,16 @@ const metricMotion = {
     },
     animation: 'overviewMetricIn 220ms cubic-bezier(0.16, 1, 0.3, 1) both',
 };
+
+const MONTH_RANGE_OPTIONS = [
+    { value: '1', label: 'Last 1 month' },
+    { value: '3', label: 'Last 3 months' },
+    { value: '6', label: 'Last 6 months' },
+    { value: '12', label: 'Last 12 months' },
+    { value: 'all', label: 'All time' },
+];
+
+const sliceMonthlyData = (data, range) => (range === 'all' ? data : data.slice(-Number(range)));
 
 const getTrendPresentation = (trend, invertTrend = false) => {
     const direction = trend?.direction ?? 'flat';
@@ -320,6 +332,7 @@ export default function DashboardOverview() {
     const [page, setPage] = useState(0);
     const [rowsPerPage] = useState(5);
     const [showDeleted, setShowDeleted] = useState(false);
+    const [monthRange, setMonthRange] = useState('all');
     const chartHeight = isMobile ? 220 : isTablet ? 260 : 300;
 
     useEffect(() => {
@@ -401,6 +414,9 @@ export default function DashboardOverview() {
         };
     });
 
+    const visibleMonthlyData = sliceMonthlyData(formattedMonthlyData, monthRange);
+    const selectedRangeLabel = MONTH_RANGE_OPTIONS.find((option) => option.value === monthRange)?.label ?? 'All time';
+
     const CHART_COLORS = [
         theme.palette.primary.main,
         theme.palette.success.main,
@@ -452,11 +468,11 @@ export default function DashboardOverview() {
     const getStatusColor = (name, index) => statusDotColor[name] ?? CHART_COLORS[index % CHART_COLORS.length];
 
     const growthChartData = {
-        labels: formattedMonthlyData.map((item) => item.name),
+        labels: visibleMonthlyData.map((item) => item.name),
         datasets: [
             {
                 label: 'Tenants',
-                data: formattedMonthlyData.map((item) => item.Tenants),
+                data: visibleMonthlyData.map((item) => item.Tenants),
                 borderColor: theme.palette.primary.main,
                 borderWidth: 2,
                 pointRadius: 0,
@@ -570,11 +586,25 @@ export default function DashboardOverview() {
                         Operations at a glance
                     </Typography>
                 </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ textAlign: { xs: 'left', sm: 'right' }, flexShrink: 0 }}>
-                    {formattedMonthlyData.length > 0
-                        ? `${formattedMonthlyData.length}-month view`
-                        : 'Awaiting first data point'}
-                </Typography>
+                <Select
+                    data-testid="growth-period-filter"
+                    size="small"
+                    value={monthRange}
+                    onChange={(event) => setMonthRange(event.target.value)}
+                    inputProps={{ 'aria-label': 'Filter tenant growth by time period' }}
+                    sx={{
+                        minWidth: { xs: 140, sm: 160 },
+                        bgcolor: 'background.paper',
+                        fontSize: 12,
+                        '& .MuiSelect-select': { py: 0.75, fontSize: 12 },
+                    }}
+                >
+                    {MONTH_RANGE_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value} sx={{ fontSize: 13 }}>
+                            {option.label}
+                        </MenuItem>
+                    ))}
+                </Select>
             </Box>
 
             <SectionHeading
@@ -745,7 +775,7 @@ export default function DashboardOverview() {
                                 </Typography>
                             </Box>
                         </Box>
-                        {tenantsByMonth.length === 0 ? (
+                        {visibleMonthlyData.length === 0 ? (
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: chartHeight }}>
                                 <Typography variant="body2" color="text.secondary">
                                     No data yet
@@ -755,7 +785,7 @@ export default function DashboardOverview() {
                             <Box
                                 sx={{ position: 'relative', height: chartHeight }}
                                 role="img"
-                                aria-label="Tenant growth by month"
+                                aria-label={`Tenant growth by month, ${selectedRangeLabel}`}
                             >
                                 <Line data={growthChartData} options={growthChartOptions} />
                             </Box>
