@@ -136,19 +136,32 @@ export default function Navbar({ view, setView }) {
                     '&::-webkit-scrollbar': { display: 'none' },
                 }}
             >
-                {Object.entries(grouped).map(([section, items]) => (
+                {Object.entries(grouped).map(([section, items], sectionIndex) => (
                     <Box key={section} sx={{ mb: 2.5 }}>
                         <Typography
                             variant="caption"
                             sx={{
-                                display: 'block',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
                                 px: 1,
                                 mb: 0.75,
                                 color: label,
                                 textTransform: 'uppercase',
-                                letterSpacing: '0.08em',
+                                letterSpacing: '0.14em',
+                                fontSize: 10,
+                                fontWeight: 700,
+                                '&::after': {
+                                    content: '""',
+                                    flex: 1,
+                                    height: '1px',
+                                    bgcolor: line,
+                                },
                             }}
                         >
+                            <Box component="span" sx={{ color: 'primary.light', letterSpacing: 0 }}>
+                                {String(sectionIndex + 1).padStart(2, '0')}
+                            </Box>
                             {section}
                         </Typography>
                         {items.map((item) => {
@@ -163,6 +176,7 @@ export default function Navbar({ view, setView }) {
                                     aria-label={item.label}
                                     data-testid={`nav-${item.id}`}
                                     sx={{
+                                        position: 'relative',
                                         width: '100%',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -177,20 +191,49 @@ export default function Navbar({ view, setView }) {
                                         textAlign: 'left',
                                         cursor: 'pointer',
                                         color: active ? 'common.white' : muted,
-                                        bgcolor: active ? 'primary.main' : 'transparent',
+                                        bgcolor: active ? alpha(theme.palette.primary.main, 0.16) : 'transparent',
                                         transition: 'background-color 150ms ease-out, color 150ms ease-out',
+                                        '&::before': {
+                                            content: '""',
+                                            position: 'absolute',
+                                            left: 0,
+                                            top: 8,
+                                            bottom: 8,
+                                            width: 3,
+                                            borderRadius: 3,
+                                            bgcolor: 'primary.main',
+                                            transform: active ? 'scaleY(1)' : 'scaleY(0)',
+                                            transformOrigin: 'center',
+                                            transition: 'transform 180ms cubic-bezier(0.16, 1, 0.3, 1)',
+                                        },
+                                        '& .nav-icon, & .nav-label': {
+                                            transition: 'transform 150ms ease-out, color 150ms ease-out',
+                                        },
                                         '&:hover': {
-                                            bgcolor: active ? 'primary.dark' : hover,
+                                            bgcolor: active ? alpha(theme.palette.primary.main, 0.22) : hover,
                                             color: 'common.white',
                                         },
+                                        '&:hover .nav-label': { transform: 'translateX(2px)' },
                                         '&:focus-visible': {
                                             outline: 'none',
                                             boxShadow: `0 0 0 2px ${theme.palette.primary.main}`,
                                         },
+                                        '@media (prefers-reduced-motion: reduce)': {
+                                            '&::before': { transition: 'none' },
+                                            '& .nav-icon, & .nav-label': { transition: 'none' },
+                                            '&:hover .nav-label': { transform: 'none' },
+                                        },
                                     }}
                                 >
-                                    {React.cloneElement(item.icon, { fontSize: 'small', sx: { fontSize: 18 } })}
-                                    <Typography component="span" variant="body2" sx={{ fontWeight: active ? 700 : 500 }}>
+                                    {React.cloneElement(item.icon, {
+                                        className: 'nav-icon',
+                                        fontSize: 'small',
+                                        sx: {
+                                            fontSize: 18,
+                                            color: active ? theme.palette.primary.light : 'inherit',
+                                        },
+                                    })}
+                                    <Typography component="span" variant="body2" className="nav-label" sx={{ fontWeight: active ? 700 : 500 }}>
                                         {item.label}
                                     </Typography>
                                 </Box>
@@ -222,7 +265,12 @@ export default function Navbar({ view, setView }) {
                             zIndex: 1300,
                             bgcolor: 'ink.main',
                             color: 'common.white',
-                            '&:hover': { bgcolor: 'ink.soft' },
+                            transition: 'transform 150ms ease-out, background-color 150ms ease-out',
+                            '&:hover': { bgcolor: 'ink.soft', transform: 'scale(1.04)' },
+                            '@media (prefers-reduced-motion: reduce)': {
+                                transition: 'background-color 150ms ease-out',
+                                '&:hover': { transform: 'none' },
+                            },
                         }}
                     >
                         <MenuIcon />

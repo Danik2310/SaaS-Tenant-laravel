@@ -13,6 +13,7 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import RestoreIcon from '@mui/icons-material/Restore';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { toast } from 'sonner';
+import { alpha, useTheme } from '@mui/material/styles';
 import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
@@ -60,8 +61,24 @@ const VIEW_TITLES = {
     impersonate: 'God Mode',
 };
 
+const viewMotionSx = {
+    '@keyframes dashboardViewIn': {
+        from: { opacity: 0, transform: 'translateY(8px)' },
+        to: { opacity: 1, transform: 'translateY(0)' },
+    },
+    '@keyframes dashboardViewFade': {
+        from: { opacity: 0 },
+        to: { opacity: 1 },
+    },
+    animation: 'dashboardViewIn 220ms cubic-bezier(0.16, 1, 0.3, 1) both',
+    '@media (prefers-reduced-motion: reduce)': {
+        animation: 'dashboardViewFade 140ms linear both',
+    },
+};
+
 export default function Dashboard() {
     const { user, permissions = [] } = useAuthContext();
+    const theme = useTheme();
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -412,13 +429,33 @@ export default function Dashboard() {
                 >
                     <Box sx={{ minWidth: 0 }}>
                         <Box component="nav" aria-label="Breadcrumb" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'text.secondary' }}>
-                            <Typography variant="caption" component="span">ShoppingLi</Typography>
+                            <Typography
+                                variant="caption"
+                                component="span"
+                                sx={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: 10, fontWeight: 700 }}
+                            >
+                                ShoppingLi
+                            </Typography>
                             <Typography variant="caption" component="span" aria-hidden="true">/</Typography>
-                            <Typography variant="caption" component="span" aria-current="page">Admin</Typography>
+                            <Typography
+                                variant="caption"
+                                component="span"
+                                aria-current="page"
+                                sx={{ textTransform: 'uppercase', letterSpacing: '0.12em', fontSize: 10, fontWeight: 700 }}
+                            >
+                                Admin
+                            </Typography>
                         </Box>
-                        <Typography variant="h5" component="h1" noWrap sx={{ mt: 0.25 }}>
+                        <Typography
+                            key={view}
+                            variant="h5"
+                            component="h1"
+                            noWrap
+                            sx={{ mt: 0.25, fontSize: { xs: 22, md: 25 }, ...viewMotionSx }}
+                        >
                             {VIEW_TITLES[view] ?? 'Dashboard'}
                         </Typography>
+                        <Box sx={{ mt: 1, width: 36, height: 2, borderRadius: 2, bgcolor: 'primary.main' }} />
                     </Box>
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
@@ -430,6 +467,10 @@ export default function Dashboard() {
                                     bgcolor: 'primary.main',
                                     color: 'primary.contrastText',
                                     fontSize: 14,
+                                    boxShadow: `0 0 0 3px ${alpha(theme.palette.primary.main, 0.14)}`,
+                                    transition: 'box-shadow 150ms ease-out',
+                                    '&:hover': { boxShadow: `0 0 0 5px ${alpha(theme.palette.primary.main, 0.18)}` },
+                                    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                                 }}
                             >
                                 {(user?.name || 'A').trim().charAt(0).toUpperCase()}
@@ -452,9 +493,15 @@ export default function Dashboard() {
                             sx={{
                                 borderColor: 'divider',
                                 color: 'text.primary',
+                                transition: 'border-color 150ms ease-out, background-color 150ms ease-out, transform 150ms ease-out',
                                 '&:hover': {
                                     borderColor: 'primary.main',
                                     bgcolor: 'action.hover',
+                                    transform: 'translateY(-1px)',
+                                },
+                                '@media (prefers-reduced-motion: reduce)': {
+                                    transition: 'border-color 150ms ease-out, background-color 150ms ease-out',
+                                    '&:hover': { transform: 'none' },
                                 },
                             }}
                         >
@@ -464,7 +511,7 @@ export default function Dashboard() {
                 </Box>
 
                 <Box component="main" sx={{ px: { xs: 2, md: 4 }, py: { xs: 2, md: 3 } }}>
-                    <Box sx={{ maxWidth: 1440, mx: 'auto' }}>
+                    <Box key={view} sx={{ maxWidth: 1440, mx: 'auto', ...viewMotionSx }}>
                         <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}><CircularProgress /></Box>}>
                         {error && (
                             <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2.5 }}>
