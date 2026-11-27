@@ -26,6 +26,7 @@ import Tooltip from '@mui/material/Tooltip';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import PersonIcon from '@mui/icons-material/Person';
+import { tableMotionSx } from '@/Components/tableMotion';
 
 export default function ActivityLog() {
     const [activities, setActivities] = useState([]);
@@ -130,7 +131,7 @@ export default function ActivityLog() {
                 <Chip
                     label={cell.getValue()}
                     size="small"
-                    sx={{ fontWeight: 600, bgcolor: '#f1f5f9', color: '#475569', textTransform: 'capitalize' }}
+                    sx={{ fontWeight: 600, bgcolor: 'action.hover', color: 'text.secondary', textTransform: 'capitalize' }}
                 />
             ),
         },
@@ -140,7 +141,7 @@ export default function ActivityLog() {
             header: 'Causer',
             Cell: ({ cell }) => (
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <PersonIcon sx={{ fontSize: 14, color: '#94a3b8' }} />
+                    <PersonIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
                     <Typography variant="body2" sx={{ fontSize: 13 }}>
                         {cell.getValue() || 'System'}
                     </Typography>
@@ -162,7 +163,15 @@ export default function ActivityLog() {
 
     return (
         <Box>
-            <Paper sx={{ p: 2, mb: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <Paper sx={{
+                p: 2,
+                mb: 3,
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                boxShadow: 'none',
+                ...tableMotionSx,
+            }}>
                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                     <FormControl size="small" sx={{ minWidth: 160 }}>
                         <InputLabel>Log Type</InputLabel>
@@ -245,34 +254,34 @@ export default function ActivityLog() {
                         <Table size="small">
                             <TableBody>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: '#475569' }}>ID</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>ID</TableCell>
                                     <TableCell>{selectedActivity.id}</TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Description</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Description</TableCell>
                                     <TableCell>{selectedActivity.description}</TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Log Name</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Log Name</TableCell>
                                     <TableCell>{selectedActivity.log_name}</TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Subject</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Subject</TableCell>
                                     <TableCell>{selectedActivity.subject_type || 'N/A'} #{selectedActivity.subject_id || 'N/A'}</TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Causer</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Causer</TableCell>
                                     <TableCell>{selectedActivity.causer_type || 'System'} #{selectedActivity.causer_id || '-'}</TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: '#475569' }}>Created</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Created</TableCell>
                                     <TableCell>{selectedActivity.created_at}</TableCell>
                                 </TableRow>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, color: '#475569', verticalAlign: 'top' }}>Properties</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary', verticalAlign: 'top' }}>Properties</TableCell>
                                     <TableCell>
                                         <Box sx={{
-                                            bgcolor: '#f8fafc',
+                                            bgcolor: 'background.default',
                                             p: 2,
                                             borderRadius: 1,
                                             fontFamily: 'monospace',

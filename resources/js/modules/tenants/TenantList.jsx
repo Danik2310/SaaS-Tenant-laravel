@@ -3,6 +3,7 @@ import { MaterialReactTable } from 'material-react-table';
 import axios from 'axios';
 import api from '@/services/api';
 import { useAuthContext } from '@/context/AuthContext';
+import { tableMotionSx, tableHeadCellSx, tableRowSx, iconButtonMotionSx } from '@/Components/tableMotion';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -606,12 +607,10 @@ export default function TenantList({
                                         disabled={action.disabled}
                                         onClick={(e) => { e.stopPropagation(); if (!action.disabled) action.onClick(); }}
                                         sx={{
-                                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                            border: 'none', bgcolor: 'transparent',
+                                            ...iconButtonMotionSx,
                                             cursor: action.disabled ? 'not-allowed' : 'pointer',
                                             opacity: action.disabled ? 0.4 : 1,
-                                            p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                            '&:hover': action.disabled ? {} : { bgcolor: 'action.hover' },
+                                            ...(action.disabled ? { '&:hover': {} } : {}),
                                         }}
                                     >
                                         {action.icon}
@@ -626,8 +625,9 @@ export default function TenantList({
                                             aria-label="More actions"
                                             onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(tenant); }}
                                             sx={{
+                                                ...iconButtonMotionSx,
                                                 color: canImpersonate ? 'text.secondary' : 'text.disabled',
-                                                ...(canImpersonate ? { '&:hover': { bgcolor: 'action.hover' } } : {}),
+                                                ...(canImpersonate ? {} : { cursor: 'default', '&:hover': {} }),
                                             }}
                                             disabled={!canImpersonate}
                                         >
@@ -641,14 +641,15 @@ export default function TenantList({
                 }}
                 renderEmptyRowsFallback={({ table }) => (
                     <Box sx={{ textAlign: 'center', py: 6 }}>
-                        <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                        <InboxIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                         <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                             {showDeleted ? 'No deleted tenants found.' : 'No tenants found. Create one to get started.'}
                         </Typography>
                     </Box>
                 )}
-                muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
-                muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                muiTablePaperProps={{ elevation: 0, sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', ...tableMotionSx } }}
+                muiTableHeadCellProps={{ sx: tableHeadCellSx }}
+                muiTableBodyRowProps={{ sx: tableRowSx }}
                 initialState={{ density: 'compact' }}
                 localization={{ toolbarSearchPlaceholder: 'Search by name, email, domain, or ID...' }}
             />

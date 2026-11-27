@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { MaterialReactTable } from 'material-react-table';
 import { toast } from 'sonner';
 import api from '../../../services/api';
-import { FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput } from '@/Components/FormElements';
+import { FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput } from '@/Components/AdminFormElements';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
@@ -23,6 +23,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 import { useAuthContext } from '@/context/AuthContext';
+import { tableMotionSx, tableHeadCellSx, tableRowSx, iconButtonMotionSx } from '@/Components/tableMotion';
 
 export default function RolePermissions() {
     const { permissions = [] } = useAuthContext();
@@ -275,12 +276,7 @@ export default function RolePermissions() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); setEditingRole(row.original); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={iconButtonMotionSx}
                             >
                                 <EditIcon fontSize="small" />
                             </Box>
@@ -291,12 +287,7 @@ export default function RolePermissions() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); setDeleteTargetRole(row.original); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: 'error.main',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={{ ...iconButtonMotionSx, color: 'error.main' }}
                             >
                                 <DeleteIcon fontSize="small" />
                             </Box>
@@ -354,12 +345,7 @@ export default function RolePermissions() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); setEditingPermission(row.original); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={iconButtonMotionSx}
                             >
                                 <EditIcon fontSize="small" />
                             </Box>
@@ -370,12 +356,7 @@ export default function RolePermissions() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); setDeleteTargetPermission(row.original); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: 'error.main',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={{ ...iconButtonMotionSx, color: 'error.main' }}
                             >
                                 <DeleteIcon fontSize="small" />
                             </Box>
@@ -388,7 +369,7 @@ export default function RolePermissions() {
 
     return (
         <>
-            <Paper sx={{ p: 2, mb: 2 }}>
+            <Paper sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, boxShadow: 'none', ...tableMotionSx }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={1.5}>
                     <Stack direction="row" spacing={1}>
                         {canViewRoles && (
@@ -396,11 +377,13 @@ export default function RolePermissions() {
                                 size="small"
                                 onClick={() => setTab('roles')}
                                 sx={{
-                                    bgcolor: tab === 'roles' ? 'primary.main' : 'grey.100',
+                                    bgcolor: tab === 'roles' ? 'primary.main' : 'action.hover',
                                     color: tab === 'roles' ? 'common.white' : 'text.secondary',
-                                    '&:hover': { bgcolor: tab === 'roles' ? 'primary.dark' : 'grey.200' },
+                                    '&:hover': { bgcolor: tab === 'roles' ? 'primary.dark' : 'background.default' },
                                     textTransform: 'none',
                                     fontWeight: tab === 'roles' ? 600 : 500,
+                                    transition: 'background-color 150ms ease-out, color 150ms ease-out',
+                                    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                                 }}
                             >
                                 Roles
@@ -411,11 +394,13 @@ export default function RolePermissions() {
                                 size="small"
                                 onClick={() => setTab('permissions')}
                                 sx={{
-                                    bgcolor: tab === 'permissions' ? 'primary.main' : 'grey.100',
+                                    bgcolor: tab === 'permissions' ? 'primary.main' : 'action.hover',
                                     color: tab === 'permissions' ? 'common.white' : 'text.secondary',
-                                    '&:hover': { bgcolor: tab === 'permissions' ? 'primary.dark' : 'grey.200' },
+                                    '&:hover': { bgcolor: tab === 'permissions' ? 'primary.dark' : 'background.default' },
                                     textTransform: 'none',
                                     fontWeight: tab === 'permissions' ? 600 : 500,
+                                    transition: 'background-color 150ms ease-out, color 150ms ease-out',
+                                    '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
                                 }}
                             >
                                 Permissions
@@ -467,14 +452,15 @@ export default function RolePermissions() {
                         positionGlobalFilter="left"
                         renderEmptyRowsFallback={() => (
                             <Box sx={{ textAlign: 'center', py: 6 }}>
-                                <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                                <InboxIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                                 <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                     No roles found. Create one to get started.
                                 </Typography>
                             </Box>
                         )}
-                        muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
-                        muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                        muiTablePaperProps={{ elevation: 0, sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', ...tableMotionSx } }}
+                        muiTableHeadCellProps={{ sx: tableHeadCellSx }}
+                        muiTableBodyRowProps={{ sx: tableRowSx }}
                         initialState={{ density: 'compact' }}
                         localization={{ toolbarSearchPlaceholder: 'Search roles...' }}
                     />
@@ -512,14 +498,15 @@ export default function RolePermissions() {
                         positionGlobalFilter="left"
                         renderEmptyRowsFallback={() => (
                             <Box sx={{ textAlign: 'center', py: 6 }}>
-                                <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                                <InboxIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                                 <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                     No permissions found. Create one to get started.
                                 </Typography>
                             </Box>
                         )}
-                        muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
-                        muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                        muiTablePaperProps={{ elevation: 0, sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', ...tableMotionSx } }}
+                        muiTableHeadCellProps={{ sx: tableHeadCellSx }}
+                        muiTableBodyRowProps={{ sx: tableRowSx }}
                         initialState={{ density: 'compact' }}
                         localization={{ toolbarSearchPlaceholder: 'Search permissions...' }}
                     />
@@ -530,7 +517,7 @@ export default function RolePermissions() {
             <Dialog open={showRoleDialog} onClose={() => setShowRoleDialog(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Create Role
-                    <IconButton onClick={() => setShowRoleDialog(false)} size="small"><CloseIcon fontSize="small" /></IconButton>
+                    <Tooltip title="Close"><IconButton onClick={() => setShowRoleDialog(false)} size="small" aria-label="Close" sx={iconButtonMotionSx}><CloseIcon fontSize="small" /></IconButton></Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     <RoleForm onSubmit={handleCreateRole} onCancel={() => setShowRoleDialog(false)} embedded />
@@ -541,7 +528,7 @@ export default function RolePermissions() {
             <Dialog open={!!editingRole} onClose={() => setEditingRole(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Edit Role
-                    <IconButton onClick={() => setEditingRole(null)} size="small"><CloseIcon fontSize="small" /></IconButton>
+                    <Tooltip title="Close"><IconButton onClick={() => setEditingRole(null)} size="small" aria-label="Close" sx={iconButtonMotionSx}><CloseIcon fontSize="small" /></IconButton></Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     {editingRole && (
@@ -554,7 +541,7 @@ export default function RolePermissions() {
             <Dialog open={showPermissionDialog} onClose={() => setShowPermissionDialog(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Create Permission
-                    <IconButton onClick={() => setShowPermissionDialog(false)} size="small"><CloseIcon fontSize="small" /></IconButton>
+                    <Tooltip title="Close"><IconButton onClick={() => setShowPermissionDialog(false)} size="small" aria-label="Close" sx={iconButtonMotionSx}><CloseIcon fontSize="small" /></IconButton></Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     <PermissionForm onSubmit={handleCreatePermission} onCancel={() => setShowPermissionDialog(false)} embedded />
@@ -565,7 +552,7 @@ export default function RolePermissions() {
             <Dialog open={!!editingPermission} onClose={() => setEditingPermission(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Edit Permission
-                    <IconButton onClick={() => setEditingPermission(null)} size="small"><CloseIcon fontSize="small" /></IconButton>
+                    <Tooltip title="Close"><IconButton onClick={() => setEditingPermission(null)} size="small" aria-label="Close" sx={iconButtonMotionSx}><CloseIcon fontSize="small" /></IconButton></Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     {editingPermission && (

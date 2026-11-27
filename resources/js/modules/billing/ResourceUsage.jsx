@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import api from '@/services/api';
 import ExportButton from '@/Components/ExportButton';
+import { tableMotionSx, iconButtonMotionSx } from '@/Components/tableMotion';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -32,6 +33,18 @@ import { Line } from 'react-chartjs-2';
 
 ChartJS.register(CategoryScale, Filler, LineElement, LinearScale, PointElement, ChartTooltip);
 
+const refreshPulseSx = {
+    fontSize: 10,
+    color: 'success.main',
+    animation: 'usageRefreshPing 420ms cubic-bezier(0.16, 1, 0.3, 1) 1 both',
+    '@keyframes usageRefreshPing': {
+        '0%': { opacity: 0.35, transform: 'scale(0.6)' },
+        '60%': { opacity: 1, transform: 'scale(1.25)' },
+        '100%': { opacity: 1, transform: 'scale(1)' },
+    },
+    '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+};
+
 function UsageBar({ current, limit, label, color = 'primary.main' }) {
     const hasLimit = limit !== null && limit !== undefined;
     const percentage = hasLimit && limit > 0 ? Math.min((current / limit) * 100, 100) : 0;
@@ -58,7 +71,7 @@ function UsageBar({ current, limit, label, color = 'primary.main' }) {
                         sx={{
                             height: 8,
                             borderRadius: 4,
-                            bgcolor: 'grey.100',
+                            bgcolor: 'action.hover',
                             '& .MuiLinearProgress-bar': {
                                 bgcolor: barColor,
                                 borderRadius: 4,
@@ -71,7 +84,7 @@ function UsageBar({ current, limit, label, color = 'primary.main' }) {
                 <LinearProgress
                     variant="determinate"
                     value={0}
-                    sx={{ height: 8, borderRadius: 4, bgcolor: 'grey.100' }}
+                    sx={{ height: 8, borderRadius: 4, bgcolor: 'action.hover' }}
                 />
             )}
         </Box>
@@ -183,7 +196,7 @@ function UsageSparklineCard({ tenantId }) {
                         size="small"
                         aria-label={open ? 'Hide usage history' : 'Show usage history'}
                         onClick={() => setOpen(!open)}
-                        sx={{ p: 0.2 }}
+                        sx={{ ...iconButtonMotionSx, p: 0.2 }}
                     >
                         {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
                     </IconButton>
@@ -210,7 +223,15 @@ function ServerSummaryCard({ server, metrics }) {
     const totalStorage = metrics?.reduce((s, m) => s + (m.storage_kb || 0), 0) || 0;
 
     return (
-        <Paper sx={{ p: 3, boxShadow: 1, borderRadius: 1, mb: 3 }}>
+        <Paper sx={{
+            p: 3,
+            mb: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            boxShadow: 'none',
+            ...tableMotionSx,
+        }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', mb: 2 }}>
                 Server Overview
             </Typography>
@@ -257,7 +278,7 @@ function ServerSummaryCard({ server, metrics }) {
                                     sx={{
                                         height: 10,
                                         borderRadius: 5,
-                                        bgcolor: 'grey.100',
+                                        bgcolor: 'action.hover',
                                         '& .MuiLinearProgress-bar': {
                                             bgcolor: server.disk_pct > 85 ? 'error.main' : server.disk_pct > 65 ? 'warning.main' : 'success.main',
                                             borderRadius: 5,
@@ -273,7 +294,7 @@ function ServerSummaryCard({ server, metrics }) {
     );
 }
 
-function TenantUsageCard({ metric }) {
+function TenantUsageCard({ metric, index = 0 }) {
     const usage = metric?.usage;
     const tenant = metric?.tenant || {};
     const planLimits = metric?.limits || {};
@@ -291,7 +312,23 @@ function TenantUsageCard({ metric }) {
     };
 
     return (
-        <Paper sx={{ p: 3, boxShadow: 1, borderRadius: 1 }}>
+        <Paper sx={{
+            p: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            boxShadow: 'none',
+            transition: 'box-shadow 180ms ease-out, transform 180ms ease-out',
+            '&:hover': { boxShadow: 2, transform: 'translateY(-2px)' },
+            ...tableMotionSx,
+            animationDelay: `${Math.min(index, 4) * 40}ms`,
+            '@media (prefers-reduced-motion: reduce)': {
+                animation: 'tableViewFade 140ms linear both',
+                animationDelay: '0ms',
+                transition: 'box-shadow 180ms ease-out',
+                '&:hover': { transform: 'none' },
+            },
+        }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <Avatar
                     sx={(theme) => ({
@@ -398,6 +435,7 @@ export default function ResourceUsage() {
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [refreshPulse, setRefreshPulse] = useState(0);
 
     const fetchMetrics = useCallback(async () => {
         setLoading(true);
@@ -410,6 +448,7 @@ export default function ResourceUsage() {
             if (res.data.server) {
                 setServer(res.data.server);
             }
+            setRefreshPulse((pulse) => pulse + 1);
         } catch (err) {
             console.error('Failed to fetch resource usage:', err);
         } finally {
@@ -439,17 +478,7 @@ export default function ResourceUsage() {
                             Resource Usage
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <FiberManualRecordIcon
-                                sx={{
-                                    fontSize: 10,
-                                    color: 'success.main',
-                                    animation: 'pulse 2s infinite',
-                                    '@keyframes pulse': {
-                                        '0%, 100%': { opacity: 1 },
-                                        '50%': { opacity: 0.4 },
-                                    },
-                                }}
-                            />
+                            <FiberManualRecordIcon key={refreshPulse} sx={refreshPulseSx} />
                             <Typography
                                 variant="caption"
                                 sx={{ color: 'success.main', fontWeight: 600 }}
@@ -476,7 +505,7 @@ export default function ResourceUsage() {
                 </Grid>
             ) : metrics.length === 0 ? (
                 <Paper sx={{ p: 6, textAlign: 'center', boxShadow: 1 }}>
-                    <StorageIcon sx={{ fontSize: 48, color: 'grey.300', mb: 2 }} />
+                    <StorageIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
                     <Typography
                         variant="body1"
                         sx={{ fontWeight: 600, color: 'text.secondary', mb: 1 }}
@@ -496,14 +525,14 @@ export default function ResourceUsage() {
                 <>
                     <ServerSummaryCard server={server} metrics={metrics} />
                     <Grid container spacing={3}>
-                        {metrics.map((m) => (
+                        {metrics.map((m, index) => (
                             <Grid item xs={12} sm={6} md={6} lg={4} key={m.id}>
-                                <TenantUsageCard metric={m} />
+                                <TenantUsageCard metric={m} index={index} />
                             </Grid>
                         ))}
                     </Grid>
                     {total > 0 && (
-                        <Paper sx={{ mt: 3, boxShadow: 1 }}>
+                        <Paper sx={{ mt: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2, boxShadow: 'none' }}>
                             <TablePagination
                                 component="div"
                                 count={total}

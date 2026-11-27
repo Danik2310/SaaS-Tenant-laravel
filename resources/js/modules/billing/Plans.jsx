@@ -6,6 +6,7 @@ import FeatureFlagPicker from '@/modules/billing/FeatureFlagPicker';
 import FeatureFlags from '@/modules/billing/FeatureFlags';
 import { useAuthContext } from '@/context/AuthContext';
 import { currenciesForScope, loadCurrencyCatalog } from '@/shared/currencies';
+import { tableMotionSx, tableHeadCellSx, tableRowSx, iconButtonMotionSx } from '@/Components/tableMotion';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
@@ -302,7 +303,7 @@ function PlanForm({ plan, featureDefinitions, currencyOptions = [], baseCurrency
                                                 bgcolor: summary.server_disk_pct > 85 ? 'error.main' : summary.server_disk_pct > 65 ? 'warning.main' : 'success.main',
                                                 height: 6,
                                                 borderRadius: 1,
-                                                transition: 'width 0.3s',
+                                                transition: 'background-color 150ms ease-out',
                                             }} />
                                         </Box>
                                     )}
@@ -614,9 +615,14 @@ export default function Plans() {
                         onClick={() => setMode('create')}
                         sx={{
                             bgcolor: 'primary.main',
-                            '&:hover': { bgcolor: 'primary.dark' },
                             fontWeight: 600,
                             fontSize: '13px',
+                            transition: 'background-color 150ms ease-out, transform 150ms ease-out',
+                            '&:hover': { bgcolor: 'primary.dark', transform: 'translateY(-1px)' },
+                            '@media (prefers-reduced-motion: reduce)': {
+                                transition: 'background-color 150ms ease-out',
+                                '&:hover': { transform: 'none' },
+                            },
                         }}
                     >
                         + New Plan
@@ -653,14 +659,15 @@ export default function Plans() {
                     positionGlobalFilter="left"
                     renderEmptyRowsFallback={() => (
                         <Box sx={{ textAlign: 'center', py: 6 }}>
-                            <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                            <InboxIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                             <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                 No plans found. Create one to get started.
                             </Typography>
                         </Box>
                     )}
-                    muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
-                    muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                    muiTablePaperProps={{ elevation: 0, sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', ...tableMotionSx } }}
+                    muiTableHeadCellProps={{ sx: tableHeadCellSx }}
+                    muiTableBodyRowProps={{ sx: tableRowSx }}
                     initialState={{ density: 'compact' }}
                     localization={{ toolbarSearchPlaceholder: 'Search plans...' }}
                     renderRowActions={({ row }) => {
@@ -673,12 +680,7 @@ export default function Plans() {
                                             component="button"
                                             aria-label="Edit"
                                             onClick={(e) => { e.stopPropagation(); setEditingPlan(plan); }}
-                                            sx={{
-                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                                p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                                '&:hover': { bgcolor: 'action.hover' },
-                                            }}
+                                            sx={iconButtonMotionSx}
                                         >
                                             <EditIcon fontSize="small" />
                                         </Box>
@@ -690,24 +692,23 @@ export default function Plans() {
                                             component="button"
                                             aria-label="Delete"
                                             onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, plan }); }}
-                                            sx={{
-                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                                border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                                p: 0.5, borderRadius: 1, color: 'error.main',
-                                                '&:hover': { bgcolor: 'action.hover' },
-                                            }}
+                                            sx={{ ...iconButtonMotionSx, color: 'error.main' }}
                                         >
                                             <DeleteIcon fontSize="small" />
                                         </Box>
                                     </Tooltip>
                                 )}
                                 {canEdit && (
-                                    <IconButton
-                                        size="small"
-                                        onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(plan); }}
-                                    >
-                                        <MoreVertIcon fontSize="small" />
-                                    </IconButton>
+                                    <Tooltip title="More actions">
+                                        <IconButton
+                                            size="small"
+                                            aria-label="More actions"
+                                            onClick={(e) => { e.stopPropagation(); setActionMenuAnchor(e.currentTarget); setActionMenuRow(plan); }}
+                                            sx={iconButtonMotionSx}
+                                        >
+                                            <MoreVertIcon fontSize="small" />
+                                        </IconButton>
+                                    </Tooltip>
                                 )}
                             </Box>
                         );

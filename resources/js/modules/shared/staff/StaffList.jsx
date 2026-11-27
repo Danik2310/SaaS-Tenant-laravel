@@ -23,6 +23,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import LockIcon from '@mui/icons-material/Lock';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/context/AuthContext';
+import { tableMotionSx, tableHeadCellSx, tableRowSx, iconButtonMotionSx } from '@/Components/tableMotion';
 
 export default function StaffList() {
     const { user, permissions = [] } = useAuthContext();
@@ -285,12 +286,7 @@ export default function StaffList() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); handleEditClick(row.original); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={iconButtonMotionSx}
                             >
                                 <EditIcon fontSize="small" />
                             </Box>
@@ -301,12 +297,7 @@ export default function StaffList() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); handlePermissionsClick(row.original); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: 'text.secondary',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={iconButtonMotionSx}
                             >
                                 <AdminPanelSettingsIcon fontSize="small" />
                             </Box>
@@ -317,12 +308,7 @@ export default function StaffList() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); handleToggleStatus(row.original); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: row.original.is_active ? 'error.main' : 'success.main',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={{ ...iconButtonMotionSx, color: row.original.is_active ? 'error.main' : 'success.main' }}
                             >
                                 {row.original.is_active ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
                             </Box>
@@ -333,12 +319,7 @@ export default function StaffList() {
                             <Box
                                 component="button"
                                 onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, staff: row.original }); }}
-                                sx={{
-                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    border: 'none', bgcolor: 'transparent', cursor: 'pointer',
-                                    p: 0.5, borderRadius: 1, color: 'error.main',
-                                    '&:hover': { bgcolor: 'action.hover' },
-                                }}
+                                sx={{ ...iconButtonMotionSx, color: 'error.main' }}
                             >
                                 <DeleteIcon fontSize="small" />
                             </Box>
@@ -363,9 +344,14 @@ export default function StaffList() {
                         onClick={() => setShowCreateDialog(true)}
                         sx={{
                             bgcolor: 'primary.main',
-                            '&:hover': { bgcolor: 'primary.dark' },
                             fontWeight: 600,
                             fontSize: '13px',
+                            transition: 'background-color 150ms ease-out, transform 150ms ease-out',
+                            '&:hover': { bgcolor: 'primary.dark', transform: 'translateY(-1px)' },
+                            '@media (prefers-reduced-motion: reduce)': {
+                                transition: 'background-color 150ms ease-out',
+                                '&:hover': { transform: 'none' },
+                            },
                         }}
                     >
                         + Create
@@ -405,14 +391,15 @@ export default function StaffList() {
                     positionGlobalFilter="left"
                     renderEmptyRowsFallback={() => (
                         <Box sx={{ textAlign: 'center', py: 6 }}>
-                            <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                            <InboxIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                             <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                 No staff members found. Create one to get started.
                             </Typography>
                         </Box>
                     )}
-                    muiTablePaperProps={{ elevation: 2, sx: { borderRadius: 2 } }}
-                    muiTableHeadCellProps={{ sx: { fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' } }}
+                    muiTablePaperProps={{ elevation: 0, sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', ...tableMotionSx } }}
+                    muiTableHeadCellProps={{ sx: tableHeadCellSx }}
+                    muiTableBodyRowProps={{ sx: tableRowSx }}
                     initialState={{ density: 'compact' }}
                     localization={{ toolbarSearchPlaceholder: 'Search by name or email...' }}
                 />
@@ -422,9 +409,11 @@ export default function StaffList() {
             <Dialog open={showCreateDialog} onClose={() => setShowCreateDialog(false)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Create Staff Member
-                    <IconButton onClick={() => setShowCreateDialog(false)} size="small">
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
+                    <Tooltip title="Close">
+                        <IconButton onClick={() => setShowCreateDialog(false)} size="small" aria-label="Close" sx={iconButtonMotionSx}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     <StaffForm
@@ -439,9 +428,11 @@ export default function StaffList() {
             <Dialog open={!!editingStaff} onClose={() => setEditingStaff(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Edit Staff Member
-                    <IconButton onClick={() => setEditingStaff(null)} size="small">
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
+                    <Tooltip title="Close">
+                        <IconButton onClick={() => setEditingStaff(null)} size="small" aria-label="Close" sx={iconButtonMotionSx}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     {editingStaff && (
@@ -469,9 +460,11 @@ export default function StaffList() {
             <Dialog open={!!permissionsTarget} onClose={() => setPermissionsTarget(null)} maxWidth="sm" fullWidth>
                 <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     Manage Roles — {permissionsTarget?.name}
-                    <IconButton onClick={() => setPermissionsTarget(null)} size="small">
-                        <CloseIcon fontSize="small" />
-                    </IconButton>
+                    <Tooltip title="Close">
+                        <IconButton onClick={() => setPermissionsTarget(null)} size="small" aria-label="Close" sx={iconButtonMotionSx}>
+                            <CloseIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
                 </DialogTitle>
                 <DialogContent sx={{ p: 2 }}>
                     {permissionsTarget && (

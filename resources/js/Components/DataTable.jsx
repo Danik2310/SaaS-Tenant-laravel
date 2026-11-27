@@ -28,6 +28,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import { tableMotionSx, tableHeadCellSx, tableRowSx, iconButtonMotionSx, emptyStateSx } from './tableMotion';
 
 function RowSkeleton({ columns }) {
     return (
@@ -171,7 +172,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'edit') {
                         return (
                             <Tooltip key={idx} title="Edit">
-                                <IconButton size="small" sx={{ color: 'primary.main' }} onClick={() => onEdit(row)}>
+                                <IconButton size="small" sx={{ ...iconButtonMotionSx, color: 'primary.main' }} onClick={() => onEdit(row)}>
                                     <EditIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -180,7 +181,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'toggle') {
                         return (
                             <Tooltip key={idx} title={row.is_active ? 'Deactivate' : 'Activate'}>
-                                <IconButton size="small" sx={{ color: action.isActive ? 'error.main' : 'success.main' }} onClick={() => onToggleStatus(row)}>
+                                <IconButton size="small" sx={{ ...iconButtonMotionSx, color: action.isActive ? 'error.main' : 'success.main' }} onClick={() => onToggleStatus(row)}>
                                     {action.isActive ? <BlockIcon fontSize="small" /> : <CheckCircleIcon fontSize="small" />}
                                 </IconButton>
                             </Tooltip>
@@ -189,7 +190,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'view') {
                         return (
                             <Tooltip key={idx} title="View">
-                                <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => onView(row)}>
+                                <IconButton size="small" sx={{ ...iconButtonMotionSx, color: 'text.secondary' }} onClick={() => onView(row)}>
                                     <VisibilityIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -198,7 +199,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'impersonate') {
                         return (
                             <Tooltip key={idx} title="Impersonate">
-                                <IconButton size="small" sx={{ color: 'secondary.main' }} onClick={() => onImpersonate(row)}>
+                                <IconButton size="small" sx={{ ...iconButtonMotionSx, color: 'secondary.main' }} onClick={() => onImpersonate(row)}>
                                     <LoginIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -209,7 +210,7 @@ const DataTable = React.memo(function DataTable({
                         return (
                             <React.Fragment key={idx}>
                                 <Tooltip title="More actions">
-                                <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={(e) => handleMenuOpen(e, row)}>
+                                <IconButton size="small" sx={{ ...iconButtonMotionSx, color: 'text.secondary' }} onClick={(e) => handleMenuOpen(e, row)}>
                                     <MoreVertIcon fontSize="small" />
                                 </IconButton>
                                 </Tooltip>
@@ -237,7 +238,7 @@ const DataTable = React.memo(function DataTable({
                     if (action.type === 'delete') {
                         return (
                             <Tooltip key={idx} title="Delete">
-                                <IconButton size="small" sx={{ color: 'error.main' }} onClick={() => onDelete(row)}>
+                                <IconButton size="small" sx={{ ...iconButtonMotionSx, color: 'error.main' }} onClick={() => onDelete(row)}>
                                     <DeleteIcon fontSize="small" />
                                 </IconButton>
                             </Tooltip>
@@ -265,7 +266,14 @@ const DataTable = React.memo(function DataTable({
     );
 
     return (
-        <Paper sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+        <Paper sx={{
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            boxShadow: 'none',
+            overflow: 'hidden',
+            ...tableMotionSx,
+        }}>
             {(onRefresh || lastUpdated) && (
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', px: 2, pt: 1, gap: 1 }}>
                     {lastUpdated && (
@@ -275,7 +283,7 @@ const DataTable = React.memo(function DataTable({
                     )}
                     {onRefresh && (
                         <Tooltip title="Refresh">
-                            <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={onRefresh}>
+                            <IconButton size="small" sx={{ ...iconButtonMotionSx, color: 'text.secondary' }} onClick={onRefresh}>
                                 <RefreshIcon fontSize="small" />
                             </IconButton>
                         </Tooltip>
@@ -285,7 +293,7 @@ const DataTable = React.memo(function DataTable({
             <TableContainer>
                 <Table size="small">
                     <TableHead>
-                        <TableRow sx={{ borderBottom: '1px solid', borderColor: 'grey.100', bgcolor: 'grey.50' }}>
+                        <TableRow sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'background.default' }}>
                             {enableSelection && (
                                 <TableCell sx={{ width: 48, py: 1.5 }}>
                                     <Checkbox
@@ -299,28 +307,14 @@ const DataTable = React.memo(function DataTable({
                             {columns.map((col) => (
                                 <TableCell
                                     key={col.accessorKey}
-                                    sx={{
-                                        fontWeight: 600,
-                                        fontSize: '12px',
-                                        color: 'text.secondary',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
-                                        py: 1.5,
-                                    }}
+                                    sx={tableHeadCellSx}
                                 >
                                     {col.header}
                                 </TableCell>
                             ))}
                             {(onEdit || onDelete || onImpersonate || onView || onToggleStatus || rowMenuActions.length > 0) && (
                                 <TableCell
-                                    sx={{
-                                        fontWeight: 600,
-                                        fontSize: '12px',
-                                        color: 'text.secondary',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
-                                        py: 1.5,
-                                    }}
+                                    sx={tableHeadCellSx}
                                 >
                                     Actions
                                 </TableCell>
@@ -334,8 +328,8 @@ const DataTable = React.memo(function DataTable({
                             ))
                         ) : displayData.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={colCount} sx={{ textAlign: 'center', py: 6 }}>
-                                    <InboxIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                                <TableCell colSpan={colCount} sx={emptyStateSx}>
+                                    <InboxIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                                     <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                                         {emptyMessage}
                                     </Typography>
@@ -347,9 +341,9 @@ const DataTable = React.memo(function DataTable({
                                     key={row.id ?? idx}
                                     sx={{
                                         borderBottom: '1px solid',
-                                        borderColor: 'grey.100',
+                                        borderColor: 'divider',
                                         '&:last-child td, &:last-child th': { border: 0 },
-                                        '&:hover': { bgcolor: 'grey.50' },
+                                        ...tableRowSx,
                                     }}
                                 >
                                     {enableSelection && (
@@ -385,7 +379,7 @@ const DataTable = React.memo(function DataTable({
                 rowsPerPage={currentRowsPerPage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 rowsPerPageOptions={rowsPerPageOptions}
-                sx={{ borderTop: '1px solid', borderColor: 'grey.100' }}
+                sx={{ borderTop: '1px solid', borderColor: 'divider' }}
             />
         </Paper>
     );
