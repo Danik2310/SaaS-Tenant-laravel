@@ -4,13 +4,20 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
+import Fade from '@mui/material/Fade';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import { useTheme } from '@mui/material/styles';
+import { dialogSx } from '@/Components/surfaceMotion';
 import { toast } from 'sonner';
 import api from '../../../services/api';
-import { FormInput, ButtonPrimary, ButtonSecondary, FormActions, SelectInput, CheckboxInput } from '@/Components/FormElements';
+import { FormInput, ButtonPrimary, ButtonSecondary, FormActions, SelectInput, CheckboxInput } from '@/Components/AdminFormElements';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 
 function ToggleInputWithButton({ type, value, onChange, placeholder, show, onToggle, ariaLabel, style, onFocus, onBlur }) {
+    const theme = useTheme();
+
     return (
         <div style={{ position: 'relative' }}>
             <input
@@ -27,27 +34,29 @@ function ToggleInputWithButton({ type, value, onChange, placeholder, show, onTog
                     border: 'none',
                     outline: 'none',
                     font: 'inherit',
+                    color: theme.palette.text.primary,
                     ...style,
                 }}
             />
-            <button
-                type="button"
-                onClick={onToggle}
-                aria-label={ariaLabel}
-                style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#64748b',
-                    padding: '4px',
-                }}
-            >
-                {show ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-            </button>
+            <Tooltip title={ariaLabel}>
+                <IconButton
+                    type="button"
+                    onClick={onToggle}
+                    aria-label={ariaLabel}
+                    size="small"
+                    sx={{
+                        position: 'absolute',
+                        right: 4,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'text.secondary',
+                        transition: 'color 150ms ease-out, background-color 150ms ease-out',
+                        '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
+                    }}
+                >
+                    {show ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                </IconButton>
+            </Tooltip>
         </div>
     );
 }
@@ -142,8 +151,17 @@ export default function PaymentMethodModal({ open, onClose, editingPayment, fetc
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-            <DialogTitle sx={{ fontWeight: 700, fontSize: '16px', color: '#0f172a', borderBottom: '1px solid #e2e8f0', pb: 1 }}>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="sm"
+            fullWidth
+            className="editorial-dialog"
+            TransitionComponent={Fade}
+            transitionDuration={180}
+            sx={dialogSx}
+        >
+            <DialogTitle sx={{ fontWeight: 700, fontSize: '16px', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
                 {editingPayment ? 'Edit Payment Method' : 'Add Payment Method'}
             </DialogTitle>
             <DialogContent sx={{ pt: 2, pb: 1 }}>
@@ -210,7 +228,7 @@ export default function PaymentMethodModal({ open, onClose, editingPayment, fetc
                     />
                 </FormInput>
             </DialogContent>
-            <DialogActions sx={{ p: 2, borderTop: '1px solid #f1f5f9' }}>
+            <DialogActions sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
                 <ButtonSecondary onClick={onClose} disabled={loading}>
                     Cancel
                 </ButtonSecondary>

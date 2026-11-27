@@ -3,6 +3,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Fade from '@mui/material/Fade';
 import IconButton from '@mui/material/IconButton';
 import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
@@ -33,6 +34,9 @@ import BusinessIcon from '@mui/icons-material/Business';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { useAuthContext } from '@/context/AuthContext';
+import { alpha, useTheme } from '@mui/material/styles';
+import { dialogSx, surfaceMotionSx } from '@/Components/surfaceMotion';
+import { iconButtonMotionSx } from '@/Components/tableMotion';
 import { toast } from 'sonner';
 import api from '@/services/api';
 
@@ -59,6 +63,14 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
     const [newDomain, setNewDomain] = useState('');
     const [addingDomain, setAddingDomain] = useState(false);
     const [removingDomainId, setRemovingDomainId] = useState(null);
+    const theme = useTheme();
+    const softPrimary = alpha(theme.palette.primary.main, 0.08);
+    const softPrimaryStrong = alpha(theme.palette.primary.main, 0.14);
+    const softSuccess = alpha(theme.palette.success.main, 0.08);
+    const softSuccessStrong = alpha(theme.palette.success.main, 0.14);
+    const softWarning = alpha(theme.palette.warning.main, 0.08);
+    const softError = alpha(theme.palette.error.main, 0.08);
+    const softErrorStrong = alpha(theme.palette.error.main, 0.14);
 
     const handleCopy = async (domain, index) => {
         try {
@@ -123,19 +135,35 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
         ? canRestore
         : canImpersonate || canRunMigrations || canViewDatabase;
 
+    const quickActionSx = (tone, soft) => ({
+        borderRadius: 2,
+        cursor: 'pointer',
+        border: '1px solid',
+        borderColor: 'divider',
+        transition: 'border-color 180ms ease-out, background-color 180ms ease-out, transform 180ms ease-out',
+        '&:hover': { borderColor: tone, bgcolor: soft, transform: 'translateY(-2px)' },
+        '@media (prefers-reduced-motion: reduce)': {
+            transition: 'border-color 180ms ease-out, background-color 180ms ease-out',
+            '&:hover': { borderColor: tone, bgcolor: soft, transform: 'none' },
+        },
+    });
+
     return (
         <Dialog
             open={!!tenant}
             onClose={onClose}
             maxWidth="md"
             fullWidth
-            sx={{ '& .MuiDialog-paper': { borderRadius: 3 } }}
+            className="editorial-dialog"
+            TransitionComponent={Fade}
+            transitionDuration={180}
+            sx={dialogSx}
         >
             <DialogTitle sx={{ p: 0 }}>
                 <Box
                     sx={{
-                        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                        color: 'white',
+                        background: `linear-gradient(135deg, ${theme.palette.ink.main} 0%, ${theme.palette.ink.soft} 100%)`,
+                        color: 'common.white',
                         px: 3,
                         py: 3,
                         display: 'flex',
@@ -148,7 +176,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                             sx={{
                                 width: 56,
                                 height: 56,
-                                bgcolor: isDeleted ? '#64748b' : isActive ? '#22c55e' : '#ef4444',
+                                bgcolor: isDeleted ? 'text.disabled' : isActive ? 'success.main' : 'error.main',
                                 fontSize: 24,
                                 fontWeight: 700,
                             }}
@@ -164,8 +192,16 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                     label={isDeleted ? 'Deleted' : isActive ? 'Active' : 'Suspended'}
                                     size="small"
                                     sx={{
-                                        bgcolor: isDeleted ? 'rgba(100,116,139,0.2)' : isActive ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
-                                        color: isDeleted ? '#cbd5e1' : isActive ? '#86efac' : '#fca5a5',
+                                        bgcolor: isDeleted
+                                            ? alpha(theme.palette.common.white, 0.16)
+                                            : isActive
+                                                ? alpha(theme.palette.success.main, 0.2)
+                                                : alpha(theme.palette.error.main, 0.2),
+                                        color: isDeleted
+                                            ? 'common.white'
+                                            : isActive
+                                                ? 'success.light'
+                                                : 'error.light',
                                         fontWeight: 600,
                                         fontSize: 12,
                                         fontStyle: isDeleted ? 'italic' : 'normal',
@@ -178,7 +214,15 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                         </Box>
                     </Box>
                     <Tooltip title="Close">
-                        <IconButton onClick={onClose} sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}>
+                        <IconButton
+                            onClick={onClose}
+                            sx={{
+                                ...iconButtonMotionSx,
+                                color: 'common.white',
+                                bgcolor: alpha(theme.palette.common.white, 0.15),
+                                '&:hover': { bgcolor: alpha(theme.palette.common.white, 0.25), transform: 'none' },
+                            }}
+                        >
                             <CloseIcon />
                         </IconButton>
                     </Tooltip>
@@ -188,37 +232,37 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
             <DialogContent sx={{ p: 3 }}>
                 <Grid container spacing={3}>
                     <Grid item xs={12} sm={12} md={6} lg={6}>
-                        <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
+                        <Card variant="outlined" sx={{ borderRadius: 2, height: '100%', ...surfaceMotionSx }}>
                             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
                                     Tenant Information
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <EmailIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
-                                        <Typography variant="body2" sx={{ color: '#334155' }}>{tenant.email}</Typography>
+                                        <EmailIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                        <Typography variant="body2" sx={{ color: 'text.primary' }}>{tenant.email}</Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <StarIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
-                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                        <StarIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                             Plan: <strong>{planName}</strong>
-                                            {planSlug && <Chip label={planSlug} size="small" sx={{ ml: 1, height: 20, fontSize: 11, bgcolor: '#e2e8f0', color: '#475569' }} />}
+                                            {planSlug && <Chip label={planSlug} size="small" sx={{ ml: 1, height: 20, fontSize: 11, bgcolor: 'divider', color: 'text.secondary' }} />}
                                         </Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <CalendarTodayIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
-                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                        <CalendarTodayIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                             Created: {new Date(tenant.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                                         </Typography>
                                     </Box>
                                     {tenant.is_on_trial && (
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             {tenant.trial_has_expired ? (
-                                                <CancelIcon sx={{ fontSize: 16, color: '#ef4444' }} />
+                                                <CancelIcon sx={{ fontSize: 16, color: 'error.main' }} />
                                             ) : (
-                                                <CheckCircleIcon sx={{ fontSize: 16, color: '#22c55e' }} />
+                                                <CheckCircleIcon sx={{ fontSize: 16, color: 'success.main' }} />
                                             )}
-                                            <Typography variant="body2" sx={{ color: tenant.trial_has_expired ? '#ef4444' : '#854d0e' }}>
+                                            <Typography variant="body2" sx={{ color: tenant.trial_has_expired ? 'error.main' : 'warning.dark' }}>
                                                 Trial {tenant.trial_has_expired ? 'expired' : 'active (temporary full access)'}
                                                 {tenant.trial_ends_at && ` — ends ${new Date(tenant.trial_ends_at).toLocaleDateString()}`}
                                             </Typography>
@@ -230,13 +274,13 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                     </Grid>
 
                     <Grid item xs={12} sm={12} md={6} lg={6}>
-                        <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
+                        <Card variant="outlined" sx={{ borderRadius: 2, height: '100%', ...surfaceMotionSx }}>
                             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
                                     Domains
                                 </Typography>
                                 {(!tenant.all_domains || tenant.all_domains.length === 0) ? (
-                                    <Typography variant="body2" sx={{ color: '#94a3b8', fontStyle: 'italic' }}>
+                                    <Typography variant="body2" sx={{ color: 'text.disabled', fontStyle: 'italic' }}>
                                         No domains configured
                                     </Typography>
                                 ) : (
@@ -248,8 +292,9 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'space-between',
-                                                    bgcolor: '#f8fafc',
-                                                    border: '1px solid #e2e8f0',
+                                                    bgcolor: 'background.default',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
                                                     borderRadius: 1.5,
                                                     px: 1.5,
                                                     py: 1,
@@ -259,7 +304,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, flex: 1 }}>
                                                     {d.is_primary && (
                                                         <Tooltip title="Primary domain">
-                                                            <StarIcon sx={{ fontSize: 16, color: '#f59e0b' }} />
+                                                            <StarIcon sx={{ fontSize: 16, color: 'warning.main' }} />
                                                         </Tooltip>
                                                     )}
                                                     <Typography
@@ -267,8 +312,8 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                         sx={{
                                                             fontSize: 13,
                                                             fontFamily: 'monospace',
-                                                            color: '#0f172a',
-                                                            bgcolor: '#f1f5f9',
+                                                            color: 'text.primary',
+                                                            bgcolor: 'action.hover',
                                                             px: 1,
                                                             py: 0.3,
                                                             borderRadius: 0.5,
@@ -285,7 +330,12 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                         <IconButton
                                                             size="small"
                                                             onClick={() => handleCopy(d.domain, idx)}
-                                                            sx={{ color: copiedIndex === idx ? '#22c55e' : '#64748b', bgcolor: '#f1f5f9', '&:hover': { bgcolor: '#e2e8f0' } }}
+                                                            sx={{
+                                                                ...iconButtonMotionSx,
+                                                                color: copiedIndex === idx ? 'success.main' : 'text.secondary',
+                                                                bgcolor: 'action.hover',
+                                                                '&:hover': { bgcolor: 'divider', transform: 'translateY(-1px)' },
+                                                            }}
                                                         >
                                                             <ContentCopyIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
@@ -296,7 +346,12 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                             href={`http://${d.domain}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            sx={{ color: '#3b82f6', bgcolor: '#eff6ff', '&:hover': { bgcolor: '#dbeafe' } }}
+                                                            sx={{
+                                                                ...iconButtonMotionSx,
+                                                                color: 'primary.main',
+                                                                bgcolor: softPrimary,
+                                                                '&:hover': { bgcolor: softPrimaryStrong, transform: 'translateY(-1px)' },
+                                                            }}
                                                         >
                                                             <LaunchIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
@@ -308,7 +363,12 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                                 data-testid={`remove-domain-${d.domain}`}
                                                                 disabled={removingDomainId === d.id}
                                                                 onClick={() => handleRemoveDomain(d)}
-                                                                sx={{ color: '#ef4444', bgcolor: '#fef2f2', '&:hover': { bgcolor: '#fee2e2' } }}
+                                                                sx={{
+                                                                    ...iconButtonMotionSx,
+                                                                    color: 'error.main',
+                                                                    bgcolor: softError,
+                                                                    '&:hover': { bgcolor: softErrorStrong, transform: 'translateY(-1px)' },
+                                                                }}
                                                             >
                                                                 <DeleteOutlineIcon sx={{ fontSize: 16 }} />
                                                             </IconButton>
@@ -346,7 +406,12 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                                 type="submit"
                                                 data-testid="add-domain-submit"
                                                 disabled={addingDomain || !newDomain.trim()}
-                                                sx={{ color: '#22c55e', bgcolor: '#f0fdf4', '&:hover': { bgcolor: '#dcfce7' } }}
+                                                sx={{
+                                                    ...iconButtonMotionSx,
+                                                    color: 'success.main',
+                                                    bgcolor: softSuccess,
+                                                    '&:hover': { bgcolor: softSuccessStrong, transform: 'translateY(-1px)' },
+                                                }}
                                             >
                                                 <AddIcon />
                                             </IconButton>
@@ -358,33 +423,33 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                     </Grid>
 
                     <Grid item xs={12} sm={12} md={12} lg={12}>
-                        <Card variant="outlined" sx={{ borderRadius: 2, height: '100%' }}>
+                        <Card variant="outlined" sx={{ borderRadius: 2, height: '100%', ...surfaceMotionSx }}>
                             <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2 }}>
                                     Personal & Business Information
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <BusinessIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
-                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                        <BusinessIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                             Company: <strong>{tenant.company_name || '—'}</strong>
                                         </Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <PersonIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
-                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                        <PersonIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                             Contact: <strong>{formatContactName(tenant)}</strong>
                                         </Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <PhoneIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
-                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                        <PhoneIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
+                                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                             Phone: <strong>{tenant.phone || '—'}</strong>
                                         </Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                                        <LocationOnIcon sx={{ fontSize: 16, color: '#94a3b8', mt: 0.3 }} />
-                                        <Typography variant="body2" sx={{ color: '#334155' }}>
+                                        <LocationOnIcon sx={{ fontSize: 16, color: 'text.disabled', mt: 0.3 }} />
+                                        <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                             Address: <strong>{formatAddress(tenant)}</strong>
                                         </Typography>
                                     </Box>
@@ -395,7 +460,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
 
                     <Grid item xs={12} sm={12} md={12} lg={12}>
                         <Divider sx={{ my: 0.5 }} />
-                        <Typography variant="subtitle2" sx={{ color: '#64748b', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2, mt: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 1, fontSize: 11, mb: 2, mt: 1 }}>
                             {isDeleted ? 'Actions' : 'Quick Actions'}
                         </Typography>
                         {showQuickActions ? (
@@ -404,23 +469,17 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                     canRestore && (
                                     <Grid item xs={12} sm={4} md={4} lg={4}>
                                         <Card
-                                            sx={{
-                                                borderRadius: 2,
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s',
-                                                border: '1px solid #e2e8f0',
-                                                '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
-                                            }}
+                                            sx={quickActionSx('success.main', softSuccess)}
                                             onClick={() => onRestore && onRestore(tenant.id)}
                                         >
                                             <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                                <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                <Avatar sx={{ bgcolor: 'success.main', width: 40, height: 40, mx: 'auto', mb: 1 }}>
                                                     <RestoreIcon />
                                                 </Avatar>
-                                                <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                                     Restore Tenant
                                                 </Typography>
-                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                                                     Reactivate this tenant
                                                 </Typography>
                                             </CardContent>
@@ -432,23 +491,17 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                         {canImpersonate && (
                                         <Grid item xs={12} sm={4} md={4} lg={4}>
                                             <Card
-                                                sx={{
-                                                    borderRadius: 2,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    border: '1px solid #e2e8f0',
-                                                    '&:hover': { borderColor: '#a78bfa', bgcolor: '#f5f3ff', transform: 'translateY(-2px)' },
-                                                }}
+                                                sx={quickActionSx('primary.main', softPrimary)}
                                                 onClick={() => onImpersonate(tenant)}
                                             >
                                                 <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                                    <Avatar sx={{ bgcolor: '#8b5cf6', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                    <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40, mx: 'auto', mb: 1 }}>
                                                         <PersonIcon />
                                                     </Avatar>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                                         Impersonate
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                                                         Log in as tenant admin
                                                     </Typography>
                                                 </CardContent>
@@ -458,23 +511,17 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                         {canViewDatabase && (
                                         <Grid item xs={12} sm={4} md={4} lg={4}>
                                             <Card
-                                                sx={{
-                                                    borderRadius: 2,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    border: '1px solid #e2e8f0',
-                                                    '&:hover': { borderColor: '#22c55e', bgcolor: '#f0fdf4', transform: 'translateY(-2px)' },
-                                                }}
+                                                sx={quickActionSx('success.main', softSuccess)}
                                                 onClick={() => onViewDatabase(tenant)}
                                             >
                                                 <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                                    <Avatar sx={{ bgcolor: '#22c55e', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                    <Avatar sx={{ bgcolor: 'success.main', width: 40, height: 40, mx: 'auto', mb: 1 }}>
                                                         <StorageIcon />
                                                     </Avatar>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                                         Database Info
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                                                         View connection details
                                                     </Typography>
                                                 </CardContent>
@@ -484,23 +531,17 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                         {canRunMigrations && (
                                         <Grid item xs={12} sm={4} md={4} lg={4}>
                                             <Card
-                                                sx={{
-                                                    borderRadius: 2,
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    border: '1px solid #e2e8f0',
-                                                    '&:hover': { borderColor: '#f59e0b', bgcolor: '#fffbeb', transform: 'translateY(-2px)' },
-                                                }}
+                                                sx={quickActionSx('warning.main', softWarning)}
                                                 onClick={() => onRunMigrations(tenant)}
                                             >
                                                 <CardContent sx={{ textAlign: 'center', py: 2.5, '&:last-child': { pb: 2.5 } }}>
-                                                    <Avatar sx={{ bgcolor: '#f59e0b', width: 40, height: 40, mx: 'auto', mb: 1 }}>
+                                                    <Avatar sx={{ bgcolor: 'warning.main', width: 40, height: 40, mx: 'auto', mb: 1 }}>
                                                         <SyncIcon />
                                                     </Avatar>
-                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b' }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                                         Run Migrations
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                                                         Execute pending migrations
                                                     </Typography>
                                                 </CardContent>
@@ -511,7 +552,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
                                 )}
                             </Grid>
                         ) : (
-                            <Typography variant="body2" sx={{ color: '#94a3b8' }}>
+                            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
                                 You don't have permission to perform actions on this tenant.
                             </Typography>
                         )}
@@ -520,7 +561,7 @@ export default function DomainModal({ tenant, onClose, onImpersonate, onViewData
             </DialogContent>
 
             <DialogActions sx={{ p: 2.5, pt: 0, justifyContent: 'flex-end' }}>
-                <Button onClick={onClose} variant="outlined" sx={{ color: '#64748b', borderColor: '#cbd5e1', '&:hover': { borderColor: '#94a3b8', bgcolor: '#f8fafc' } }}>
+                <Button onClick={onClose} variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider', transition: 'background-color 150ms ease-out, border-color 150ms ease-out', '&:hover': { borderColor: 'text.disabled', bgcolor: 'background.default' } }}>
                     Close
                 </Button>
             </DialogActions>

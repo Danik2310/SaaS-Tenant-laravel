@@ -5,7 +5,9 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import Fade from '@mui/material/Fade';
 import TextField from '@mui/material/TextField';
+import { dialogSx } from './surfaceMotion';
 import Typography from '@mui/material/Typography';
 
 export default function ConfirmDialog({
@@ -31,8 +33,17 @@ export default function ConfirmDialog({
   };
 
   return (
-    <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
-      <DialogTitle>{title}</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      maxWidth="xs"
+      fullWidth
+      className="editorial-dialog"
+      TransitionComponent={Fade}
+      transitionDuration={180}
+      sx={dialogSx}
+    >
+      <DialogTitle sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>{title}</DialogTitle>
       <DialogContent>
         <DialogContentText component="div">
           {message}
@@ -57,14 +68,15 @@ export default function ConfirmDialog({
           )}
         </DialogContentText>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel}>{cancelLabel || 'Cancel'}</Button>
+      <DialogActions sx={{ borderTop: '1px solid', borderColor: 'divider', p: 2 }}>
+        <Button onClick={onCancel} sx={{ transition: 'background-color 150ms ease-out' }}>{cancelLabel || 'Cancel'}</Button>
         <Button
           onClick={handleConfirm}
           variant="contained"
           color="error"
           autoFocus={!requiresTypedConfirmation}
           disabled={requiresTypedConfirmation && !isMatch}
+          sx={{ fontWeight: 700, transition: 'background-color 150ms ease-out' }}
         >
           {confirmLabel || 'Confirm'}
         </Button>

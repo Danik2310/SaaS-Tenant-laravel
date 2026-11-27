@@ -3,6 +3,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Fade from '@mui/material/Fade';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -16,6 +17,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningIcon from '@mui/icons-material/Warning';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import { alpha, useTheme } from '@mui/material/styles';
+import { dialogSx, surfaceMotionSx } from '@/Components/surfaceMotion';
+import { iconButtonMotionSx } from '@/Components/tableMotion';
 import { toast } from 'sonner';
 
 import api from '../../../services/api';
@@ -34,6 +38,7 @@ function formatLimit(value) {
 }
 
 export default function ActivateTrialModal({ open, tenants, onClose, onActivated }) {
+    const theme = useTheme();
     const { formatMoney } = useMoney();
     const [plans, setPlans] = useState([]);
     const [selectedPlanId, setSelectedPlanId] = useState(null);
@@ -114,21 +119,24 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
             onClose={submitting ? undefined : onClose}
             maxWidth="sm"
             fullWidth
-            sx={{ '& .MuiDialog-paper': { borderRadius: 2 } }}
+            className="editorial-dialog"
+            TransitionComponent={Fade}
+            transitionDuration={180}
+            sx={dialogSx}
         >
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {step === 'confirm' ? (
-                        <WarningIcon sx={{ color: '#f59e0b' }} />
+                        <WarningIcon sx={{ color: 'warning.main' }} />
                     ) : (
-                        <RocketLaunchIcon sx={{ color: '#8b5cf6' }} />
+                        <RocketLaunchIcon sx={{ color: 'primary.main' }} />
                     )}
                     <Typography variant="h6" sx={{ fontWeight: 600 }}>
                         {step === 'confirm' ? 'Confirm Activation' : 'Activate & Assign Plan'}
                     </Typography>
                 </Box>
                 <Tooltip title="Close">
-                    <IconButton onClick={onClose} size="small" disabled={submitting}>
+                    <IconButton onClick={onClose} size="small" disabled={submitting} sx={iconButtonMotionSx}>
                         <CloseIcon />
                     </IconButton>
                 </Tooltip>
@@ -136,15 +144,15 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
 
             <DialogContent>
                 {singleTenant && (
-                    <Typography variant="body2" sx={{ mb: 2, color: '#64748b' }}>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
                         Activating <strong>{singleTenant.name}</strong> from{' '}
-                        <Chip label="Trial" size="small" sx={{ bgcolor: '#fef9c3', color: '#854d0e', fontSize: 11, height: 20 }} />
+                        <Chip label="Trial" size="small" sx={{ bgcolor: 'action.hover', color: 'warning.dark', fontSize: 11, height: 20 }} />
                         {' → '}
-                        <Chip label="Active" size="small" sx={{ bgcolor: '#dcfce7', color: '#166534', fontSize: 11, height: 20, fontWeight: 600 }} />
+                        <Chip label="Active" size="small" sx={{ bgcolor: 'action.hover', color: 'success.dark', fontSize: 11, height: 20, fontWeight: 700 }} />
                     </Typography>
                 )}
                 {isBulk && (
-                    <Typography variant="body2" sx={{ mb: 2, color: '#64748b' }}>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
                         Activating <strong>{tenants.length} tenant(s)</strong> from Trial to Active
                     </Typography>
                 )}
@@ -156,13 +164,13 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
                 )}
 
                 {!loading && plans.length === 0 && (
-                    <Box sx={{ bgcolor: '#fef9c3', color: '#854d0e', p: 2, borderRadius: 1, fontSize: 13 }}>
+                    <Box sx={{ bgcolor: 'action.hover', color: 'warning.dark', border: '1px solid', borderColor: 'warning.main', p: 2, borderRadius: 2, fontSize: 13 }}>
                         No plans available. Please create a plan first.
                     </Box>
                 )}
 
                 {!loading && plans.length > 0 && step === 'select' && (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, ...surfaceMotionSx }}>
                         {plans.map((plan) => {
                             const isCurrent = plan.id === currentPlanId;
                             const isSelected = plan.id === selectedPlanId;
@@ -175,29 +183,31 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
                                         p: 2,
                                         borderRadius: 2,
                                         cursor: isCurrent ? 'default' : 'pointer',
-                                        border: isSelected
-                                            ? '2px solid #8b5cf6'
+                                        border: '1px solid',
+                                        borderWidth: isSelected || isCurrent ? 2 : 1,
+                                        borderColor: isSelected ? 'primary.main' : 'divider',
+                                        bgcolor: isSelected
+                                            ? alpha(theme.palette.primary.main, 0.08)
                                             : isCurrent
-                                                ? '2px solid #e2e8f0'
-                                                : '1px solid #e2e8f0',
-                                        bgcolor: isSelected ? '#f5f3ff' : isCurrent ? '#f8fafc' : '#ffffff',
+                                                ? 'background.default'
+                                                : 'background.paper',
                                         opacity: isCurrent ? 0.7 : 1,
-                                        transition: 'all 0.15s',
+                                        transition: 'border-color 180ms ease-out, background-color 180ms ease-out',
                                     }}
                                 >
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#0f172a' }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary' }}>
                                                 {plan.name}
                                             </Typography>
                                             {isCurrent && (
-                                                <Chip label="Current" size="small" sx={{ bgcolor: '#dbeafe', color: '#1e40af', fontSize: 10, height: 20 }} />
+                                                <Chip label="Current" size="small" sx={{ bgcolor: 'action.hover', color: 'primary.dark', fontSize: 10, height: 20 }} />
                                             )}
                                             {isSelected && !isCurrent && (
-                                                <CheckCircleIcon sx={{ color: '#8b5cf6', fontSize: 18 }} />
+                                                <CheckCircleIcon sx={{ color: 'success.main', fontSize: 18 }} />
                                             )}
                                         </Box>
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                                             {plan.price > 0 ? `${formatMoney(plan.price)}/mo` : 'Free'}
                                         </Typography>
                                     </Box>
@@ -209,7 +219,7 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
                                                 label={`${formatLimit(plan[row.key])} ${row.label}`}
                                                 size="small"
                                                 variant="outlined"
-                                                sx={{ fontSize: 11, borderColor: '#e2e8f0', color: '#64748b' }}
+                                                sx={{ fontSize: 11, borderColor: 'divider', color: 'text.secondary' }}
                                             />
                                         ))}
                                     </Box>
@@ -223,25 +233,25 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
                     <Box>
                         {singleTenant?.plan && LIMIT_ROWS.some(r => singleTenant.plan[r.key] !== selectedPlan[r.key]) && (
                             <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#0f172a', mb: 1 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }}>
                                     Plan Comparison
                                 </Typography>
-                                <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
+                                <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
                                     {LIMIT_ROWS.map(row => {
                                         const oldVal = singleTenant.plan[row.key];
                                         const newVal = selectedPlan[row.key];
                                         const changed = oldVal !== newVal;
                                         return (
-                                            <Box key={row.key} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1, borderBottom: '1px solid #f1f5f9', bgcolor: changed ? '#fffbeb' : 'transparent' }}>
-                                                <Typography variant="body2" sx={{ color: '#64748b', fontSize: 13 }}>{row.label}</Typography>
+                                            <Box key={row.key} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', bgcolor: changed ? alpha(theme.palette.warning.main, 0.08) : 'transparent' }}>
+                                                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: 13 }}>{row.label}</Typography>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Typography variant="body2" sx={{ color: '#94a3b8', fontSize: 13, textDecoration: changed ? 'line-through' : 'none' }}>
+                                                    <Typography variant="body2" sx={{ color: 'text.disabled', fontSize: 13, textDecoration: changed ? 'line-through' : 'none' }}>
                                                         {formatLimit(oldVal)}
                                                     </Typography>
                                                     {changed && (
                                                         <>
-                                                            <Typography variant="body2" sx={{ color: '#94a3b8' }}>→</Typography>
-                                                            <Typography variant="body2" sx={{ color: '#0f172a', fontWeight: 700, fontSize: 13 }}>
+                                                            <Typography variant="body2" sx={{ color: 'text.disabled' }}>→</Typography>
+                                                            <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 700, fontSize: 13 }}>
                                                                 {formatLimit(newVal)}
                                                             </Typography>
                                                         </>
@@ -265,7 +275,7 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
                                     </Typography>
                                     <Box sx={{ maxHeight: 160, overflow: 'auto', mt: 1 }}>
                                         {tenants.map(t => (
-                                            <Typography key={t.id} variant="body2" sx={{ py: 0.3, borderBottom: '1px solid #fef9c3', fontSize: 13 }}>
+                                            <Typography key={t.id} variant="body2" sx={{ py: 0.3, borderBottom: '1px solid', borderColor: 'divider', fontSize: 13 }}>
                                                 • {t.name}
                                             </Typography>
                                         ))}
@@ -274,7 +284,7 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
                             ) : (
                                 <Typography variant="body2" sx={{ mt: 1 }}>
                                     Activate <strong>{singleTenant?.name}</strong> and assign plan{' '}
-                                    <Chip label={selectedPlan.name} size="small" sx={{ bgcolor: '#dbeafe', color: '#1e40af', fontSize: 11, height: 20, fontWeight: 700 }} />
+                                    <Chip label={selectedPlan.name} size="small" sx={{ bgcolor: 'action.hover', color: 'primary.dark', fontSize: 11, height: 20, fontWeight: 700 }} />
                                     ?
                                 </Typography>
                             )}
@@ -286,7 +296,7 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
             <DialogActions sx={{ p: 2, pt: 0, gap: 1 }}>
                 {step === 'confirm' ? (
                     <>
-                        <Button onClick={handleBack} disabled={submitting} sx={{ color: '#64748b' }}>
+                        <Button onClick={handleBack} disabled={submitting} sx={{ color: 'text.secondary', transition: 'background-color 150ms ease-out' }}>
                             Back
                         </Button>
                         <Button
@@ -294,21 +304,21 @@ export default function ActivateTrialModal({ open, tenants, onClose, onActivated
                             variant="contained"
                             disabled={submitting}
                             color="success"
-                            sx={{ fontWeight: 600 }}
+                            sx={{ fontWeight: 700, transition: 'background-color 150ms ease-out' }}
                         >
                             {submitting ? 'Activating...' : 'Confirm Activation'}
                         </Button>
                     </>
                 ) : (
                     <>
-                        <Button onClick={onClose} variant="outlined" sx={{ color: '#64748b', borderColor: '#cbd5e1' }}>
+                        <Button onClick={onClose} variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider', transition: 'background-color 150ms ease-out, border-color 150ms ease-out' }}>
                             Cancel
                         </Button>
                         <Button
                             onClick={handleContinue}
                             variant="contained"
                             disabled={!selectedPlanId || selectedPlanId === currentPlanId}
-                            sx={{ fontWeight: 600, bgcolor: '#8b5cf6', '&:hover': { bgcolor: '#7c3aed' } }}
+                            sx={{ fontWeight: 700, bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' }, transition: 'background-color 150ms ease-out' }}
                         >
                             Continue
                         </Button>

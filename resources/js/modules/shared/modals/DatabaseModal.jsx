@@ -3,6 +3,7 @@ import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
+import Fade from '@mui/material/Fade';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
@@ -18,6 +19,8 @@ import DnsIcon from '@mui/icons-material/Dns';
 import RouterIcon from '@mui/icons-material/Router';
 import NumbersIcon from '@mui/icons-material/Numbers';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import { dialogSx, surfaceMotionSx } from '@/Components/surfaceMotion';
+import { iconButtonMotionSx } from '@/Components/tableMotion';
 import { toast } from 'sonner';
 
 import api from '../../../services/api';
@@ -36,19 +39,19 @@ function InfoRow({ icon, label, value, copyable }) {
     };
 
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, borderBottom: '1px solid #f1f5f9' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {icon}
                 <Box>
-                    <Typography variant="caption" sx={{ color: '#94a3b8', fontSize: 11 }}>{label}</Typography>
-                    <Typography variant="body2" sx={{ color: '#0f172a', fontFamily: value?.includes('.') || value?.includes(':') ? 'monospace' : 'inherit', fontWeight: 500 }}>
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: 11 }}>{label}</Typography>
+                    <Typography variant="body2" sx={{ color: 'text.primary', fontFamily: value?.includes('.') || value?.includes(':') ? 'monospace' : 'inherit', fontWeight: 500 }}>
                         {value}
                     </Typography>
                 </Box>
             </Box>
             {copyable && value && (
                 <Tooltip title={copied ? 'Copied!' : 'Copy'}>
-                    <IconButton size="small" onClick={handleCopy} sx={{ color: copied ? '#22c55e' : '#94a3b8' }}>
+                    <IconButton size="small" onClick={handleCopy} sx={{ ...iconButtonMotionSx, color: copied ? 'success.main' : 'text.secondary' }}>
                         <ContentCopyIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                 </Tooltip>
@@ -85,14 +88,23 @@ export default function DatabaseModal({ tenant, onClose }) {
     }, [tenant]);
 
     return (
-        <Dialog open={!!tenant} onClose={onClose} maxWidth="sm" fullWidth sx={{ '& .MuiDialog-paper': { borderRadius: 2 } }}>
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
+        <Dialog
+            open={!!tenant}
+            onClose={onClose}
+            maxWidth="sm"
+            fullWidth
+            className="editorial-dialog"
+            TransitionComponent={Fade}
+            transitionDuration={180}
+            sx={dialogSx}
+        >
+            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <StorageIcon sx={{ color: '#22c55e' }} />
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>Database Info</Typography>
-                    {tenant && <Chip label={tenant.name} size="small" sx={{ bgcolor: '#f1f5f9', color: '#475569', fontSize: 12 }} />}
+                    <StorageIcon sx={{ color: 'success.main' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>Database Info</Typography>
+                    {tenant && <Chip label={tenant.name} size="small" sx={{ bgcolor: 'action.hover', color: 'text.secondary', fontSize: 12 }} />}
                 </Box>
-                <Tooltip title="Close"><IconButton onClick={onClose} size="small"><CloseIcon /></IconButton></Tooltip>
+                <Tooltip title="Close"><IconButton onClick={onClose} size="small" sx={iconButtonMotionSx}><CloseIcon /></IconButton></Tooltip>
             </DialogTitle>
 
             <DialogContent>
@@ -100,25 +112,25 @@ export default function DatabaseModal({ tenant, onClose }) {
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={28} /></Box>
                 )}
                 {error && (
-                    <Box sx={{ bgcolor: '#fef2f2', color: '#dc2626', p: 2, borderRadius: 1, fontSize: 13 }}>{error}</Box>
+                    <Box sx={{ bgcolor: 'action.hover', color: 'error.main', border: '1px solid', borderColor: 'error.main', p: 2, borderRadius: 2, fontSize: 13 }}>{error}</Box>
                 )}
                 {!loading && !error && dbInfo && (
-                    <Card variant="outlined" sx={{ borderRadius: 2, mt: 1 }}>
+                    <Card variant="outlined" sx={{ borderRadius: 2, mt: 1, ...surfaceMotionSx }}>
                         <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                            <InfoRow icon={<StorageIcon sx={{ fontSize: 18, color: '#3b82f6' }} />} label="Database Name" value={dbInfo.name} copyable />
-                            <InfoRow icon={<DnsIcon sx={{ fontSize: 18, color: '#8b5cf6' }} />} label="Connection" value={dbInfo.connection} />
-                            <InfoRow icon={<RouterIcon sx={{ fontSize: 18, color: '#f59e0b' }} />} label="Host" value={dbInfo.host} copyable />
-                            <InfoRow icon={<NumbersIcon sx={{ fontSize: 18, color: '#ef4444' }} />} label="Port" value={dbInfo.port} copyable />
+                            <InfoRow icon={<StorageIcon sx={{ fontSize: 18, color: 'primary.main' }} />} label="Database Name" value={dbInfo.name} copyable />
+                            <InfoRow icon={<DnsIcon sx={{ fontSize: 18, color: 'secondary.main' }} />} label="Connection" value={dbInfo.connection} />
+                            <InfoRow icon={<RouterIcon sx={{ fontSize: 18, color: 'warning.main' }} />} label="Host" value={dbInfo.host} copyable />
+                            <InfoRow icon={<NumbersIcon sx={{ fontSize: 18, color: 'error.main' }} />} label="Port" value={dbInfo.port} copyable />
                         </CardContent>
                     </Card>
                 )}
                 {!loading && !error && !dbInfo && (
-                    <Typography sx={{ color: '#94a3b8', py: 2, textAlign: 'center' }}>No database information available.</Typography>
+                    <Typography sx={{ color: 'text.disabled', py: 2, textAlign: 'center' }}>No database information available.</Typography>
                 )}
             </DialogContent>
 
             <DialogActions sx={{ p: 2, pt: 0 }}>
-                <Button onClick={onClose} variant="outlined" sx={{ color: '#64748b', borderColor: '#cbd5e1' }}>Close</Button>
+                <Button onClick={onClose} variant="outlined" sx={{ color: 'text.secondary', borderColor: 'divider', transition: 'background-color 150ms ease-out, border-color 150ms ease-out' }}>Close</Button>
             </DialogActions>
         </Dialog>
     );

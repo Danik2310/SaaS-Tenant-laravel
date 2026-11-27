@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
+import Fade from '@mui/material/Fade';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
@@ -28,6 +29,9 @@ import EditIcon from '@mui/icons-material/Edit';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
+import { alpha, useTheme } from '@mui/material/styles';
+import { dialogSx } from '@/Components/surfaceMotion';
+import { iconButtonMotionSx, tableHeadCellSx, tableMotionSx, tableRowSx } from '@/Components/tableMotion';
 import { toast } from 'sonner';
 import api from '@/services/api';
 import { useMoney, currencySymbol } from '@/shared/money';
@@ -47,13 +51,6 @@ const STATUS_OPTIONS = [
     { label: 'Refunded', value: 'refunded' },
 ];
 
-const STATUS_STYLES = {
-    completed: { bgcolor: '#dcfce7', color: '#166534' },
-    pending:   { bgcolor: '#fef9c3', color: '#854d0e' },
-    failed:    { bgcolor: '#fee2e2', color: '#991b1b' },
-    refunded:  { bgcolor: '#f1f5f9', color: '#64748b' },
-};
-
 const EMPTY_FILTERS = { status: '', method: '', dateFrom: '', dateTo: '' };
 
 const EMPTY_FORM = {
@@ -66,6 +63,7 @@ const EMPTY_FORM = {
 };
 
 export default function PaymentHistoryDialog({ open, subscription, onClose }) {
+    const theme = useTheme();
     const money = useMoney();
     const { formatMoney } = money;
     const { permissions = [] } = useAuthContext();
@@ -130,6 +128,13 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
             return true;
         });
     }, [payments, filters]);
+
+    const statusStyles = useMemo(() => ({
+        completed: { bgcolor: alpha(theme.palette.success.main, 0.12), color: theme.palette.success.dark },
+        pending: { bgcolor: alpha(theme.palette.warning.main, 0.12), color: theme.palette.warning.dark },
+        failed: { bgcolor: alpha(theme.palette.error.main, 0.12), color: theme.palette.error.dark },
+        refunded: { bgcolor: theme.palette.action.hover, color: theme.palette.text.secondary },
+    }), [theme]);
 
     const activeFilterCount = useMemo(() => {
         let count = 0;
@@ -215,21 +220,32 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
         .reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+            className="editorial-dialog"
+            TransitionComponent={Fade}
+            transitionDuration={180}
+            sx={dialogSx}
+        >
+            <DialogTitle sx={{ m: 0, p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid', borderColor: 'divider' }}>
                 <Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                         Payment History
                     </Typography>
                     {subscription && (
-                        <Typography variant="body2" sx={{ color: '#64748b', mt: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
                             {subscription.tenant_name} — {subscription.plan_name}
                         </Typography>
                     )}
                 </Box>
-                <IconButton onClick={onClose} size="small">
-                    <CloseIcon fontSize="small" />
-                </IconButton>
+                <Tooltip title="Close">
+                    <IconButton onClick={onClose} size="small" aria-label="Close" sx={iconButtonMotionSx}>
+                        <CloseIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
             </DialogTitle>
 
             <DialogContent sx={{ p: 0 }}>
@@ -240,9 +256,9 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                             icon={<AttachMoneyIcon sx={{ fontSize: 16 }} />}
                             label={`Total Paid: ${formatMoney(totalPaid)}`}
                             size="small"
-                            sx={{ bgcolor: '#dcfce7', color: '#166534', fontWeight: 600 }}
+                            sx={{ bgcolor: 'success.light', color: 'success.dark', fontWeight: 600 }}
                         />
-                        <Typography variant="body2" sx={{ color: '#64748b' }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                             {filteredPayments.length} of {payments.length} payment{payments.length !== 1 ? 's' : ''}
                         </Typography>
                     </Box>
@@ -252,7 +268,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                             size="small"
                             startIcon={<AddIcon />}
                             onClick={() => { setShowForm(true); setEditingPayment(null); setForm(EMPTY_FORM); }}
-                            sx={{ bgcolor: '#22c55e', '&:hover': { bgcolor: '#16a34a' }, fontWeight: 600, fontSize: '13px' }}
+                            sx={{ bgcolor: 'success.main', '&:hover': { bgcolor: 'success.dark' }, fontWeight: 600, fontSize: '13px', transition: 'background-color 150ms ease-out' }}
                         >
                             Record Payment
                         </Button>
@@ -261,8 +277,8 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
 
                 {/* Filter controls */}
                 {payments.length > 0 && !showForm && (
-                    <Box sx={{ px: 2, pb: 1.5, display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid #e2e8f0' }}>
-                        <FilterListIcon sx={{ fontSize: 18, color: '#94a3b8' }} />
+                    <Box sx={{ px: 2, pb: 1.5, display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', borderBottom: '1px solid', borderColor: 'divider' }}>
+                        <FilterListIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
                         <FormControl size="small" sx={{ minWidth: 120 }}>
                             <InputLabel>Status</InputLabel>
                             <Select value={filters.status} label="Status" onChange={handleFilterChange('status')}>
@@ -304,7 +320,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                                 size="small"
                                 startIcon={<ClearIcon />}
                                 onClick={clearFilters}
-                                sx={{ color: '#64748b', textTransform: 'none', fontSize: 12 }}
+                                sx={{ color: 'text.secondary', textTransform: 'none', fontSize: 12, transition: 'background-color 150ms ease-out' }}
                             >
                                 Clear ({activeFilterCount})
                             </Button>
@@ -314,12 +330,12 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
 
                 {/* Record / Edit payment form */}
                 {showForm && (
-                    <Box component="form" onSubmit={handleSubmit} sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 1.5, borderBottom: '1px solid #e2e8f0' }}>
+                    <Box component="form" onSubmit={handleSubmit} sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                 {editingPayment ? 'Edit Payment' : 'Record Payment'}
                             </Typography>
-                            <Button size="small" onClick={handleCancelEdit} sx={{ textTransform: 'none', color: '#64748b' }}>
+                            <Button size="small" onClick={handleCancelEdit} sx={{ textTransform: 'none', color: 'text.secondary', transition: 'background-color 150ms ease-out' }}>
                                 Cancel
                             </Button>
                         </Box>
@@ -406,17 +422,17 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                     </Box>
                 ) : payments.length === 0 ? (
                     <Box sx={{ textAlign: 'center', py: 6 }}>
-                        <AttachMoneyIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                        <AttachMoneyIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                         <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                             No payments recorded yet.
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#94a3b8', mt: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: 'text.disabled', mt: 0.5 }}>
                             Click "Record Payment" to add the first payment.
                         </Typography>
                     </Box>
                 ) : filteredPayments.length === 0 ? (
                     <Box sx={{ textAlign: 'center', py: 6 }}>
-                        <FilterListIcon sx={{ fontSize: 48, color: 'grey.300', mb: 1 }} />
+                        <FilterListIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
                         <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                             No payments match the current filters.
                         </Typography>
@@ -425,45 +441,45 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                         </Button>
                     </Box>
                 ) : (
-                    <TableContainer component={Paper} elevation={0} sx={{ mx: 2, mb: 2, border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                    <TableContainer component={Paper} elevation={0} sx={{ mx: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2, ...tableMotionSx }}>
                         <Table size="small">
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Date</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Amount</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Method</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Reference</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Status</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase' }}>Notes</TableCell>
-                                    <TableCell sx={{ fontWeight: 600, fontSize: '12px', color: 'text.secondary', textTransform: 'uppercase', width: 48 }} />
+                                    <TableCell sx={{ ...tableHeadCellSx }}>Date</TableCell>
+                                    <TableCell sx={{ ...tableHeadCellSx }}>Amount</TableCell>
+                                    <TableCell sx={{ ...tableHeadCellSx }}>Method</TableCell>
+                                    <TableCell sx={{ ...tableHeadCellSx }}>Reference</TableCell>
+                                    <TableCell sx={{ ...tableHeadCellSx }}>Status</TableCell>
+                                    <TableCell sx={{ ...tableHeadCellSx }}>Notes</TableCell>
+                                    <TableCell sx={{ ...tableHeadCellSx, width: 48 }} />
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {filteredPayments.map(payment => (
                                     <TableRow
                                         key={payment.id}
-                                        sx={editingPayment?.id === payment.id ? { bgcolor: '#f0f9ff' } : {}}
+                                        sx={{ ...tableRowSx, ...(editingPayment?.id === payment.id ? { bgcolor: 'action.hover' } : {}) }}
                                     >
                                         <TableCell sx={{ fontSize: 13 }}>
                                             {payment.paid_at ? new Date(payment.paid_at).toLocaleDateString() : '\u2014'}
                                         </TableCell>
-                                        <TableCell sx={{ fontSize: 13, fontWeight: 600, color: '#166534' }}>
+                                        <TableCell sx={{ fontSize: 13, fontWeight: 600, color: 'success.dark' }}>
                                             {formatMoney(payment.amount)}
                                         </TableCell>
                                         <TableCell sx={{ fontSize: 13, textTransform: 'capitalize' }}>
                                             {payment.method?.replace('_', ' ')}
                                         </TableCell>
-                                        <TableCell sx={{ fontSize: 13, color: '#64748b' }}>
+                                        <TableCell sx={{ fontSize: 13, color: 'text.secondary' }}>
                                             {payment.reference || '\u2014'}
                                         </TableCell>
                                         <TableCell>
                                             <Chip
                                                 label={payment.status}
                                                 size="small"
-                                                sx={{ fontWeight: 600, textTransform: 'capitalize', fontSize: 11, ...STATUS_STYLES[payment.status] }}
+                                                sx={{ fontWeight: 600, textTransform: 'capitalize', fontSize: 11, ...statusStyles[payment.status] }}
                                             />
                                         </TableCell>
-                                        <TableCell sx={{ fontSize: 13, color: '#64748b', maxWidth: 150 }}>
+                                        <TableCell sx={{ fontSize: 13, color: 'text.secondary', maxWidth: 150 }}>
                                             {payment.notes || '\u2014'}
                                         </TableCell>
                                         <TableCell>
@@ -473,7 +489,7 @@ export default function PaymentHistoryDialog({ open, subscription, onClose }) {
                                                         size="small"
                                                         data-testid="edit-payment-btn"
                                                         onClick={() => handleEdit(payment)}
-                                                        sx={{ color: '#0369a1', '&:hover': { bgcolor: '#e0f2fe' } }}
+                                                        sx={{ ...iconButtonMotionSx, color: 'primary.main' }}
                                                     >
                                                         <EditIcon fontSize="small" />
                                                     </IconButton>

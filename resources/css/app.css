@@ -418,6 +418,15 @@
         animation-iteration-count: 1 !important;
     }
 
+    /* Admin dialogs keep their fade but drop all transform-based motion. */
+    .editorial-dialog,
+    .editorial-dialog .MuiBackdrop-root,
+    .editorial-dialog .MuiDialog-paper {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        transform: none !important;
+    }
+
     *,
     *::before,
     *::after {
