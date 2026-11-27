@@ -29,6 +29,7 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import SaveIcon from '@mui/icons-material/Save';
+import { surfaceMotionSx } from '@/Components/surfaceMotion';
 
 const settingFields = [
     { key: 'app_name', label: 'Application Name' },
@@ -223,7 +224,7 @@ export default function Settings() {
         <Box sx={{ maxWidth: 1000, mx: 'auto' }}>
             {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-            <Paper sx={{ p: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <Paper sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 2, boxShadow: 'none', ...surfaceMotionSx }}>
                 <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>System Settings</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
                     Configure global settings and the currencies available across the platform.
@@ -316,7 +317,7 @@ export default function Settings() {
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                        <Typography sx={{ fontSize: 14, fontWeight: 600, color: '#334155', mb: 1 }}>Apply to</Typography>
+                        <Typography sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary', mb: 1 }}>Apply to</Typography>
                         <FormGroup row>
                             {SCOPES.map((scope) => (
                                 <FormControlLabel
@@ -424,7 +425,7 @@ export default function Settings() {
                 </Grid>
 
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 4 }}>
-                    <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={saving}>
+                    <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={saving} sx={{ transition: 'background-color 150ms ease-out' }}>
                         {saving ? 'Saving...' : 'Save All Settings'}
                     </Button>
                 </Box>

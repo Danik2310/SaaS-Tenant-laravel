@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput, RadioInput } from '@/Components/FormElements';
+import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions, CheckboxInput, RadioInput } from '@/Components/AdminFormElements';
 import ConfirmDialog from '@/Components/ConfirmDialog';
 import { toast } from 'sonner';
+import { useTheme } from '@mui/material/styles';
 
 const PASSWORD_RULES = [
     { key: 'length', label: 'At least 8 characters', test: (p) => p.length >= 8 },
@@ -12,22 +13,35 @@ const PASSWORD_RULES = [
     { key: 'symbol', label: 'At least one symbol (!@#$%...)', test: (p) => /[^A-Za-z0-9]/.test(p) },
 ];
 
-const STRENGTH_COLORS = [
-    { max: 1, background: '#ef4444' },
-    { max: 3, background: '#f59e0b' },
-    { max: 4, background: '#84cc16' },
-    { max: 5, background: '#22c55e' },
+const STRENGTH_LEVELS = [
+    { max: 1, tone: 'error' },
+    { max: 3, tone: 'warning' },
+    { max: 4, tone: 'successLight' },
+    { max: 5, tone: 'success' },
 ];
 
-const getPasswordStrength = (password) => {
+const getPasswordStrength = (password, theme) => {
     const checks = PASSWORD_RULES.map((rule) => ({ ...rule, met: rule.test(password) }));
     const score = checks.filter((c) => c.met).length;
-    const meter = STRENGTH_COLORS.find((s) => score <= s.max) || STRENGTH_COLORS[STRENGTH_COLORS.length - 1];
-    return { checks, score, percent: (score / PASSWORD_RULES.length) * 100, color: meter.background };
+    const level = STRENGTH_LEVELS.find((s) => score <= s.max) || STRENGTH_LEVELS[STRENGTH_LEVELS.length - 1];
+    const colors = {
+        error: theme.palette.error.main,
+        warning: theme.palette.warning.main,
+        successLight: theme.palette.success.light,
+        success: theme.palette.success.main,
+    };
+
+    return {
+        checks,
+        score,
+        percent: (score / PASSWORD_RULES.length) * 100,
+        color: colors[level.tone],
+    };
 };
 
 function PasswordStrengthMeter({ password }) {
-    const { checks, percent, color } = getPasswordStrength(password);
+    const theme = useTheme();
+    const { checks, percent, color } = getPasswordStrength(password, theme);
 
     return (
         <div style={{ marginTop: '6px' }}>
@@ -37,7 +51,7 @@ function PasswordStrengthMeter({ password }) {
                 aria-valuemin={0}
                 aria-valuemax={PASSWORD_RULES.length}
                 aria-valuenow={checks.filter((c) => c.met).length}
-                style={{ height: '6px', borderRadius: '9999px', background: '#e2e8f0', overflow: 'hidden' }}
+                style={{ height: '6px', borderRadius: '9999px', background: theme.palette.divider, overflow: 'hidden' }}
             >
                 <div
                     style={{
@@ -45,7 +59,7 @@ function PasswordStrengthMeter({ password }) {
                         width: `${percent}%`,
                         background: color,
                         borderRadius: '9999px',
-                        transition: 'width 0.2s ease, background-color 0.2s ease',
+                        transition: 'background-color 150ms ease-out',
                     }}
                 />
             </div>
@@ -58,7 +72,8 @@ function PasswordStrengthMeter({ password }) {
                             alignItems: 'center',
                             gap: '4px',
                             fontSize: '12px',
-                            color: check.met ? '#16a34a' : '#94a3b8',
+                            color: check.met ? theme.palette.success.main : theme.palette.text.disabled,
+                            transition: 'color 150ms ease-out',
                         }}
                     >
                         <span style={{ fontSize: '11px', lineHeight: 1 }}>{check.met ? '✓' : '○'}</span>
@@ -71,6 +86,7 @@ function PasswordStrengthMeter({ password }) {
 }
 
 export default function StaffForm({ staff = null, onSubmit, onCancel, embedded = false, isSelf = false, rolesLocked = false, rolesLockedHint = '' }) {
+    const theme = useTheme();
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -256,17 +272,17 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
             <PasswordStrengthMeter password={formData.password} />
 
             <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 500, fontSize: '13px', color: '#334155' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '13px', color: theme.palette.text.secondary }}>
                     Role
                 </label>
                 {errors?.roles?.[0] ? (
-                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#ef4444' }}>{errors.roles[0]}</p>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: theme.palette.error.main }}>{errors.roles[0]}</p>
                 ) : null}
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '6px', padding: '12px', background: '#f8fafc', maxHeight: '200px', overflowY: 'auto' }}>
+                <div style={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '8px', padding: '12px', background: theme.palette.background.default, maxHeight: '200px', overflowY: 'auto' }}>
                     {rolesLoading ? (
-                        <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>Loading roles...</p>
+                        <p style={{ color: theme.palette.text.disabled, fontSize: '13px', margin: 0 }}>Loading roles...</p>
                     ) : roles.length === 0 ? (
-                        <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>No roles available</p>
+                        <p style={{ color: theme.palette.text.disabled, fontSize: '13px', margin: 0 }}>No roles available</p>
                     ) : (
                         roles.map((role) => (
                             <RadioInput
@@ -280,9 +296,9 @@ export default function StaffForm({ staff = null, onSubmit, onCancel, embedded =
                     )}
                 </div>
                 {rolesLocked && rolesLockedHint ? (
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#d97706' }}>{rolesLockedHint}</p>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: theme.palette.warning.main }}>{rolesLockedHint}</p>
                 ) : (
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: theme.palette.text.disabled }}>
                         Select one role. Click the selected role again to remove it.
                     </p>
                 )}

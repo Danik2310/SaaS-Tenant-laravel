@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/FormElements';
+import { FormCard, FormInput, ButtonPrimary, ButtonSecondary, FormActions } from '@/Components/AdminFormElements';
 import api from '../../services/api';
 import { useMoney } from '@/shared/money';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 
 const defaultsFrom = (tenant) => ({
     name: tenant?.name || '',
@@ -24,6 +28,7 @@ const defaultsFrom = (tenant) => ({
 });
 
 export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
+    const theme = useTheme();
     const { formatMoney } = useMoney();
     const { data, setData, reset } = useForm(defaultsFrom(tenant));
     const [plans, setPlans] = useState([]);
@@ -109,9 +114,20 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
             onClose={onCancel}
         >
             {error && (
-                <div style={{ background: '#fef2f2', color: '#dc2626', padding: '12px 16px', borderRadius: '6px', marginBottom: '16px', border: '1px solid #fecaca', fontSize: '13px' }}>
+                <Alert
+                    severity="error"
+                    sx={{
+                        mb: 2,
+                        borderRadius: 2,
+                        fontSize: 13,
+                        bgcolor: 'background.default',
+                        color: 'error.main',
+                        border: '1px solid',
+                        borderColor: 'error.main',
+                    }}
+                >
                     {error}
-                </div>
+                </Alert>
             )}
 
             <form onSubmit={handleSubmit}>
@@ -148,16 +164,16 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                 )}
 
                 {tenant && (
-                    <div style={{ marginBottom: '16px', padding: '12px', background: '#f8fafc', borderRadius: '6px', fontSize: '13px', border: '1px solid #f1f5f9' }}>
-                        <strong style={{ color: '#334155' }}>Domain:</strong>{' '}
-                        <code style={{ color: '#3b82f6', fontFamily: 'monospace' }}>{tenant.domain}</code>
-                        <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: '12px' }}>
+                    <Box sx={{ mb: 2, p: 1.5, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 2, fontSize: 13 }}>
+                        <Box component="strong" sx={{ color: 'text.primary' }}>Domain:</Box>{' '}
+                        <Box component="code" sx={{ color: 'primary.main', fontFamily: 'monospace' }}>{tenant.domain}</Box>
+                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.disabled' }}>
                             Domain cannot be changed after creation.
-                        </p>
-                    </div>
+                        </Typography>
+                    </Box>
                 )}
 
-                <FormInput label="Plan" hint={tenant ? "Change the tenant's subscription plan" : "Assign a plan to this tenant (optional)"}>
+                <FormInput label="Plan" hint={tenant ? "Change the tenant's subscription plan" : 'Assign a plan to this tenant (optional)'}>
                     <select
                         value={data.plan_id}
                         onChange={(e) => setData('plan_id', e.target.value)}
@@ -165,14 +181,15 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                         style={{
                             width: '100%',
                             padding: '10px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: '8px',
                             fontSize: '14px',
-                            color: '#0f172a',
-                            background: plansLoading ? '#f1f5f9' : '#ffffff',
+                            color: theme.palette.text.primary,
+                            background: plansLoading ? theme.palette.action.hover : theme.palette.background.paper,
                             cursor: plansLoading ? 'not-allowed' : 'pointer',
                             outline: 'none',
                             boxSizing: 'border-box',
+                            transition: 'border-color 150ms ease-out, box-shadow 150ms ease-out',
                         }}
                     >
                         {plansLoading ? (
@@ -190,12 +207,12 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                     </select>
                 </FormInput>
 
-                <div style={{ margin: '20px 0 16px', padding: '14px 16px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <strong style={{ color: '#334155', fontSize: '14px', display: 'block', marginBottom: '4px' }}>Business & Contact Information</strong>
-                    <p style={{ margin: '0', color: '#94a3b8', fontSize: '12px' }}>Optional details about the tenant company and primary contact.</p>
-                </div>
+                <Box sx={{ my: 2.5, p: 1.75, bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                    <Typography variant="subtitle2" sx={{ color: 'text.primary', fontSize: 14, mb: 0.5 }}>Business & Contact Information</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>Optional details about the tenant company and primary contact.</Typography>
+                </Box>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
                     <FormInput label="Company Name" hint="Legal or trading name of the company">
                         <input type="text" value={data.company_name} onChange={(e) => setData('company_name', e.target.value)} placeholder="e.g., Acme Corp LLC" />
                     </FormInput>
@@ -208,7 +225,7 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                     <FormInput label="Last Name" hint="Primary contact's last name">
                         <input type="text" value={data.last_name} onChange={(e) => setData('last_name', e.target.value)} placeholder="Doe" />
                     </FormInput>
-                </div>
+                </Box>
 
                 <FormInput label="Address Line 1" hint="Street address (e.g., 123 Main St)">
                     <input type="text" value={data.address_line1} onChange={(e) => setData('address_line1', e.target.value)} placeholder="123 Main St" />
@@ -218,7 +235,7 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                     <input type="text" value={data.address_line2} onChange={(e) => setData('address_line2', e.target.value)} placeholder="Suite 400" />
                 </FormInput>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 16px' }}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 2 }}>
                     <FormInput label="City" hint="City or locality">
                         <input type="text" value={data.city} onChange={(e) => setData('city', e.target.value)} placeholder="Springfield" />
                     </FormInput>
@@ -228,7 +245,7 @@ export default function TenantForm({ tenant = null, onSubmit, onCancel }) {
                     <FormInput label="Postal Code" hint="ZIP / postal code">
                         <input type="text" value={data.postal_code} onChange={(e) => setData('postal_code', e.target.value)} placeholder="62701" />
                     </FormInput>
-                </div>
+                </Box>
 
                 <FormInput label="Country" hint="Country of the registered address">
                     <input type="text" value={data.country} onChange={(e) => setData('country', e.target.value)} placeholder="United States" />

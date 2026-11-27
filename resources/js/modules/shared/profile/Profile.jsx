@@ -96,9 +96,9 @@ export default function Profile() {
 
     return (
         <Box sx={{ maxWidth: 720, mx: 'auto' }}>
-            <Paper sx={{ p: 4, mb: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <Paper sx={{ p: 4, mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2, boxShadow: 'none', ...surfaceMotionSx }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
-                    <Avatar sx={{ width: 64, height: 64, bgcolor: '#3b82f6' }}>
+                    <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main' }}>
                         <PersonIcon sx={{ fontSize: 32 }} />
                     </Avatar>
                     <Box>
@@ -141,7 +141,7 @@ export default function Profile() {
                 </Box>
             </Paper>
 
-            <Paper sx={{ p: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <Paper sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 2, boxShadow: 'none', ...surfaceMotionSx }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>Change Password</Typography>
                 <Box component="form" onSubmit={handleUpdatePassword} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <TextField

@@ -2,8 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import api from '../../../services/api';
 import ConfirmDialog from '@/Components/ConfirmDialog';
+import { alpha, useTheme } from '@mui/material/styles';
 
 export default function StaffPermissions({ staffId, staffName, onClose, onUpdate, embedded = false }) {
+    const theme = useTheme();
+    const c = {
+        surface: theme.palette.background.default,
+        paper: theme.palette.background.paper,
+        text: theme.palette.text.primary,
+        muted: theme.palette.text.secondary,
+        faint: theme.palette.text.disabled,
+        divider: theme.palette.divider,
+        primary: theme.palette.primary.main,
+        success: theme.palette.success.main,
+        warning: theme.palette.warning.main,
+        error: theme.palette.error.main,
+        errorSoft: alpha(theme.palette.error.main, 0.08),
+        successSoft: alpha(theme.palette.success.main, 0.08),
+        disabled: theme.palette.action.disabledBackground,
+        white: theme.palette.common.white,
+    };
+
     const [staff, setStaff] = useState(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
@@ -105,11 +124,11 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
     if (loading) {
         return (
             <div style={{
-                background: '#f8f9fa',
+                background: c.surface,
                 padding: '40px',
                 borderRadius: '8px',
                 textAlign: 'center',
-                color: '#666',
+                color: c.muted,
             }}>
                 Loading staff permissions...
             </div>
@@ -119,20 +138,22 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
     if (!staff) {
         return (
             <div style={{
-                background: '#f8f9fa',
+                background: c.surface,
                 padding: '40px',
                 borderRadius: '8px',
                 textAlign: 'center',
-                color: '#c33',
+                color: c.error,
             }}>
                 Failed to load staff details
             </div>
         );
     }
 
+    const buttonTransition = 'background-color 150ms ease-out';
+
     return (
         <div style={{
-            background: embedded ? 'transparent' : '#f8f9fa',
+            background: embedded ? 'transparent' : c.surface,
             padding: embedded ? '0' : '30px',
             borderRadius: '8px',
         }}>
@@ -142,22 +163,23 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                     <button
                         onClick={onClose}
                         style={{
-                            background: '#6c757d',
-                            color: 'white',
+                            background: c.muted,
+                            color: c.white,
                             border: 'none',
                             padding: '8px 16px',
-                            borderRadius: '4px',
+                            borderRadius: '6px',
                             cursor: 'pointer',
                             fontSize: '14px',
                             marginBottom: '15px',
+                            transition: buttonTransition,
                         }}
                     >
                         ← Back
                     </button>
-                    <h3 style={{ margin: '0 0 10px 0' }}>
+                    <h3 style={{ margin: '0 0 10px 0', color: c.text }}>
                         Manage Roles for {staffName}
                     </h3>
-                    <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>
+                    <p style={{ margin: 0, color: c.muted, fontSize: '14px' }}>
                         Email: {staff.email}
                     </p>
                 </div>
@@ -167,9 +189,9 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
             {error && (
                 <div style={{
                     padding: '12px 16px',
-                    background: '#fee',
-                    color: '#c33',
-                    borderRadius: '4px',
+                    background: c.errorSoft,
+                    color: c.error,
+                    borderRadius: '6px',
                     marginBottom: '15px',
                     fontSize: '14px',
                 }}>
@@ -179,9 +201,9 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
             {success && (
                 <div style={{
                     padding: '12px 16px',
-                    background: '#efe',
-                    color: '#3c3',
-                    borderRadius: '4px',
+                    background: c.successSoft,
+                    color: c.success,
+                    borderRadius: '6px',
                     marginBottom: '15px',
                     fontSize: '14px',
                 }}>
@@ -192,27 +214,28 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
             {/* Roles */}
             <div>
                 <div style={{
-                    background: 'white',
-                    border: '1px solid #dee2e6',
-                    borderRadius: '4px',
+                    background: c.paper,
+                    border: `1px solid ${c.divider}`,
+                    borderRadius: '8px',
                     padding: '15px',
                     marginBottom: '20px',
                     maxHeight: '400px',
                     overflowY: 'auto',
                 }}>
                     {availableRoles.length === 0 ? (
-                        <p style={{ color: '#999', margin: 0 }}>No roles available</p>
+                        <p style={{ color: c.faint, margin: 0 }}>No roles available</p>
                     ) : (
                         availableRoles.map(role => (
                             <div
                                 key={role.id}
                                 style={{
                                     padding: '12px',
-                                    borderBottom: '1px solid #f0f0f0',
+                                    borderBottom: `1px solid ${c.divider}`,
                                     display: 'flex',
                                     alignItems: 'flex-start',
                                     gap: '12px',
                                     opacity: rolesLocked ? 0.6 : 1,
+                                    transition: 'background-color 150ms ease-out',
                                 }}
                             >
                                 <input
@@ -227,21 +250,21 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                                         marginTop: '4px',
                                         width: '18px',
                                         height: '18px',
-                                        accentColor: '#3b82f6',
+                                        accentColor: c.primary,
                                     }}
                                 />
                                 <label htmlFor={`role-${role.id}`} style={{ flex: 1, cursor: rolesLocked ? 'not-allowed' : 'pointer' }}>
                                     <div style={{
                                         fontWeight: '600',
                                         marginBottom: '4px',
-                                        color: '#222',
+                                        color: c.text,
                                     }}>
                                         {role.name}
                                     </div>
                                     {role.description && (
                                         <div style={{
                                             fontSize: '13px',
-                                            color: '#666',
+                                            color: c.muted,
                                             marginBottom: '8px',
                                         }}>
                                             {role.description}
@@ -250,7 +273,7 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                                     {(role.permissions && role.permissions.length > 0) && (
                                         <div style={{
                                             fontSize: '12px',
-                                            color: '#999',
+                                            color: c.faint,
                                         }}>
                                             Includes {role.permissions.length} permission{role.permissions.length !== 1 ? 's' : ''}
                                         </div>
@@ -262,10 +285,10 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                 </div>
 
                 {rolesLocked && rolesLockedHint && (
-                    <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#d97706' }}>{rolesLockedHint}</p>
+                    <p style={{ margin: '0 0 16px', fontSize: '12px', color: c.warning }}>{rolesLockedHint}</p>
                 )}
                 {!rolesLocked && (
-                    <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#999' }}>
+                    <p style={{ margin: '0 0 16px', fontSize: '12px', color: c.faint }}>
                         Select one role. Click the selected role again to remove it.
                     </p>
                 )}
@@ -279,13 +302,14 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                         onClick={onClose}
                         style={{
                             padding: '10px 20px',
-                            background: '#6c757d',
-                            color: 'white',
+                            background: c.muted,
+                            color: c.white,
                             border: 'none',
-                            borderRadius: '4px',
+                            borderRadius: '6px',
                             cursor: 'pointer',
                             fontSize: '14px',
                             fontWeight: '600',
+                            transition: buttonTransition,
                         }}
                     >
                         Cancel
@@ -295,13 +319,14 @@ export default function StaffPermissions({ staffId, staffName, onClose, onUpdate
                         disabled={updating || rolesLocked}
                         style={{
                             padding: '10px 20px',
-                            background: updating || rolesLocked ? '#ccc' : '#27ae60',
-                            color: 'white',
+                            background: updating || rolesLocked ? c.disabled : c.success,
+                            color: updating || rolesLocked ? c.faint : c.white,
                             border: 'none',
-                            borderRadius: '4px',
+                            borderRadius: '6px',
                             cursor: updating || rolesLocked ? 'not-allowed' : 'pointer',
                             fontSize: '14px',
                             fontWeight: '600',
+                            transition: buttonTransition,
                         }}
                     >
                         {updating ? 'Saving...' : 'Save Roles'}
