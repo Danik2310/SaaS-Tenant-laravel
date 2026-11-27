@@ -100,6 +100,9 @@ export default function Dashboard() {
     const [bulkLoading, setBulkLoading] = useState(false);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const incrementRefreshTrigger = useCallback(() => setRefreshTrigger(r => r + 1), []);
+    const [pendingRowIds, setPendingRowIds] = useState([]);
+    const markRowsPending = useCallback((ids) => setPendingRowIds(ids.map(String)), []);
+    const clearRowsPending = useCallback(() => setPendingRowIds([]), []);
     const [bulkPlanChangeOpen, setBulkPlanChangeOpen] = useState(false);
     const [activateTrialTenants, setActivateTrialTenants] = useState(null);
     const [deleteConfirmTenant, setDeleteConfirmTenant] = useState(null);
@@ -193,6 +196,7 @@ export default function Dashboard() {
         if (deleteWorkspaceName.trim() !== deleteConfirmTenant.name) return;
 
         try {
+            markRowsPending([deleteConfirmTenant.id]);
             await deleteTenant(deleteConfirmTenant.id, deleteWorkspaceName);
             toast.success('Tenant disabled. Data is preserved and it can be restored.');
             fetchTenants();
@@ -202,6 +206,7 @@ export default function Dashboard() {
             toast.error(message);
             setError(message);
         } finally {
+            clearRowsPending();
             setDeleteConfirmTenant(null);
             setDeleteWorkspaceName('');
         }
@@ -214,6 +219,7 @@ export default function Dashboard() {
     const confirmRestoreTenant = async () => {
         if (restoreConfirmId === null) return;
         try {
+            markRowsPending([restoreConfirmId]);
             await api.patch(`/admin/api/tenants/${restoreConfirmId}/restore`);
             toast.success('Tenant restored successfully');
             fetchTenants();
@@ -223,6 +229,7 @@ export default function Dashboard() {
             toast.error(message);
             setError(message);
         } finally {
+            clearRowsPending();
             setRestoreConfirmId(null);
         }
     };
@@ -252,6 +259,7 @@ export default function Dashboard() {
         }
 
         try {
+            markRowsPending([id]);
             await api.put(`/admin/api/tenants/${id}`, data);
             toast.success('Tenant updated successfully');
             setEditingTenant(null);
@@ -261,6 +269,8 @@ export default function Dashboard() {
             const message = err.response?.data?.message || 'Failed to update tenant';
             toast.error(message);
             setError(message);
+        } finally {
+            clearRowsPending();
         }
     };
 
@@ -303,6 +313,7 @@ export default function Dashboard() {
         }
         const newStatus = tenant.status === 'Active' ? 'Suspended' : 'Active';
         try {
+            markRowsPending([tenant.id]);
             await api.put(`/admin/api/tenants/${tenant.id}`, { status: newStatus });
             fetchTenants();
             incrementRefreshTrigger();
@@ -311,6 +322,8 @@ export default function Dashboard() {
             const message = err.response?.data?.message || 'Failed to update tenant status';
             toast.error(message);
             setError(message);
+        } finally {
+            clearRowsPending();
         }
     };
 
@@ -332,11 +345,14 @@ export default function Dashboard() {
 
     const handleRefreshPaymentCard = async (tenant) => {
         try {
+            markRowsPending([tenant.id]);
             const response = await api.post(`/admin/api/tenants/${tenant.id}/payment-methods/refresh`);
             toast.success(response.data?.message || 'Payment card refreshed.');
             incrementRefreshTrigger();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to refresh payment card');
+        } finally {
+            clearRowsPending();
         }
     };
 
@@ -363,6 +379,7 @@ export default function Dashboard() {
 
         setBulkLoading(true);
         try {
+            markRowsPending(ids);
             await api.post('/admin/api/tenants/bulk', {
                 tenant_ids: ids,
                 action,
@@ -374,6 +391,7 @@ export default function Dashboard() {
         } catch (err) {
             toast.error(err.response?.data?.message || `Bulk ${action} failed`);
         } finally {
+            clearRowsPending();
             setBulkLoading(false);
         }
     };
@@ -549,6 +567,7 @@ export default function Dashboard() {
                             <TenantList
                                 refreshTrigger={refreshTrigger}
                                 bulkLoading={bulkLoading}
+                                pendingRowIds={pendingRowIds}
                                 initialSearch={tenantSearch}
                                 initialShowDeleted={showDeletedTenantList}
                                 onAdd={() => setShowForm(true)}

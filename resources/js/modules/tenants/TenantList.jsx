@@ -3,7 +3,8 @@ import { MaterialReactTable } from 'material-react-table';
 import axios from 'axios';
 import api from '@/services/api';
 import { useAuthContext } from '@/context/AuthContext';
-import { tableMotionSx, tableHeadCellSx, tableRowSx, iconButtonMotionSx } from '@/Components/tableMotion';
+import { tableMotionSx, rowMotionKeyframes, animatedRowSx, tableHeadCellSx, iconButtonMotionSx } from '@/Components/tableMotion';
+import useAnimatedTableRows from '@/hooks/useAnimatedTableRows';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
@@ -54,6 +55,7 @@ export default function TenantList({
     onManagePaymentCard,
     onBulkAction,
     bulkLoading = false,
+    pendingRowIds = [],
     initialSearch = '',
     initialShowDeleted = false,
 }) {
@@ -154,6 +156,8 @@ export default function TenantList({
         fetchTenants();
         return () => abortRef.current?.abort();
     }, [fetchTenants, refreshTrigger]);
+
+    const animatedRows = useAnimatedTableRows(data, (row) => String(row.id), pendingRowIds);
 
     const selectedIds = useMemo(() =>
         new Set(Object.keys(rowSelection).filter(k => rowSelection[k])),
@@ -489,7 +493,7 @@ export default function TenantList({
 
             <MaterialReactTable
                 columns={columns}
-                data={data}
+                data={animatedRows.rows}
                 rowCount={total}
                 state={{
                     isLoading: loading,
@@ -647,9 +651,16 @@ export default function TenantList({
                         </Typography>
                     </Box>
                 )}
-                muiTablePaperProps={{ elevation: 0, sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', ...tableMotionSx } }}
+                muiTablePaperProps={{ elevation: 0, sx: { borderRadius: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', ...tableMotionSx, ...rowMotionKeyframes } }}
                 muiTableHeadCellProps={{ sx: tableHeadCellSx }}
-                muiTableBodyRowProps={{ sx: tableRowSx }}
+                muiTableBodyRowProps={({ row }) => {
+                    const key = String(row.original.id);
+                    const phase = animatedRows.phases[key];
+                    return {
+                        'data-row-phase': phase || undefined,
+                        sx: animatedRowSx(phase, animatedRows.delays[key]),
+                    };
+                }}
                 initialState={{ density: 'compact' }}
                 localization={{ toolbarSearchPlaceholder: 'Search by name, email, domain, or ID...' }}
             />
